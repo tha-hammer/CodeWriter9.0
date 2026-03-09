@@ -485,6 +485,44 @@
       "when": "the trace translator processes it",
       "then": "concrete test scenarios are generated with setup, steps, and expected outcomes for each state"
     },
+    "gwt-0012": {
+      "id": "gwt-0012",
+      "kind": "behavior",
+      "name": "reverse_closure_complete",
+      "description": "",
+      "version": 1,
+      "given": "a registry DAG with nodes A\u2192B\u2192C (A depends on B depends on C)",
+      "when": "query_impact(C) is called",
+      "then": "the result contains both A and B as affected nodes (full transitive reverse closure)"
+    },
+    "gwt-0013": {
+      "id": "gwt-0013",
+      "kind": "behavior",
+      "name": "leaf_has_no_impact",
+      "description": "",
+      "version": 1,
+      "given": "a registry DAG where node X has no dependents (nothing points to X)",
+      "when": "query_impact(X) is called",
+      "then": "the affected set is empty (leaf nodes have zero impact radius)"
+    },
+    "gwt-0014": {
+      "id": "gwt-0014",
+      "kind": "behavior",
+      "name": "direct_dependents_included",
+      "description": "",
+      "version": 1,
+      "given": "a registry DAG where nodes D and E both directly depend on node F",
+      "when": "query_impact(F) is called",
+      "then": "D and E both appear in the affected set and in direct_dependents"
+    },
+    "impact-0001": {
+      "id": "impact-0001",
+      "kind": "resource",
+      "name": "impact_analysis",
+      "description": "Reverse dependency query \u2014 finds all nodes transitively depending on a target",
+      "version": 1,
+      "path": "python/registry/dag.py"
+    },
     "loop-0001": {
       "id": "loop-0001",
       "kind": "resource",
@@ -587,6 +625,14 @@
       "description": "",
       "version": 1,
       "text": "System needs mechanical translators that convert TLA+ specs into code artifacts conforming to existing schema shapes (data_structures, processors.operations, verifiers, testing.assertions)"
+    },
+    "req-0004": {
+      "id": "req-0004",
+      "kind": "requirement",
+      "name": "",
+      "description": "",
+      "version": 1,
+      "text": "System needs an impact analysis query: given a node, find all nodes that transitively depend on it (reverse closure), enabling change-impact assessment"
     },
     "res-0001": {
       "id": "res-0001",
@@ -1357,6 +1403,96 @@
       "from": "bridge-0004",
       "to": "fs-y3q2",
       "edge_type": "references"
+    },
+    {
+      "from": "req-0004",
+      "to": "gwt-0012",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0004",
+      "to": "gwt-0013",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0004",
+      "to": "gwt-0014",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "gwt-0012",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0012",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0012",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0013",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0013",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0013",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0014",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0014",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0014",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "impact-0001",
+      "to": "gwt-0012",
+      "edge_type": "implements"
+    },
+    {
+      "from": "impact-0001",
+      "to": "gwt-0013",
+      "edge_type": "implements"
+    },
+    {
+      "from": "impact-0001",
+      "to": "gwt-0014",
+      "edge_type": "implements"
+    },
+    {
+      "from": "impact-0001",
+      "to": "res-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "impact-0001",
+      "to": "res-0002",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "impact-0001",
+      "to": "res-0003",
+      "edge_type": "depends_on"
     }
   ],
   "closure": {
@@ -1780,6 +1916,29 @@
       "tpl-0007",
       "ui-x1r9"
     ],
+    "gwt-0012": [
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "gwt-0013": [
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "gwt-0014": [
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "impact-0001": [
+      "gwt-0012",
+      "gwt-0013",
+      "gwt-0014",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
     "loop-0001": [
       "cfg-d2q3",
       "cfg-f7s8",
@@ -1949,6 +2108,14 @@
       "tpl-0006",
       "tpl-0007",
       "ui-x1r9"
+    ],
+    "req-0004": [
+      "gwt-0012",
+      "gwt-0013",
+      "gwt-0014",
+      "res-0001",
+      "res-0002",
+      "res-0003"
     ],
     "res-0001": [],
     "res-0002": [],
@@ -2151,6 +2318,10 @@
       "gwt-0009",
       "gwt-0010",
       "gwt-0011",
+      "gwt-0012",
+      "gwt-0013",
+      "gwt-0014",
+      "impact-0001",
       "loop-0001",
       "loop-0002",
       "loop-0003",
@@ -2162,6 +2333,7 @@
       "req-0001",
       "req-0002",
       "req-0003",
+      "req-0004",
       "res-0001",
       "res-0002",
       "res-0003",

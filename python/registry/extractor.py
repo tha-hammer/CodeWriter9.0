@@ -779,3 +779,58 @@ class SchemaExtractor:
         # Bridge outputs stored in plan artifact store (activating fs-y3q2)
         for br in ("bridge-0001", "bridge-0002", "bridge-0003", "bridge-0004"):
             self._add_edge_safe(dag, br, "fs-y3q2", EdgeType.REFERENCES)
+
+        # ── Phase 5: Self-Hosting — Impact Analysis (first pipeline-built feature) ──
+
+        # Requirement: reverse dependency / impact analysis query
+        dag.add_node(Node.requirement(
+            "req-0004",
+            "System needs an impact analysis query: given a node, find all nodes that transitively depend on it (reverse closure), enabling change-impact assessment",
+        ))
+
+        # 3 GWT behaviors for impact analysis
+        dag.add_node(Node.behavior(
+            "gwt-0012", "reverse_closure_complete",
+            "a registry DAG with nodes A→B→C (A depends on B depends on C)",
+            "query_impact(C) is called",
+            "the result contains both A and B as affected nodes (full transitive reverse closure)",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0013", "leaf_has_no_impact",
+            "a registry DAG where node X has no dependents (nothing points to X)",
+            "query_impact(X) is called",
+            "the affected set is empty (leaf nodes have zero impact radius)",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0014", "direct_dependents_included",
+            "a registry DAG where nodes D and E both directly depend on node F",
+            "query_impact(F) is called",
+            "D and E both appear in the affected set and in direct_dependents",
+        ))
+
+        # Requirement decomposes into the 3 impact analysis behaviors
+        for gwt in ("gwt-0012", "gwt-0013", "gwt-0014"):
+            self._add_edge_safe(dag, "req-0004", gwt, EdgeType.DECOMPOSES)
+
+        # GWT behaviors reference the DAG core resources (nodes, edges, closure)
+        for gwt in ("gwt-0012", "gwt-0013", "gwt-0014"):
+            self._add_edge_safe(dag, gwt, "res-0001", EdgeType.REFERENCES)  # → nodes
+            self._add_edge_safe(dag, gwt, "res-0002", EdgeType.REFERENCES)  # → edges
+            self._add_edge_safe(dag, gwt, "res-0003", EdgeType.REFERENCES)  # → closure
+
+        # Impact analysis resource node (the implementation we'll write)
+        dag.add_node(Node.resource(
+            "impact-0001", "impact_analysis",
+            description="Reverse dependency query — finds all nodes transitively depending on a target",
+            path="python/registry/dag.py",
+        ))
+
+        # Impact analysis implements its behaviors
+        self._add_edge_safe(dag, "impact-0001", "gwt-0012", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "impact-0001", "gwt-0013", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "impact-0001", "gwt-0014", EdgeType.IMPLEMENTS)
+
+        # Impact analysis depends on the DAG engine
+        self._add_edge_safe(dag, "impact-0001", "res-0001", EdgeType.DEPENDS_ON)
+        self._add_edge_safe(dag, "impact-0001", "res-0002", EdgeType.DEPENDS_ON)
+        self._add_edge_safe(dag, "impact-0001", "res-0003", EdgeType.DEPENDS_ON)
