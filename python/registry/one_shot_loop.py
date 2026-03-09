@@ -89,6 +89,7 @@ class LoopStatus:
     tlc_result: TLCResult | None = None
     counterexample: CounterexampleTrace | None = None
     error: str | None = None
+    compiled_spec_path: Path | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -634,6 +635,7 @@ class OneShotLoop:
             project_root=self.project_root,
         )
         self.status.tlc_result = tlc_result
+        self.status.compiled_spec_path = tla_path
 
         # Step 6: Translate counterexample if failed
         if not tlc_result.success and tlc_result.counterexample:

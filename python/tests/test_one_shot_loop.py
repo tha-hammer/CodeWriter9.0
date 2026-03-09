@@ -380,6 +380,6 @@ class TestSelfRegistration:
         assert "res-0003" in result.transitive_deps
 
     def test_dag_totals(self):
-        """Phase 4 adds 10 nodes (1 req + 4 GWT + 4 bridge + 1 spec) and 32 edges over Phase 3 (66/90)."""
-        assert self.dag.node_count == 76
-        assert self.dag.edge_count == 122
+        """Phase 5 adds 5 nodes (1 req + 3 GWT + 1 resource) and 18 edges over Phase 4 (76/122)."""
+        assert self.dag.node_count == 81
+        assert self.dag.edge_count == 140
