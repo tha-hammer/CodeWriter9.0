@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
-from registry.types import Edge, EdgeType, ImpactResult, Node, NodeKind, QueryResult
+from registry.types import Edge, EdgeType, ImpactResult, Node, NodeKind, QueryResult, ValidationResult
 
 
 class CycleError(Exception):
@@ -162,6 +162,55 @@ class RegistryDag:
             if resource_id in members:
                 return list(members)
         return []
+
+    # Forbidden (from_kind, to_kind) pairs for depends_on edges
+    _KIND_INCOMPATIBLE: set[tuple[NodeKind, NodeKind]] = {
+        (NodeKind.BEHAVIOR, NodeKind.TEST),
+        (NodeKind.REQUIREMENT, NodeKind.TEST),
+    }
+
+    def validate_edge(self, from_id: str, to_id: str, edge_type: EdgeType) -> ValidationResult:
+        """Pre-check whether adding an edge would maintain all DAG invariants.
+
+        Checks acyclicity, duplicate rejection, and node-kind compatibility
+        without mutating the DAG.
+        """
+        if from_id not in self.nodes:
+            raise NodeNotFoundError(from_id)
+        if to_id not in self.nodes:
+            raise NodeNotFoundError(to_id)
+
+        # Check acyclicity (self-loop or reachability from to→from)
+        if from_id == to_id or self._can_reach(to_id, from_id):
+            return ValidationResult(
+                valid=False, from_id=from_id, to_id=to_id,
+                edge_type=edge_type.value, reason="cycle",
+            )
+
+        # Check duplicate
+        for existing in self.edges:
+            if (existing.from_id == from_id
+                    and existing.to_id == to_id
+                    and existing.edge_type == edge_type):
+                return ValidationResult(
+                    valid=False, from_id=from_id, to_id=to_id,
+                    edge_type=edge_type.value, reason="duplicate",
+                )
+
+        # Check node-kind compatibility (only for depends_on)
+        if edge_type == EdgeType.DEPENDS_ON:
+            from_kind = self.nodes[from_id].kind
+            to_kind = self.nodes[to_id].kind
+            if (from_kind, to_kind) in self._KIND_INCOMPATIBLE:
+                return ValidationResult(
+                    valid=False, from_id=from_id, to_id=to_id,
+                    edge_type=edge_type.value, reason="kind",
+                )
+
+        return ValidationResult(
+            valid=True, from_id=from_id, to_id=to_id,
+            edge_type=edge_type.value,
+        )
 
     def query_impact(self, target_id: str) -> ImpactResult:
         """Reverse dependency query: find all nodes that transitively depend on target.

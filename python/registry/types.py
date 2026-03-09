@@ -112,3 +112,13 @@ class ImpactResult:
     target: str
     affected: set[str] = field(default_factory=set)
     direct_dependents: set[str] = field(default_factory=set)
+
+
+@dataclass
+class ValidationResult:
+    """Result of an edge validation pre-check."""
+    valid: bool
+    from_id: str
+    to_id: str
+    edge_type: str
+    reason: str = ""
