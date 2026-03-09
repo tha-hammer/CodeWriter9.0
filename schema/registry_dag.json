@@ -356,6 +356,14 @@
       "source_schema": "backend_schema.json",
       "source_key": "error_definitions.ErrorType"
     },
+    "depval-0001": {
+      "id": "depval-0001",
+      "kind": "resource",
+      "name": "dependency_validation",
+      "description": "Edge validation pre-check \u2014 determines if a proposed edge maintains DAG invariants",
+      "version": 1,
+      "path": "python/registry/dag.py"
+    },
     "fs-x7p6": {
       "id": "fs-x7p6",
       "kind": "resource",
@@ -515,6 +523,36 @@
       "when": "query_impact(F) is called",
       "then": "D and E both appear in the affected set and in direct_dependents"
     },
+    "gwt-0015": {
+      "id": "gwt-0015",
+      "kind": "behavior",
+      "name": "valid_edge_accepted",
+      "description": "",
+      "version": 1,
+      "given": "a registry DAG with compatible node kinds and no existing path from target to source",
+      "when": "validate_edge(source, target, edge_type) is called",
+      "then": "validation passes with valid=True and empty reason"
+    },
+    "gwt-0016": {
+      "id": "gwt-0016",
+      "kind": "behavior",
+      "name": "cycle_creating_edge_rejected",
+      "description": "",
+      "version": 1,
+      "given": "a registry DAG where node Y can already reach node X through existing edges",
+      "when": "validate_edge(X, Y, edge_type) is called (which would create a cycle)",
+      "then": "validation fails with valid=False and reason containing 'cycle'"
+    },
+    "gwt-0017": {
+      "id": "gwt-0017",
+      "kind": "behavior",
+      "name": "kind_incompatible_edge_rejected",
+      "description": "",
+      "version": 1,
+      "given": "a registry DAG where a behavior node B exists and a test node T exists",
+      "when": "validate_edge(B, T, 'depends_on') is called (behavior depending on test)",
+      "then": "validation fails with valid=False and reason containing 'kind'"
+    },
     "impact-0001": {
       "id": "impact-0001",
       "kind": "resource",
@@ -633,6 +671,14 @@
       "description": "",
       "version": 1,
       "text": "System needs an impact analysis query: given a node, find all nodes that transitively depend on it (reverse closure), enabling change-impact assessment"
+    },
+    "req-0005": {
+      "id": "req-0005",
+      "kind": "requirement",
+      "name": "",
+      "description": "",
+      "version": 1,
+      "text": "System needs an edge validation pre-check: given a proposed edge, determine whether adding it would maintain all DAG invariants (acyclicity, no duplicates, node-kind compatibility) without actually mutating the DAG"
     },
     "res-0001": {
       "id": "res-0001",
@@ -1493,6 +1539,96 @@
       "from": "impact-0001",
       "to": "res-0003",
       "edge_type": "depends_on"
+    },
+    {
+      "from": "req-0005",
+      "to": "gwt-0015",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0005",
+      "to": "gwt-0016",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0005",
+      "to": "gwt-0017",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "gwt-0015",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0015",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0015",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0016",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0016",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0016",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0017",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0017",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0017",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "depval-0001",
+      "to": "gwt-0015",
+      "edge_type": "implements"
+    },
+    {
+      "from": "depval-0001",
+      "to": "gwt-0016",
+      "edge_type": "implements"
+    },
+    {
+      "from": "depval-0001",
+      "to": "gwt-0017",
+      "edge_type": "implements"
+    },
+    {
+      "from": "depval-0001",
+      "to": "res-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "depval-0001",
+      "to": "res-0002",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "depval-0001",
+      "to": "res-0003",
+      "edge_type": "depends_on"
     }
   ],
   "closure": {
@@ -1760,6 +1896,14 @@
       "db-f8n5"
     ],
     "db-l1c3": [],
+    "depval-0001": [
+      "gwt-0015",
+      "gwt-0016",
+      "gwt-0017",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
     "fs-x7p6": [],
     "fs-y3q2": [],
     "gwt-0001": [
@@ -1927,6 +2071,21 @@
       "res-0003"
     ],
     "gwt-0014": [
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "gwt-0015": [
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "gwt-0016": [
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "gwt-0017": [
       "res-0001",
       "res-0002",
       "res-0003"
@@ -2113,6 +2272,14 @@
       "gwt-0012",
       "gwt-0013",
       "gwt-0014",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "req-0005": [
+      "gwt-0015",
+      "gwt-0016",
+      "gwt-0017",
       "res-0001",
       "res-0002",
       "res-0003"
@@ -2305,6 +2472,7 @@
       "db-h2s4",
       "db-j6x9",
       "db-l1c3",
+      "depval-0001",
       "fs-x7p6",
       "fs-y3q2",
       "gwt-0001",
@@ -2321,6 +2489,9 @@
       "gwt-0012",
       "gwt-0013",
       "gwt-0014",
+      "gwt-0015",
+      "gwt-0016",
+      "gwt-0017",
       "impact-0001",
       "loop-0001",
       "loop-0002",
@@ -2334,6 +2505,7 @@
       "req-0002",
       "req-0003",
       "req-0004",
+      "req-0005",
       "res-0001",
       "res-0002",
       "res-0003",

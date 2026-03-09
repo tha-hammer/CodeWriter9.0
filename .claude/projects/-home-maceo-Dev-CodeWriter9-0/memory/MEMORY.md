@@ -7,9 +7,11 @@ See `BOOTSTRAP.md` for the flywheel plan (Phases 0-5).
 ## Implementation Status
 - **Phase 0-4** — ALL COMPLETE (DAG, templates, composer, loop, bridge)
 - **Phase 5: Self-Hosting** — COMPLETE (first pipeline-built feature: impact analysis)
-  - DAG: 81 nodes, 140 edges, 9 components
-  - Tests: 192 passing (179 existing + 13 generated impact analysis)
-  - BOOTSTRAP.md checklist fully checked off — system is self-hosting
+- **Phase 6: Dependency Validation** — COMPLETE (second pipeline-built feature)
+  - DAG: 86 nodes, 158 edges, 9 components
+  - Tests: 213 passing (192 prev + 21 generated dep validation)
+  - `validate_edge()` pre-checks acyclicity, duplicates, node-kind compatibility
+  - IDs: req-0005, gwt-0015/0016/0017, depval-0001
 
 ## Key Paths
 - Schema files: `schema/*.json` (4 schema files + resource registry + extracted DAG)
@@ -44,4 +46,4 @@ See `BOOTSTRAP.md` for the flywheel plan (Phases 0-5).
 - `LoopStatus.compiled_spec_path` exposes the compiled file.
 
 ## Next: More self-hosted features
-Clone `run_impact_loop.py` as template. Next IDs: req-0005, gwt-0015+, tpl-0010+.
+Clone `run_impact_loop.py` as template. Next IDs: req-0006, gwt-0018+, tpl-0010+.

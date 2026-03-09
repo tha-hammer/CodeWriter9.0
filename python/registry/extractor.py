@@ -834,3 +834,58 @@ class SchemaExtractor:
         self._add_edge_safe(dag, "impact-0001", "res-0001", EdgeType.DEPENDS_ON)
         self._add_edge_safe(dag, "impact-0001", "res-0002", EdgeType.DEPENDS_ON)
         self._add_edge_safe(dag, "impact-0001", "res-0003", EdgeType.DEPENDS_ON)
+
+        # ── Phase 6: Self-Hosting — Dependency Validation (second pipeline-built feature) ──
+
+        # Requirement: pre-check edge validity before add_edge()
+        dag.add_node(Node.requirement(
+            "req-0005",
+            "System needs an edge validation pre-check: given a proposed edge, determine whether adding it would maintain all DAG invariants (acyclicity, no duplicates, node-kind compatibility) without actually mutating the DAG",
+        ))
+
+        # 3 GWT behaviors for dependency validation
+        dag.add_node(Node.behavior(
+            "gwt-0015", "valid_edge_accepted",
+            "a registry DAG with compatible node kinds and no existing path from target to source",
+            "validate_edge(source, target, edge_type) is called",
+            "validation passes with valid=True and empty reason",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0016", "cycle_creating_edge_rejected",
+            "a registry DAG where node Y can already reach node X through existing edges",
+            "validate_edge(X, Y, edge_type) is called (which would create a cycle)",
+            "validation fails with valid=False and reason containing 'cycle'",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0017", "kind_incompatible_edge_rejected",
+            "a registry DAG where a behavior node B exists and a test node T exists",
+            "validate_edge(B, T, 'depends_on') is called (behavior depending on test)",
+            "validation fails with valid=False and reason containing 'kind'",
+        ))
+
+        # Requirement decomposes into the 3 validation behaviors
+        for gwt in ("gwt-0015", "gwt-0016", "gwt-0017"):
+            self._add_edge_safe(dag, "req-0005", gwt, EdgeType.DECOMPOSES)
+
+        # GWT behaviors reference the DAG core resources
+        for gwt in ("gwt-0015", "gwt-0016", "gwt-0017"):
+            self._add_edge_safe(dag, gwt, "res-0001", EdgeType.REFERENCES)  # → nodes
+            self._add_edge_safe(dag, gwt, "res-0002", EdgeType.REFERENCES)  # → edges
+            self._add_edge_safe(dag, gwt, "res-0003", EdgeType.REFERENCES)  # → closure
+
+        # Dependency validation resource node
+        dag.add_node(Node.resource(
+            "depval-0001", "dependency_validation",
+            description="Edge validation pre-check — determines if a proposed edge maintains DAG invariants",
+            path="python/registry/dag.py",
+        ))
+
+        # Dependency validation implements its behaviors
+        self._add_edge_safe(dag, "depval-0001", "gwt-0015", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "depval-0001", "gwt-0016", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "depval-0001", "gwt-0017", EdgeType.IMPLEMENTS)
+
+        # Dependency validation depends on DAG engine (nodes, edges, closure)
+        self._add_edge_safe(dag, "depval-0001", "res-0001", EdgeType.DEPENDS_ON)
+        self._add_edge_safe(dag, "depval-0001", "res-0002", EdgeType.DEPENDS_ON)
+        self._add_edge_safe(dag, "depval-0001", "res-0003", EdgeType.DEPENDS_ON)
