@@ -1,0 +1,488 @@
+{
+  "module_name": "subgraph_extraction",
+  "data_structures": {
+    "subgraph_extractionState": {
+      "function_id": "fn-subgraph_extraction-state",
+      "acceptance_criteria_id": "ac-subgraph_extraction-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Loop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "current_state": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "adjacency": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[n \\in 1..NumNodes |-> {}]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "edge_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "target": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "forward_set": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "reverse_set": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "subgraph_nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "subgraph_edges": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "fw_worklist": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "fw_visited": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "rv_worklist": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "rv_visited": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "op": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "result": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "dirty": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from subgraph_extraction TLA+ spec"
+    }
+  },
+  "operations": {
+    "Loop": {
+      "function_id": "fn-subgraph_extraction-Loop",
+      "acceptance_criteria_id": "ac-subgraph_extraction-Loop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Loop from subgraph_extraction spec"
+    },
+    "InitGraph": {
+      "function_id": "fn-subgraph_extraction-InitGraph",
+      "acceptance_criteria_id": "ac-subgraph_extraction-InitGraph",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action InitGraph from subgraph_extraction spec"
+    },
+    "InitGraphDone": {
+      "function_id": "fn-subgraph_extraction-InitGraphDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-InitGraphDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action InitGraphDone from subgraph_extraction spec"
+    },
+    "AddEdge": {
+      "function_id": "fn-subgraph_extraction-AddEdge",
+      "acceptance_criteria_id": "ac-subgraph_extraction-AddEdge",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AddEdge from subgraph_extraction spec"
+    },
+    "AddEdgeDone": {
+      "function_id": "fn-subgraph_extraction-AddEdgeDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-AddEdgeDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AddEdgeDone from subgraph_extraction spec"
+    },
+    "FinishBuilding": {
+      "function_id": "fn-subgraph_extraction-FinishBuilding",
+      "acceptance_criteria_id": "ac-subgraph_extraction-FinishBuilding",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FinishBuilding from subgraph_extraction spec"
+    },
+    "FinishBuildingDone": {
+      "function_id": "fn-subgraph_extraction-FinishBuildingDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-FinishBuildingDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FinishBuildingDone from subgraph_extraction spec"
+    },
+    "SelectTarget": {
+      "function_id": "fn-subgraph_extraction-SelectTarget",
+      "acceptance_criteria_id": "ac-subgraph_extraction-SelectTarget",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SelectTarget from subgraph_extraction spec"
+    },
+    "SelectTargetDone": {
+      "function_id": "fn-subgraph_extraction-SelectTargetDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-SelectTargetDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SelectTargetDone from subgraph_extraction spec"
+    },
+    "ForwardBFS": {
+      "function_id": "fn-subgraph_extraction-ForwardBFS",
+      "acceptance_criteria_id": "ac-subgraph_extraction-ForwardBFS",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ForwardBFS from subgraph_extraction spec"
+    },
+    "ForwardBFSDone": {
+      "function_id": "fn-subgraph_extraction-ForwardBFSDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-ForwardBFSDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ForwardBFSDone from subgraph_extraction spec"
+    },
+    "StartReverse": {
+      "function_id": "fn-subgraph_extraction-StartReverse",
+      "acceptance_criteria_id": "ac-subgraph_extraction-StartReverse",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartReverse from subgraph_extraction spec"
+    },
+    "StartReverseDone": {
+      "function_id": "fn-subgraph_extraction-StartReverseDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-StartReverseDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartReverseDone from subgraph_extraction spec"
+    },
+    "ReverseBFS": {
+      "function_id": "fn-subgraph_extraction-ReverseBFS",
+      "acceptance_criteria_id": "ac-subgraph_extraction-ReverseBFS",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ReverseBFS from subgraph_extraction spec"
+    },
+    "ReverseBFSDone": {
+      "function_id": "fn-subgraph_extraction-ReverseBFSDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-ReverseBFSDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ReverseBFSDone from subgraph_extraction spec"
+    },
+    "StartCollecting": {
+      "function_id": "fn-subgraph_extraction-StartCollecting",
+      "acceptance_criteria_id": "ac-subgraph_extraction-StartCollecting",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartCollecting from subgraph_extraction spec"
+    },
+    "StartCollectingDone": {
+      "function_id": "fn-subgraph_extraction-StartCollectingDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-StartCollectingDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartCollectingDone from subgraph_extraction spec"
+    },
+    "Finish": {
+      "function_id": "fn-subgraph_extraction-Finish",
+      "acceptance_criteria_id": "ac-subgraph_extraction-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from subgraph_extraction spec"
+    },
+    "FinishDone": {
+      "function_id": "fn-subgraph_extraction-FinishDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-FinishDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FinishDone from subgraph_extraction spec"
+    },
+    "Timeout": {
+      "function_id": "fn-subgraph_extraction-Timeout",
+      "acceptance_criteria_id": "ac-subgraph_extraction-Timeout",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Timeout from subgraph_extraction spec"
+    },
+    "TimeoutDone": {
+      "function_id": "fn-subgraph_extraction-TimeoutDone",
+      "acceptance_criteria_id": "ac-subgraph_extraction-TimeoutDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/TimeoutDoneFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action TimeoutDone from subgraph_extraction spec"
+    }
+  },
+  "verifiers": {
+    "ValidState": {
+      "function_id": "fn-subgraph_extraction-verify-ValidState",
+      "acceptance_criteria_id": "ac-subgraph_extraction-ValidState",
+      "conditions": [
+        "current_state \\in StateSet"
+      ],
+      "message": "ValidState violation: current_state \\in StateSet",
+      "applies_to": [
+        "current_state"
+      ],
+      "description": "Verifier for invariant ValidState from subgraph_extraction spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-subgraph_extraction-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-subgraph_extraction-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from subgraph_extraction spec"
+    },
+    "SubgraphCompleteness": {
+      "function_id": "fn-subgraph_extraction-verify-SubgraphCompleteness",
+      "acceptance_criteria_id": "ac-subgraph_extraction-SubgraphCompleteness",
+      "conditions": [
+        "current_state # \"done\" \\/\n    (target \\in subgraph_nodes",
+        "forward_set \\subseteq subgraph_nodes",
+        "reverse_set \\subseteq subgraph_nodes"
+      ],
+      "message": "SubgraphCompleteness violation: current_state # \"done\" \\/\n    (target \\in subgraph_nodes /\\\n     forward_set \\subseteq subgraph_nodes /\\\n     reverse...",
+      "applies_to": [
+        "current_state",
+        "dirty",
+        "forward_set",
+        "reverse_set",
+        "subgraph_nodes",
+        "target"
+      ],
+      "description": "Verifier for invariant SubgraphCompleteness from subgraph_extraction spec"
+    },
+    "NoHoles": {
+      "function_id": "fn-subgraph_extraction-verify-NoHoles",
+      "acceptance_criteria_id": "ac-subgraph_extraction-NoHoles",
+      "conditions": [
+        "current_state # \"done\" \\/\n    (subgraph_nodes = forward_set \\union reverse_set \\union {target}"
+      ],
+      "message": "NoHoles violation: current_state # \"done\" \\/\n    (subgraph_nodes = forward_set \\union reverse_set \\union {target})",
+      "applies_to": [
+        "current_state",
+        "dirty",
+        "forward_set",
+        "reverse_set",
+        "subgraph_nodes",
+        "target"
+      ],
+      "description": "Verifier for invariant NoHoles from subgraph_extraction spec"
+    },
+    "NoDanglingEdges": {
+      "function_id": "fn-subgraph_extraction-verify-NoDanglingEdges",
+      "acceptance_criteria_id": "ac-subgraph_extraction-NoDanglingEdges",
+      "conditions": [
+        "current_state # \"done\" \\/\n    (\\A edge \\in subgraph_edges :\n        edge[1] \\in subgraph_nodes",
+        "edge[2] \\in subgraph_nodes"
+      ],
+      "message": "NoDanglingEdges violation: current_state # \"done\" \\/\n    (\\A edge \\in subgraph_edges :\n        edge[1] \\in subgraph_nodes /\\ edge[2] \\in subgrap...",
+      "applies_to": [
+        "current_state",
+        "dirty",
+        "subgraph_edges",
+        "subgraph_nodes"
+      ],
+      "description": "Verifier for invariant NoDanglingEdges from subgraph_extraction spec"
+    },
+    "IsolatedNodeCorrect": {
+      "function_id": "fn-subgraph_extraction-verify-IsolatedNodeCorrect",
+      "acceptance_criteria_id": "ac-subgraph_extraction-IsolatedNodeCorrect",
+      "conditions": [
+        "current_state # \"done\" \\/\n    ((adjacency[target] = {}",
+        "\\A n \\in 1..NumNodes : target \\notin adjacency[n])) =>\n     (subgraph_nodes = {target}",
+        "subgraph_edges = {}"
+      ],
+      "message": "IsolatedNodeCorrect violation: current_state # \"done\" \\/\n    ((adjacency[target] = {} /\\ (\\A n \\in 1..NumNodes : target \\notin adjacency[n])) =>\n   ...",
+      "applies_to": [
+        "adjacency",
+        "current_state",
+        "dirty",
+        "subgraph_edges",
+        "subgraph_nodes",
+        "target"
+      ],
+      "description": "Verifier for invariant IsolatedNodeCorrect from subgraph_extraction spec"
+    }
+  },
+  "assertions": {
+    "assert_ValidState": {
+      "condition": "current_state in StateSet",
+      "message": "Assertion failed: ValidState \u2014 current_state \\in StateSet",
+      "description": "Test assertion for ValidState from subgraph_extraction spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from subgraph_extraction spec"
+    },
+    "assert_SubgraphCompleteness": {
+      "condition": "current_state # \"done\" or\n    (target in subgraph_nodes and\n     forward_set \\subseteq subgraph_nodes and\n     reverse_set \\subseteq subgraph_nodes)",
+      "message": "Assertion failed: SubgraphCompleteness \u2014 current_state # \"done\" \\/\n    (target \\in subgraph_nodes /\\\n     forward_set \\subseteq subgraph_nodes /\\\n     reverse...",
+      "description": "Test assertion for SubgraphCompleteness from subgraph_extraction spec"
+    },
+    "assert_NoHoles": {
+      "condition": "current_state # \"done\" or\n    (subgraph_nodes = forward_set \\union reverse_set \\union {target})",
+      "message": "Assertion failed: NoHoles \u2014 current_state # \"done\" \\/\n    (subgraph_nodes = forward_set \\union reverse_set \\union {target})",
+      "description": "Test assertion for NoHoles from subgraph_extraction spec"
+    },
+    "assert_NoDanglingEdges": {
+      "condition": "current_state # \"done\" or\n    (\\A edge in subgraph_edges :\n        edge[1] in subgraph_nodes and edge[2] in subgraph_nodes)",
+      "message": "Assertion failed: NoDanglingEdges \u2014 current_state # \"done\" \\/\n    (\\A edge \\in subgraph_edges :\n        edge[1] \\in subgraph_nodes /\\ edge[2] \\in subgrap...",
+      "description": "Test assertion for NoDanglingEdges from subgraph_extraction spec"
+    },
+    "assert_IsolatedNodeCorrect": {
+      "condition": "current_state # \"done\" or\n    ((adjacency[target] = {} and (\\A n in 1..NumNodes : target not in adjacency[n])) implies\n     (subgraph_nodes = {target} and subgraph_edges = {}))",
+      "message": "Assertion failed: IsolatedNodeCorrect \u2014 current_state # \"done\" \\/\n    ((adjacency[target] = {} /\\ (\\A n \\in 1..NumNodes : target \\notin adjacency[n])) =>\n   ...",
+      "description": "Test assertion for IsolatedNodeCorrect from subgraph_extraction spec"
+    }
+  }
+}
