@@ -889,3 +889,58 @@ class SchemaExtractor:
         self._add_edge_safe(dag, "depval-0001", "res-0001", EdgeType.DEPENDS_ON)
         self._add_edge_safe(dag, "depval-0001", "res-0002", EdgeType.DEPENDS_ON)
         self._add_edge_safe(dag, "depval-0001", "res-0003", EdgeType.DEPENDS_ON)
+
+        # ── Phase 7: Self-Hosting — Subgraph Extraction (third pipeline-built feature) ──
+
+        # Requirement: extract the minimal subgraph needed to understand a node
+        dag.add_node(Node.requirement(
+            "req-0006",
+            "System needs a subgraph extraction query: given a node, return its forward closure (descendants), reverse closure (ancestors), and all edges where both endpoints are in that set",
+        ))
+
+        # 3 GWT behaviors for subgraph extraction
+        dag.add_node(Node.behavior(
+            "gwt-0018", "chain_subgraph_complete",
+            "a node in a chain (has ancestors and descendants)",
+            "extract_subgraph(node_id) is called",
+            "the result contains all ancestors AND all descendants of the node",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0019", "isolated_node_subgraph",
+            "an isolated node with no edges",
+            "extract_subgraph(node_id) is called",
+            "the result contains only that node and no edges",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0020", "no_dangling_edges",
+            "any subgraph result from extract_subgraph",
+            "the edges in the result are inspected",
+            "every edge has both endpoints in the node set (no dangling edges)",
+        ))
+
+        # Requirement decomposes into the 3 subgraph behaviors
+        for gwt in ("gwt-0018", "gwt-0019", "gwt-0020"):
+            self._add_edge_safe(dag, "req-0006", gwt, EdgeType.DECOMPOSES)
+
+        # GWT behaviors reference the DAG core resources
+        for gwt in ("gwt-0018", "gwt-0019", "gwt-0020"):
+            self._add_edge_safe(dag, gwt, "res-0001", EdgeType.REFERENCES)  # → nodes
+            self._add_edge_safe(dag, gwt, "res-0002", EdgeType.REFERENCES)  # → edges
+            self._add_edge_safe(dag, gwt, "res-0003", EdgeType.REFERENCES)  # → closure
+
+        # Subgraph extraction resource node
+        dag.add_node(Node.resource(
+            "subgraph-0001", "subgraph_extraction",
+            description="Subgraph extraction query — returns minimal subgraph to understand a node",
+            path="python/registry/dag.py",
+        ))
+
+        # Subgraph extraction implements its behaviors
+        self._add_edge_safe(dag, "subgraph-0001", "gwt-0018", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "subgraph-0001", "gwt-0019", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "subgraph-0001", "gwt-0020", EdgeType.IMPLEMENTS)
+
+        # Subgraph extraction depends on DAG engine (nodes, edges, closure)
+        self._add_edge_safe(dag, "subgraph-0001", "res-0001", EdgeType.DEPENDS_ON)
+        self._add_edge_safe(dag, "subgraph-0001", "res-0002", EdgeType.DEPENDS_ON)
+        self._add_edge_safe(dag, "subgraph-0001", "res-0003", EdgeType.DEPENDS_ON)

@@ -553,6 +553,36 @@
       "when": "validate_edge(B, T, 'depends_on') is called (behavior depending on test)",
       "then": "validation fails with valid=False and reason containing 'kind'"
     },
+    "gwt-0018": {
+      "id": "gwt-0018",
+      "kind": "behavior",
+      "name": "chain_subgraph_complete",
+      "description": "",
+      "version": 1,
+      "given": "a node in a chain (has ancestors and descendants)",
+      "when": "extract_subgraph(node_id) is called",
+      "then": "the result contains all ancestors AND all descendants of the node"
+    },
+    "gwt-0019": {
+      "id": "gwt-0019",
+      "kind": "behavior",
+      "name": "isolated_node_subgraph",
+      "description": "",
+      "version": 1,
+      "given": "an isolated node with no edges",
+      "when": "extract_subgraph(node_id) is called",
+      "then": "the result contains only that node and no edges"
+    },
+    "gwt-0020": {
+      "id": "gwt-0020",
+      "kind": "behavior",
+      "name": "no_dangling_edges",
+      "description": "",
+      "version": 1,
+      "given": "any subgraph result from extract_subgraph",
+      "when": "the edges in the result are inspected",
+      "then": "every edge has both endpoints in the node set (no dangling edges)"
+    },
     "impact-0001": {
       "id": "impact-0001",
       "kind": "resource",
@@ -680,6 +710,14 @@
       "version": 1,
       "text": "System needs an edge validation pre-check: given a proposed edge, determine whether adding it would maintain all DAG invariants (acyclicity, no duplicates, node-kind compatibility) without actually mutating the DAG"
     },
+    "req-0006": {
+      "id": "req-0006",
+      "kind": "requirement",
+      "name": "",
+      "description": "",
+      "version": 1,
+      "text": "System needs a subgraph extraction query: given a node, return its forward closure (descendants), reverse closure (ancestors), and all edges where both endpoints are in that set"
+    },
     "res-0001": {
       "id": "res-0001",
       "kind": "resource",
@@ -707,6 +745,14 @@
       "name": "components",
       "description": "Map<ComponentID, Set<UUID>> \u2014 connected components",
       "version": 1
+    },
+    "subgraph-0001": {
+      "id": "subgraph-0001",
+      "kind": "resource",
+      "name": "subgraph_extraction",
+      "description": "Subgraph extraction query \u2014 returns minimal subgraph to understand a node",
+      "version": 1,
+      "path": "python/registry/dag.py"
     },
     "tpl-0001": {
       "id": "tpl-0001",
@@ -1629,6 +1675,96 @@
       "from": "depval-0001",
       "to": "res-0003",
       "edge_type": "depends_on"
+    },
+    {
+      "from": "req-0006",
+      "to": "gwt-0018",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0006",
+      "to": "gwt-0019",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0006",
+      "to": "gwt-0020",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "gwt-0018",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0018",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0018",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0019",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0019",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0019",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0020",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0020",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0020",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "gwt-0018",
+      "edge_type": "implements"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "gwt-0019",
+      "edge_type": "implements"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "gwt-0020",
+      "edge_type": "implements"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "res-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "res-0002",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "res-0003",
+      "edge_type": "depends_on"
     }
   ],
   "closure": {
@@ -2090,6 +2226,21 @@
       "res-0002",
       "res-0003"
     ],
+    "gwt-0018": [
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "gwt-0019": [
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "gwt-0020": [
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
     "impact-0001": [
       "gwt-0012",
       "gwt-0013",
@@ -2284,10 +2435,26 @@
       "res-0002",
       "res-0003"
     ],
+    "req-0006": [
+      "gwt-0018",
+      "gwt-0019",
+      "gwt-0020",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
     "res-0001": [],
     "res-0002": [],
     "res-0003": [],
     "res-0004": [],
+    "subgraph-0001": [
+      "gwt-0018",
+      "gwt-0019",
+      "gwt-0020",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
     "tpl-0001": [
       "db-d3w8",
       "db-f8n5",
@@ -2492,6 +2659,9 @@
       "gwt-0015",
       "gwt-0016",
       "gwt-0017",
+      "gwt-0018",
+      "gwt-0019",
+      "gwt-0020",
       "impact-0001",
       "loop-0001",
       "loop-0002",
@@ -2506,10 +2676,12 @@
       "req-0003",
       "req-0004",
       "req-0005",
+      "req-0006",
       "res-0001",
       "res-0002",
       "res-0003",
       "res-0004",
+      "subgraph-0001",
       "tpl-0001",
       "tpl-0002",
       "tpl-0003",
