@@ -5,18 +5,17 @@ Registry-driven pipeline for verified code generation using TLA+/PlusCal formal 
 See `BOOTSTRAP.md` for the flywheel plan (Phases 0-5).
 
 ## Implementation Status
-- **Phase 0: Extract the Graph** — COMPLETE (DAG engine, extractor)
-- **Phase 1: First Templates** — COMPLETE (4 PlusCal templates, TLC verified)
-- **Phase 2: Composition Engine** — COMPLETE (compose(spec_a, spec_b), TLC verified)
-- **Phase 3: One-Shot Loop** — COMPLETE (OneShotLoop orchestrator, TLC verified)
-- **Phase 4: The Bridge** — COMPLETE (4 translators, first real loop use, TLC verified)
-  - DAG: 76 nodes, 122 edges, 9 components
-  - Tests: 144 passing (43 bridge + 5 integration + 96 existing)
+- **Phase 0-4** — ALL COMPLETE (DAG, templates, composer, loop, bridge)
+- **Phase 5: Self-Hosting** — COMPLETE (first pipeline-built feature: impact analysis)
+  - DAG: 81 nodes, 140 edges, 9 components
+  - Tests: 192 passing (179 existing + 13 generated impact analysis)
+  - BOOTSTRAP.md checklist fully checked off — system is self-hosting
 
 ## Key Paths
 - Schema files: `schema/*.json` (4 schema files + resource registry + extracted DAG)
 - Rust crate: `crates/registry-core/`
 - Python package: `python/registry/` (types, dag, extractor, composer, one_shot_loop, bridge)
+- Loop scripts: `python/run_impact_loop.py` (template for new features), `python/run_bridge_loop.py`
 - Python tests: `python/tests/` (test_dag, test_extractor, test_composer, test_one_shot_loop, test_bridge, test_loop_bridge_integration)
 - PlusCal specs: `templates/pluscal/instances/` (registry_crud, composition_engine, one_shot_loop, bridge_translator)
 - TLA+ tools: `tools/tla2tools.jar` (Java 21 required)
@@ -37,5 +36,12 @@ See `BOOTSTRAP.md` for the flywheel plan (Phases 0-5).
 - OneShotLoop does NOT call LLM — caller handles LLM interaction
 - TLA+ module name MUST match filename (TLC constraint)
 
-## Next: Phase 5+
-Full pipeline from requirements → specs → verified code artifacts.
+## Pipeline Ground Rules
+- LLM generates specs, not the implementation agent. Never hand-write/fix specs.
+- Tests are mechanically generated from bridge artifacts, not hand-written.
+- On TLC failure, send errors back through the retry loop (up to 5 attempts).
+- Bridge needs compiled TLA+ (after pcal.trans), not raw PlusCal.
+- `LoopStatus.compiled_spec_path` exposes the compiled file.
+
+## Next: More self-hosted features
+Clone `run_impact_loop.py` as template. Next IDs: req-0005, gwt-0015+, tpl-0010+.
