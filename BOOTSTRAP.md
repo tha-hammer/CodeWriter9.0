@@ -807,7 +807,10 @@ The bootstrap is complete when:
 - [x] The bridge generates test suites for Phases 0-3 from their specs (Phase 4)
 - [x] `fs-y3q2` activated, plan artifacts stored there (Phase 4)
 - [x] All generated tests pass against hand-built code (Phase 4 validation)
-- [ ] First feature built entirely through the pipeline (Phase 5)
+- [x] First feature built entirely through the pipeline (Phase 5)
+      Impact analysis query: GWT behaviors → LLM-generated PlusCal spec →
+      TLC verified (624,466 states, 337,346 distinct, 0 violations) →
+      bridge artifacts → generated tests → query_impact() implementation
 
 At that point, the system is self-hosting. The flywheel is turning under
 its own power.
