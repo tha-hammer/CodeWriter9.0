@@ -944,3 +944,67 @@ class SchemaExtractor:
         self._add_edge_safe(dag, "subgraph-0001", "res-0001", EdgeType.DEPENDS_ON)
         self._add_edge_safe(dag, "subgraph-0001", "res-0002", EdgeType.DEPENDS_ON)
         self._add_edge_safe(dag, "subgraph-0001", "res-0003", EdgeType.DEPENDS_ON)
+
+        # ── Phase 8: Self-Hosting — Change Propagation (fourth pipeline-built feature) ──
+
+        # Requirement: query affected tests when a node changes
+        dag.add_node(Node.requirement(
+            "req-0007",
+            "System needs a change propagation query: given a node, return the file paths of test files affected by a change to that node, using the impact set and a test_artifacts mapping",
+        ))
+
+        # 3 GWT behaviors for change propagation
+        dag.add_node(Node.behavior(
+            "gwt-0021", "upstream_change_propagates",
+            "a node that a test-bearing node depends on",
+            "query_affected_tests(node_id) is called",
+            "the test path is in the result",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0022", "no_downstream_tests_empty",
+            "a node with no downstream test artifacts",
+            "query_affected_tests(node_id) is called",
+            "the result is empty",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0023", "self_test_included",
+            "a node that IS a test-bearing node",
+            "query_affected_tests(node_id) is called",
+            "its own test path is included",
+        ))
+
+        # Requirement decomposes into the 3 change propagation behaviors
+        for gwt in ("gwt-0021", "gwt-0022", "gwt-0023"):
+            self._add_edge_safe(dag, "req-0007", gwt, EdgeType.DECOMPOSES)
+
+        # GWT behaviors reference the DAG core resources + impact analysis
+        for gwt in ("gwt-0021", "gwt-0022", "gwt-0023"):
+            self._add_edge_safe(dag, gwt, "res-0001", EdgeType.REFERENCES)  # → nodes
+            self._add_edge_safe(dag, gwt, "res-0002", EdgeType.REFERENCES)  # → edges
+            self._add_edge_safe(dag, gwt, "res-0003", EdgeType.REFERENCES)  # → closure
+            self._add_edge_safe(dag, gwt, "impact-0001", EdgeType.REFERENCES)  # → impact analysis
+
+        # Change propagation resource node
+        dag.add_node(Node.resource(
+            "chgprop-0001", "change_propagation",
+            description="Change propagation query — returns test file paths affected by a node change",
+            path="python/registry/dag.py",
+        ))
+
+        # Change propagation implements its behaviors
+        self._add_edge_safe(dag, "chgprop-0001", "gwt-0021", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "chgprop-0001", "gwt-0022", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "chgprop-0001", "gwt-0023", EdgeType.IMPLEMENTS)
+
+        # Change propagation depends on impact analysis + DAG engine
+        self._add_edge_safe(dag, "chgprop-0001", "impact-0001", EdgeType.DEPENDS_ON)
+        self._add_edge_safe(dag, "chgprop-0001", "res-0001", EdgeType.DEPENDS_ON)
+        self._add_edge_safe(dag, "chgprop-0001", "res-0002", EdgeType.DEPENDS_ON)
+        self._add_edge_safe(dag, "chgprop-0001", "res-0003", EdgeType.DEPENDS_ON)
+
+        # ── Test artifact mapping (for query_affected_tests) ──
+        dag.test_artifacts = {
+            "impact-0001": "tests/generated/test_impact_analysis.py",
+            "depval-0001": "tests/generated/test_dep_validation.py",
+            "subgraph-0001": "tests/generated/test_subgraph_extraction.py",
+        }

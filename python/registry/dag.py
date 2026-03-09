@@ -31,6 +31,7 @@ class RegistryDag:
         self.edges: list[Edge] = []
         self.closure: dict[str, set[str]] = {}
         self.components: dict[str, list[str]] = {}
+        self.test_artifacts: dict[str, str] = {}  # node_id → test file path
 
     def add_node(self, node: Node) -> None:
         self.nodes[node.id] = node
@@ -238,6 +239,25 @@ class RegistryDag:
 
         return SubgraphResult(root=node_id, nodes=nodes, edges=edges)
 
+    def query_affected_tests(self, node_id: str) -> list[str]:
+        """Return file paths of test files affected by a change to the target node.
+
+        Uses query_impact() to get the full impact set, then checks
+        test_artifacts for each affected node (+ the node itself).
+        """
+        if node_id not in self.nodes:
+            raise NodeNotFoundError(node_id)
+
+        impact = self.query_impact(node_id)
+        candidates = impact.affected | {node_id}
+
+        paths: set[str] = set()
+        for nid in candidates:
+            if nid in self.test_artifacts:
+                paths.add(self.test_artifacts[nid])
+
+        return sorted(paths)
+
     def query_impact(self, target_id: str) -> ImpactResult:
         """Reverse dependency query: find all nodes that transitively depend on target.
 
@@ -279,12 +299,15 @@ class RegistryDag:
         return len(self.components)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "nodes": {nid: n.to_dict() for nid, n in sorted(self.nodes.items())},
             "edges": [e.to_dict() for e in self.edges],
             "closure": {nid: sorted(deps) for nid, deps in sorted(self.closure.items())},
             "components": dict(sorted(self.components.items())),
         }
+        if self.test_artifacts:
+            d["test_artifacts"] = dict(sorted(self.test_artifacts.items()))
+        return d
 
     def to_json(self, indent: int = 2) -> str:
         return json.dumps(self.to_dict(), indent=indent)
@@ -314,6 +337,7 @@ class RegistryDag:
                 to_id=edata["to"],
                 edge_type=EdgeType(edata["edge_type"]),
             ))
+        dag.test_artifacts = data.get("test_artifacts", {})
         dag._recompute_closure()
         dag._recompute_components()
         return dag

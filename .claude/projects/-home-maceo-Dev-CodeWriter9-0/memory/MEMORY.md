@@ -8,10 +8,14 @@ See `BOOTSTRAP.md` for the flywheel plan (Phases 0-5).
 - **Phase 0-4** — ALL COMPLETE (DAG, templates, composer, loop, bridge)
 - **Phase 5: Self-Hosting** — COMPLETE (first pipeline-built feature: impact analysis)
 - **Phase 6: Dependency Validation** — COMPLETE (second pipeline-built feature)
-  - DAG: 86 nodes, 158 edges, 9 components
-  - Tests: 213 passing (192 prev + 21 generated dep validation)
   - `validate_edge()` pre-checks acyclicity, duplicates, node-kind compatibility
   - IDs: req-0005, gwt-0015/0016/0017, depval-0001
+- **Phase 7: Subgraph Extraction** — COMPLETE (third pipeline-built feature)
+  - DAG: 91 nodes, 176 edges, 9 components
+  - Tests: 233 passing (213 prev + 20 generated subgraph extraction)
+  - `extract_subgraph()` returns forward+reverse closure + induced edges
+  - IDs: req-0006, gwt-0018/0019/0020, subgraph-0001
+  - TLC verified attempt 1: 180,280 distinct states, 6 invariants
 
 ## Key Paths
 - Schema files: `schema/*.json` (4 schema files + resource registry + extracted DAG)
@@ -45,5 +49,6 @@ See `BOOTSTRAP.md` for the flywheel plan (Phases 0-5).
 - Bridge needs compiled TLA+ (after pcal.trans), not raw PlusCal.
 - `LoopStatus.compiled_spec_path` exposes the compiled file.
 
-## Next: More self-hosted features
-Clone `run_impact_loop.py` as template. Next IDs: req-0006, gwt-0018+, tpl-0010+.
+## Next: Phase 8 — Change Propagation (`query_affected_tests`)
+Clone `run_subgraph_loop.py` as template. Next IDs: req-0007, gwt-0021+.
+Use separate `test_artifacts: dict[str, str]` on RegistryDag (not a Node field).
