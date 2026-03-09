@@ -122,3 +122,11 @@ class ValidationResult:
     to_id: str
     edge_type: str
     reason: str = ""
+
+
+@dataclass
+class SubgraphResult:
+    """Result of a subgraph extraction query."""
+    root: str
+    nodes: set[str] = field(default_factory=set)
+    edges: list[Edge] = field(default_factory=list)

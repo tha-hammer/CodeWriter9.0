@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
-from registry.types import Edge, EdgeType, ImpactResult, Node, NodeKind, QueryResult, ValidationResult
+from registry.types import Edge, EdgeType, ImpactResult, Node, NodeKind, QueryResult, SubgraphResult, ValidationResult
 
 
 class CycleError(Exception):
@@ -211,6 +211,32 @@ class RegistryDag:
             valid=True, from_id=from_id, to_id=to_id,
             edge_type=edge_type.value,
         )
+
+    def extract_subgraph(self, node_id: str) -> SubgraphResult:
+        """Extract the minimal subgraph needed to understand a node.
+
+        Returns forward closure (descendants) + reverse closure (ancestors) + self,
+        plus all edges where both endpoints are in that set.
+        """
+        if node_id not in self.nodes:
+            raise NodeNotFoundError(node_id)
+
+        # Forward closure: all descendants (already in self.closure)
+        forward = self.closure.get(node_id, set())
+
+        # Reverse closure: all nodes whose forward closure contains node_id
+        reverse: set[str] = set()
+        for nid, reachable in self.closure.items():
+            if nid != node_id and node_id in reachable:
+                reverse.add(nid)
+
+        # Node set: forward + reverse + self
+        nodes = forward | reverse | {node_id}
+
+        # Edge set: all edges where both endpoints are in node set
+        edges = [e for e in self.edges if e.from_id in nodes and e.to_id in nodes]
+
+        return SubgraphResult(root=node_id, nodes=nodes, edges=edges)
 
     def query_impact(self, target_id: str) -> ImpactResult:
         """Reverse dependency query: find all nodes that transitively depend on target.
