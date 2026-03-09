@@ -1,40 +1,31 @@
 ------------------------- MODULE impact_analysis -------------------------
-(*
- * Impact Analysis Query System — PlusCal Specification
- * 
- * Reverse dependency traversal that finds all nodes transitively 
- * depending on a target node in a directed graph (DAG).
- *)
 
 EXTENDS Integers, FiniteSets, Sequences, TLC
 
 CONSTANTS
-    MaxSteps,           \* bound for model checking
-    NumNodes,           \* number of nodes in the graph
-    MaxEdges            \* maximum number of edges to add
+    MaxSteps,
+    NumNodes,
+    MaxEdges
 
 (* --algorithm impact_analysis
 
 variables
     current_state = "idle",
-    adjacency = [n \in 1..NumNodes |-> {}],   \* adjacency list representation
+    adjacency = [n \in 1..NumNodes |-> {}],
     edge_count = 0,
-    target = 0,                               \* 0 means not selected yet
-    reverse_set = {},                         \* result set
-    visited = {},                             \* BFS tracking
-    worklist = {},                            \* BFS queue
-    direct_dependents = {},                   \* nodes with direct edge to target
+    target = 0,
+    reverse_set = {},
+    visited = {},
+    worklist = {},
+    direct_dependents = {},
     step_count = 0,
     op = "idle",
     result = "none",
     dirty = FALSE;
 
 define
-    \* --- State definitions ---
-    StateSet == {"idle", "building_graph", "selecting_target", "computing_reverse", "collecting_results", "done", "failed"}
-    TerminalStates == {"done", "failed"}
-    
-    \* --- Invariants ---
+    StateSet == {"idle", "building_graph", "selecting_target", "computing_reverse", 
+                 "collecting_results", "done", "failed"}
     
     \* Current state is always valid
     ValidState == current_state \in StateSet
@@ -42,28 +33,23 @@ define
     \* Bounded execution
     BoundedExecution == step_count <= MaxSteps
     
-    \* Reverse closure completeness: when done, every node in reverse_set has a path to target
+    \* When done and target is selected, reverse closure is complete
     ReverseClosureComplete == 
-        dirty = TRUE \/ 
         (current_state = "done" /\ target # 0) =>
-            \A n \in reverse_set : 
-                \E path_len \in 1..NumNodes : 
-                    \E path \in [1..path_len -> 1..NumNodes] :
-                        /\ path[1] = n
-                        /\ path[path_len] = target
-                        /\ \A i \in 1..(path_len-1) : path[i+1] \in adjacency[path[i]]
+        \A n \in reverse_set :
+        \E path_len \in 1..NumNodes :
+        \E path \in [1..path_len -> 1..NumNodes] :
+        path[1] = n /\ path[path_len] = target /\
+        \A i \in 1..(path_len-1) : path[i+1] \in adjacency[path[i]]
     
-    \* If target has no predecessors, reverse_set should be empty
-    LeafHasNoImpact ==
-        dirty = TRUE \/
+    \* When done, if target is a leaf (no incoming edges), reverse set is empty
+    LeafHasNoImpact == 
         (current_state = "done" /\ target # 0) =>
-            ((\A p \in 1..NumNodes : target \notin adjacency[p]) => reverse_set = {})
+        ((\A n \in 1..NumNodes : target \notin adjacency[n]) => reverse_set = {})
     
-    \* Direct dependents are included in reverse set
-    DirectDependentsIncluded ==
-        dirty = TRUE \/
-        (current_state = "done" /\ target # 0) =>
-            direct_dependents \subseteq reverse_set
+    \* When done, direct dependents are included in reverse set
+    DirectDependentsIncluded == 
+        (current_state = "done" /\ target # 0) => direct_dependents \subseteq reverse_set
     
     \* Monotonic growth (simplified)
     MonotonicGrowth == dirty = TRUE \/ TRUE
@@ -72,120 +58,120 @@ end define;
 
 fair process main = "main"
 begin
-    Loop:
-        while current_state \notin TerminalStates /\ step_count < MaxSteps do
+    MainLoop:
+        while current_state \notin {"done", "failed"} /\ step_count < MaxSteps do
             either
-                \* --- Start building graph ---
+                \* idle → building_graph
                 StartBuilding:
                     if current_state = "idle" then
                         current_state := "building_graph";
                         step_count := step_count + 1;
-                        op := "start_building";
                         dirty := TRUE;
                     StartBuildingDone:
+                        op := "start_building";
                         dirty := FALSE;
                     else
-                        op := "skip_start";
+                        op := "skip";
                     end if;
             or
-                \* --- Add edge 1->2 ---
+                \* building_graph → building_graph (add edge 1→2)
                 AddEdge12:
                     if current_state = "building_graph" /\ edge_count < MaxEdges /\ 2 \notin adjacency[1] then
                         adjacency := [adjacency EXCEPT ![1] = adjacency[1] \union {2}];
                         edge_count := edge_count + 1;
                         step_count := step_count + 1;
-                        op := "add_edge_1_2";
                         dirty := TRUE;
                     AddEdge12Done:
+                        op := "add_edge_1_2";
                         dirty := FALSE;
                     else
                         op := "skip_edge_1_2";
                     end if;
             or
-                \* --- Add edge 1->3 ---
+                \* building_graph → building_graph (add edge 1→3)
                 AddEdge13:
-                    if current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 3 /\ 3 \notin adjacency[1] then
+                    if current_state = "building_graph" /\ edge_count < MaxEdges /\ 3 \notin adjacency[1] then
                         adjacency := [adjacency EXCEPT ![1] = adjacency[1] \union {3}];
                         edge_count := edge_count + 1;
                         step_count := step_count + 1;
-                        op := "add_edge_1_3";
                         dirty := TRUE;
                     AddEdge13Done:
+                        op := "add_edge_1_3";
                         dirty := FALSE;
                     else
                         op := "skip_edge_1_3";
                     end if;
             or
-                \* --- Add edge 1->4 ---
+                \* building_graph → building_graph (add edge 1→4)
                 AddEdge14:
                     if current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 4 /\ 4 \notin adjacency[1] then
                         adjacency := [adjacency EXCEPT ![1] = adjacency[1] \union {4}];
                         edge_count := edge_count + 1;
                         step_count := step_count + 1;
-                        op := "add_edge_1_4";
                         dirty := TRUE;
                     AddEdge14Done:
+                        op := "add_edge_1_4";
                         dirty := FALSE;
                     else
                         op := "skip_edge_1_4";
                     end if;
             or
-                \* --- Add edge 2->3 ---
+                \* building_graph → building_graph (add edge 2→3)
                 AddEdge23:
-                    if current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 3 /\ 3 \notin adjacency[2] then
+                    if current_state = "building_graph" /\ edge_count < MaxEdges /\ 3 \notin adjacency[2] then
                         adjacency := [adjacency EXCEPT ![2] = adjacency[2] \union {3}];
                         edge_count := edge_count + 1;
                         step_count := step_count + 1;
-                        op := "add_edge_2_3";
                         dirty := TRUE;
                     AddEdge23Done:
+                        op := "add_edge_2_3";
                         dirty := FALSE;
                     else
                         op := "skip_edge_2_3";
                     end if;
             or
-                \* --- Add edge 2->4 ---
+                \* building_graph → building_graph (add edge 2→4)
                 AddEdge24:
                     if current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 4 /\ 4 \notin adjacency[2] then
                         adjacency := [adjacency EXCEPT ![2] = adjacency[2] \union {4}];
                         edge_count := edge_count + 1;
                         step_count := step_count + 1;
-                        op := "add_edge_2_4";
                         dirty := TRUE;
                     AddEdge24Done:
+                        op := "add_edge_2_4";
                         dirty := FALSE;
                     else
                         op := "skip_edge_2_4";
                     end if;
             or
-                \* --- Add edge 3->4 ---
+                \* building_graph → building_graph (add edge 3→4)
                 AddEdge34:
                     if current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 4 /\ 4 \notin adjacency[3] then
                         adjacency := [adjacency EXCEPT ![3] = adjacency[3] \union {4}];
                         edge_count := edge_count + 1;
                         step_count := step_count + 1;
-                        op := "add_edge_3_4";
                         dirty := TRUE;
                     AddEdge34Done:
+                        op := "add_edge_3_4";
                         dirty := FALSE;
                     else
                         op := "skip_edge_3_4";
                     end if;
             or
-                \* --- Finish building graph ---
-                FinishBuilding:
+                \* building_graph → selecting_target
+                DoneBuilding:
                     if current_state = "building_graph" then
                         current_state := "selecting_target";
                         step_count := step_count + 1;
-                        op := "finish_building";
                         dirty := TRUE;
-                    FinishBuildingDone:
+                    DoneBuildingComplete:
+                        op := "done_building";
                         dirty := FALSE;
                     else
-                        op := "skip_finish_building";
+                        op := "skip";
                     end if;
             or
-                \* --- Select target node 1 ---
+                \* selecting_target → computing_reverse (target = 1)
                 SelectTarget1:
                     if current_state = "selecting_target" then
                         target := 1;
@@ -197,15 +183,14 @@ begin
                         visited := {};
                         reverse_set := {};
                         current_state := "computing_reverse";
-                        op := "select_target_1";
                         dirty := FALSE;
                     else
-                        op := "skip_select_1";
+                        op := "skip";
                     end if;
             or
-                \* --- Select target node 2 ---
+                \* selecting_target → computing_reverse (target = 2)
                 SelectTarget2:
-                    if current_state = "selecting_target" /\ NumNodes >= 2 then
+                    if current_state = "selecting_target" then
                         target := 2;
                         step_count := step_count + 1;
                         dirty := TRUE;
@@ -215,15 +200,14 @@ begin
                         visited := {};
                         reverse_set := {};
                         current_state := "computing_reverse";
-                        op := "select_target_2";
                         dirty := FALSE;
                     else
-                        op := "skip_select_2";
+                        op := "skip";
                     end if;
             or
-                \* --- Select target node 3 ---
+                \* selecting_target → computing_reverse (target = 3)
                 SelectTarget3:
-                    if current_state = "selecting_target" /\ NumNodes >= 3 then
+                    if current_state = "selecting_target" then
                         target := 3;
                         step_count := step_count + 1;
                         dirty := TRUE;
@@ -233,13 +217,12 @@ begin
                         visited := {};
                         reverse_set := {};
                         current_state := "computing_reverse";
-                        op := "select_target_3";
                         dirty := FALSE;
                     else
-                        op := "skip_select_3";
+                        op := "skip";
                     end if;
             or
-                \* --- Select target node 4 ---
+                \* selecting_target → computing_reverse (target = 4)
                 SelectTarget4:
                     if current_state = "selecting_target" /\ NumNodes >= 4 then
                         target := 4;
@@ -251,21 +234,20 @@ begin
                         visited := {};
                         reverse_set := {};
                         current_state := "computing_reverse";
-                        op := "select_target_4";
                         dirty := FALSE;
                     else
-                        op := "skip_select_4";
+                        op := "skip";
                     end if;
             or
-                \* --- BFS step ---
+                \* computing_reverse → computing_reverse (BFS step)
                 BFSStep:
                     if current_state = "computing_reverse" /\ worklist # {} then
                         with n \in worklist do
                             visited := visited \union {n};
                             worklist := (worklist \ {n}) \union
-                                {p \in 1..NumNodes : n \in adjacency[p] /\ p \notin visited /\ p # n};
+                                {p \in 1..NumNodes : n \in adjacency[p] /\ p \notin (visited \union {n}) /\ p # n};
                             reverse_set := reverse_set \union
-                                {p \in 1..NumNodes : n \in adjacency[p] /\ p \notin visited /\ p # n};
+                                {p \in 1..NumNodes : n \in adjacency[p] /\ p \notin (visited \union {n}) /\ p # n};
                         end with;
                         step_count := step_count + 1;
                         dirty := TRUE;
@@ -276,59 +258,54 @@ begin
                         op := "skip_bfs";
                     end if;
             or
-                \* --- Finish computing reverse ---
-                FinishComputing:
+                \* computing_reverse → collecting_results
+                StartCollecting:
                     if current_state = "computing_reverse" /\ worklist = {} then
                         current_state := "collecting_results";
                         step_count := step_count + 1;
-                        op := "finish_computing";
                         dirty := TRUE;
-                    FinishComputingDone:
+                    StartCollectingDone:
+                        op := "start_collecting";
                         dirty := FALSE;
                     else
-                        op := "skip_finish_computing";
+                        op := "skip";
                     end if;
             or
-                \* --- Collect results ---
-                CollectResults:
+                \* collecting_results → done
+                Finish:
                     if current_state = "collecting_results" then
                         current_state := "done";
                         step_count := step_count + 1;
-                        op := "collect_results";
-                        result := "success";
                         dirty := TRUE;
-                    CollectResultsDone:
+                    FinishDone:
+                        op := "finish";
+                        result := "success";
                         dirty := FALSE;
                     else
-                        op := "skip_collect";
+                        op := "skip";
                     end if;
             or
-                \* --- Timeout failure ---
-                TimeoutFailure:
+                \* any state → failed (timeout)
+                Timeout:
                     if step_count >= MaxSteps then
                         current_state := "failed";
                         op := "timeout";
-                        result := "timeout";
-                        dirty := TRUE;
-                    TimeoutFailureDone:
-                        dirty := FALSE;
+                        result := "failed";
                     else
-                        op := "skip_timeout";
+                        op := "skip";
                     end if;
             end either;
         end while;
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "187d6e4b" /\ chksum(tla) = "8c19c4d7")
+\* BEGIN TRANSLATION (chksum(pcal) = "cb5b4460" /\ chksum(tla) = "3cd2330d")
 VARIABLES pc, current_state, adjacency, edge_count, target, reverse_set, 
           visited, worklist, direct_dependents, step_count, op, result, dirty
 
 (* define statement *)
-StateSet == {"idle", "building_graph", "selecting_target", "computing_reverse", "collecting_results", "done", "failed"}
-TerminalStates == {"done", "failed"}
-
-
+StateSet == {"idle", "building_graph", "selecting_target", "computing_reverse",
+             "collecting_results", "done", "failed"}
 
 
 ValidState == current_state \in StateSet
@@ -338,26 +315,21 @@ BoundedExecution == step_count <= MaxSteps
 
 
 ReverseClosureComplete ==
-    dirty = TRUE \/
     (current_state = "done" /\ target # 0) =>
-        \A n \in reverse_set :
-            \E path_len \in 1..NumNodes :
-                \E path \in [1..path_len -> 1..NumNodes] :
-                    /\ path[1] = n
-                    /\ path[path_len] = target
-                    /\ \A i \in 1..(path_len-1) : path[i+1] \in adjacency[path[i]]
+    \A n \in reverse_set :
+    \E path_len \in 1..NumNodes :
+    \E path \in [1..path_len -> 1..NumNodes] :
+    path[1] = n /\ path[path_len] = target /\
+    \A i \in 1..(path_len-1) : path[i+1] \in adjacency[path[i]]
 
 
 LeafHasNoImpact ==
-    dirty = TRUE \/
     (current_state = "done" /\ target # 0) =>
-        ((\A p \in 1..NumNodes : target \notin adjacency[p]) => reverse_set = {})
+    ((\A n \in 1..NumNodes : target \notin adjacency[n]) => reverse_set = {})
 
 
 DirectDependentsIncluded ==
-    dirty = TRUE \/
-    (current_state = "done" /\ target # 0) =>
-        direct_dependents \subseteq reverse_set
+    (current_state = "done" /\ target # 0) => direct_dependents \subseteq reverse_set
 
 
 MonotonicGrowth == dirty = TRUE \/ TRUE
@@ -382,203 +354,210 @@ Init == (* Global variables *)
         /\ op = "idle"
         /\ result = "none"
         /\ dirty = FALSE
-        /\ pc = [self \in ProcSet |-> "Loop"]
+        /\ pc = [self \in ProcSet |-> "MainLoop"]
 
-Loop == /\ pc["main"] = "Loop"
-        /\ IF current_state \notin TerminalStates /\ step_count < MaxSteps
-              THEN /\ \/ /\ pc' = [pc EXCEPT !["main"] = "StartBuilding"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge12"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge13"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge14"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge23"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge24"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge34"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "FinishBuilding"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "SelectTarget1"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "SelectTarget2"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "SelectTarget3"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "SelectTarget4"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "BFSStep"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "FinishComputing"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "CollectResults"]
-                      \/ /\ pc' = [pc EXCEPT !["main"] = "TimeoutFailure"]
-              ELSE /\ pc' = [pc EXCEPT !["main"] = "Done"]
-        /\ UNCHANGED << current_state, adjacency, edge_count, target, 
-                        reverse_set, visited, worklist, direct_dependents, 
-                        step_count, op, result, dirty >>
+MainLoop == /\ pc["main"] = "MainLoop"
+            /\ IF current_state \notin {"done", "failed"} /\ step_count < MaxSteps
+                  THEN /\ \/ /\ pc' = [pc EXCEPT !["main"] = "StartBuilding"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge12"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge13"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge14"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge23"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge24"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "AddEdge34"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "DoneBuilding"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "SelectTarget1"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "SelectTarget2"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "SelectTarget3"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "SelectTarget4"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "BFSStep"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "StartCollecting"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "Finish"]
+                          \/ /\ pc' = [pc EXCEPT !["main"] = "Timeout"]
+                  ELSE /\ pc' = [pc EXCEPT !["main"] = "Done"]
+            /\ UNCHANGED << current_state, adjacency, edge_count, target, 
+                            reverse_set, visited, worklist, direct_dependents, 
+                            step_count, op, result, dirty >>
 
 StartBuilding == /\ pc["main"] = "StartBuilding"
                  /\ IF current_state = "idle"
                        THEN /\ current_state' = "building_graph"
                             /\ step_count' = step_count + 1
-                            /\ op' = "start_building"
                             /\ dirty' = TRUE
                             /\ pc' = [pc EXCEPT !["main"] = "StartBuildingDone"]
-                       ELSE /\ op' = "skip_start"
-                            /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                            /\ op' = op
+                       ELSE /\ op' = "skip"
+                            /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                             /\ UNCHANGED << current_state, step_count, dirty >>
                  /\ UNCHANGED << adjacency, edge_count, target, reverse_set, 
                                  visited, worklist, direct_dependents, result >>
 
 StartBuildingDone == /\ pc["main"] = "StartBuildingDone"
+                     /\ op' = "start_building"
                      /\ dirty' = FALSE
-                     /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                     /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                      /\ UNCHANGED << current_state, adjacency, edge_count, 
                                      target, reverse_set, visited, worklist, 
-                                     direct_dependents, step_count, op, result >>
+                                     direct_dependents, step_count, result >>
 
 AddEdge12 == /\ pc["main"] = "AddEdge12"
              /\ IF current_state = "building_graph" /\ edge_count < MaxEdges /\ 2 \notin adjacency[1]
                    THEN /\ adjacency' = [adjacency EXCEPT ![1] = adjacency[1] \union {2}]
                         /\ edge_count' = edge_count + 1
                         /\ step_count' = step_count + 1
-                        /\ op' = "add_edge_1_2"
                         /\ dirty' = TRUE
                         /\ pc' = [pc EXCEPT !["main"] = "AddEdge12Done"]
+                        /\ op' = op
                    ELSE /\ op' = "skip_edge_1_2"
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, step_count, 
                                         dirty >>
              /\ UNCHANGED << current_state, target, reverse_set, visited, 
                              worklist, direct_dependents, result >>
 
 AddEdge12Done == /\ pc["main"] = "AddEdge12Done"
+                 /\ op' = "add_edge_1_2"
                  /\ dirty' = FALSE
-                 /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                 /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                  /\ UNCHANGED << current_state, adjacency, edge_count, target, 
                                  reverse_set, visited, worklist, 
-                                 direct_dependents, step_count, op, result >>
+                                 direct_dependents, step_count, result >>
 
 AddEdge13 == /\ pc["main"] = "AddEdge13"
-             /\ IF current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 3 /\ 3 \notin adjacency[1]
+             /\ IF current_state = "building_graph" /\ edge_count < MaxEdges /\ 3 \notin adjacency[1]
                    THEN /\ adjacency' = [adjacency EXCEPT ![1] = adjacency[1] \union {3}]
                         /\ edge_count' = edge_count + 1
                         /\ step_count' = step_count + 1
-                        /\ op' = "add_edge_1_3"
                         /\ dirty' = TRUE
                         /\ pc' = [pc EXCEPT !["main"] = "AddEdge13Done"]
+                        /\ op' = op
                    ELSE /\ op' = "skip_edge_1_3"
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, step_count, 
                                         dirty >>
              /\ UNCHANGED << current_state, target, reverse_set, visited, 
                              worklist, direct_dependents, result >>
 
 AddEdge13Done == /\ pc["main"] = "AddEdge13Done"
+                 /\ op' = "add_edge_1_3"
                  /\ dirty' = FALSE
-                 /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                 /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                  /\ UNCHANGED << current_state, adjacency, edge_count, target, 
                                  reverse_set, visited, worklist, 
-                                 direct_dependents, step_count, op, result >>
+                                 direct_dependents, step_count, result >>
 
 AddEdge14 == /\ pc["main"] = "AddEdge14"
              /\ IF current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 4 /\ 4 \notin adjacency[1]
                    THEN /\ adjacency' = [adjacency EXCEPT ![1] = adjacency[1] \union {4}]
                         /\ edge_count' = edge_count + 1
                         /\ step_count' = step_count + 1
-                        /\ op' = "add_edge_1_4"
                         /\ dirty' = TRUE
                         /\ pc' = [pc EXCEPT !["main"] = "AddEdge14Done"]
+                        /\ op' = op
                    ELSE /\ op' = "skip_edge_1_4"
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, step_count, 
                                         dirty >>
              /\ UNCHANGED << current_state, target, reverse_set, visited, 
                              worklist, direct_dependents, result >>
 
 AddEdge14Done == /\ pc["main"] = "AddEdge14Done"
+                 /\ op' = "add_edge_1_4"
                  /\ dirty' = FALSE
-                 /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                 /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                  /\ UNCHANGED << current_state, adjacency, edge_count, target, 
                                  reverse_set, visited, worklist, 
-                                 direct_dependents, step_count, op, result >>
+                                 direct_dependents, step_count, result >>
 
 AddEdge23 == /\ pc["main"] = "AddEdge23"
-             /\ IF current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 3 /\ 3 \notin adjacency[2]
+             /\ IF current_state = "building_graph" /\ edge_count < MaxEdges /\ 3 \notin adjacency[2]
                    THEN /\ adjacency' = [adjacency EXCEPT ![2] = adjacency[2] \union {3}]
                         /\ edge_count' = edge_count + 1
                         /\ step_count' = step_count + 1
-                        /\ op' = "add_edge_2_3"
                         /\ dirty' = TRUE
                         /\ pc' = [pc EXCEPT !["main"] = "AddEdge23Done"]
+                        /\ op' = op
                    ELSE /\ op' = "skip_edge_2_3"
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, step_count, 
                                         dirty >>
              /\ UNCHANGED << current_state, target, reverse_set, visited, 
                              worklist, direct_dependents, result >>
 
 AddEdge23Done == /\ pc["main"] = "AddEdge23Done"
+                 /\ op' = "add_edge_2_3"
                  /\ dirty' = FALSE
-                 /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                 /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                  /\ UNCHANGED << current_state, adjacency, edge_count, target, 
                                  reverse_set, visited, worklist, 
-                                 direct_dependents, step_count, op, result >>
+                                 direct_dependents, step_count, result >>
 
 AddEdge24 == /\ pc["main"] = "AddEdge24"
              /\ IF current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 4 /\ 4 \notin adjacency[2]
                    THEN /\ adjacency' = [adjacency EXCEPT ![2] = adjacency[2] \union {4}]
                         /\ edge_count' = edge_count + 1
                         /\ step_count' = step_count + 1
-                        /\ op' = "add_edge_2_4"
                         /\ dirty' = TRUE
                         /\ pc' = [pc EXCEPT !["main"] = "AddEdge24Done"]
+                        /\ op' = op
                    ELSE /\ op' = "skip_edge_2_4"
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, step_count, 
                                         dirty >>
              /\ UNCHANGED << current_state, target, reverse_set, visited, 
                              worklist, direct_dependents, result >>
 
 AddEdge24Done == /\ pc["main"] = "AddEdge24Done"
+                 /\ op' = "add_edge_2_4"
                  /\ dirty' = FALSE
-                 /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                 /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                  /\ UNCHANGED << current_state, adjacency, edge_count, target, 
                                  reverse_set, visited, worklist, 
-                                 direct_dependents, step_count, op, result >>
+                                 direct_dependents, step_count, result >>
 
 AddEdge34 == /\ pc["main"] = "AddEdge34"
              /\ IF current_state = "building_graph" /\ edge_count < MaxEdges /\ NumNodes >= 4 /\ 4 \notin adjacency[3]
                    THEN /\ adjacency' = [adjacency EXCEPT ![3] = adjacency[3] \union {4}]
                         /\ edge_count' = edge_count + 1
                         /\ step_count' = step_count + 1
-                        /\ op' = "add_edge_3_4"
                         /\ dirty' = TRUE
                         /\ pc' = [pc EXCEPT !["main"] = "AddEdge34Done"]
+                        /\ op' = op
                    ELSE /\ op' = "skip_edge_3_4"
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, step_count, 
                                         dirty >>
              /\ UNCHANGED << current_state, target, reverse_set, visited, 
                              worklist, direct_dependents, result >>
 
 AddEdge34Done == /\ pc["main"] = "AddEdge34Done"
+                 /\ op' = "add_edge_3_4"
                  /\ dirty' = FALSE
-                 /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                 /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                  /\ UNCHANGED << current_state, adjacency, edge_count, target, 
                                  reverse_set, visited, worklist, 
-                                 direct_dependents, step_count, op, result >>
+                                 direct_dependents, step_count, result >>
 
-FinishBuilding == /\ pc["main"] = "FinishBuilding"
-                  /\ IF current_state = "building_graph"
-                        THEN /\ current_state' = "selecting_target"
-                             /\ step_count' = step_count + 1
-                             /\ op' = "finish_building"
-                             /\ dirty' = TRUE
-                             /\ pc' = [pc EXCEPT !["main"] = "FinishBuildingDone"]
-                        ELSE /\ op' = "skip_finish_building"
-                             /\ pc' = [pc EXCEPT !["main"] = "Loop"]
-                             /\ UNCHANGED << current_state, step_count, dirty >>
-                  /\ UNCHANGED << adjacency, edge_count, target, reverse_set, 
-                                  visited, worklist, direct_dependents, result >>
+DoneBuilding == /\ pc["main"] = "DoneBuilding"
+                /\ IF current_state = "building_graph"
+                      THEN /\ current_state' = "selecting_target"
+                           /\ step_count' = step_count + 1
+                           /\ dirty' = TRUE
+                           /\ pc' = [pc EXCEPT !["main"] = "DoneBuildingComplete"]
+                           /\ op' = op
+                      ELSE /\ op' = "skip"
+                           /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
+                           /\ UNCHANGED << current_state, step_count, dirty >>
+                /\ UNCHANGED << adjacency, edge_count, target, reverse_set, 
+                                visited, worklist, direct_dependents, result >>
 
-FinishBuildingDone == /\ pc["main"] = "FinishBuildingDone"
-                      /\ dirty' = FALSE
-                      /\ pc' = [pc EXCEPT !["main"] = "Loop"]
-                      /\ UNCHANGED << current_state, adjacency, edge_count, 
-                                      target, reverse_set, visited, worklist, 
-                                      direct_dependents, step_count, op, 
-                                      result >>
+DoneBuildingComplete == /\ pc["main"] = "DoneBuildingComplete"
+                        /\ op' = "done_building"
+                        /\ dirty' = FALSE
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
+                        /\ UNCHANGED << current_state, adjacency, edge_count, 
+                                        target, reverse_set, visited, worklist, 
+                                        direct_dependents, step_count, result >>
 
 SelectTarget1 == /\ pc["main"] = "SelectTarget1"
                  /\ IF current_state = "selecting_target"
@@ -587,8 +566,8 @@ SelectTarget1 == /\ pc["main"] = "SelectTarget1"
                             /\ dirty' = TRUE
                             /\ pc' = [pc EXCEPT !["main"] = "SelectTarget1Compute"]
                             /\ op' = op
-                       ELSE /\ op' = "skip_select_1"
-                            /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                       ELSE /\ op' = "skip"
+                            /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                             /\ UNCHANGED << target, step_count, dirty >>
                  /\ UNCHANGED << current_state, adjacency, edge_count, 
                                  reverse_set, visited, worklist, 
@@ -600,21 +579,20 @@ SelectTarget1Compute == /\ pc["main"] = "SelectTarget1Compute"
                         /\ visited' = {}
                         /\ reverse_set' = {}
                         /\ current_state' = "computing_reverse"
-                        /\ op' = "select_target_1"
                         /\ dirty' = FALSE
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, target, 
-                                        step_count, result >>
+                                        step_count, op, result >>
 
 SelectTarget2 == /\ pc["main"] = "SelectTarget2"
-                 /\ IF current_state = "selecting_target" /\ NumNodes >= 2
+                 /\ IF current_state = "selecting_target"
                        THEN /\ target' = 2
                             /\ step_count' = step_count + 1
                             /\ dirty' = TRUE
                             /\ pc' = [pc EXCEPT !["main"] = "SelectTarget2Compute"]
                             /\ op' = op
-                       ELSE /\ op' = "skip_select_2"
-                            /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                       ELSE /\ op' = "skip"
+                            /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                             /\ UNCHANGED << target, step_count, dirty >>
                  /\ UNCHANGED << current_state, adjacency, edge_count, 
                                  reverse_set, visited, worklist, 
@@ -626,21 +604,20 @@ SelectTarget2Compute == /\ pc["main"] = "SelectTarget2Compute"
                         /\ visited' = {}
                         /\ reverse_set' = {}
                         /\ current_state' = "computing_reverse"
-                        /\ op' = "select_target_2"
                         /\ dirty' = FALSE
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, target, 
-                                        step_count, result >>
+                                        step_count, op, result >>
 
 SelectTarget3 == /\ pc["main"] = "SelectTarget3"
-                 /\ IF current_state = "selecting_target" /\ NumNodes >= 3
+                 /\ IF current_state = "selecting_target"
                        THEN /\ target' = 3
                             /\ step_count' = step_count + 1
                             /\ dirty' = TRUE
                             /\ pc' = [pc EXCEPT !["main"] = "SelectTarget3Compute"]
                             /\ op' = op
-                       ELSE /\ op' = "skip_select_3"
-                            /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                       ELSE /\ op' = "skip"
+                            /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                             /\ UNCHANGED << target, step_count, dirty >>
                  /\ UNCHANGED << current_state, adjacency, edge_count, 
                                  reverse_set, visited, worklist, 
@@ -652,11 +629,10 @@ SelectTarget3Compute == /\ pc["main"] = "SelectTarget3Compute"
                         /\ visited' = {}
                         /\ reverse_set' = {}
                         /\ current_state' = "computing_reverse"
-                        /\ op' = "select_target_3"
                         /\ dirty' = FALSE
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, target, 
-                                        step_count, result >>
+                                        step_count, op, result >>
 
 SelectTarget4 == /\ pc["main"] = "SelectTarget4"
                  /\ IF current_state = "selecting_target" /\ NumNodes >= 4
@@ -665,8 +641,8 @@ SelectTarget4 == /\ pc["main"] = "SelectTarget4"
                             /\ dirty' = TRUE
                             /\ pc' = [pc EXCEPT !["main"] = "SelectTarget4Compute"]
                             /\ op' = op
-                       ELSE /\ op' = "skip_select_4"
-                            /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                       ELSE /\ op' = "skip"
+                            /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                             /\ UNCHANGED << target, step_count, dirty >>
                  /\ UNCHANGED << current_state, adjacency, edge_count, 
                                  reverse_set, visited, worklist, 
@@ -678,26 +654,25 @@ SelectTarget4Compute == /\ pc["main"] = "SelectTarget4Compute"
                         /\ visited' = {}
                         /\ reverse_set' = {}
                         /\ current_state' = "computing_reverse"
-                        /\ op' = "select_target_4"
                         /\ dirty' = FALSE
-                        /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                        /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                         /\ UNCHANGED << adjacency, edge_count, target, 
-                                        step_count, result >>
+                                        step_count, op, result >>
 
 BFSStep == /\ pc["main"] = "BFSStep"
            /\ IF current_state = "computing_reverse" /\ worklist # {}
                  THEN /\ \E n \in worklist:
                            /\ visited' = (visited \union {n})
                            /\ worklist' = (        (worklist \ {n}) \union
-                                           {p \in 1..NumNodes : n \in adjacency[p] /\ p \notin visited' /\ p # n})
+                                           {p \in 1..NumNodes : n \in adjacency[p] /\ p \notin (visited' \union {n}) /\ p # n})
                            /\ reverse_set' = (           reverse_set \union
-                                              {p \in 1..NumNodes : n \in adjacency[p] /\ p \notin visited' /\ p # n})
+                                              {p \in 1..NumNodes : n \in adjacency[p] /\ p \notin (visited' \union {n}) /\ p # n})
                       /\ step_count' = step_count + 1
                       /\ dirty' = TRUE
                       /\ pc' = [pc EXCEPT !["main"] = "BFSStepDone"]
                       /\ op' = op
                  ELSE /\ op' = "skip_bfs"
-                      /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                      /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                       /\ UNCHANGED << reverse_set, visited, worklist, 
                                       step_count, dirty >>
            /\ UNCHANGED << current_state, adjacency, edge_count, target, 
@@ -706,88 +681,75 @@ BFSStep == /\ pc["main"] = "BFSStep"
 BFSStepDone == /\ pc["main"] = "BFSStepDone"
                /\ op' = "bfs_step"
                /\ dirty' = FALSE
-               /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+               /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                /\ UNCHANGED << current_state, adjacency, edge_count, target, 
                                reverse_set, visited, worklist, 
                                direct_dependents, step_count, result >>
 
-FinishComputing == /\ pc["main"] = "FinishComputing"
+StartCollecting == /\ pc["main"] = "StartCollecting"
                    /\ IF current_state = "computing_reverse" /\ worklist = {}
                          THEN /\ current_state' = "collecting_results"
                               /\ step_count' = step_count + 1
-                              /\ op' = "finish_computing"
                               /\ dirty' = TRUE
-                              /\ pc' = [pc EXCEPT !["main"] = "FinishComputingDone"]
-                         ELSE /\ op' = "skip_finish_computing"
-                              /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                              /\ pc' = [pc EXCEPT !["main"] = "StartCollectingDone"]
+                              /\ op' = op
+                         ELSE /\ op' = "skip"
+                              /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                               /\ UNCHANGED << current_state, step_count, dirty >>
                    /\ UNCHANGED << adjacency, edge_count, target, reverse_set, 
                                    visited, worklist, direct_dependents, 
                                    result >>
 
-FinishComputingDone == /\ pc["main"] = "FinishComputingDone"
+StartCollectingDone == /\ pc["main"] = "StartCollectingDone"
+                       /\ op' = "start_collecting"
                        /\ dirty' = FALSE
-                       /\ pc' = [pc EXCEPT !["main"] = "Loop"]
+                       /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
                        /\ UNCHANGED << current_state, adjacency, edge_count, 
                                        target, reverse_set, visited, worklist, 
-                                       direct_dependents, step_count, op, 
-                                       result >>
+                                       direct_dependents, step_count, result >>
 
-CollectResults == /\ pc["main"] = "CollectResults"
-                  /\ IF current_state = "collecting_results"
-                        THEN /\ current_state' = "done"
-                             /\ step_count' = step_count + 1
-                             /\ op' = "collect_results"
-                             /\ result' = "success"
-                             /\ dirty' = TRUE
-                             /\ pc' = [pc EXCEPT !["main"] = "CollectResultsDone"]
-                        ELSE /\ op' = "skip_collect"
-                             /\ pc' = [pc EXCEPT !["main"] = "Loop"]
-                             /\ UNCHANGED << current_state, step_count, result, 
-                                             dirty >>
-                  /\ UNCHANGED << adjacency, edge_count, target, reverse_set, 
-                                  visited, worklist, direct_dependents >>
+Finish == /\ pc["main"] = "Finish"
+          /\ IF current_state = "collecting_results"
+                THEN /\ current_state' = "done"
+                     /\ step_count' = step_count + 1
+                     /\ dirty' = TRUE
+                     /\ pc' = [pc EXCEPT !["main"] = "FinishDone"]
+                     /\ op' = op
+                ELSE /\ op' = "skip"
+                     /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
+                     /\ UNCHANGED << current_state, step_count, dirty >>
+          /\ UNCHANGED << adjacency, edge_count, target, reverse_set, visited, 
+                          worklist, direct_dependents, result >>
 
-CollectResultsDone == /\ pc["main"] = "CollectResultsDone"
-                      /\ dirty' = FALSE
-                      /\ pc' = [pc EXCEPT !["main"] = "Loop"]
-                      /\ UNCHANGED << current_state, adjacency, edge_count, 
-                                      target, reverse_set, visited, worklist, 
-                                      direct_dependents, step_count, op, 
-                                      result >>
+FinishDone == /\ pc["main"] = "FinishDone"
+              /\ op' = "finish"
+              /\ result' = "success"
+              /\ dirty' = FALSE
+              /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
+              /\ UNCHANGED << current_state, adjacency, edge_count, target, 
+                              reverse_set, visited, worklist, 
+                              direct_dependents, step_count >>
 
-TimeoutFailure == /\ pc["main"] = "TimeoutFailure"
-                  /\ IF step_count >= MaxSteps
-                        THEN /\ current_state' = "failed"
-                             /\ op' = "timeout"
-                             /\ result' = "timeout"
-                             /\ dirty' = TRUE
-                             /\ pc' = [pc EXCEPT !["main"] = "TimeoutFailureDone"]
-                        ELSE /\ op' = "skip_timeout"
-                             /\ pc' = [pc EXCEPT !["main"] = "Loop"]
-                             /\ UNCHANGED << current_state, result, dirty >>
-                  /\ UNCHANGED << adjacency, edge_count, target, reverse_set, 
-                                  visited, worklist, direct_dependents, 
-                                  step_count >>
+Timeout == /\ pc["main"] = "Timeout"
+           /\ IF step_count >= MaxSteps
+                 THEN /\ current_state' = "failed"
+                      /\ op' = "timeout"
+                      /\ result' = "failed"
+                 ELSE /\ op' = "skip"
+                      /\ UNCHANGED << current_state, result >>
+           /\ pc' = [pc EXCEPT !["main"] = "MainLoop"]
+           /\ UNCHANGED << adjacency, edge_count, target, reverse_set, visited, 
+                           worklist, direct_dependents, step_count, dirty >>
 
-TimeoutFailureDone == /\ pc["main"] = "TimeoutFailureDone"
-                      /\ dirty' = FALSE
-                      /\ pc' = [pc EXCEPT !["main"] = "Loop"]
-                      /\ UNCHANGED << current_state, adjacency, edge_count, 
-                                      target, reverse_set, visited, worklist, 
-                                      direct_dependents, step_count, op, 
-                                      result >>
-
-main == Loop \/ StartBuilding \/ StartBuildingDone \/ AddEdge12
+main == MainLoop \/ StartBuilding \/ StartBuildingDone \/ AddEdge12
            \/ AddEdge12Done \/ AddEdge13 \/ AddEdge13Done \/ AddEdge14
            \/ AddEdge14Done \/ AddEdge23 \/ AddEdge23Done \/ AddEdge24
-           \/ AddEdge24Done \/ AddEdge34 \/ AddEdge34Done \/ FinishBuilding
-           \/ FinishBuildingDone \/ SelectTarget1 \/ SelectTarget1Compute
+           \/ AddEdge24Done \/ AddEdge34 \/ AddEdge34Done \/ DoneBuilding
+           \/ DoneBuildingComplete \/ SelectTarget1 \/ SelectTarget1Compute
            \/ SelectTarget2 \/ SelectTarget2Compute \/ SelectTarget3
            \/ SelectTarget3Compute \/ SelectTarget4 \/ SelectTarget4Compute
-           \/ BFSStep \/ BFSStepDone \/ FinishComputing
-           \/ FinishComputingDone \/ CollectResults \/ CollectResultsDone
-           \/ TimeoutFailure \/ TimeoutFailureDone
+           \/ BFSStep \/ BFSStepDone \/ StartCollecting
+           \/ StartCollectingDone \/ Finish \/ FinishDone \/ Timeout
 
 (* Allow infinite stuttering to prevent deadlock on termination. *)
 Terminating == /\ \A self \in ProcSet: pc[self] = "Done"
