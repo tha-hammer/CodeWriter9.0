@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
-from registry.types import Edge, EdgeType, Node, NodeKind, QueryResult
+from registry.types import Edge, EdgeType, ImpactResult, Node, NodeKind, QueryResult
 
 
 class CycleError(Exception):
@@ -162,6 +162,34 @@ class RegistryDag:
             if resource_id in members:
                 return list(members)
         return []
+
+    def query_impact(self, target_id: str) -> ImpactResult:
+        """Reverse dependency query: find all nodes that transitively depend on target.
+
+        Uses the forward closure to compute the reverse: a node N is in the
+        affected set iff target_id is in N's transitive closure.
+        """
+        if target_id not in self.nodes:
+            raise NodeNotFoundError(target_id)
+
+        affected: set[str] = set()
+        direct_dependents: set[str] = set()
+
+        # Direct dependents: nodes with a direct edge TO target
+        for edge in self.edges:
+            if edge.to_id == target_id:
+                direct_dependents.add(edge.from_id)
+
+        # Reverse closure: any node whose forward closure contains target
+        for node_id, reachable in self.closure.items():
+            if node_id != target_id and target_id in reachable:
+                affected.add(node_id)
+
+        return ImpactResult(
+            target=target_id,
+            affected=affected,
+            direct_dependents=direct_dependents,
+        )
 
     @property
     def node_count(self) -> int:

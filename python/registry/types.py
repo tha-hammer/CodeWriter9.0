@@ -104,3 +104,11 @@ class QueryResult:
     direct_edges: list[Edge] = field(default_factory=list)
     all_edges: list[Edge] = field(default_factory=list)
     component_id: str | None = None
+
+
+@dataclass
+class ImpactResult:
+    """Result of a reverse dependency (impact) query."""
+    target: str
+    affected: set[str] = field(default_factory=set)
+    direct_dependents: set[str] = field(default_factory=set)
