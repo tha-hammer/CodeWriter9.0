@@ -455,6 +455,30 @@ All deliverables met:
 - DAG totals: 58 nodes, 74 edges, 11 components
 - All 61 tests passing (26 composer + 35 existing)
 
+**Phase 3 — The One-Shot Loop** completed:
+
+**`one_shot_loop.py`** — `python/registry/one_shot_loop.py`:
+- Registry context query: given a GWT behavior ID, returns all transitive deps (schemas, templates, existing specs) assembled into a prompt context bundle
+- PlusCal fragment extraction: parses LLM response for algorithm blocks (fenced code blocks with tla/pluscal markers, bare --algorithm blocks)
+- Compile → compose → TLC pipeline: writes PlusCal to temp file, compiles with `pcal.trans`, optionally composes with composition engine, runs TLC, captures results
+- Counterexample translator: parses TLC counterexample traces, extracts states/variables/violated invariant, translates to PlusCal-level concepts (labels, variable names) rather than TLA+ internals
+- Pass/retry/fail router: deterministic routing based on TLC result + failure count — pass → done, first failure → retry with counterexample, second consecutive failure → requirements inconsistency (not retried)
+- `OneShotLoop` orchestrator class: manages lifecycle states (idle → querying_context → prompting_llm → extracting_fragment → compiling → composing → verifying → translating_error → routing → done | failed)
+
+**TLA+ verification:**
+- `one_shot_loop.tla` — state machine spec (instantiates `state_machine.tla` template), TLC verified: 3,105 states, 1,790 distinct, 6 invariants (ValidState, MutualExclusionOnCompose, TwoFailureLimit, DeterministicRouting, BoundedExecution, DerivedConsistency)
+- `loop_compose_composed.tla` — composed spec (loop + composition engine as two concurrent processes), TLC verified: 34,081 states, 10,624 distinct, 10 invariants including cross-invariant MutualExclusionOnComposedSpecs
+- Key finding: TLC discovered that the engine's compose can complete before the loop enters composing state — the `compose_busy` guard on EngineCompose prevents the engine from starting a NEW compose while the loop is composing
+
+**Self-registration:**
+- 3 new GWT behaviors: `gwt-0005` (transitive deps), `gwt-0006` (counterexample translation), `gwt-0007` (failure routing)
+- 1 requirement: `req-0002` (one-shot loop)
+- 1 spec node: `tpl-0007` (one-shot loop state machine)
+- 3 resource nodes: `loop-0001` (orchestrator), `loop-0002` (counterexample translator), `loop-0003` (router)
+- 16 new edges (IMPLEMENTS, VERIFIES, REFERENCES, DEPENDS_ON, DECOMPOSES)
+- DAG totals: 66 nodes, 90 edges, 11 components
+- All 96 tests passing (35 one-shot loop + 26 composer + 10 DAG + 25 extractor)
+
 ---
 
 ### Phase 3: The One-Shot Loop
@@ -745,10 +769,10 @@ The bootstrap is complete when:
 - [x] The registry describes itself as nodes in its own graph (Phase 0)
 - [x] TLC verifies the registry's own spec via CRUD template (Phase 1)
 - [x] `fs-x7p6` activated, TLA+ artifacts stored there (Phase 1)
-- [ ] TLC verifies the composition engine via state machine template (Phase 2)
-- [ ] Cross-layer dependencies (frontend→backend, middleware→shared) are
+- [x] TLC verifies the composition engine via state machine template (Phase 2)
+- [x] Cross-layer dependencies (frontend→backend, middleware→shared) are
       composed and verified (Phase 2)
-- [ ] The one-shot loop is verified against composed specs of registry +
+- [x] The one-shot loop is verified against composed specs of registry +
       composition engine (Phase 3)
 - [ ] The bridge generates test suites for Phases 0-3 from their specs (Phase 4)
 - [ ] `fs-y3q2` activated, plan artifacts stored there (Phase 4)
