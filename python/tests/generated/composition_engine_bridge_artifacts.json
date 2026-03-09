@@ -1,0 +1,292 @@
+{
+  "module_name": "composition_engine",
+  "data_structures": {
+    "composition_engineState": {
+      "function_id": "fn-composition_engine-state",
+      "acceptance_criteria_id": "ac-composition_engine-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Loop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "current_state": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "empty",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "registered": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "composed_from": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "verified_set": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "op": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "result": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "dirty": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from composition_engine TLA+ spec"
+    }
+  },
+  "operations": {
+    "Loop": {
+      "function_id": "fn-composition_engine-Loop",
+      "acceptance_criteria_id": "ac-composition_engine-Loop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Loop from composition_engine spec"
+    },
+    "UpdateDerived": {
+      "function_id": "fn-composition_engine-UpdateDerived",
+      "acceptance_criteria_id": "ac-composition_engine-UpdateDerived",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action UpdateDerived from composition_engine spec"
+    },
+    "RegisterSpec": {
+      "function_id": "fn-composition_engine-RegisterSpec",
+      "acceptance_criteria_id": "ac-composition_engine-RegisterSpec",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/RegisterSpecError"
+      ],
+      "error_handling": "raise",
+      "description": "Action RegisterSpec from composition_engine spec"
+    },
+    "Compose": {
+      "function_id": "fn-composition_engine-Compose",
+      "acceptance_criteria_id": "ac-composition_engine-Compose",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/ComposeError"
+      ],
+      "error_handling": "raise",
+      "description": "Action Compose from composition_engine spec"
+    },
+    "Verify": {
+      "function_id": "fn-composition_engine-Verify",
+      "acceptance_criteria_id": "ac-composition_engine-Verify",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/VerifyFailure",
+        "shared/error_definitions/VerifyFailure",
+        "shared/error_definitions/VerifyFailure",
+        "shared/error_definitions/VerifyError"
+      ],
+      "error_handling": "raise",
+      "description": "Action Verify from composition_engine spec"
+    },
+    "Revise": {
+      "function_id": "fn-composition_engine-Revise",
+      "acceptance_criteria_id": "ac-composition_engine-Revise",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/ReviseError"
+      ],
+      "error_handling": "raise",
+      "description": "Action Revise from composition_engine spec"
+    }
+  },
+  "verifiers": {
+    "ValidState": {
+      "function_id": "fn-composition_engine-verify-ValidState",
+      "acceptance_criteria_id": "ac-composition_engine-ValidState",
+      "conditions": [
+        "current_state \\in StateSet"
+      ],
+      "message": "ValidState violation: current_state \\in StateSet",
+      "applies_to": [
+        "current_state"
+      ],
+      "description": "Verifier for invariant ValidState from composition_engine spec"
+    },
+    "MonotonicGrowth": {
+      "function_id": "fn-composition_engine-verify-MonotonicGrowth",
+      "acceptance_criteria_id": "ac-composition_engine-MonotonicGrowth",
+      "conditions": [
+        "verified_set \\subseteq registered"
+      ],
+      "message": "MonotonicGrowth violation: verified_set \\subseteq registered",
+      "applies_to": [
+        "registered",
+        "verified_set"
+      ],
+      "description": "Verifier for invariant MonotonicGrowth from composition_engine spec"
+    },
+    "NoEmptyCompose": {
+      "function_id": "fn-composition_engine-verify-NoEmptyCompose",
+      "acceptance_criteria_id": "ac-composition_engine-NoEmptyCompose",
+      "conditions": [
+        "current_state \\in {\"composed\", \"verified\"}\n                    => Cardinality(composed_from) >= 2"
+      ],
+      "message": "NoEmptyCompose violation: current_state \\in {\"composed\", \"verified\"}\n                    => Cardinality(composed_from) >= 2",
+      "applies_to": [
+        "composed_from",
+        "current_state"
+      ],
+      "description": "Verifier for invariant NoEmptyCompose from composition_engine spec"
+    },
+    "AssociativityHolds": {
+      "function_id": "fn-composition_engine-verify-AssociativityHolds",
+      "acceptance_criteria_id": "ac-composition_engine-AssociativityHolds",
+      "conditions": [
+        "current_state = \"composed\"\n                        => composed_from \\subseteq registered"
+      ],
+      "message": "AssociativityHolds violation: current_state = \"composed\"\n                        => composed_from \\subseteq registered",
+      "applies_to": [
+        "composed_from",
+        "current_state",
+        "registered"
+      ],
+      "description": "Verifier for invariant AssociativityHolds from composition_engine spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-composition_engine-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-composition_engine-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from composition_engine spec"
+    },
+    "ValidSpecs": {
+      "function_id": "fn-composition_engine-verify-ValidSpecs",
+      "acceptance_criteria_id": "ac-composition_engine-ValidSpecs",
+      "conditions": [
+        "registered \\subseteq SpecSet"
+      ],
+      "message": "ValidSpecs violation: registered \\subseteq SpecSet",
+      "applies_to": [
+        "registered"
+      ],
+      "description": "Verifier for invariant ValidSpecs from composition_engine spec"
+    },
+    "DerivedConsistency": {
+      "function_id": "fn-composition_engine-verify-DerivedConsistency",
+      "acceptance_criteria_id": "ac-composition_engine-DerivedConsistency",
+      "conditions": [
+        "composed_from \\subseteq registered",
+        "verified_set \\subseteq registered"
+      ],
+      "message": "DerivedConsistency violation: (/\\ composed_from \\subseteq registered\n     /\\ verified_set \\subseteq registered)",
+      "applies_to": [
+        "composed_from",
+        "dirty",
+        "registered",
+        "verified_set"
+      ],
+      "description": "Verifier for invariant DerivedConsistency from composition_engine spec"
+    }
+  },
+  "assertions": {
+    "assert_ValidState": {
+      "condition": "current_state in StateSet",
+      "message": "Assertion failed: ValidState \u2014 current_state \\in StateSet",
+      "description": "Test assertion for ValidState from composition_engine spec"
+    },
+    "assert_MonotonicGrowth": {
+      "condition": "verified_set \\subseteq registered",
+      "message": "Assertion failed: MonotonicGrowth \u2014 verified_set \\subseteq registered",
+      "description": "Test assertion for MonotonicGrowth from composition_engine spec"
+    },
+    "assert_NoEmptyCompose": {
+      "condition": "current_state in {\"composed\", \"verified\"}\n                    implies Cardinality(composed_from) >= 2",
+      "message": "Assertion failed: NoEmptyCompose \u2014 current_state \\in {\"composed\", \"verified\"}\n                    => Cardinality(composed_from) >= 2",
+      "description": "Test assertion for NoEmptyCompose from composition_engine spec"
+    },
+    "assert_AssociativityHolds": {
+      "condition": "current_state = \"composed\"\n                        implies composed_from \\subseteq registered",
+      "message": "Assertion failed: AssociativityHolds \u2014 current_state = \"composed\"\n                        => composed_from \\subseteq registered",
+      "description": "Test assertion for AssociativityHolds from composition_engine spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from composition_engine spec"
+    },
+    "assert_ValidSpecs": {
+      "condition": "registered \\subseteq SpecSet",
+      "message": "Assertion failed: ValidSpecs \u2014 registered \\subseteq SpecSet",
+      "description": "Test assertion for ValidSpecs from composition_engine spec"
+    },
+    "assert_DerivedConsistency": {
+      "condition": "(and composed_from \\subseteq registered\n     and verified_set \\subseteq registered)",
+      "message": "Assertion failed: DerivedConsistency \u2014 (/\\ composed_from \\subseteq registered\n     /\\ verified_set \\subseteq registered)",
+      "description": "Test assertion for DerivedConsistency from composition_engine spec"
+    }
+  }
+}

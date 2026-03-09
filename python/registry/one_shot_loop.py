@@ -193,17 +193,35 @@ _FENCED_GENERIC_RE = re.compile(
 def extract_pluscal(llm_response: str) -> str | None:
     """Parse LLM response to extract PlusCal code.
 
-    Tries multiple patterns:
-    1. Direct --algorithm...end algorithm block
-    2. Fenced code block with tla/pluscal language marker
-    3. Generic fenced code block containing PlusCal markers
+    Tries multiple patterns in order:
+    0. Complete TLA+ module (starts with ---- MODULE or contains it)
+    1. Fenced code block with tla/pluscal language marker
+    2. Generic fenced code block containing PlusCal markers
+    3. Direct --algorithm...end algorithm block
 
     Returns the extracted PlusCal fragment or None if not found.
+    When a complete TLA+ module is found, returns the full module text
+    (needed for pcal.trans which requires MODULE/EXTENDS/CONSTANTS).
     """
-    # Try fenced code blocks first (most structured)
+    # Check for a complete TLA+ module first — if the LLM output the whole
+    # module (MODULE ... ====), use it as-is since pcal.trans needs the
+    # full module wrapper, not just the algorithm block.
+    module_match = re.search(
+        r'(-{4,}\s*MODULE\s+\w+\s*-{4,}.*?={4,})',
+        llm_response,
+        re.DOTALL,
+    )
+    if module_match and '--algorithm' in module_match.group(1).lower():
+        return module_match.group(1).strip()
+
+    # Try fenced code blocks (most structured)
     m = _FENCED_TLA_RE.search(llm_response)
     if m:
-        return m.group(1).strip()
+        content = m.group(1).strip()
+        # If the fenced block contains a full module, return it
+        if re.match(r'-{4,}\s*MODULE', content):
+            return content
+        return content
 
     # Try generic fenced block with algorithm markers
     m = _FENCED_GENERIC_RE.search(llm_response)

@@ -44,6 +44,38 @@
       "source_schema": "frontend_schema.json",
       "source_key": "api_contracts.EndpointName"
     },
+    "bridge-0001": {
+      "id": "bridge-0001",
+      "kind": "resource",
+      "name": "state_var_translator",
+      "description": "Translates TLA+ state variables into data_structures shape (fields, types, validation)",
+      "version": 1,
+      "path": "python/registry/bridge.py"
+    },
+    "bridge-0002": {
+      "id": "bridge-0002",
+      "kind": "resource",
+      "name": "action_translator",
+      "description": "Translates TLA+ actions into processors.operations shape (params, returns, errors)",
+      "version": 1,
+      "path": "python/registry/bridge.py"
+    },
+    "bridge-0003": {
+      "id": "bridge-0003",
+      "kind": "resource",
+      "name": "invariant_translator",
+      "description": "Translates TLA+ invariants into verifiers and testing.assertions shapes",
+      "version": 1,
+      "path": "python/registry/bridge.py"
+    },
+    "bridge-0004": {
+      "id": "bridge-0004",
+      "kind": "resource",
+      "name": "trace_translator",
+      "description": "Translates TLC counterexample traces into concrete test scenarios",
+      "version": 1,
+      "path": "python/registry/bridge.py"
+    },
     "cfg-b8m6": {
       "id": "cfg-b8m6",
       "kind": "resource",
@@ -413,6 +445,46 @@
       "when": "routing",
       "then": "requirements inconsistency is reported (not retried)"
     },
+    "gwt-0008": {
+      "id": "gwt-0008",
+      "kind": "behavior",
+      "name": "state_var_translation",
+      "description": "",
+      "version": 1,
+      "given": "a TLA+ spec with declared state variables",
+      "when": "the state variable translator processes it",
+      "then": "a data_structures artifact is produced with fields, types, and validation conforming to backend_schema"
+    },
+    "gwt-0009": {
+      "id": "gwt-0009",
+      "kind": "behavior",
+      "name": "action_translation",
+      "description": "",
+      "version": 1,
+      "given": "a TLA+ spec with defined actions",
+      "when": "the action translator processes it",
+      "then": "a processors.operations artifact is produced with parameters, returns, and error_types conforming to backend_schema"
+    },
+    "gwt-0010": {
+      "id": "gwt-0010",
+      "kind": "behavior",
+      "name": "invariant_translation",
+      "description": "",
+      "version": 1,
+      "given": "a TLA+ spec with invariants",
+      "when": "the invariant translator processes it",
+      "then": "verifiers and testing.assertions artifacts are produced conforming to backend and shared schemas"
+    },
+    "gwt-0011": {
+      "id": "gwt-0011",
+      "kind": "behavior",
+      "name": "trace_translation",
+      "description": "",
+      "version": 1,
+      "given": "a TLC counterexample trace with state transitions",
+      "when": "the trace translator processes it",
+      "then": "concrete test scenarios are generated with setup, steps, and expected outcomes for each state"
+    },
     "loop-0001": {
       "id": "loop-0001",
       "kind": "resource",
@@ -508,6 +580,14 @@
       "version": 1,
       "text": "System needs a one-shot loop that queries registry context, prompts LLM, extracts PlusCal, compiles, composes, verifies with TLC, and routes pass/retry/fail"
     },
+    "req-0003": {
+      "id": "req-0003",
+      "kind": "requirement",
+      "name": "",
+      "description": "",
+      "version": 1,
+      "text": "System needs mechanical translators that convert TLA+ specs into code artifacts conforming to existing schema shapes (data_structures, processors.operations, verifiers, testing.assertions)"
+    },
     "res-0001": {
       "id": "res-0001",
       "kind": "resource",
@@ -591,6 +671,14 @@
       "description": "State machine spec for the one-shot loop lifecycle (TLC verified)",
       "version": 1,
       "path": "templates/pluscal/instances/one_shot_loop.tla"
+    },
+    "tpl-0008": {
+      "id": "tpl-0008",
+      "kind": "spec",
+      "name": "bridge_translator_spec",
+      "description": "State machine spec for the bridge translator pipeline (TLC verified: 702 states, 6 invariants)",
+      "version": 1,
+      "path": "templates/pluscal/instances/bridge_translator.tla"
     },
     "ui-a4y1": {
       "id": "ui-a4y1",
@@ -1109,6 +1197,166 @@
       "from": "req-0002",
       "to": "gwt-0007",
       "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0003",
+      "to": "gwt-0008",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0003",
+      "to": "gwt-0009",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0003",
+      "to": "gwt-0010",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0003",
+      "to": "gwt-0011",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "tpl-0002",
+      "edge_type": "implements"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "fs-x7p6",
+      "edge_type": "references"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "gwt-0008",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "gwt-0009",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "gwt-0010",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "gwt-0011",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "gwt-0008",
+      "to": "db-f8n5",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0009",
+      "to": "db-b7r2",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0010",
+      "to": "db-j6x9",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0010",
+      "to": "cfg-g1u4",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0010",
+      "to": "cfg-s6e2",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0011",
+      "to": "cfg-s6e2",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0008",
+      "to": "loop-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0009",
+      "to": "loop-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0010",
+      "to": "loop-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0011",
+      "to": "loop-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "bridge-0001",
+      "to": "gwt-0008",
+      "edge_type": "implements"
+    },
+    {
+      "from": "bridge-0002",
+      "to": "gwt-0009",
+      "edge_type": "implements"
+    },
+    {
+      "from": "bridge-0003",
+      "to": "gwt-0010",
+      "edge_type": "implements"
+    },
+    {
+      "from": "bridge-0004",
+      "to": "gwt-0011",
+      "edge_type": "implements"
+    },
+    {
+      "from": "bridge-0001",
+      "to": "loop-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "bridge-0002",
+      "to": "loop-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "bridge-0003",
+      "to": "loop-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "bridge-0004",
+      "to": "loop-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "bridge-0001",
+      "to": "fs-y3q2",
+      "edge_type": "references"
+    },
+    {
+      "from": "bridge-0002",
+      "to": "fs-y3q2",
+      "edge_type": "references"
+    },
+    {
+      "from": "bridge-0003",
+      "to": "fs-y3q2",
+      "edge_type": "references"
+    },
+    {
+      "from": "bridge-0004",
+      "to": "fs-y3q2",
+      "edge_type": "references"
     }
   ],
   "closure": {
@@ -1147,6 +1395,145 @@
       "db-b7r2",
       "db-d3w8",
       "db-h2s4"
+    ],
+    "bridge-0001": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "fs-y3q2",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "gwt-0008",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
+    "bridge-0002": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "fs-y3q2",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "gwt-0009",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
+    "bridge-0003": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-s6e2",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "db-j6x9",
+      "fs-x7p6",
+      "fs-y3q2",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "gwt-0010",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
+    "bridge-0004": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-s6e2",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "fs-y3q2",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "gwt-0011",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
     ],
     "cfg-b8m6": [],
     "cfg-d2q3": [],
@@ -1262,6 +1649,137 @@
     ],
     "gwt-0006": [],
     "gwt-0007": [],
+    "gwt-0008": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
+    "gwt-0009": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
+    "gwt-0010": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-s6e2",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "db-j6x9",
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
+    "gwt-0011": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-s6e2",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
     "loop-0001": [
       "cfg-d2q3",
       "cfg-f7s8",
@@ -1394,6 +1912,44 @@
       "gwt-0007",
       "res-0003"
     ],
+    "req-0003": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-s6e2",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "db-j6x9",
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "gwt-0008",
+      "gwt-0009",
+      "gwt-0010",
+      "gwt-0011",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
     "res-0001": [],
     "res-0002": [],
     "res-0003": [],
@@ -1453,6 +2009,44 @@
       "res-0003",
       "tpl-0002"
     ],
+    "tpl-0008": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-s6e2",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "db-j6x9",
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "gwt-0008",
+      "gwt-0009",
+      "gwt-0010",
+      "gwt-0011",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
     "ui-a4y1": [
       "ui-w8p2",
       "ui-z2w7"
@@ -1499,9 +2093,6 @@
     "component-1": [
       "cfg-l8y1"
     ],
-    "component-10": [
-      "fs-y3q2"
-    ],
     "component-2": [
       "cfg-m2z6"
     ],
@@ -1514,28 +2105,30 @@
       "cfg-r3d7"
     ],
     "component-5": [
-      "cfg-s6e2"
-    ],
-    "component-6": [
       "cfg-u2k4"
     ],
-    "component-7": [
+    "component-6": [
       "cfg-v8l7"
     ],
-    "component-8": [
+    "component-7": [
       "cfg-w4n3"
     ],
-    "component-9": [
+    "component-8": [
       "api-m5g7",
       "api-n8k2",
       "api-p3e6",
       "api-q7v1",
+      "bridge-0001",
+      "bridge-0002",
+      "bridge-0003",
+      "bridge-0004",
       "cfg-d2q3",
       "cfg-f7s8",
       "cfg-g1u4",
       "cfg-h5v9",
       "cfg-j9w2",
       "cfg-k3x7",
+      "cfg-s6e2",
       "cfg-t5h9",
       "comp-0001",
       "comp-0002",
@@ -1546,6 +2139,7 @@
       "db-j6x9",
       "db-l1c3",
       "fs-x7p6",
+      "fs-y3q2",
       "gwt-0001",
       "gwt-0002",
       "gwt-0003",
@@ -1553,6 +2147,10 @@
       "gwt-0005",
       "gwt-0006",
       "gwt-0007",
+      "gwt-0008",
+      "gwt-0009",
+      "gwt-0010",
+      "gwt-0011",
       "loop-0001",
       "loop-0002",
       "loop-0003",
@@ -1563,6 +2161,7 @@
       "mq-u6j3",
       "req-0001",
       "req-0002",
+      "req-0003",
       "res-0001",
       "res-0002",
       "res-0003",
@@ -1574,6 +2173,7 @@
       "tpl-0005",
       "tpl-0006",
       "tpl-0007",
+      "tpl-0008",
       "ui-a4y1",
       "ui-v3n6",
       "ui-w8p2",

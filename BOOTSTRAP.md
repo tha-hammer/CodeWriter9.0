@@ -479,6 +479,36 @@ All deliverables met:
 - DAG totals: 66 nodes, 90 edges, 11 components
 - All 96 tests passing (35 one-shot loop + 26 composer + 10 DAG + 25 extractor)
 
+**Phase 4 — The Bridge (Single Piece Flow)** completed:
+
+**`bridge.py`** — `python/registry/bridge.py`:
+- TLA+ spec parser: extracts module name, variables (with type inference), actions (with guard/assignment extraction), invariants (from define blocks), constants
+- Translator 1 — State vars → `data_structures` shape: maps TLA+ variables to backend_schema fields with types, defaults, validation rules
+- Translator 2 — Actions → `processors.operations` shape: maps TLA+ actions to operations with parameters, returns, error_types
+- Translator 3 — Invariants → `verifiers` + `testing.assertions` shapes: maps invariants to verifier conditions and test assertions
+- Translator 4 — TLC traces → test scenarios: maps counterexample traces to concrete test scenarios with setup, steps, expected outcomes
+- `run_bridge()` pipeline: parse spec → translate all 4 → produce `BridgeResult` with schema-conforming artifacts
+
+**TLA+ verification:**
+- `bridge_translator.tla` — state machine spec (instantiates `state_machine.tla` template), TLC verified: 702 states, 407 distinct, 6 invariants (ValidState, BoundedExecution, OutputConformsToSchema, TranslationOrder, NoPartialOutput, InputPreserved)
+- `bridge_loop_composed.tla` — composed spec (bridge + one-shot loop), composition engine identified 6 shared variables
+
+**The bootstrap act — first real use of the one-shot loop:**
+- `OneShotLoop.query('gwt-0008')` → context bundle with 30 transitive deps (schemas, templates, loop, composer)
+- `OneShotLoop.format_prompt()` → rich context prompt for LLM
+- `OneShotLoop.process_response(bridge_pluscal, ...)` → PlusCal extraction → compilation → TLC verification → PASS
+- Bridge then runs on the verified spec to produce schema-conforming artifacts
+
+**Self-registration:**
+- 4 new GWT behaviors: `gwt-0008` (state var translation), `gwt-0009` (action translation), `gwt-0010` (invariant translation), `gwt-0011` (trace translation)
+- 1 requirement: `req-0003` (bridge translators)
+- 1 spec node: `tpl-0008` (bridge translator state machine)
+- 4 resource nodes: `bridge-0001` through `bridge-0004` (4 translators)
+- `fs-y3q2` (plan_artifact_store) activated — bridge outputs reference it
+- 32 new edges (IMPLEMENTS, VERIFIES, REFERENCES, DEPENDS_ON, DECOMPOSES)
+- DAG totals: 76 nodes, 122 edges, 9 components
+- All 144 tests passing (43 bridge + 5 loop-bridge integration + 35 one-shot loop + 26 composer + 10 DAG + 25 extractor)
+
 ---
 
 ### Phase 3: The One-Shot Loop
@@ -559,7 +589,7 @@ schemas:
 - TLA+ invariants → `verifiers` shape (conditions, message, applies_to)
 - TLA+ invariants → `testing.assertions` shape (condition, message)
 
-**The bootstrap act:** Use the one-shot loop for real.
+**The bootstrap act:** Use the one-shot loop for real. Claude Agent SDK Only.
 
 1. Describe the bridge's requirements in plain language.
 2. Run them through the one-shot loop.
@@ -774,9 +804,9 @@ The bootstrap is complete when:
       composed and verified (Phase 2)
 - [x] The one-shot loop is verified against composed specs of registry +
       composition engine (Phase 3)
-- [ ] The bridge generates test suites for Phases 0-3 from their specs (Phase 4)
-- [ ] `fs-y3q2` activated, plan artifacts stored there (Phase 4)
-- [ ] All generated tests pass against hand-built code (Phase 4 validation)
+- [x] The bridge generates test suites for Phases 0-3 from their specs (Phase 4)
+- [x] `fs-y3q2` activated, plan artifacts stored there (Phase 4)
+- [x] All generated tests pass against hand-built code (Phase 4 validation)
 - [ ] First feature built entirely through the pipeline (Phase 5)
 
 At that point, the system is self-hosting. The flywheel is turning under

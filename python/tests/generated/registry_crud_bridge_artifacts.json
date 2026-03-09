@@ -1,0 +1,359 @@
+{
+  "module_name": "registry_crud",
+  "data_structures": {
+    "registry_crudState": {
+      "function_id": "fn-registry_crud-state",
+      "acceptance_criteria_id": "ac-registry_crud-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Loop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "edges": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "closure": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "components": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "op": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "result": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "dirty": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from registry_crud TLA+ spec"
+    }
+  },
+  "operations": {
+    "Loop": {
+      "function_id": "fn-registry_crud-Loop",
+      "acceptance_criteria_id": "ac-registry_crud-Loop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Loop from registry_crud spec"
+    },
+    "UpdateDerived": {
+      "function_id": "fn-registry_crud-UpdateDerived",
+      "acceptance_criteria_id": "ac-registry_crud-UpdateDerived",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action UpdateDerived from registry_crud spec"
+    },
+    "AddNode": {
+      "function_id": "fn-registry_crud-AddNode",
+      "acceptance_criteria_id": "ac-registry_crud-AddNode",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/AddNodeError"
+      ],
+      "error_handling": "raise",
+      "description": "Action AddNode from registry_crud spec"
+    },
+    "AddEdge": {
+      "function_id": "fn-registry_crud-AddEdge",
+      "acceptance_criteria_id": "ac-registry_crud-AddEdge",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/AddEdgeError",
+        "shared/error_definitions/AddEdgeError"
+      ],
+      "error_handling": "raise",
+      "description": "Action AddEdge from registry_crud spec"
+    },
+    "RemoveEdge": {
+      "function_id": "fn-registry_crud-RemoveEdge",
+      "acceptance_criteria_id": "ac-registry_crud-RemoveEdge",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RemoveEdge from registry_crud spec"
+    },
+    "QueryCtx": {
+      "function_id": "fn-registry_crud-QueryCtx",
+      "acceptance_criteria_id": "ac-registry_crud-QueryCtx",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/QueryCtxError"
+      ],
+      "error_handling": "raise",
+      "description": "Action QueryCtx from registry_crud spec"
+    }
+  },
+  "verifiers": {
+    "NodeIds": {
+      "function_id": "fn-registry_crud-verify-NodeIds",
+      "acceptance_criteria_id": "ac-registry_crud-NodeIds",
+      "conditions": [
+        "{n.id : n \\in nodes}\n\nRECURSIVE TransitiveClosure(_)\nTransitiveClosure(E) ==\n    LET pairs == {<<a, b>> \\in E \\X E : a.to = b.from}\n        composed == {[from |-> p[1].from, to |-> p[2].to] : p \\in pairs}\n        extended == E \\union composed\n    IN  IF extended = E THEN E\n        ELSE TransitiveClosure(extended"
+      ],
+      "message": "NodeIds violation: {n.id : n \\in nodes}\n\nRECURSIVE TransitiveClosure(_)\nTransitiveClosure(E) ==\n    LET pairs == {<<a, b>> \\in E \\X E : ...",
+      "applies_to": [
+        "nodes"
+      ],
+      "description": "Verifier for invariant NodeIds from registry_crud spec"
+    },
+    "ActualClosure": {
+      "function_id": "fn-registry_crud-verify-ActualClosure",
+      "acceptance_criteria_id": "ac-registry_crud-ActualClosure",
+      "conditions": [
+        "TransitiveClosure({[from |-> e.from, to |-> e.to] : e \\in edges})\n\nReachable(start) ==\n    {pair.to : pair \\in {p \\in ActualClosure : p.from = start}}"
+      ],
+      "message": "ActualClosure violation: TransitiveClosure({[from |-> e.from, to |-> e.to] : e \\in edges})\n\nReachable(start) ==\n    {pair.to : pair \\in {p \\in...",
+      "applies_to": [
+        "edges"
+      ],
+      "description": "Verifier for invariant ActualClosure from registry_crud spec"
+    },
+    "UndirectedEdges": {
+      "function_id": "fn-registry_crud-verify-UndirectedEdges",
+      "acceptance_criteria_id": "ac-registry_crud-UndirectedEdges",
+      "conditions": [
+        "{[from |-> e.from, to |-> e.to] : e \\in edges}\n                   \\union {[from |-> e.to, to |-> e.from] : e \\in edges}"
+      ],
+      "message": "UndirectedEdges violation: {[from |-> e.from, to |-> e.to] : e \\in edges}\n                   \\union {[from |-> e.to, to |-> e.from] : e \\in edges}",
+      "applies_to": [
+        "edges"
+      ],
+      "description": "Verifier for invariant UndirectedEdges from registry_crud spec"
+    },
+    "UndirectedClosure": {
+      "function_id": "fn-registry_crud-verify-UndirectedClosure",
+      "acceptance_criteria_id": "ac-registry_crud-UndirectedClosure",
+      "conditions": [
+        "TransitiveClosure(UndirectedEdges)\n\nComponentOf(id) ==\n    {id} \\union {pair.to : pair \\in {p \\in UndirectedClosure : p.from = id}}"
+      ],
+      "message": "UndirectedClosure violation: TransitiveClosure(UndirectedEdges)\n\nComponentOf(id) ==\n    {id} \\union {pair.to : pair \\in {p \\in UndirectedClosure :...",
+      "applies_to": [
+        "registry_crud"
+      ],
+      "description": "Verifier for invariant UndirectedClosure from registry_crud spec"
+    },
+    "ActualComponents": {
+      "function_id": "fn-registry_crud-verify-ActualComponents",
+      "acceptance_criteria_id": "ac-registry_crud-ActualComponents",
+      "conditions": [
+        "LET RECURSIVE BuildComponents(_, _)\n        BuildComponents(remaining, acc) ==\n            IF remaining = {} THEN acc\n            ELSE LET pick == CHOOSE x \\in remaining : TRUE\n                     comp == ComponentOf(pick) \\intersect remaining\n                 IN  BuildComponents(remaining \\ comp, acc \\union {comp})\n    IN  BuildComponents(NodeIds, {}"
+      ],
+      "message": "ActualComponents violation: LET RECURSIVE BuildComponents(_, _)\n        BuildComponents(remaining, acc) ==\n            IF remaining = {} THEN acc...",
+      "applies_to": [
+        "registry_crud"
+      ],
+      "description": "Verifier for invariant ActualComponents from registry_crud spec"
+    },
+    "ClosureCorrect": {
+      "function_id": "fn-registry_crud-verify-ClosureCorrect",
+      "acceptance_criteria_id": "ac-registry_crud-ClosureCorrect",
+      "conditions": [
+        "closure = ActualClosure"
+      ],
+      "message": "ClosureCorrect violation: closure = ActualClosure",
+      "applies_to": [
+        "closure",
+        "dirty"
+      ],
+      "description": "Verifier for invariant ClosureCorrect from registry_crud spec"
+    },
+    "ComponentsValid": {
+      "function_id": "fn-registry_crud-verify-ComponentsValid",
+      "acceptance_criteria_id": "ac-registry_crud-ComponentsValid",
+      "conditions": [
+        "components = ActualComponents"
+      ],
+      "message": "ComponentsValid violation: components = ActualComponents",
+      "applies_to": [
+        "components",
+        "dirty"
+      ],
+      "description": "Verifier for invariant ComponentsValid from registry_crud spec"
+    },
+    "AcyclicGraph": {
+      "function_id": "fn-registry_crud-verify-AcyclicGraph",
+      "acceptance_criteria_id": "ac-registry_crud-AcyclicGraph",
+      "conditions": [
+        "\\A id \\in NodeIds : id \\notin Reachable(id"
+      ],
+      "message": "AcyclicGraph violation: \\A id \\in NodeIds : id \\notin Reachable(id)",
+      "applies_to": [
+        "registry_crud"
+      ],
+      "description": "Verifier for invariant AcyclicGraph from registry_crud spec"
+    },
+    "ReferentialIntegrity": {
+      "function_id": "fn-registry_crud-verify-ReferentialIntegrity",
+      "acceptance_criteria_id": "ac-registry_crud-ReferentialIntegrity",
+      "conditions": [
+        "\\A e \\in edges : e.from \\in NodeIds",
+        "e.to \\in NodeIds"
+      ],
+      "message": "ReferentialIntegrity violation: \\A e \\in edges : e.from \\in NodeIds /\\ e.to \\in NodeIds",
+      "applies_to": [
+        "edges"
+      ],
+      "description": "Verifier for invariant ReferentialIntegrity from registry_crud spec"
+    },
+    "ValidEdgeTypes": {
+      "function_id": "fn-registry_crud-verify-ValidEdgeTypes",
+      "acceptance_criteria_id": "ac-registry_crud-ValidEdgeTypes",
+      "conditions": [
+        "\\A e \\in edges : e.type \\in EdgeTypeSet"
+      ],
+      "message": "ValidEdgeTypes violation: \\A e \\in edges : e.type \\in EdgeTypeSet",
+      "applies_to": [
+        "edges"
+      ],
+      "description": "Verifier for invariant ValidEdgeTypes from registry_crud spec"
+    },
+    "BoundedSize": {
+      "function_id": "fn-registry_crud-verify-BoundedSize",
+      "acceptance_criteria_id": "ac-registry_crud-BoundedSize",
+      "conditions": [
+        "Cardinality(nodes) <= MaxRecords"
+      ],
+      "message": "BoundedSize violation: Cardinality(nodes) <= MaxRecords",
+      "applies_to": [
+        "nodes"
+      ],
+      "description": "Verifier for invariant BoundedSize from registry_crud spec"
+    },
+    "ValidIds": {
+      "function_id": "fn-registry_crud-verify-ValidIds",
+      "acceptance_criteria_id": "ac-registry_crud-ValidIds",
+      "conditions": [
+        "NodeIds \\subseteq IdSet"
+      ],
+      "message": "ValidIds violation: NodeIds \\subseteq IdSet",
+      "applies_to": [
+        "registry_crud"
+      ],
+      "description": "Verifier for invariant ValidIds from registry_crud spec"
+    }
+  },
+  "assertions": {
+    "assert_NodeIds": {
+      "condition": "{n.id : n in nodes}\n\nRECURSIVE TransitiveClosure(_)\nTransitiveClosure(E) ==\n    LET pairs == {<<a, b>> in E \\X E : a.to = b.from}\n        composed == {[from |-> p[1].from, to |-> p[2].to] : p in pairs}\n        extended == E \\union composed\n    IN  IF extended = E THEN E\n        ELSE TransitiveClosure(extended)",
+      "message": "Assertion failed: NodeIds \u2014 {n.id : n \\in nodes}\n\nRECURSIVE TransitiveClosure(_)\nTransitiveClosure(E) ==\n    LET pairs == {<<a, b>> \\in E \\X E : ...",
+      "description": "Test assertion for NodeIds from registry_crud spec"
+    },
+    "assert_ActualClosure": {
+      "condition": "TransitiveClosure({[from |-> e.from, to |-> e.to] : e in edges})\n\nReachable(start) ==\n    {pair.to : pair in {p in ActualClosure : p.from = start}}",
+      "message": "Assertion failed: ActualClosure \u2014 TransitiveClosure({[from |-> e.from, to |-> e.to] : e \\in edges})\n\nReachable(start) ==\n    {pair.to : pair \\in {p \\in...",
+      "description": "Test assertion for ActualClosure from registry_crud spec"
+    },
+    "assert_UndirectedEdges": {
+      "condition": "{[from |-> e.from, to |-> e.to] : e in edges}\n                   \\union {[from |-> e.to, to |-> e.from] : e in edges}",
+      "message": "Assertion failed: UndirectedEdges \u2014 {[from |-> e.from, to |-> e.to] : e \\in edges}\n                   \\union {[from |-> e.to, to |-> e.from] : e \\in edges}",
+      "description": "Test assertion for UndirectedEdges from registry_crud spec"
+    },
+    "assert_UndirectedClosure": {
+      "condition": "TransitiveClosure(UndirectedEdges)\n\nComponentOf(id) ==\n    {id} \\union {pair.to : pair in {p in UndirectedClosure : p.from = id}}",
+      "message": "Assertion failed: UndirectedClosure \u2014 TransitiveClosure(UndirectedEdges)\n\nComponentOf(id) ==\n    {id} \\union {pair.to : pair \\in {p \\in UndirectedClosure :...",
+      "description": "Test assertion for UndirectedClosure from registry_crud spec"
+    },
+    "assert_ActualComponents": {
+      "condition": "LET RECURSIVE BuildComponents(_, _)\n        BuildComponents(remaining, acc) ==\n            IF remaining = {} THEN acc\n            ELSE LET pick == CHOOSE x in remaining : TRUE\n                     comp == ComponentOf(pick) intersect remaining\n                 IN  BuildComponents(remaining \\ comp, acc \\union {comp})\n    IN  BuildComponents(NodeIds, {})",
+      "message": "Assertion failed: ActualComponents \u2014 LET RECURSIVE BuildComponents(_, _)\n        BuildComponents(remaining, acc) ==\n            IF remaining = {} THEN acc...",
+      "description": "Test assertion for ActualComponents from registry_crud spec"
+    },
+    "assert_ClosureCorrect": {
+      "condition": "closure = ActualClosure",
+      "message": "Assertion failed: ClosureCorrect \u2014 closure = ActualClosure",
+      "description": "Test assertion for ClosureCorrect from registry_crud spec"
+    },
+    "assert_ComponentsValid": {
+      "condition": "components = ActualComponents",
+      "message": "Assertion failed: ComponentsValid \u2014 components = ActualComponents",
+      "description": "Test assertion for ComponentsValid from registry_crud spec"
+    },
+    "assert_AcyclicGraph": {
+      "condition": "\\A id in NodeIds : id not in Reachable(id)",
+      "message": "Assertion failed: AcyclicGraph \u2014 \\A id \\in NodeIds : id \\notin Reachable(id)",
+      "description": "Test assertion for AcyclicGraph from registry_crud spec"
+    },
+    "assert_ReferentialIntegrity": {
+      "condition": "\\A e in edges : e.from in NodeIds and e.to in NodeIds",
+      "message": "Assertion failed: ReferentialIntegrity \u2014 \\A e \\in edges : e.from \\in NodeIds /\\ e.to \\in NodeIds",
+      "description": "Test assertion for ReferentialIntegrity from registry_crud spec"
+    },
+    "assert_ValidEdgeTypes": {
+      "condition": "\\A e in edges : e.type in EdgeTypeSet",
+      "message": "Assertion failed: ValidEdgeTypes \u2014 \\A e \\in edges : e.type \\in EdgeTypeSet",
+      "description": "Test assertion for ValidEdgeTypes from registry_crud spec"
+    },
+    "assert_BoundedSize": {
+      "condition": "Cardinality(nodes) <= MaxRecords",
+      "message": "Assertion failed: BoundedSize \u2014 Cardinality(nodes) <= MaxRecords",
+      "description": "Test assertion for BoundedSize from registry_crud spec"
+    },
+    "assert_ValidIds": {
+      "condition": "NodeIds \\subseteq IdSet",
+      "message": "Assertion failed: ValidIds \u2014 NodeIds \\subseteq IdSet",
+      "description": "Test assertion for ValidIds from registry_crud spec"
+    }
+  }
+}

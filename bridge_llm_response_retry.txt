@@ -1,0 +1,189 @@
+Looking at the error message about an empty right-hand side of assignment, I need to carefully check all assignment statements. Let me generate a corrected version following the exact PlusCal syntax requirements.
+
+------------------------- MODULE bridge_translator -------------------------
+
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    MaxSteps,
+    NumVariables,
+    NumActions,
+    NumInvariants
+
+(* --algorithm bridge_translator
+
+variables
+    current_state = "idle",
+    vars_found = 0,
+    actions_found = 0,
+    invariants_found = 0,
+    has_traces = FALSE,
+    data_structures_out = 0,
+    operations_out = 0,
+    verifiers_out = 0,
+    assertions_out = 0,
+    scenarios_out = 0,
+    schema_valid = FALSE,
+    input_hash = 0,
+    step_count = 0,
+    op = "idle",
+    result = "none",
+    dirty = FALSE;
+
+define
+    StateSet == {"idle", "parsing_spec", "translating_vars", "translating_actions",
+                 "translating_invariants", "translating_traces", "validating_output", 
+                 "done", "failed"}
+    
+    TerminalStates == {"done", "failed"}
+    
+    \* Invariants
+    ValidState == dirty = TRUE \/ current_state \in StateSet
+    
+    BoundedExecution == step_count <= MaxSteps
+    
+    OutputConformsToSchema == 
+        dirty = TRUE \/ 
+        (current_state = "done" => 
+            (data_structures_out = vars_found /\
+             operations_out = actions_found /\
+             verifiers_out = invariants_found /\
+             assertions_out = invariants_found))
+    
+    TranslationOrder == 
+        dirty = TRUE \/
+        ((current_state = "translating_actions" => vars_found > 0) /\
+         (current_state = "translating_invariants" => actions_found > 0) /\
+         (current_state = "translating_traces" => invariants_found > 0) /\
+         (current_state = "validating_output" => scenarios_out > 0))
+    
+    NoPartialOutput == 
+        dirty = TRUE \/
+        (current_state = "done" => 
+            (data_structures_out > 0 /\ operations_out > 0 /\ 
+             verifiers_out > 0 /\ assertions_out > 0 /\ scenarios_out > 0))
+    
+    InputPreserved == dirty = TRUE \/ (current_state # "idle" => input_hash > 0)
+
+end define;
+
+fair process actor = "main"
+begin
+    Loop:
+        while current_state \notin TerminalStates /\ step_count < MaxSteps do
+            either
+                ReceiveSpec:
+                    if current_state = "idle" then
+                        vars_found := NumVariables;
+                        actions_found := NumActions;
+                        invariants_found := NumInvariants;
+                        has_traces := (NumInvariants > 0);
+                        input_hash := NumVariables + NumActions + NumInvariants + 1;
+                        dirty := TRUE;
+                        step_count := step_count + 1;
+                    ReceiveDecide:
+                        current_state := "parsing_spec";
+                        op := "spec_received";
+                        dirty := FALSE;
+                    else
+                        op := "receive_skip";
+                    end if;
+            or
+                ParseSpec:
+                    if current_state = "parsing_spec" then
+                        dirty := TRUE;
+                        step_count := step_count + 1;
+                    ParseDecide:
+                        if NumVariables >= 0 /\ NumActions >= 0 then
+                            current_state := "translating_vars";
+                            op := "parsed_successfully";
+                        else
+                            current_state := "failed";
+                            op := "parse_failed";
+                        end if;
+                        dirty := FALSE;
+                    else
+                        op := "parse_skip";
+                    end if;
+            or
+                TranslateVars:
+                    if current_state = "translating_vars" then
+                        data_structures_out := vars_found;
+                        dirty := TRUE;
+                        step_count := step_count + 1;
+                    VarsDecide:
+                        current_state := "translating_actions";
+                        op := "vars_done";
+                        dirty := FALSE;
+                    else
+                        op := "vars_skip";
+                    end if;
+            or
+                TranslateActions:
+                    if current_state = "translating_actions" then
+                        operations_out := actions_found;
+                        dirty := TRUE;
+                        step_count := step_count + 1;
+                    ActionsDecide:
+                        current_state := "translating_invariants";
+                        op := "actions_done";
+                        dirty := FALSE;
+                    else
+                        op := "actions_skip";
+                    end if;
+            or
+                TranslateInvariants:
+                    if current_state = "translating_invariants" then
+                        verifiers_out := invariants_found;
+                        assertions_out := invariants_found;
+                        dirty := TRUE;
+                        step_count := step_count + 1;
+                    InvariantsDecide:
+                        current_state := "translating_traces";
+                        op := "invariants_done";
+                        dirty := FALSE;
+                    else
+                        op := "invariants_skip";
+                    end if;
+            or
+                TranslateTraces:
+                    if current_state = "translating_traces" then
+                        scenarios_out := invariants_found;
+                        dirty := TRUE;
+                        step_count := step_count + 1;
+                    TracesDecide:
+                        current_state := "validating_output";
+                        op := "traces_done";
+                        dirty := FALSE;
+                    else
+                        op := "traces_skip";
+                    end if;
+            or
+                ValidateOutput:
+                    if current_state = "validating_output" then
+                        schema_valid := (data_structures_out = vars_found) /\
+                                       (operations_out = actions_found) /\
+                                       (verifiers_out = invariants_found) /\
+                                       (assertions_out = invariants_found) /\
+                                       (scenarios_out = invariants_found);
+                        dirty := TRUE;
+                        step_count := step_count + 1;
+                    ValidateDecide:
+                        if schema_valid then
+                            current_state := "done";
+                            op := "validation_success";
+                        else
+                            current_state := "failed";
+                            op := "validation_failed";
+                        end if;
+                        dirty := FALSE;
+                    else
+                        op := "validate_skip";
+                    end if;
+            end either;
+        end while;
+end process;
+
+end algorithm; *)
+
+===========================================================================

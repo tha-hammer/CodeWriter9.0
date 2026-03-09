@@ -677,3 +677,105 @@ class SchemaExtractor:
         # Requirement decomposes into the 3 behaviors
         for gwt in ("gwt-0005", "gwt-0006", "gwt-0007"):
             self._add_edge_safe(dag, "req-0002", gwt, EdgeType.DECOMPOSES)
+
+        # ── Phase 4: The Bridge self-registration ──
+
+        # Requirement: spec-to-code bridge
+        dag.add_node(Node.requirement(
+            "req-0003",
+            "System needs mechanical translators that convert TLA+ specs into code artifacts conforming to existing schema shapes (data_structures, processors.operations, verifiers, testing.assertions)",
+        ))
+
+        # 4 GWT behaviors — one per translator
+        dag.add_node(Node.behavior(
+            "gwt-0008", "state_var_translation",
+            "a TLA+ spec with declared state variables",
+            "the state variable translator processes it",
+            "a data_structures artifact is produced with fields, types, and validation conforming to backend_schema",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0009", "action_translation",
+            "a TLA+ spec with defined actions",
+            "the action translator processes it",
+            "a processors.operations artifact is produced with parameters, returns, and error_types conforming to backend_schema",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0010", "invariant_translation",
+            "a TLA+ spec with invariants",
+            "the invariant translator processes it",
+            "verifiers and testing.assertions artifacts are produced conforming to backend and shared schemas",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0011", "trace_translation",
+            "a TLC counterexample trace with state transitions",
+            "the trace translator processes it",
+            "concrete test scenarios are generated with setup, steps, and expected outcomes for each state",
+        ))
+
+        # Requirement decomposes into the 4 bridge behaviors
+        for gwt in ("gwt-0008", "gwt-0009", "gwt-0010", "gwt-0011"):
+            self._add_edge_safe(dag, "req-0003", gwt, EdgeType.DECOMPOSES)
+
+        # Bridge translator resource nodes
+        dag.add_node(Node.resource(
+            "bridge-0001", "state_var_translator",
+            description="Translates TLA+ state variables into data_structures shape (fields, types, validation)",
+            path="python/registry/bridge.py",
+        ))
+        dag.add_node(Node.resource(
+            "bridge-0002", "action_translator",
+            description="Translates TLA+ actions into processors.operations shape (params, returns, errors)",
+            path="python/registry/bridge.py",
+        ))
+        dag.add_node(Node.resource(
+            "bridge-0003", "invariant_translator",
+            description="Translates TLA+ invariants into verifiers and testing.assertions shapes",
+            path="python/registry/bridge.py",
+        ))
+        dag.add_node(Node.resource(
+            "bridge-0004", "trace_translator",
+            description="Translates TLC counterexample traces into concrete test scenarios",
+            path="python/registry/bridge.py",
+        ))
+
+        # Bridge translator spec (instantiates state_machine template)
+        dag.add_node(Node(
+            id="tpl-0008", kind=NodeKind.SPEC, name="bridge_translator_spec",
+            description="State machine spec for the bridge translator pipeline (TLC verified: 702 states, 6 invariants)",
+            path="templates/pluscal/instances/bridge_translator.tla",
+        ))
+        # Bridge spec instantiates state_machine template
+        self._add_edge_safe(dag, "tpl-0008", "tpl-0002", EdgeType.IMPLEMENTS)
+        # Bridge spec stored in artifact store
+        self._add_edge_safe(dag, "tpl-0008", "fs-x7p6", EdgeType.REFERENCES)
+        # Bridge spec verifies the 4 GWT behaviors
+        for gwt in ("gwt-0008", "gwt-0009", "gwt-0010", "gwt-0011"):
+            self._add_edge_safe(dag, "tpl-0008", gwt, EdgeType.VERIFIES)
+
+        # GWT behaviors reference the target schema shapes they produce
+        self._add_edge_safe(dag, "gwt-0008", "db-f8n5", EdgeType.REFERENCES)    # → data_structures
+        self._add_edge_safe(dag, "gwt-0009", "db-b7r2", EdgeType.REFERENCES)    # → processors
+        self._add_edge_safe(dag, "gwt-0010", "db-j6x9", EdgeType.REFERENCES)    # → backend verifiers
+        self._add_edge_safe(dag, "gwt-0010", "cfg-g1u4", EdgeType.REFERENCES)   # → shared verifiers
+        self._add_edge_safe(dag, "gwt-0010", "cfg-s6e2", EdgeType.REFERENCES)   # → testing
+        self._add_edge_safe(dag, "gwt-0011", "cfg-s6e2", EdgeType.REFERENCES)   # → testing
+
+        # GWT behaviors reference the loop (bridge uses the loop)
+        self._add_edge_safe(dag, "gwt-0008", "loop-0001", EdgeType.REFERENCES)
+        self._add_edge_safe(dag, "gwt-0009", "loop-0001", EdgeType.REFERENCES)
+        self._add_edge_safe(dag, "gwt-0010", "loop-0001", EdgeType.REFERENCES)
+        self._add_edge_safe(dag, "gwt-0011", "loop-0001", EdgeType.REFERENCES)
+
+        # Bridge translators implement their behaviors
+        self._add_edge_safe(dag, "bridge-0001", "gwt-0008", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "bridge-0002", "gwt-0009", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "bridge-0003", "gwt-0010", EdgeType.IMPLEMENTS)
+        self._add_edge_safe(dag, "bridge-0004", "gwt-0011", EdgeType.IMPLEMENTS)
+
+        # Bridge translators depend on the one-shot loop
+        for br in ("bridge-0001", "bridge-0002", "bridge-0003", "bridge-0004"):
+            self._add_edge_safe(dag, br, "loop-0001", EdgeType.DEPENDS_ON)
+
+        # Bridge outputs stored in plan artifact store (activating fs-y3q2)
+        for br in ("bridge-0001", "bridge-0002", "bridge-0003", "bridge-0004"):
+            self._add_edge_safe(dag, br, "fs-y3q2", EdgeType.REFERENCES)
