@@ -590,3 +590,90 @@ class SchemaExtractor:
             self._add_edge_safe(dag, "comp-0001", tpl, EdgeType.COMPOSES)
         # Spec cache references composer
         self._add_edge_safe(dag, "comp-0002", "comp-0001", EdgeType.DEPENDS_ON)
+
+        # ── Phase 3: One-Shot Loop self-registration ──
+
+        # 3 GWT behaviors for the one-shot loop
+        dag.add_node(Node.behavior(
+            "gwt-0005", "context_transitive_deps",
+            "a new GWT",
+            "context is queried from registry",
+            "all transitive deps are included",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0006", "counterexample_translation",
+            "a TLC counterexample",
+            "translated to natural language",
+            "it references PlusCal-level concepts only",
+        ))
+        dag.add_node(Node.behavior(
+            "gwt-0007", "failure_routing",
+            "two consecutive failures",
+            "routing",
+            "requirements inconsistency is reported (not retried)",
+        ))
+
+        # One-shot loop state machine spec (instantiates state_machine template)
+        dag.add_node(Node(
+            id="tpl-0007", kind=NodeKind.SPEC, name="one_shot_loop_spec",
+            description="State machine spec for the one-shot loop lifecycle (TLC verified)",
+            path="templates/pluscal/instances/one_shot_loop.tla",
+        ))
+
+        # One-shot loop Python module
+        dag.add_node(Node.resource(
+            "loop-0001", "one_shot_loop",
+            description="One-shot loop: registry context → LLM → PlusCal → compile → compose → TLC → route",
+            path="python/registry/one_shot_loop.py",
+        ))
+
+        # Counterexample translator component
+        dag.add_node(Node.resource(
+            "loop-0002", "counterexample_translator",
+            description="Translates TLC counterexample traces to PlusCal-level concepts",
+            path="python/registry/one_shot_loop.py",
+        ))
+
+        # Pass/retry/fail router component
+        dag.add_node(Node.resource(
+            "loop-0003", "pass_retry_fail_router",
+            description="Routes TLC results: pass → done, first fail → retry, second fail → requirements inconsistency",
+            path="python/registry/one_shot_loop.py",
+        ))
+
+        # One-shot loop spec instantiates state_machine template
+        self._add_edge_safe(dag, "tpl-0007", "tpl-0002", EdgeType.IMPLEMENTS)
+        # One-shot loop spec stored in artifact store
+        self._add_edge_safe(dag, "tpl-0007", "fs-x7p6", EdgeType.REFERENCES)
+        # One-shot loop spec verifies the 3 GWT behaviors
+        for gwt in ("gwt-0005", "gwt-0006", "gwt-0007"):
+            self._add_edge_safe(dag, "tpl-0007", gwt, EdgeType.VERIFIES)
+
+        # One-shot loop module implements its spec
+        self._add_edge_safe(dag, "loop-0001", "tpl-0007", EdgeType.IMPLEMENTS)
+        # One-shot loop uses the registry (DAG) for context query
+        self._add_edge_safe(dag, "loop-0001", "res-0001", EdgeType.REFERENCES)  # nodes
+        self._add_edge_safe(dag, "loop-0001", "res-0003", EdgeType.REFERENCES)  # closure
+        # One-shot loop uses the composition engine
+        self._add_edge_safe(dag, "loop-0001", "comp-0001", EdgeType.DEPENDS_ON)
+        # One-shot loop uses the spec cache
+        self._add_edge_safe(dag, "loop-0001", "comp-0002", EdgeType.REFERENCES)
+
+        # Counterexample translator is part of loop
+        self._add_edge_safe(dag, "loop-0002", "loop-0001", EdgeType.DEPENDS_ON)
+        # Router is part of loop
+        self._add_edge_safe(dag, "loop-0003", "loop-0001", EdgeType.DEPENDS_ON)
+
+        # GWT behaviors reference the loop components
+        self._add_edge_safe(dag, "gwt-0005", "res-0003", EdgeType.REFERENCES)  # transitive deps → closure
+        self._add_edge_safe(dag, "gwt-0006", "loop-0002", EdgeType.REFERENCES)  # counterexample → translator
+        self._add_edge_safe(dag, "gwt-0007", "loop-0003", EdgeType.REFERENCES)  # routing → router
+
+        # Requirement for the one-shot loop
+        dag.add_node(Node.requirement(
+            "req-0002",
+            "System needs a one-shot loop that queries registry context, prompts LLM, extracts PlusCal, compiles, composes, verifies with TLC, and routes pass/retry/fail",
+        ))
+        # Requirement decomposes into the 3 behaviors
+        for gwt in ("gwt-0005", "gwt-0006", "gwt-0007"):
+            self._add_edge_safe(dag, "req-0002", gwt, EdgeType.DECOMPOSES)

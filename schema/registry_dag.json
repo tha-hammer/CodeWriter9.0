@@ -383,6 +383,60 @@
       "when": "the edge is added",
       "then": "the edge is rejected with an error"
     },
+    "gwt-0005": {
+      "id": "gwt-0005",
+      "kind": "behavior",
+      "name": "context_transitive_deps",
+      "description": "",
+      "version": 1,
+      "given": "a new GWT",
+      "when": "context is queried from registry",
+      "then": "all transitive deps are included"
+    },
+    "gwt-0006": {
+      "id": "gwt-0006",
+      "kind": "behavior",
+      "name": "counterexample_translation",
+      "description": "",
+      "version": 1,
+      "given": "a TLC counterexample",
+      "when": "translated to natural language",
+      "then": "it references PlusCal-level concepts only"
+    },
+    "gwt-0007": {
+      "id": "gwt-0007",
+      "kind": "behavior",
+      "name": "failure_routing",
+      "description": "",
+      "version": 1,
+      "given": "two consecutive failures",
+      "when": "routing",
+      "then": "requirements inconsistency is reported (not retried)"
+    },
+    "loop-0001": {
+      "id": "loop-0001",
+      "kind": "resource",
+      "name": "one_shot_loop",
+      "description": "One-shot loop: registry context \u2192 LLM \u2192 PlusCal \u2192 compile \u2192 compose \u2192 TLC \u2192 route",
+      "version": 1,
+      "path": "python/registry/one_shot_loop.py"
+    },
+    "loop-0002": {
+      "id": "loop-0002",
+      "kind": "resource",
+      "name": "counterexample_translator",
+      "description": "Translates TLC counterexample traces to PlusCal-level concepts",
+      "version": 1,
+      "path": "python/registry/one_shot_loop.py"
+    },
+    "loop-0003": {
+      "id": "loop-0003",
+      "kind": "resource",
+      "name": "pass_retry_fail_router",
+      "description": "Routes TLC results: pass \u2192 done, first fail \u2192 retry, second fail \u2192 requirements inconsistency",
+      "version": 1,
+      "path": "python/registry/one_shot_loop.py"
+    },
     "mq-c1g5": {
       "id": "mq-c1g5",
       "kind": "resource",
@@ -445,6 +499,14 @@
       "description": "",
       "version": 1,
       "text": "System needs a dependency-tracking DAG over existing resource registry"
+    },
+    "req-0002": {
+      "id": "req-0002",
+      "kind": "requirement",
+      "name": "",
+      "description": "",
+      "version": 1,
+      "text": "System needs a one-shot loop that queries registry context, prompts LLM, extracts PlusCal, compiles, composes, verifies with TLC, and routes pass/retry/fail"
     },
     "res-0001": {
       "id": "res-0001",
@@ -521,6 +583,14 @@
       "description": "State machine spec for the composition engine lifecycle (TLC verified)",
       "version": 1,
       "path": "templates/pluscal/instances/composition_engine.tla"
+    },
+    "tpl-0007": {
+      "id": "tpl-0007",
+      "kind": "spec",
+      "name": "one_shot_loop_spec",
+      "description": "State machine spec for the one-shot loop lifecycle (TLC verified)",
+      "version": 1,
+      "path": "templates/pluscal/instances/one_shot_loop.tla"
     },
     "ui-a4y1": {
       "id": "ui-a4y1",
@@ -959,6 +1029,86 @@
       "from": "comp-0002",
       "to": "comp-0001",
       "edge_type": "depends_on"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "tpl-0002",
+      "edge_type": "implements"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "fs-x7p6",
+      "edge_type": "references"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "gwt-0005",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "gwt-0006",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "gwt-0007",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "loop-0001",
+      "to": "tpl-0007",
+      "edge_type": "implements"
+    },
+    {
+      "from": "loop-0001",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "loop-0001",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "loop-0001",
+      "to": "comp-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "loop-0001",
+      "to": "comp-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "loop-0002",
+      "to": "loop-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "loop-0003",
+      "to": "loop-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "gwt-0005",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "req-0002",
+      "to": "gwt-0005",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0002",
+      "to": "gwt-0006",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0002",
+      "to": "gwt-0007",
+      "edge_type": "decomposes"
     }
   ],
   "closure": {
@@ -1107,6 +1257,106 @@
     "gwt-0004": [
       "res-0002"
     ],
+    "gwt-0005": [
+      "res-0003"
+    ],
+    "gwt-0006": [],
+    "gwt-0007": [],
+    "loop-0001": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
+    "loop-0002": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
+    "loop-0003": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "loop-0001",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "res-0001",
+      "res-0003",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "tpl-0007",
+      "ui-x1r9"
+    ],
     "mq-c1g5": [],
     "mq-r4z8": [
       "cfg-d2q3",
@@ -1137,6 +1387,12 @@
       "res-0002",
       "res-0003",
       "res-0004"
+    ],
+    "req-0002": [
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "res-0003"
     ],
     "res-0001": [],
     "res-0002": [],
@@ -1186,6 +1442,15 @@
     "tpl-0006": [
       "fs-x7p6",
       "mq-t2f7",
+      "tpl-0002"
+    ],
+    "tpl-0007": [
+      "fs-x7p6",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "mq-t2f7",
+      "res-0003",
       "tpl-0002"
     ],
     "ui-a4y1": [
@@ -1285,12 +1550,19 @@
       "gwt-0002",
       "gwt-0003",
       "gwt-0004",
+      "gwt-0005",
+      "gwt-0006",
+      "gwt-0007",
+      "loop-0001",
+      "loop-0002",
+      "loop-0003",
       "mq-c1g5",
       "mq-r4z8",
       "mq-s9b4",
       "mq-t2f7",
       "mq-u6j3",
       "req-0001",
+      "req-0002",
       "res-0001",
       "res-0002",
       "res-0003",
@@ -1301,6 +1573,7 @@
       "tpl-0004",
       "tpl-0005",
       "tpl-0006",
+      "tpl-0007",
       "ui-a4y1",
       "ui-v3n6",
       "ui-w8p2",
