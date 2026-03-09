@@ -242,6 +242,22 @@
       "source_schema": "shared_objects_schema.json",
       "source_key": "documentation"
     },
+    "comp-0001": {
+      "id": "comp-0001",
+      "kind": "resource",
+      "name": "composer",
+      "description": "TLA+ composition engine: compose(spec_a, spec_b) with variable unification",
+      "version": 1,
+      "path": "python/registry/composer.py"
+    },
+    "comp-0002": {
+      "id": "comp-0002",
+      "kind": "resource",
+      "name": "spec_cache",
+      "description": "Composed spec cache indexed by connected component",
+      "version": 1,
+      "path": "python/registry/composer.py"
+    },
     "db-b7r2": {
       "id": "db-b7r2",
       "kind": "resource",
@@ -312,12 +328,9 @@
       "id": "fs-x7p6",
       "kind": "resource",
       "name": "tla_artifact_store",
-      "description": "Filesystem working directory for generated TLA+ specs (.tla), TLC configs (.cfg), and model-checker output logs. Activate if using formal verification.",
+      "description": "Filesystem location for generated TLA+ specs and TLC output",
       "version": 1,
-      "schema": "filesystem",
-      "path": "artifacts/tlaplus/WorkspaceName",
-      "source_schema": "shared_objects_schema.json",
-      "source_key": "filesystem.tla_artifact_store"
+      "path": "templates/pluscal"
     },
     "fs-y3q2": {
       "id": "fs-y3q2",
@@ -460,6 +473,54 @@
       "name": "components",
       "description": "Map<ComponentID, Set<UUID>> \u2014 connected components",
       "version": 1
+    },
+    "tpl-0001": {
+      "id": "tpl-0001",
+      "kind": "spec",
+      "name": "crud_template",
+      "description": "CRUD PlusCal template \u2014 set-based state, create/read/update/delete actions, structural invariants",
+      "version": 1,
+      "path": "templates/pluscal/crud.tla"
+    },
+    "tpl-0002": {
+      "id": "tpl-0002",
+      "kind": "spec",
+      "name": "state_machine_template",
+      "description": "State machine PlusCal template \u2014 enum states, guarded transitions, bypass conditions",
+      "version": 1,
+      "path": "templates/pluscal/state_machine.tla"
+    },
+    "tpl-0003": {
+      "id": "tpl-0003",
+      "kind": "spec",
+      "name": "queue_pipeline_template",
+      "description": "Queue/pipeline PlusCal template \u2014 ordered processing, FIFO, no-item-loss invariant",
+      "version": 1,
+      "path": "templates/pluscal/queue_pipeline.tla"
+    },
+    "tpl-0004": {
+      "id": "tpl-0004",
+      "kind": "spec",
+      "name": "auth_session_template",
+      "description": "Auth/session PlusCal template \u2014 login/logout/expire, role-based access, session timeout",
+      "version": 1,
+      "path": "templates/pluscal/auth_session.tla"
+    },
+    "tpl-0005": {
+      "id": "tpl-0005",
+      "kind": "spec",
+      "name": "registry_crud_spec",
+      "description": "Registry CRUD instantiation \u2014 verifies gwt-0001..0004 via TLC model checker",
+      "version": 1,
+      "path": "templates/pluscal/instances/registry_crud.tla"
+    },
+    "tpl-0006": {
+      "id": "tpl-0006",
+      "kind": "resource",
+      "name": "composition_engine_spec",
+      "description": "State machine spec for the composition engine lifecycle (TLC verified)",
+      "version": 1,
+      "path": "templates/pluscal/instances/composition_engine.tla"
     },
     "ui-a4y1": {
       "id": "ui-a4y1",
@@ -768,6 +829,136 @@
       "from": "gwt-0004",
       "to": "res-0002",
       "edge_type": "references"
+    },
+    {
+      "from": "tpl-0001",
+      "to": "db-f8n5",
+      "edge_type": "models"
+    },
+    {
+      "from": "tpl-0001",
+      "to": "db-d3w8",
+      "edge_type": "models"
+    },
+    {
+      "from": "tpl-0002",
+      "to": "mq-t2f7",
+      "edge_type": "models"
+    },
+    {
+      "from": "tpl-0003",
+      "to": "mq-r4z8",
+      "edge_type": "models"
+    },
+    {
+      "from": "tpl-0003",
+      "to": "mq-u6j3",
+      "edge_type": "models"
+    },
+    {
+      "from": "tpl-0004",
+      "to": "cfg-t5h9",
+      "edge_type": "models"
+    },
+    {
+      "from": "tpl-0004",
+      "to": "ui-x1r9",
+      "edge_type": "models"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "tpl-0001",
+      "edge_type": "implements"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "gwt-0001",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "gwt-0002",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "gwt-0003",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "gwt-0004",
+      "edge_type": "verifies"
+    },
+    {
+      "from": "tpl-0001",
+      "to": "fs-x7p6",
+      "edge_type": "references"
+    },
+    {
+      "from": "tpl-0002",
+      "to": "fs-x7p6",
+      "edge_type": "references"
+    },
+    {
+      "from": "tpl-0003",
+      "to": "fs-x7p6",
+      "edge_type": "references"
+    },
+    {
+      "from": "tpl-0004",
+      "to": "fs-x7p6",
+      "edge_type": "references"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "fs-x7p6",
+      "edge_type": "references"
+    },
+    {
+      "from": "tpl-0006",
+      "to": "tpl-0002",
+      "edge_type": "implements"
+    },
+    {
+      "from": "tpl-0006",
+      "to": "fs-x7p6",
+      "edge_type": "references"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0006",
+      "edge_type": "implements"
+    },
+    {
+      "from": "comp-0001",
+      "to": "db-f8n5",
+      "edge_type": "references"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0001",
+      "edge_type": "composes"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0002",
+      "edge_type": "composes"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0003",
+      "edge_type": "composes"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0004",
+      "edge_type": "composes"
+    },
+    {
+      "from": "comp-0002",
+      "to": "comp-0001",
+      "edge_type": "depends_on"
     }
   ],
   "closure": {
@@ -833,6 +1024,53 @@
     "cfg-u2k4": [],
     "cfg-v8l7": [],
     "cfg-w4n3": [],
+    "comp-0001": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "ui-x1r9"
+    ],
+    "comp-0002": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "comp-0001",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0006",
+      "ui-x1r9"
+    ],
     "db-b7r2": [
       "cfg-d2q3",
       "cfg-f7s8",
@@ -904,6 +1142,52 @@
     "res-0002": [],
     "res-0003": [],
     "res-0004": [],
+    "tpl-0001": [
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6"
+    ],
+    "tpl-0002": [
+      "fs-x7p6",
+      "mq-t2f7"
+    ],
+    "tpl-0003": [
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "db-b7r2",
+      "fs-x7p6",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-u6j3"
+    ],
+    "tpl-0004": [
+      "cfg-t5h9",
+      "fs-x7p6",
+      "ui-x1r9"
+    ],
+    "tpl-0005": [
+      "db-d3w8",
+      "db-f8n5",
+      "fs-x7p6",
+      "gwt-0001",
+      "gwt-0002",
+      "gwt-0003",
+      "gwt-0004",
+      "res-0001",
+      "res-0002",
+      "res-0003",
+      "res-0004",
+      "tpl-0001"
+    ],
+    "tpl-0006": [
+      "fs-x7p6",
+      "mq-t2f7",
+      "tpl-0002"
+    ],
     "ui-a4y1": [
       "ui-w8p2",
       "ui-z2w7"
@@ -951,52 +1235,7 @@
       "cfg-l8y1"
     ],
     "component-10": [
-      "api-m5g7",
-      "api-n8k2",
-      "api-p3e6",
-      "api-q7v1",
-      "cfg-d2q3",
-      "cfg-f7s8",
-      "cfg-g1u4",
-      "cfg-h5v9",
-      "cfg-j9w2",
-      "cfg-k3x7",
-      "db-b7r2",
-      "db-d3w8",
-      "db-f8n5",
-      "db-h2s4",
-      "db-j6x9",
-      "db-l1c3",
-      "mq-c1g5",
-      "mq-r4z8",
-      "mq-s9b4",
-      "mq-u6j3",
-      "ui-a4y1",
-      "ui-v3n6",
-      "ui-w8p2",
-      "ui-x1r9",
-      "ui-y5t3",
-      "ui-z2w7"
-    ],
-    "component-11": [
-      "fs-x7p6"
-    ],
-    "component-12": [
       "fs-y3q2"
-    ],
-    "component-13": [
-      "mq-t2f7"
-    ],
-    "component-14": [
-      "gwt-0001",
-      "gwt-0002",
-      "gwt-0003",
-      "gwt-0004",
-      "req-0001",
-      "res-0001",
-      "res-0002",
-      "res-0003",
-      "res-0004"
     ],
     "component-2": [
       "cfg-m2z6"
@@ -1013,16 +1252,61 @@
       "cfg-s6e2"
     ],
     "component-6": [
-      "cfg-t5h9"
-    ],
-    "component-7": [
       "cfg-u2k4"
     ],
-    "component-8": [
+    "component-7": [
       "cfg-v8l7"
     ],
-    "component-9": [
+    "component-8": [
       "cfg-w4n3"
+    ],
+    "component-9": [
+      "api-m5g7",
+      "api-n8k2",
+      "api-p3e6",
+      "api-q7v1",
+      "cfg-d2q3",
+      "cfg-f7s8",
+      "cfg-g1u4",
+      "cfg-h5v9",
+      "cfg-j9w2",
+      "cfg-k3x7",
+      "cfg-t5h9",
+      "comp-0001",
+      "comp-0002",
+      "db-b7r2",
+      "db-d3w8",
+      "db-f8n5",
+      "db-h2s4",
+      "db-j6x9",
+      "db-l1c3",
+      "fs-x7p6",
+      "gwt-0001",
+      "gwt-0002",
+      "gwt-0003",
+      "gwt-0004",
+      "mq-c1g5",
+      "mq-r4z8",
+      "mq-s9b4",
+      "mq-t2f7",
+      "mq-u6j3",
+      "req-0001",
+      "res-0001",
+      "res-0002",
+      "res-0003",
+      "res-0004",
+      "tpl-0001",
+      "tpl-0002",
+      "tpl-0003",
+      "tpl-0004",
+      "tpl-0005",
+      "tpl-0006",
+      "ui-a4y1",
+      "ui-v3n6",
+      "ui-w8p2",
+      "ui-x1r9",
+      "ui-y5t3",
+      "ui-z2w7"
     ]
   }
 }

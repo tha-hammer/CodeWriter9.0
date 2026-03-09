@@ -497,3 +497,96 @@ class SchemaExtractor:
 
         # gwt-0004 (cycle rejection) references edges
         self._add_edge_safe(dag, "gwt-0004", "res-0002", EdgeType.REFERENCES)
+
+        # --- Phase 1: PlusCal template library (self-registration) ---
+
+        # The 4 PlusCal templates
+        dag.add_node(Node(
+            id="tpl-0001", kind=NodeKind.SPEC, name="crud_template",
+            description="CRUD PlusCal template — set-based state, create/read/update/delete actions, structural invariants",
+            path="templates/pluscal/crud.tla",
+        ))
+        dag.add_node(Node(
+            id="tpl-0002", kind=NodeKind.SPEC, name="state_machine_template",
+            description="State machine PlusCal template — enum states, guarded transitions, bypass conditions",
+            path="templates/pluscal/state_machine.tla",
+        ))
+        dag.add_node(Node(
+            id="tpl-0003", kind=NodeKind.SPEC, name="queue_pipeline_template",
+            description="Queue/pipeline PlusCal template — ordered processing, FIFO, no-item-loss invariant",
+            path="templates/pluscal/queue_pipeline.tla",
+        ))
+        dag.add_node(Node(
+            id="tpl-0004", kind=NodeKind.SPEC, name="auth_session_template",
+            description="Auth/session PlusCal template — login/logout/expire, role-based access, session timeout",
+            path="templates/pluscal/auth_session.tla",
+        ))
+
+        # The registry CRUD instance (first customer of the template)
+        dag.add_node(Node(
+            id="tpl-0005", kind=NodeKind.SPEC, name="registry_crud_spec",
+            description="Registry CRUD instantiation — verifies gwt-0001..0004 via TLC model checker",
+            path="templates/pluscal/instances/registry_crud.tla",
+        ))
+
+        # The TLA+ artifact store resource
+        dag.add_node(Node(
+            id="fs-x7p6", kind=NodeKind.RESOURCE, name="tla_artifact_store",
+            description="Filesystem location for generated TLA+ specs and TLC output",
+            path="templates/pluscal",
+        ))
+
+        # Templates model schema patterns
+        self._add_edge_safe(dag, "tpl-0001", "db-f8n5", EdgeType.MODELS)   # CRUD ← data_structures
+        self._add_edge_safe(dag, "tpl-0001", "db-d3w8", EdgeType.MODELS)   # CRUD ← data_access_objects
+        self._add_edge_safe(dag, "tpl-0002", "mq-t2f7", EdgeType.MODELS)   # state machine ← execution_patterns
+        self._add_edge_safe(dag, "tpl-0003", "mq-r4z8", EdgeType.MODELS)   # queue ← process_chains (backend)
+        self._add_edge_safe(dag, "tpl-0003", "mq-u6j3", EdgeType.MODELS)   # queue ← process_chains (middleware)
+        self._add_edge_safe(dag, "tpl-0004", "cfg-t5h9", EdgeType.MODELS)  # auth ← security
+        self._add_edge_safe(dag, "tpl-0004", "ui-x1r9", EdgeType.MODELS)   # auth ← access_controls
+
+        # Registry spec instantiates the CRUD template
+        self._add_edge_safe(dag, "tpl-0005", "tpl-0001", EdgeType.IMPLEMENTS)
+
+        # Registry spec verifies the 4 GWT behaviors
+        for gwt in ("gwt-0001", "gwt-0002", "gwt-0003", "gwt-0004"):
+            self._add_edge_safe(dag, "tpl-0005", gwt, EdgeType.VERIFIES)
+
+        # All templates stored in the artifact store
+        for tpl in ("tpl-0001", "tpl-0002", "tpl-0003", "tpl-0004", "tpl-0005"):
+            self._add_edge_safe(dag, tpl, "fs-x7p6", EdgeType.REFERENCES)
+
+        # ── Phase 2: Composition Engine self-registration ──
+
+        # Composition engine state machine spec (instantiates state_machine template)
+        dag.add_node(Node.resource(
+            "tpl-0006", "composition_engine_spec",
+            description="State machine spec for the composition engine lifecycle (TLC verified)",
+            path="templates/pluscal/instances/composition_engine.tla",
+        ))
+        # Composition engine Python module
+        dag.add_node(Node.resource(
+            "comp-0001", "composer",
+            description="TLA+ composition engine: compose(spec_a, spec_b) with variable unification",
+            path="python/registry/composer.py",
+        ))
+        # Spec cache
+        dag.add_node(Node.resource(
+            "comp-0002", "spec_cache",
+            description="Composed spec cache indexed by connected component",
+            path="python/registry/composer.py",
+        ))
+
+        # Composition engine spec instantiates state_machine template
+        self._add_edge_safe(dag, "tpl-0006", "tpl-0002", EdgeType.IMPLEMENTS)
+        # Composition engine spec stored in artifact store
+        self._add_edge_safe(dag, "tpl-0006", "fs-x7p6", EdgeType.REFERENCES)
+        # Composer implements the composition engine spec
+        self._add_edge_safe(dag, "comp-0001", "tpl-0006", EdgeType.IMPLEMENTS)
+        # Composer uses the DAG for variable unification
+        self._add_edge_safe(dag, "comp-0001", "db-f8n5", EdgeType.REFERENCES)  # data_structures
+        # Composer composes templates
+        for tpl in ("tpl-0001", "tpl-0002", "tpl-0003", "tpl-0004"):
+            self._add_edge_safe(dag, "comp-0001", tpl, EdgeType.COMPOSES)
+        # Spec cache references composer
+        self._add_edge_safe(dag, "comp-0002", "comp-0001", EdgeType.DEPENDS_ON)

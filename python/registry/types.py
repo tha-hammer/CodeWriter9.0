@@ -38,6 +38,7 @@ class EdgeType(str, Enum):
     VERIFIES = "verifies"
     IMPLEMENTS = "implements"
     CONSTRAINS = "constrains"
+    COMPOSES = "composes"
 
 
 @dataclass

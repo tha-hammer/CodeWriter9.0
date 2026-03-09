@@ -275,6 +275,10 @@ Results:
 
 ### Phase 1: First Templates
 
+The CRUD template isn't just for verifying the registry — it's the first
+reusable template in a library that will generate code for external projects.
+The registry bootstrap is just the first customer.
+
 **What we have:** Registry DAG with its own behaviors registered. Existing
 schema structures that define what each resource type looks like.
 **How we build:** By hand, but the registry + schemas tell us what to build.
@@ -295,7 +299,8 @@ Deliverables:
 The existing schemas directly inform template design:
 - **CRUD template** ← modeled after `data_structures` + `data_access_objects`
   (fields, relations, queries — these are the CRUD operations)
-- **State machine template** ← modeled after `execution_patterns`
+- **State machine template** ← modeled 
+after `execution_patterns`
   (conditions, rules, bypass_conditions — these are state guards)
 - **Queue/pipeline template** ← modeled after `process_chains`
   (ordered steps, conditions — these are queue operations)
@@ -329,6 +334,45 @@ not after building 5 more layers on top.
 **This is the flywheel's first real turn.** A tool we just built
 (CRUD template) verified a tool we built earlier (registry), using
 resource shapes already defined in the existing schemas.
+
+#### Phase 1 Implementation (COMPLETE — 2026-03-09)
+
+All deliverables met. Templates are reusable for external projects.
+
+```
+  templates/pluscal/
+  ├── crud.tla              CRUD template — set-based state, CRUD actions
+  ├── state_machine.tla     State machine template — enum states, guards, bypass
+  ├── queue_pipeline.tla    Queue/pipeline template — FIFO, no-item-loss
+  ├── auth_session.tla      Auth/session template — login/logout/expire/RBAC
+  └── instances/
+      ├── registry_crud.tla First instantiation — registry DAG verification
+      └── registry_crud.cfg TLC model checking configuration
+
+  tools/
+  └── tla2tools.jar         TLA+ toolbox (PlusCal compiler + TLC checker)
+```
+
+Results:
+- **4 PlusCal templates** with `{{FILL:...}}` markers for LLM parameterization
+- **TLC verified** registry CRUD: 7 invariants, 12,245 states, 0 violations
+- **`fs-x7p6`** (tla_artifact_store) activated in resource registry
+- **6 new DAG nodes** registered: tpl-0001..0005, fs-x7p6
+- **17 new edges**: templates model schemas, registry spec verifies GWTs
+- **DAG totals**: 55 nodes, 65 edges, 11 connected components
+- **45 tests** still passing (10 Rust + 35 Python)
+
+Key design decision: Two-phase action model (mutate → update derived).
+TLA+ evaluates primed variables simultaneously, so derived state
+(closure, components) must be recomputed in a separate step. Invariants
+on derived state are gated with `dirty = TRUE \/` to allow the
+intermediate state between phases.
+
+Template design: Each template maps to schema patterns:
+- CRUD ← `data_structures` + `data_access_objects`
+- State machine ← `execution_patterns` (conditions, rules, bypass)
+- Queue/pipeline ← `process_chains` (steps[], order[], conditions[])
+- Auth/session ← `security` + `access_controls` (roles, permissions, guards)
 
 ---
 
@@ -381,6 +425,35 @@ engine's own lifecycle:
 
 Run TLC. Verify the composition engine's own state machine before
 trusting it to compose other people's specs.
+
+#### Phase 2 Completion
+
+All deliverables met:
+
+**Composition Engine State Machine** (bootstrap act):
+- Instantiated `state_machine.tla` template for the composition lifecycle
+- States: `{empty, partial, composed, verified, failed}`
+- 7 invariants: ValidState, MonotonicGrowth, NoEmptyCompose,
+  AssociativityHolds, BoundedExecution, ValidSpecs, DerivedConsistency
+- TLC verified: 1,553 distinct states, 0 violations
+
+**`compose(spec_a, spec_b)`** — `python/registry/composer.py`:
+- TLA+ module parser (EXTENDS, CONSTANTS, VARIABLES, Init, Next, invariants)
+- Variable unification: name intersection + DAG edge inference
+- Composed module generation:
+  - `Init_composed = Init_A ∧ Init_B`
+  - `Next_composed = Next_A ∨ Next_B (with UNCHANGED)`
+  - `Inv_composed = Inv_A ∧ Inv_B ∧ Inv_cross`
+- Cross-invariant generation from registry dependency edges
+- Composed spec cache indexed by connected component
+- High-level API: `compose_from_files()`, `compose_component()`
+
+**Self-registration:**
+- 3 new nodes: `tpl-0006` (composition engine spec), `comp-0001` (composer),
+  `comp-0002` (spec cache)
+- 9 new edges (IMPLEMENTS, REFERENCES, COMPOSES, DEPENDS_ON)
+- DAG totals: 58 nodes, 74 edges, 11 components
+- All 61 tests passing (26 composer + 35 existing)
 
 ---
 
@@ -670,8 +743,8 @@ The bootstrap is complete when:
 
 - [x] Edge extraction from 4 schema files produces a valid DAG (Phase 0)
 - [x] The registry describes itself as nodes in its own graph (Phase 0)
-- [ ] TLC verifies the registry's own spec via CRUD template (Phase 1)
-- [ ] `fs-x7p6` activated, TLA+ artifacts stored there (Phase 1)
+- [x] TLC verifies the registry's own spec via CRUD template (Phase 1)
+- [x] `fs-x7p6` activated, TLA+ artifacts stored there (Phase 1)
 - [ ] TLC verifies the composition engine via state machine template (Phase 2)
 - [ ] Cross-layer dependencies (frontend→backend, middleware→shared) are
       composed and verified (Phase 2)
