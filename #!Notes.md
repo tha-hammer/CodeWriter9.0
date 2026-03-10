@@ -1,5 +1,206 @@
 #!Notes
 
+# The core problem with few-shot from the oracle is that the LLM sees finished tests and  
+  copies the topology/assertions rather than deriving them from bridge data. The question 
+  is: what context makes the LLM generate tests that are as good as the oracle but derived
+   from the artifacts?
+                                                                                          
+  The answer is TLC simulation traces.                                                  
+
+  The insight
+
+  When TLC verifies a model with 762 distinct states and passes, it has visited every
+  reachable state and confirmed every invariant holds at each one. We currently throw all
+  of that away — we capture "pass" and a state count. That's an enormous waste.
+
+  TLC has a -simulate mode that outputs concrete execution traces through the state space,
+   even on passing models. Each trace is:
+
+  State 1: <Init>
+    /\ current_state = "idle"
+    /\ candidates = {}
+    /\ affected = {}
+    /\ test_artifacts = {"a" :> "test_a.py", "b" :> "test_b.py"}
+    /\ adj = {"a" :> {"b"}, "b" :> {"c"}}
+
+  State 2: <SelectNode>
+    /\ current_state = "propagating"
+    /\ start = "c"
+    ...
+
+  State 3: <ComputeAffected>
+    /\ affected = {"a", "b", "c"}
+    /\ candidates = {"a", "b"}
+    ...
+
+  These traces ARE the test cases. Each one says: "starting from THIS state, applying
+  THESE actions, produces THIS result, and ALL invariants hold." The LLM's job shifts
+  from:
+
+  - Hard: "Design test scenarios for NoFalsePositives" (creative, needs domain reasoning)
+  - Easy: "Translate this concrete state trace into Python API calls" (mechanical,
+  verifiable)
+
+  The context stack
+
+  Ranked by impact:
+
+  1. TLC simulation traces (primary — the WHAT)
+
+  ## Concrete Verified Scenarios
+
+  Trace 1 (5 steps, tests NoFalsePositives + ValidState):
+    Init: nodes={a,b,c,d}, edges={a→b, b→c, c→d}, test_artifacts={a:"test_a.py",
+  c:"test_c.py"}
+    Action: query_affected_tests("d")
+    Result: affected={"test_a.py", "test_c.py"}
+    Invariants verified: NoFalsePositives ✓, NoFalseNegatives ✓, SelfTestIncluded ✓
+
+  Trace 2 (3 steps, tests isolated node):
+    Init: nodes={x}, edges={}, test_artifacts={x:"test_x.py"}
+    Action: query_affected_tests("x")
+    Result: affected={"test_x.py"}
+    ...
+
+  10 traces from -simulate num=10 gives the LLM concrete input/output pairs. It doesn't
+  need to invent topologies — TLC already explored the state space and found interesting
+  ones.
+
+  2. Python API source code (the HOW)
+
+  The LLM must see the implementation to bind traces to API calls:
+
+  # From dag.py:242-259
+  def query_affected_tests(self, node_id: str) -> list[str]:
+      ...
+
+  Plus return types, parameter types, the RegistryDag constructor, add_node/add_edge
+  signatures. Without this, the LLM guesses at method signatures.
+
+  3. GWT text + bridge artifacts with compiled hints (the WHY)
+
+  ## Behavioral Requirement
+  Given: a registry DAG with test artifact mappings
+  When: a node is modified
+  Then: all tests affected by the change are identified
+
+  ## Invariant Translations (compiler output — starting points, not final assertions)
+    NoFalsePositives: TLA+ `\A t \in affected : t \in candidates` ≈ Python `all(t in
+  candidates for t in affected)`
+    NoFalseNegatives: TLA+ `\A n \in candidates : test_artifacts[n] \in result` ≈ Python
+  `all(test_artifacts[n] in result for n in candidates)`
+
+  The compiled expressions give the LLM a head start on the assertion logic. The GWT text
+  grounds the intent.
+
+  4. The verified TLA+ spec (the FULL PICTURE)
+
+  The raw .tla file. The LLM can read TLA+ — it generated it in the first place. The spec
+  contains the complete state machine: variable types, init predicate, next relation,
+  invariant definitions. The bridge artifacts are a lossy projection; the spec is
+  lossless.
+
+  5. Decomposed structural patterns (the FORM)
+
+  NOT the full oracle files. Instead, extract three generic patterns:
+
+  # Pattern: fixture construction (generic)
+  def _make_dag(nodes, edges, artifacts):
+      dag = RegistryDag()
+      for nid in nodes:
+          dag.add_node(Node.behavior(nid, nid, "g", "w", "t"))
+      for src, dst in edges:
+          dag.add_edge(Edge(src, dst, EdgeType.IMPORTS))
+      dag.test_artifacts = artifacts
+      return dag
+
+  # Pattern: invariant verification (generic)
+  def test_invariant(dag):
+      result = dag.some_query("node_id")
+      assert property_of(result)
+
+  # Pattern: error case (generic)
+  def test_invalid_input(dag):
+      with pytest.raises(NodeNotFoundError):
+          dag.some_query("nonexistent")
+
+  These teach form without leaking module-specific content.
+
+  What NOT to pass
+
+  - Full oracle test files — the LLM will copy topologies instead of deriving from traces
+  - The project DAG — fixtures should be self-contained, not coupled to project state
+  - All bridge artifacts unfiltered — operations and data_structures are noisy; traces are
+   the better input for scenario design
+
+  The engineering delta
+
+  This changes Phase 5A from "connect CounterexampleTrace to TlcTrace" to something more
+  significant:
+
+  1. Modify run_tlc() to run -simulate num=10 on passing models and capture output
+  2. Extend the trace parser to handle simulation traces (same format as counterexamples,
+  minus the violation)
+  3. Convert simulation traces to structured data — state sequences with variable bindings
+  4. Build the prompt assembler that combines: traces + API source + GWT + bridge hints +
+  patterns
+
+  The key shift: TLC goes from a pass/fail gate to a test case generator. The formal
+  verification doesn't just prove correctness — it produces the concrete scenarios that
+  become Python tests.
+
+
+
+#  Issue 1: Node.requirement() signature mismatch (Phase 0)
+
+  The plan's register_requirement() calls Node.requirement(req_id, name, text) with 3
+  args, but the actual factory is Node.requirement(id: str, text: str) — 2 args, no name 
+  param. The name is hardcoded to "" inside the factory. Either:
+  - Change register_requirement() to not pass name, or
+  - Modify Node.requirement() to accept an optional name param (small types.py change)
+
+  The tests at lines 290-308 will also need updating — Node.requirement(f"req-{i:04d}",
+  f"r{i}", f"text{i}") passes 3 args to a 2-arg method.
+
+  Issue 2: cw9 extract overwrites registered GWTs (Phase 2)
+
+  The plan acknowledges this at line 466 but hand-waves it: "A future enhancement could
+  merge..." This is a real problem. The workflow register_gwt() → extract → loop will
+  destroy the registered GWTs because extract rebuilds from schemas. The fix is simple:
+  load the existing DAG, extract a fresh one, merge registered GWTs (nodes with gwt-
+  prefix that aren't in the extracted DAG) back in. This should be Phase 2, not "future."
+
+  Issue 3: loop_runner.py uses process_response wrong (Phase 3)
+
+  The plan shows status = loop.process_response(response, gwt_id) but process_response
+  returns self.status which is a LoopStatus. The plan then checks status.result ==
+  LoopResult.PASS — this is correct. But status.retry_prompt (line 650) — does LoopStatus 
+  have a retry_prompt field? This needs verification. The existing loop scripts build
+  retry prompts manually from counterexample output, not from a field on LoopStatus.
+
+DAG registration just means: take one of those given/when/then objects and give it a    
+  permanent address in the project's dependency graph.                                    
+                                                                                          
+  Right now that JSON array has four behaviors — fund the escrow, approve a milestone,
+  reject a milestone, close the escrow. They're just floating descriptions. The system    
+  doesn't know they exist, can't track them, can't tell you what depends on what.
+
+  Registration means:
+  - Assign each one an ID (gwt-0024, gwt-0025, gwt-0026, gwt-0027)
+  - Add it as a node in the graph
+  - Connect it to the requirement it came from (e.g., "gwt-0024 belongs to req-0008:
+  construction escrow")
+  - Now every downstream step can refer to it by ID — the TLC verifier knows what to
+  check, the bridge knows what traces to extract, the test generator knows what to produce
+
+  It's like checking into a hotel. You show up as "person with a suitcase." Registration
+  gives you a room number. Now housekeeping, room service, and checkout all know where to
+  find you.
+
+  Without registration, the pipeline has no way to say "run the formal verification for
+  the milestone approval behavior" — it doesn't know that behavior exists yet.
+
+
 
 
 # Help me think ahead. There are 2 common use cases: 1. greenfield project, external to   
