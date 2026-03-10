@@ -7,6 +7,8 @@ Three roots:
 
 For CW9 self-hosting, all three point to the same directory.
 For external projects, state_root defaults to target_root/.cw9.
+For installed mode (no repo checkout), engine_root is None and bundled
+assets come from package resources via registry._resources.
 """
 
 from __future__ import annotations
@@ -18,14 +20,14 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class ProjectContext:
-    engine_root: Path
+    engine_root: Path | None     # None in installed mode
     target_root: Path
     state_root: Path
 
     # Derived paths under engine_root (read-only, CW9's own files)
     template_dir: Path
     tools_dir: Path
-    python_dir: Path
+    python_dir: Path             # target_root in installed mode
 
     # Derived paths under state_root (project-specific state)
     schema_dir: Path
@@ -63,9 +65,11 @@ class ProjectContext:
 
         If target_root has a .cw9/ directory, uses external layout.
         If target_root IS the engine_root, uses self-hosting layout.
-        engine_root defaults to auto-detection from this file's location.
+        engine_root defaults to auto-detection from this file's location,
+        falling back to installed mode if no repo checkout is found.
         """
         target_root = Path(target_root).resolve()
+
         if engine_root is None:
             # Try config.toml first
             config_path = target_root / ".cw9" / "config.toml"
@@ -74,16 +78,26 @@ class ProjectContext:
                     config = tomllib.load(f)
                 engine_root_str = config.get("engine", {}).get("root")
                 if engine_root_str:
-                    engine_root = Path(engine_root_str).resolve()
-            # Fallback to auto-detection from __file__
+                    candidate = Path(engine_root_str).resolve()
+                    if candidate.is_dir():
+                        engine_root = candidate
+                    # else: stale path, fall through to auto-detection
+
+            # Fallback: repo auto-detection (only if templates/ exists there)
             if engine_root is None:
-                engine_root = Path(__file__).resolve().parent.parent.parent
+                candidate = Path(__file__).resolve().parent.parent.parent
+                if (candidate / "templates").is_dir():
+                    engine_root = candidate
         else:
             engine_root = Path(engine_root).resolve()
 
-        if target_root == engine_root:
+        # Route to appropriate constructor
+        if engine_root is not None and target_root == engine_root:
             return cls.self_hosting(engine_root)
-        return cls.external(engine_root, target_root)
+        elif engine_root is not None:
+            return cls.external(engine_root, target_root)
+        else:
+            return cls.installed(target_root)
 
     @classmethod
     def external(cls, engine_root: Path, target_root: Path) -> ProjectContext:
@@ -99,6 +113,30 @@ class ProjectContext:
             template_dir=engine_root / "templates" / "pluscal",
             tools_dir=engine_root / "tools",
             python_dir=engine_root / "python",
+            # State paths (.cw9 layout)
+            schema_dir=state_root / "schema",
+            spec_dir=state_root / "specs",
+            artifact_dir=state_root / "bridge",
+            session_dir=state_root / "sessions",
+            # Target paths
+            test_output_dir=target_root / "tests" / "generated",
+        )
+
+    @classmethod
+    def installed(cls, target_root: Path) -> ProjectContext:
+        """Installed mode — bundled assets from package resources."""
+        from registry._resources import get_data_path, get_template_dir
+
+        target_root = Path(target_root).resolve()
+        state_root = target_root / ".cw9"
+        return cls(
+            engine_root=None,         # No engine_root in installed mode
+            target_root=target_root,
+            state_root=state_root,
+            # Bundled assets via _resources
+            template_dir=get_template_dir("pluscal"),
+            tools_dir=get_data_path("tools"),
+            python_dir=target_root,   # Use target project root as working directory
             # State paths (.cw9 layout)
             schema_dir=state_root / "schema",
             spec_dir=state_root / "specs",

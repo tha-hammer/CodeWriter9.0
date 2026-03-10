@@ -248,7 +248,8 @@ _TLA2TOOLS_JAR_NAME = "tla2tools.jar"
 def _find_tla2tools(tools_dir: str | Path | None = None) -> str:
     """Locate the tla2tools.jar file.
 
-    Checks in order: tools_dir, cwd/tools, TLA2TOOLS_JAR env var.
+    Checks in order: tools_dir, cwd/tools, TLA2TOOLS_JAR env var,
+    package resources (installed mode).
     """
     if tools_dir:
         jar = Path(tools_dir) / _TLA2TOOLS_JAR_NAME
@@ -265,8 +266,18 @@ def _find_tla2tools(tools_dir: str | Path | None = None) -> str:
     if env_jar and Path(env_jar).exists():
         return env_jar
 
+    # Try package resources (installed mode)
+    try:
+        from registry._resources import get_data_path
+        jar = get_data_path(f"tools/{_TLA2TOOLS_JAR_NAME}")
+        if jar.exists():
+            return str(jar)
+    except (ImportError, FileNotFoundError):
+        pass
+
     raise FileNotFoundError(
-        f"Cannot find {_TLA2TOOLS_JAR_NAME}. Set TLA2TOOLS_JAR env var or place in tools/"
+        f"Cannot find {_TLA2TOOLS_JAR_NAME}. "
+        f"Set TLA2TOOLS_JAR env var or install cw9 with bundled tools."
     )
 
 

@@ -84,7 +84,7 @@ def compile_condition(tla_expr: str, state_var: str = "state") -> CompiledAssert
     # Phase 8: Tuple literals  <<a, b>> → (a, b)
     expr = re.sub(r'<<(.+?)>>', r'(\1)', expr)
 
-    # Phase 10: Record field access — state.field → state["field"]
+    # Phase 9: Record field access — state.field → state["field"]
     expr = re.sub(
         rf'{state_var}\.(\w+)',
         rf'{state_var}["\1"]',
