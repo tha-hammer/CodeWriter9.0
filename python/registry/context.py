@@ -11,6 +11,7 @@ For external projects, state_root defaults to target_root/.cw9.
 
 from __future__ import annotations
 
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -66,8 +67,17 @@ class ProjectContext:
         """
         target_root = Path(target_root).resolve()
         if engine_root is None:
-            # python/registry/context.py -> python/registry -> python -> engine_root
-            engine_root = Path(__file__).resolve().parent.parent.parent
+            # Try config.toml first
+            config_path = target_root / ".cw9" / "config.toml"
+            if config_path.exists():
+                with open(config_path, "rb") as f:
+                    config = tomllib.load(f)
+                engine_root_str = config.get("engine", {}).get("root")
+                if engine_root_str:
+                    engine_root = Path(engine_root_str).resolve()
+            # Fallback to auto-detection from __file__
+            if engine_root is None:
+                engine_root = Path(__file__).resolve().parent.parent.parent
         else:
             engine_root = Path(engine_root).resolve()
 

@@ -55,6 +55,37 @@ class TlcTrace:
     states: list[dict[str, str]]  # [{var_name: value}]
 
 
+def counterexample_to_tlc_trace(ce: "CounterexampleTrace") -> "TlcTrace | None":
+    """Convert a CounterexampleTrace from one_shot_loop to a TlcTrace for bridge.
+
+    CounterexampleTrace.states is list[dict] with keys:
+        state_num: int, label: str, vars: dict[str, str]
+    TlcTrace expects:
+        invariant_violated: str, states: list[dict[str, str]]
+
+    Returns None if the counterexample has no states or no violated invariant.
+    """
+    if not ce.states or not ce.violated_invariant:
+        return None
+
+    # Flatten: CounterexampleTrace.states[i]["vars"] → TlcTrace.states[i]
+    tlc_states = []
+    for state in ce.states:
+        vars_dict = state.get("vars", {})
+        tlc_states.append(vars_dict)
+
+    return TlcTrace(
+        invariant_violated=ce.violated_invariant,
+        states=tlc_states,
+    )
+
+
+# Import type for annotation only (avoid circular import)
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from registry.one_shot_loop import CounterexampleTrace
+
+
 @dataclass
 class ParsedSpec:
     """Result of parsing a TLA+ spec."""

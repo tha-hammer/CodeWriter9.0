@@ -673,3 +673,88 @@ class OneShotLoop:
             self.status.error = message
 
         return self.status
+
+
+# ---------------------------------------------------------------------------
+# Simulation Trace Support (v5)
+# ---------------------------------------------------------------------------
+
+def parse_simulation_traces(raw: str) -> list[list[dict[str, Any]]]:
+    """Parse TLC -simulate output into structured traces.
+
+    Reuses the same _STATE_HEADER_RE and _VAR_ASSIGN_RE regexes as
+    parse_counterexample(). Traces are delimited by the State 1 restart
+    pattern — each time we see State 1 after already having states,
+    we know a new trace has begun.
+    """
+    traces: list[list[dict[str, Any]]] = []
+    current_trace: list[dict[str, Any]] = []
+    current_state: dict[str, Any] | None = None
+
+    for line in raw.split("\n"):
+        line = line.strip()
+
+        header_m = _STATE_HEADER_RE.match(line)
+        if header_m:
+            state_num = int(header_m.group(1))
+            # New trace starts at State 1
+            if state_num == 1 and current_trace:
+                if current_state:
+                    current_trace.append(current_state)
+                traces.append(current_trace)
+                current_trace = []
+            elif current_state:
+                current_trace.append(current_state)
+
+            current_state = {
+                "state_num": state_num,
+                "label": header_m.group(2),
+                "vars": {},
+            }
+            continue
+
+        if current_state is not None:
+            var_m = _VAR_ASSIGN_RE.match(line)
+            if var_m:
+                current_state["vars"][var_m.group(1)] = var_m.group(2).strip()
+
+    if current_state:
+        current_trace.append(current_state)
+    if current_trace:
+        traces.append(current_trace)
+
+    return traces
+
+
+def run_tlc_simulate(
+    tla_path: str | Path,
+    cfg_path: str | Path | None = None,
+    tools_dir: str | Path | None = None,
+    num_traces: int = 10,
+) -> list[list[dict[str, Any]]]:
+    """Run TLC in -simulate mode to generate concrete traces from a passing model.
+
+    Each trace is a sequence of states through the verified state space.
+    All invariants hold at every state in every trace.
+
+    Returns list of traces, where each trace is a list of state dicts
+    with keys: state_num, label, vars.
+    """
+    jar = _find_tla2tools(tools_dir)
+    tla_path = Path(tla_path)
+
+    cmd = [
+        "java", "-XX:+UseParallelGC",
+        "-cp", jar,
+        "tlc2.TLC",
+        str(tla_path),
+        "-simulate", f"num={num_traces}",
+        "-nowarning",
+    ]
+    if cfg_path:
+        cmd.extend(["-config", str(cfg_path)])
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    raw = result.stdout + result.stderr
+
+    return parse_simulation_traces(raw)

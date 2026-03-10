@@ -69,8 +69,8 @@ class Node:
         )
 
     @classmethod
-    def requirement(cls, id: str, text: str) -> Node:
-        return cls(id=id, kind=NodeKind.REQUIREMENT, name="", text=text)
+    def requirement(cls, id: str, text: str, name: str = "") -> Node:
+        return cls(id=id, kind=NodeKind.REQUIREMENT, name=name, text=text)
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {

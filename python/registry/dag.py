@@ -286,6 +286,120 @@ class RegistryDag:
             direct_dependents=direct_dependents,
         )
 
+    # ── ID allocators ──────────────────────────────────────────────
+
+    def _next_gwt_id(self) -> str:
+        """Allocate the next gwt-NNNN ID based on existing nodes."""
+        existing = [
+            int(nid.split("-")[1])
+            for nid in self.nodes
+            if nid.startswith("gwt-") and nid.split("-")[1].isdigit()
+        ]
+        next_num = max(existing, default=0) + 1
+        return f"gwt-{next_num:04d}"
+
+    def _next_req_id(self) -> str:
+        """Allocate the next req-NNNN ID based on existing nodes."""
+        existing = [
+            int(nid.split("-")[1])
+            for nid in self.nodes
+            if nid.startswith("req-") and nid.split("-")[1].isdigit()
+        ]
+        next_num = max(existing, default=0) + 1
+        return f"req-{next_num:04d}"
+
+    # ── Registration API ─────────────────────────────────────────
+
+    def register_gwt(
+        self,
+        given: str,
+        when: str,
+        then: str,
+        parent_req: str | None = None,
+        name: str | None = None,
+    ) -> str:
+        """Register a new GWT behavior in the DAG.
+
+        Allocates a gwt-NNNN ID, creates the behavior node,
+        and optionally wires a DECOMPOSES edge from parent_req.
+
+        Args:
+            given: The "Given" precondition
+            when: The "When" action/event
+            then: The "Then" expected outcome
+            parent_req: Optional requirement ID to wire DECOMPOSES edge
+            name: Optional short name (defaults to auto-generated from 'when' clause)
+
+        Returns:
+            The allocated GWT ID (e.g., "gwt-0024")
+
+        Raises:
+            NodeNotFoundError: If parent_req is given but doesn't exist in the DAG
+        """
+        gwt_id = self._next_gwt_id()
+
+        if name is None:
+            name = when.lower().replace(" ", "_")[:40]
+
+        node = Node.behavior(gwt_id, name, given, when, then)
+        self.add_node(node)
+
+        if parent_req is not None:
+            if parent_req not in self.nodes:
+                raise NodeNotFoundError(parent_req)
+            self.add_edge(Edge(parent_req, gwt_id, EdgeType.DECOMPOSES))
+
+        return gwt_id
+
+    def register_requirement(self, text: str, name: str | None = None) -> str:
+        """Register a new requirement in the DAG.
+
+        Args:
+            text: The requirement text
+            name: Optional short name
+
+        Returns:
+            The allocated requirement ID (e.g., "req-0008")
+        """
+        req_id = self._next_req_id()
+        if name is None:
+            name = text[:40].lower().replace(" ", "_")
+        node = Node.requirement(req_id, text, name)
+        self.add_node(node)
+        return req_id
+
+    # ── Merge support ────────────────────────────────────────────
+
+    def merge_registered_nodes(self, old_dag: "RegistryDag") -> int:
+        """Merge nodes from old_dag that don't exist in self.
+
+        Identifies "registered" nodes as those with gwt- or req- prefixed IDs
+        that exist in old_dag but not in the freshly-extracted self.
+        Also preserves their edges.
+
+        Returns the number of nodes merged.
+        """
+        merged = 0
+        fresh_ids = set(self.nodes.keys())
+
+        for nid, node in old_dag.nodes.items():
+            if nid in fresh_ids:
+                continue
+            prefix = nid.split("-")[0] if "-" in nid else ""
+            if prefix not in ("gwt", "req"):
+                continue
+            self.add_node(node)
+            merged += 1
+
+        # Preserve edges involving merged nodes
+        merged_ids = set(self.nodes.keys()) - fresh_ids
+        for edge in old_dag.edges:
+            if edge.from_id in merged_ids or edge.to_id in merged_ids:
+                if edge.from_id in self.nodes and edge.to_id in self.nodes:
+                    self.add_edge(edge)
+
+        return merged
+
     @property
     def node_count(self) -> int:
         return len(self.nodes)
