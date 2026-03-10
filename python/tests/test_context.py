@@ -100,6 +100,32 @@ class TestFromTarget:
         assert ctx.target_root.is_absolute()
         assert ctx.engine_root.is_absolute()
 
+    def test_from_target_reads_config_toml(self, tmp_path):
+        target = tmp_path / "proj"
+        target.mkdir()
+        cw9 = target / ".cw9"
+        cw9.mkdir()
+        config = cw9 / "config.toml"
+        config.write_text(f'[engine]\nroot = "{ENGINE_ROOT}"\n')
+        ctx = ProjectContext.from_target(target)  # no engine_root arg
+        assert ctx.engine_root == ENGINE_ROOT
+
+    def test_from_target_falls_back_without_config(self, tmp_path):
+        target = tmp_path / "proj"
+        target.mkdir()
+        ctx = ProjectContext.from_target(target)
+        assert ctx.engine_root == ENGINE_ROOT
+
+    def test_explicit_engine_root_overrides_config(self, tmp_path):
+        target = tmp_path / "proj"
+        target.mkdir()
+        cw9 = target / ".cw9"
+        cw9.mkdir()
+        config = cw9 / "config.toml"
+        config.write_text('[engine]\nroot = "/bogus/path"\n')
+        ctx = ProjectContext.from_target(target, ENGINE_ROOT)
+        assert ctx.engine_root == ENGINE_ROOT
+
     def test_frozen(self, tmp_path):
         target = tmp_path / "proj"
         target.mkdir()
