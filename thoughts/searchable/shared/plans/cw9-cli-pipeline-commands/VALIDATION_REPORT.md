@@ -16,7 +16,7 @@
 | Phase 3 | `cw9 loop <gwt-id>` -- LLM -> PlusCal -> TLC | ✓ Fully implemented | 12/12 | loop_runner.py:88-210, one_shot_loop.py:682-760 |
 | Phase 4 | `cw9 bridge <gwt-id>` -- spec -> bridge artifacts | ✓ Fully implemented | 9/9 | cli.py:215-273 |
 | Phase 5A | Trace pipeline + simulation trace types | ✓ Fully implemented | 17/17 | traces.py:15-92 |
-| Phase 5B | TLA+ condition compiler (prompt enrichment) | ✓ Fully implemented | 4/5 (cosmetic) | tla_compiler.py:1-158 |
+| Phase 5B | TLA+ condition compiler (prompt enrichment) | ✓ Fully implemented | 5/5 | tla_compiler.py:1-158 |
 | Phase 5C | `cw9 gen-tests <gwt-id>` -- LLM test gen loop | ✓ Fully implemented | 11/11 + 10/10 tests | test_gen_loop.py:25-457, cli.py:276-366 |
 | Phase 6 | `cw9 test` -- run generated tests | ✓ Fully implemented | 6/6 | cli.py:386-415 |
 
@@ -155,7 +155,7 @@
 
 ### Minor Observations (non-blocking)
 
-1. **Phase 5B `compile_condition()` phase numbering:** Regex phases numbered 1-8, then 10 (skipping 9). Universal/existential quantifiers combined under Phase 5 (lines 62-73). Functionality correct — cosmetic only.
+1. ~~**Phase 5B `compile_condition()` phase numbering:** Regex phases numbered 1-8, then 10 (skipping 9).~~ **FIXED** — Renumbered Phase 10 → Phase 9 (tla_compiler.py:87). Phases now sequential 1-9.
 
 ### Deviations from Plan
 
@@ -209,7 +209,7 @@ These items require LLM access (Claude Agent SDK) and cannot be verified automat
 
 1. **No blockers found** -- all automated success criteria pass.
 2. **Manual integration testing** is the primary remaining gap. The full pipeline (`extract -> loop -> bridge -> gen-tests -> test`) should be exercised end-to-end with a real GWT.
-3. The Phase 5B phase numbering gap is cosmetic and does not affect functionality.
+3. ~~The Phase 5B phase numbering gap is cosmetic and does not affect functionality.~~ **FIXED.**
 
 ---
 
