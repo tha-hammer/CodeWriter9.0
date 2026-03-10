@@ -31,7 +31,7 @@ class RegistryDag:
         self.edges: list[Edge] = []
         self.closure: dict[str, set[str]] = {}
         self.components: dict[str, list[str]] = {}
-        self.test_artifacts: dict[str, str] = {}  # node_id → test file path
+        self.test_artifacts: dict[str, str] = {}
 
     def add_node(self, node: Node) -> None:
         self.nodes[node.id] = node

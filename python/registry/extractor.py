@@ -1007,4 +1007,6 @@ class SchemaExtractor:
             "impact-0001": "tests/generated/test_impact_analysis.py",
             "depval-0001": "tests/generated/test_dep_validation.py",
             "subgraph-0001": "tests/generated/test_subgraph_extraction.py",
+            "chgprop-0001": "tests/generated/test_change_propagation.py",
         }
+

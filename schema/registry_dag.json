@@ -274,6 +274,14 @@
       "source_schema": "shared_objects_schema.json",
       "source_key": "documentation"
     },
+    "chgprop-0001": {
+      "id": "chgprop-0001",
+      "kind": "resource",
+      "name": "change_propagation",
+      "description": "Change propagation query \u2014 returns test file paths affected by a node change",
+      "version": 1,
+      "path": "python/registry/dag.py"
+    },
     "comp-0001": {
       "id": "comp-0001",
       "kind": "resource",
@@ -583,6 +591,36 @@
       "when": "the edges in the result are inspected",
       "then": "every edge has both endpoints in the node set (no dangling edges)"
     },
+    "gwt-0021": {
+      "id": "gwt-0021",
+      "kind": "behavior",
+      "name": "upstream_change_propagates",
+      "description": "",
+      "version": 1,
+      "given": "a node that a test-bearing node depends on",
+      "when": "query_affected_tests(node_id) is called",
+      "then": "the test path is in the result"
+    },
+    "gwt-0022": {
+      "id": "gwt-0022",
+      "kind": "behavior",
+      "name": "no_downstream_tests_empty",
+      "description": "",
+      "version": 1,
+      "given": "a node with no downstream test artifacts",
+      "when": "query_affected_tests(node_id) is called",
+      "then": "the result is empty"
+    },
+    "gwt-0023": {
+      "id": "gwt-0023",
+      "kind": "behavior",
+      "name": "self_test_included",
+      "description": "",
+      "version": 1,
+      "given": "a node that IS a test-bearing node",
+      "when": "query_affected_tests(node_id) is called",
+      "then": "its own test path is included"
+    },
     "impact-0001": {
       "id": "impact-0001",
       "kind": "resource",
@@ -717,6 +755,14 @@
       "description": "",
       "version": 1,
       "text": "System needs a subgraph extraction query: given a node, return its forward closure (descendants), reverse closure (ancestors), and all edges where both endpoints are in that set"
+    },
+    "req-0007": {
+      "id": "req-0007",
+      "kind": "requirement",
+      "name": "",
+      "description": "",
+      "version": 1,
+      "text": "System needs a change propagation query: given a node, return the file paths of test files affected by a change to that node, using the impact set and a test_artifacts mapping"
     },
     "res-0001": {
       "id": "res-0001",
@@ -1765,6 +1811,116 @@
       "from": "subgraph-0001",
       "to": "res-0003",
       "edge_type": "depends_on"
+    },
+    {
+      "from": "req-0007",
+      "to": "gwt-0021",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0007",
+      "to": "gwt-0022",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0007",
+      "to": "gwt-0023",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "gwt-0021",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0021",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0021",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0021",
+      "to": "impact-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0022",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0022",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0022",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0022",
+      "to": "impact-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0023",
+      "to": "res-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0023",
+      "to": "res-0002",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0023",
+      "to": "res-0003",
+      "edge_type": "references"
+    },
+    {
+      "from": "gwt-0023",
+      "to": "impact-0001",
+      "edge_type": "references"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "gwt-0021",
+      "edge_type": "implements"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "gwt-0022",
+      "edge_type": "implements"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "gwt-0023",
+      "edge_type": "implements"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "impact-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "res-0001",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "res-0002",
+      "edge_type": "depends_on"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "res-0003",
+      "edge_type": "depends_on"
     }
   ],
   "closure": {
@@ -1969,6 +2125,18 @@
     "cfg-u2k4": [],
     "cfg-v8l7": [],
     "cfg-w4n3": [],
+    "chgprop-0001": [
+      "gwt-0012",
+      "gwt-0013",
+      "gwt-0014",
+      "gwt-0021",
+      "gwt-0022",
+      "gwt-0023",
+      "impact-0001",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
     "comp-0001": [
       "cfg-d2q3",
       "cfg-f7s8",
@@ -2241,6 +2409,33 @@
       "res-0002",
       "res-0003"
     ],
+    "gwt-0021": [
+      "gwt-0012",
+      "gwt-0013",
+      "gwt-0014",
+      "impact-0001",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "gwt-0022": [
+      "gwt-0012",
+      "gwt-0013",
+      "gwt-0014",
+      "impact-0001",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
+    "gwt-0023": [
+      "gwt-0012",
+      "gwt-0013",
+      "gwt-0014",
+      "impact-0001",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
     "impact-0001": [
       "gwt-0012",
       "gwt-0013",
@@ -2443,6 +2638,18 @@
       "res-0002",
       "res-0003"
     ],
+    "req-0007": [
+      "gwt-0012",
+      "gwt-0013",
+      "gwt-0014",
+      "gwt-0021",
+      "gwt-0022",
+      "gwt-0023",
+      "impact-0001",
+      "res-0001",
+      "res-0002",
+      "res-0003"
+    ],
     "res-0001": [],
     "res-0002": [],
     "res-0003": [],
@@ -2631,6 +2838,7 @@
       "cfg-k3x7",
       "cfg-s6e2",
       "cfg-t5h9",
+      "chgprop-0001",
       "comp-0001",
       "comp-0002",
       "db-b7r2",
@@ -2662,6 +2870,9 @@
       "gwt-0018",
       "gwt-0019",
       "gwt-0020",
+      "gwt-0021",
+      "gwt-0022",
+      "gwt-0023",
       "impact-0001",
       "loop-0001",
       "loop-0002",
@@ -2677,6 +2888,7 @@
       "req-0004",
       "req-0005",
       "req-0006",
+      "req-0007",
       "res-0001",
       "res-0002",
       "res-0003",
@@ -2697,5 +2909,11 @@
       "ui-y5t3",
       "ui-z2w7"
     ]
+  },
+  "test_artifacts": {
+    "chgprop-0001": "tests/generated/test_change_propagation.py",
+    "depval-0001": "tests/generated/test_dep_validation.py",
+    "impact-0001": "tests/generated/test_impact_analysis.py",
+    "subgraph-0001": "tests/generated/test_subgraph_extraction.py"
   }
 }
