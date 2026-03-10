@@ -26,7 +26,11 @@ import claude_agent_sdk
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "python"))
 
-LOG_FILE = PROJECT_ROOT / "impact_loop_output.log"
+from registry.context import ProjectContext
+ctx = ProjectContext.self_hosting(PROJECT_ROOT)
+ctx.session_dir.mkdir(parents=True, exist_ok=True)
+
+LOG_FILE = ctx.session_dir / "impact_loop_output.log"
 _log_fh = open(LOG_FILE, "w")
 
 MAX_RETRIES = 5
@@ -83,7 +87,7 @@ def build_initial_prompt(loop: OneShotLoop) -> str:
     loop.query("gwt-0012")
     context = loop.format_prompt()
 
-    template_path = PROJECT_ROOT / "templates" / "pluscal" / "state_machine.tla"
+    template_path = ctx.template_dir / "state_machine.tla"
     template_text = template_path.read_text()
 
     return f"""You are generating a PlusCal specification for an impact analysis query —
@@ -307,13 +311,13 @@ async def run_loop() -> None:
 
     # Step 1: Load registry DAG
     step(1, 3, "Loading registry DAG...")
-    extractor = SchemaExtractor(schema_dir=str(PROJECT_ROOT / "schema"))
+    extractor = SchemaExtractor(schema_dir=str(ctx.schema_dir))
     dag = extractor.extract()
     log(f"       DAG: {len(dag.nodes)} nodes, {len(dag.edges)} edges")
 
     # Step 2: Build initial prompt
     step(2, 3, "Building prompt from registry context for gwt-0012...")
-    loop = OneShotLoop(dag=dag, project_root=str(PROJECT_ROOT))
+    loop = OneShotLoop(dag=dag, ctx=ctx)
     initial_prompt = build_initial_prompt(loop)
     log(f"       Prompt: {len(initial_prompt)} chars")
 
@@ -335,7 +339,7 @@ async def run_loop() -> None:
 
         # Save response
         suffix = "" if attempt == 1 else f"_attempt{attempt}"
-        response_file = PROJECT_ROOT / f"impact_llm_response{suffix}.txt"
+        response_file = ctx.session_dir / f"impact_llm_response{suffix}.txt"
         response_file.write_text(llm_response)
         log(f"  Saved to: {response_file.name}")
 
@@ -344,7 +348,7 @@ async def run_loop() -> None:
         log("  Processing: extract PlusCal → compile → TLC verify...")
 
         # Fresh loop instance for each attempt (resets failure counter)
-        loop = OneShotLoop(dag=dag, project_root=str(PROJECT_ROOT))
+        loop = OneShotLoop(dag=dag, ctx=ctx)
         loop.query("gwt-0012")
 
         status = loop.process_response(
@@ -420,9 +424,8 @@ async def run_loop() -> None:
         log(f"  assertions:      {len(bridge_result.assertions)}")
 
         # Save bridge artifacts
-        artifacts_dir = PROJECT_ROOT / "python" / "tests" / "generated"
-        artifacts_dir.mkdir(parents=True, exist_ok=True)
-        artifact_file = artifacts_dir / "impact_analysis_bridge_artifacts.json"
+        ctx.artifact_dir.mkdir(parents=True, exist_ok=True)
+        artifact_file = ctx.artifact_dir / "impact_analysis_bridge_artifacts.json"
         artifact_file.write_text(json.dumps({
             "module_name": bridge_result.module_name,
             "data_structures": bridge_result.data_structures,
@@ -433,7 +436,7 @@ async def run_loop() -> None:
         log(f"  Artifacts saved: {artifact_file.name}")
 
         # Copy verified spec to instances directory
-        instances_dir = PROJECT_ROOT / "templates" / "pluscal" / "instances"
+        instances_dir = ctx.spec_dir
         dest_tla = instances_dir / "impact_analysis.tla"
         dest_cfg = instances_dir / "impact_analysis.cfg"
         if compiled_path and compiled_path.exists():
@@ -442,7 +445,7 @@ async def run_loop() -> None:
             cfg_src = compiled_path.with_suffix(".cfg")
             if cfg_src.exists():
                 shutil.copy2(cfg_src, dest_cfg)
-            log(f"  Spec saved to: {dest_tla.relative_to(PROJECT_ROOT)}")
+            log(f"  Spec saved to: {dest_tla.relative_to(ctx.engine_root)}")
 
         # Generate tests mechanically from bridge artifacts
         banner("Generating tests from bridge artifacts...")
@@ -456,7 +459,7 @@ async def run_loop() -> None:
         result = subprocess.run(
             ["python3", "-m", "pytest", str(test_path), "-v", "--tb=short"],
             capture_output=True, text=True,
-            cwd=str(PROJECT_ROOT / "python"),
+            cwd=str(ctx.python_dir),
         )
         log(result.stdout)
         if result.returncode != 0 and result.stderr:
@@ -660,9 +663,8 @@ class TestImpactAnalysisInvariants:
         assert result.direct_dependents == result.affected
 '''
 
-    output_dir = PROJECT_ROOT / "python" / "tests" / "generated"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    test_path = output_dir / "test_impact_analysis.py"
+    ctx.test_output_dir.mkdir(parents=True, exist_ok=True)
+    test_path = ctx.test_output_dir / "test_impact_analysis.py"
     test_path.write_text(test_content)
     return test_path
 

@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from registry.composer import compose_from_files, parse_tla_file, ComposedModule
+from registry.context import ProjectContext
 from registry.dag import RegistryDag
 from registry.types import Edge, EdgeType, Node, NodeKind, QueryResult
 
@@ -241,18 +242,21 @@ def extract_pluscal(llm_response: str) -> str | None:
 # Compile → Compose → TLC Pipeline
 # ---------------------------------------------------------------------------
 
-_TLA2TOOLS_JAR = "tools/tla2tools.jar"
+_TLA2TOOLS_JAR_NAME = "tla2tools.jar"
 
 
-def _find_tla2tools(project_root: str | Path | None = None) -> str:
-    """Locate the tla2tools.jar file."""
-    if project_root:
-        jar = Path(project_root) / _TLA2TOOLS_JAR
+def _find_tla2tools(tools_dir: str | Path | None = None) -> str:
+    """Locate the tla2tools.jar file.
+
+    Checks in order: tools_dir, cwd/tools, TLA2TOOLS_JAR env var.
+    """
+    if tools_dir:
+        jar = Path(tools_dir) / _TLA2TOOLS_JAR_NAME
         if jar.exists():
             return str(jar)
 
-    # Try relative to cwd
-    jar = Path(_TLA2TOOLS_JAR)
+    # Try relative to cwd (legacy fallback)
+    jar = Path("tools") / _TLA2TOOLS_JAR_NAME
     if jar.exists():
         return str(jar)
 
@@ -262,19 +266,19 @@ def _find_tla2tools(project_root: str | Path | None = None) -> str:
         return env_jar
 
     raise FileNotFoundError(
-        f"Cannot find tla2tools.jar. Set TLA2TOOLS_JAR env var or place at {_TLA2TOOLS_JAR}"
+        f"Cannot find {_TLA2TOOLS_JAR_NAME}. Set TLA2TOOLS_JAR env var or place in tools/"
     )
 
 
 def compile_pluscal(
     tla_path: str | Path,
-    project_root: str | Path | None = None,
+    tools_dir: str | Path | None = None,
 ) -> tuple[bool, str]:
     """Compile PlusCal to TLA+ using pcal.trans.
 
     Returns (success, output_or_error).
     """
-    jar = _find_tla2tools(project_root)
+    jar = _find_tla2tools(tools_dir)
     tla_path = Path(tla_path)
 
     result = subprocess.run(
@@ -292,14 +296,14 @@ def compile_pluscal(
 def run_tlc(
     tla_path: str | Path,
     cfg_path: str | Path | None = None,
-    project_root: str | Path | None = None,
+    tools_dir: str | Path | None = None,
     workers: str = "auto",
 ) -> TLCResult:
     """Run TLC model checker on a TLA+ spec.
 
     Returns a TLCResult with success status and counterexample if found.
     """
-    jar = _find_tla2tools(project_root)
+    jar = _find_tla2tools(tools_dir)
     tla_path = Path(tla_path)
 
     cmd = [
@@ -360,14 +364,12 @@ def compile_compose_verify(
     cfg_text: str,
     compose_with: str | Path | None = None,
     dag: RegistryDag | None = None,
-    project_root: str | Path | None = None,
+    tools_dir: str | Path | None = None,
 ) -> tuple[TLCResult, Path]:
     """Full pipeline: write PlusCal → compile → optionally compose → TLC.
 
     Returns (tlc_result, tla_path).
     """
-    project_root = Path(project_root) if project_root else Path.cwd()
-
     # Write PlusCal to temp file
     tmpdir = Path(tempfile.mkdtemp(prefix="cw9_"))
     tla_path = tmpdir / f"{module_name}.tla"
@@ -377,7 +379,7 @@ def compile_compose_verify(
     cfg_path.write_text(cfg_text)
 
     # Compile PlusCal → TLA+
-    ok, compile_output = compile_pluscal(tla_path, project_root)
+    ok, compile_output = compile_pluscal(tla_path, tools_dir)
     if not ok:
         return TLCResult(
             success=False,
@@ -401,7 +403,7 @@ def compile_compose_verify(
         cfg_path = composed_cfg
 
     # Run TLC
-    tlc_result = run_tlc(tla_path, cfg_path, project_root)
+    tlc_result = run_tlc(tla_path, cfg_path, tools_dir)
     return tlc_result, tla_path
 
 
@@ -583,10 +585,19 @@ class OneShotLoop:
     processes responses. The caller is responsible for the LLM interaction.
     """
     dag: RegistryDag
-    project_root: str | Path = "."
+    ctx: ProjectContext | None = None
+    project_root: str | Path | None = None  # deprecated, use ctx
     status: LoopStatus = field(default_factory=LoopStatus)
     _context: ContextBundle | None = field(default=None, repr=False)
     _compose_with: str | Path | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.ctx is None and self.project_root is not None:
+            self.ctx = ProjectContext.self_hosting(Path(self.project_root))
+
+    @property
+    def _tools_dir(self) -> Path | None:
+        return self.ctx.tools_dir if self.ctx else None
 
     def query(self, behavior_id: str) -> ContextBundle:
         """Step 1: Query registry context for a behavior."""
@@ -632,7 +643,7 @@ class OneShotLoop:
             cfg_text=cfg_text,
             compose_with=compose_with,
             dag=self.dag,
-            project_root=self.project_root,
+            tools_dir=self._tools_dir,
         )
         self.status.tlc_result = tlc_result
         self.status.compiled_spec_path = tla_path

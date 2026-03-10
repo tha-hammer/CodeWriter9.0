@@ -22,10 +22,12 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "python"))
 
+from registry.context import ProjectContext
 from registry.bridge import run_bridge, BridgeResult
 
-SPECS_DIR = PROJECT_ROOT / "templates" / "pluscal" / "instances"
-OUTPUT_DIR = PROJECT_ROOT / "python" / "tests" / "generated"
+ctx = ProjectContext.self_hosting(PROJECT_ROOT)
+SPECS_DIR = ctx.spec_dir
+OUTPUT_DIR = ctx.artifact_dir
 
 SPECS = [
     ("registry_crud.tla", "Phase 0/1: Registry CRUD DAG"),
@@ -518,7 +520,7 @@ def main():
         ["python3", "-m", "pytest", str(test_path), "-v", "--tb=short"],
         capture_output=True,
         text=True,
-        cwd=str(PROJECT_ROOT / "python"),
+        cwd=str(ctx.python_dir),
     )
     print(result.stdout)
     if result.stderr:
@@ -531,7 +533,7 @@ def main():
         ["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
         capture_output=True,
         text=True,
-        cwd=str(PROJECT_ROOT / "python"),
+        cwd=str(ctx.python_dir),
     )
     print(result_all.stdout)
     if result_all.stderr:

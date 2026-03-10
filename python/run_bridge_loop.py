@@ -29,8 +29,11 @@ import claude_agent_sdk
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "python"))
 
-# Redirect output to log file when stdout is captured
-LOG_FILE = PROJECT_ROOT / "bridge_loop_output.log"
+from registry.context import ProjectContext
+ctx = ProjectContext.self_hosting(PROJECT_ROOT)
+ctx.session_dir.mkdir(parents=True, exist_ok=True)
+
+LOG_FILE = ctx.session_dir / "bridge_loop_output.log"
 _log_fh = open(LOG_FILE, "w")
 
 
@@ -72,7 +75,7 @@ def build_prompt(loop: OneShotLoop) -> str:
     context = loop.format_prompt()
 
     # Read the state machine template for reference
-    template_path = PROJECT_ROOT / "templates" / "pluscal" / "state_machine.tla"
+    template_path = ctx.template_dir / "state_machine.tla"
     template_text = template_path.read_text()
 
     return f"""You are generating a PlusCal specification for a bridge translator —
@@ -213,13 +216,13 @@ async def run_loop() -> None:
 
     # Step 1: Load registry DAG
     log("\n[1/5] Loading registry DAG...")
-    extractor = SchemaExtractor(schema_dir=str(PROJECT_ROOT / "schema"))
+    extractor = SchemaExtractor(schema_dir=str(ctx.schema_dir))
     dag = extractor.extract()
     log(f"  DAG: {len(dag.nodes)} nodes, {len(dag.edges)} edges")
 
     # Step 2: Initialize loop and build prompt
     log("\n[2/5] Querying registry context for gwt-0008...")
-    loop = OneShotLoop(dag=dag, project_root=str(PROJECT_ROOT))
+    loop = OneShotLoop(dag=dag, ctx=ctx)
     prompt = build_prompt(loop)
     log(f"  Prompt length: {len(prompt)} chars")
 
@@ -229,7 +232,7 @@ async def run_loop() -> None:
     log(f"  Response length: {len(llm_response)} chars")
 
     # Save the raw LLM response for inspection
-    response_file = PROJECT_ROOT / "bridge_llm_response.txt"
+    response_file = ctx.session_dir / "bridge_llm_response.txt"
     response_file.write_text(llm_response)
     log(f"  Saved raw response to {response_file}")
 
@@ -258,7 +261,7 @@ async def run_loop() -> None:
         log(f"  Retry response length: {len(llm_response_2)} chars")
 
         # Save retry response too
-        retry_file = PROJECT_ROOT / "bridge_llm_response_retry.txt"
+        retry_file = ctx.session_dir / "bridge_llm_response_retry.txt"
         retry_file.write_text(llm_response_2)
 
         status = loop.process_response(
