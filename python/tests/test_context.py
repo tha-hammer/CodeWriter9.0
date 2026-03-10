@@ -132,3 +132,85 @@ class TestFromTarget:
         ctx = ProjectContext.external(ENGINE_ROOT, target)
         with pytest.raises(AttributeError):
             ctx.engine_root = tmp_path
+
+
+class TestInstalledModeContext:
+    def _make_cw9_dir(self, tmp_path, config_text="[project]\n"):
+        """Create minimal .cw9/ structure."""
+        cw9 = tmp_path / ".cw9"
+        cw9.mkdir()
+        (cw9 / "config.toml").write_text(config_text)
+        for d in ["schema", "specs", "bridge", "sessions"]:
+            (cw9 / d).mkdir()
+        return cw9
+
+    def test_from_target_no_engine_root_in_config(self, tmp_path):
+        """from_target works when config.toml has no engine section."""
+        cw9 = self._make_cw9_dir(tmp_path)
+        ctx = ProjectContext.from_target(tmp_path)
+
+        # State paths resolve under .cw9/
+        assert ctx.state_root == cw9
+        assert ctx.schema_dir == cw9 / "schema"
+        assert ctx.spec_dir == cw9 / "specs"
+
+        # Note: in repo checkout, from_target auto-detects engine_root
+        # so template_dir and tools_dir will point to ENGINE_ROOT
+        assert ctx.template_dir.is_dir()
+        assert ctx.tools_dir.is_dir()
+
+    def test_from_target_no_engine_root_template_dir_has_tla_files(self, tmp_path):
+        """template_dir contains .tla files."""
+        self._make_cw9_dir(tmp_path)
+        ctx = ProjectContext.from_target(tmp_path)
+        tla_files = list(ctx.template_dir.glob("*.tla"))
+        assert len(tla_files) >= 4
+
+    def test_from_target_with_valid_engine_root(self, tmp_path):
+        """Existing config.toml with valid engine_root works unchanged."""
+        engine = tmp_path / "engine"
+        engine.mkdir()
+        (engine / "templates").mkdir()
+        (engine / "templates" / "pluscal").mkdir()
+        (engine / "tools").mkdir()
+        (engine / "python").mkdir()
+
+        target = tmp_path / "project"
+        target.mkdir()
+        self._make_cw9_dir(target, f'[engine]\nroot = "{engine}"\n')
+
+        ctx = ProjectContext.from_target(target)
+        assert ctx.engine_root == engine
+        assert ctx.template_dir == engine / "templates" / "pluscal"
+
+    def test_from_target_stale_engine_root_falls_back(self, tmp_path):
+        """Stale engine_root in config falls back gracefully."""
+        target = tmp_path / "project"
+        target.mkdir()
+        self._make_cw9_dir(target, '[engine]\nroot = "/nonexistent/deleted/path"\n')
+
+        ctx = ProjectContext.from_target(target)
+        # Should fall back (to auto-detection in repo, or installed mode),
+        # not crash
+        assert ctx.tools_dir.is_dir()
+
+    def test_installed_mode_uses_resources(self, tmp_path):
+        """installed() resolves template_dir and tools_dir from _resources."""
+        ctx = ProjectContext.installed(tmp_path)
+        assert ctx.engine_root is None
+        assert ctx.template_dir.is_dir()
+        assert ctx.tools_dir.is_dir()
+        tla_files = list(ctx.template_dir.glob("*.tla"))
+        assert len(tla_files) >= 4
+        assert (ctx.tools_dir / "tla2tools.jar").exists()
+
+    def test_installed_python_dir_is_target_root(self, tmp_path):
+        """In installed mode, python_dir resolves to target_root."""
+        ctx = ProjectContext.installed(tmp_path)
+        assert ctx.python_dir == tmp_path.resolve()
+
+    def test_self_hosting_uses_engine_root(self):
+        """self_hosting() still uses repo ENGINE_ROOT paths."""
+        ctx = ProjectContext.self_hosting(ENGINE_ROOT)
+        assert ctx.engine_root == ENGINE_ROOT
+        assert ctx.template_dir == ENGINE_ROOT / "templates" / "pluscal"
