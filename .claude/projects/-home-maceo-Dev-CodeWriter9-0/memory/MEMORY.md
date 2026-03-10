@@ -11,11 +11,15 @@ See `BOOTSTRAP.md` for the flywheel plan (Phases 0-5).
   - `validate_edge()` pre-checks acyclicity, duplicates, node-kind compatibility
   - IDs: req-0005, gwt-0015/0016/0017, depval-0001
 - **Phase 7: Subgraph Extraction** — COMPLETE (third pipeline-built feature)
-  - DAG: 91 nodes, 176 edges, 9 components
-  - Tests: 233 passing (213 prev + 20 generated subgraph extraction)
   - `extract_subgraph()` returns forward+reverse closure + induced edges
   - IDs: req-0006, gwt-0018/0019/0020, subgraph-0001
-  - TLC verified attempt 1: 180,280 distinct states, 6 invariants
+- **Phase 8: Change Propagation** — COMPLETE (fourth pipeline-built feature)
+  - DAG: 96 nodes, 198 edges, 9 components
+  - Tests: 250 passing (233 prev + 17 generated change propagation)
+  - `query_affected_tests()` returns test file paths affected by a node change
+  - Uses `test_artifacts: dict[str, str]` on RegistryDag (not a Node field)
+  - IDs: req-0007, gwt-0021/0022/0023, chgprop-0001
+  - TLC verified attempt 2: 1,349,968 distinct states, 5 invariants
 
 ## Key Paths
 - Schema files: `schema/*.json` (4 schema files + resource registry + extracted DAG)
@@ -49,6 +53,10 @@ See `BOOTSTRAP.md` for the flywheel plan (Phases 0-5).
 - Bridge needs compiled TLA+ (after pcal.trans), not raw PlusCal.
 - `LoopStatus.compiled_spec_path` exposes the compiled file.
 
-## Next: Phase 8 — Change Propagation (`query_affected_tests`)
-Clone `run_subgraph_loop.py` as template. Next IDs: req-0007, gwt-0021+.
-Use separate `test_artifacts: dict[str, str]` on RegistryDag (not a Node field).
+## Single Piece Flow (proven across 4 features)
+1. Add GWT behaviors + requirement to `extractor.py:_self_describe()`
+2. Clone latest loop script (`run_change_prop_loop.py`), update module/GWT/config/prompt/generate_tests
+3. Run loop: `python3 python/run_<feature>_loop.py`
+4. Implement feature in `dag.py` to pass generated tests (implementation comes LAST)
+5. Wire serialization, populate `test_artifacts`, re-extract DAG, update test totals
+Next IDs: req-0008, gwt-0024+.

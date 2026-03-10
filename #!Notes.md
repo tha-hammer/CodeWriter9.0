@@ -1,5 +1,247 @@
 #!Notes
 
+
+
+# Help me think ahead. There are 2 common use cases: 1. greenfield project, external to   
+this repo and 2. brownfield project, external to this project.                            
+We will need a way to "point" CW9 at the external repo, maintain state, persist sessions, 
+ and write code from this repo - or - we package a globally available binary to invoke in 
+ the target repo.  The CW9 code will also need to be able to locate files in the external 
+ repo.                                                                                    
+                                                                                          
+● Good timing to think about this. Let me break it down.                                  
+                                                                                          
+  The Core Problem                                                                        
+   
+  Right now CW9 is solipsistic — every path, every schema, every DAG reference assumes    
+  it's operating on itself. To work on external repos, you need to solve five things:
+
+  1. Project root — where is the target code?
+  2. CW9 state — where do schemas, DAG, specs, bridge artifacts live?
+  3. Session continuity — handoffs, pipeline history, retry context
+  4. Code targeting — generated tests and implementations land in the right place
+  5. Codebase ingestion — how does the DAG get populated for a foreign project?
+
+  Two Deployment Models
+
+  Model A: "Point At" (CW9 stays home)
+
+  CW9 repo is the tool. External project is a target path. State lives in CW9 under
+  something like projects/<name>/.
+
+  CodeWriter9.0/
+    projects/
+      my-saas-app/
+        schema/          ← schemas for the external project
+        registry_dag.json
+        templates/pluscal/instances/
+        bridge_artifacts/
+        sessions/
+      another-project/
+        ...
+    python/registry/     ← CW9 engine code
+
+  Pros: Single source of truth, easy to compare projects, no installation step.
+  Cons: Path management nightmare. Every tool (extractor.py, one_shot_loop.py, bridge.py)
+  takes project_root today but assumes schemas are in that root. You'd need to split
+  "where is CW9 engine code" from "where is the target project" from "where is CW9 state
+  for this project." That's three roots, not one.
+
+  Model B: CLI binary, state in target repo
+
+  CW9 packages as a CLI tool. Target repo gets a .cw9/ directory (like .git/). The tool
+  runs in the target repo's context.
+
+  my-saas-app/              ← target repo
+    .cw9/
+      schema/               ← project schemas
+      dag.json              ← registry DAG
+      specs/                ← TLA+ instances
+      bridge/               ← bridge artifacts
+      sessions/             ← handoffs, loop history
+      config.toml           ← project-level settings
+    src/                    ← their code
+    tests/                  ← where generated tests land
+
+  Pros: Clean separation. State travels with the project. Multiple developers can use CW9
+  on the same repo. Standard CLI ergonomics (cw9 init, cw9 extract, cw9 verify, cw9
+  bridge).
+  Cons: Packaging and distribution. The Rust crate helps here — crates/registry-core/
+  could become the binary, with Python as an embedded runtime or subprocess.
+
+  My Recommendation: Model B, but staged
+
+  Model B is the right end state, but you don't need to package a binary to start. The
+  staging:
+
+  Stage 1 — Decouple paths (do this now, in-repo). Every component that uses PROJECT_ROOT
+  or hardcoded paths needs a config object:
+
+  @dataclass
+  class ProjectContext:
+      target_root: Path      # where the external code lives
+      state_root: Path       # where .cw9/ state lives (usually target_root/.cw9)
+      schema_dir: Path       # state_root/schema
+      spec_dir: Path         # state_root/specs
+      artifact_dir: Path     # state_root/bridge
+      test_output_dir: Path  # target_root/tests/generated (or configurable)
+
+  This is the foundational refactor. Currently SchemaExtractor, OneShotLoop,
+  run_*_loop.py, and bridge.py all assume paths relative to a single root.
+
+  Stage 2 — cw9 init for greenfield. Creates .cw9/ in target repo, generates starter
+  schemas from a template. The 4 schema files (backend, frontend, middleware, shared) get
+  created with empty structures. User fills them in, or an ingestion step helps.
+
+  Stage 3 — cw9 ingest for brownfield. This is the hard one. You need to scan an existing
+  codebase and populate schemas. Options:
+  - LLM-assisted: point at a directory, LLM reads code, proposes schema entries
+  - Convention-based: scan for known patterns (Express routes → endpoints, SQLAlchemy
+  models → data structures)
+  - Manual: user writes schemas by hand, CW9 validates
+
+  Stage 4 — Package as CLI. Rust binary wraps the Python engine. cargo install cw9 or a
+  standalone binary.
+
+  The Greenfield vs Brownfield Split
+
+  Greenfield is easier — the pipeline works as-is. User writes requirements in plain
+  language, pipeline generates specs, verifies, generates tests, user implements. The only
+   missing piece is ProjectContext so files land in the right place.
+
+  Brownfield is fundamentally different. You're not building forward from requirements —
+  you're building backward from existing code. The pipeline's Phase 0 (extraction)
+  currently reads schemas that describe the code. For a brownfield project, someone has to
+   create those schemas from the existing codebase. That's either a manual effort or a
+  separate ingestion pipeline.
+
+  What to Build Next
+
+  The ProjectContext refactor is the prerequisite for both use cases and both deployment
+  models. It's also a good pipeline candidate — you could express it as GWT behaviors
+  ("given a project context pointing to an external directory, when extract is called,
+  then schemas are read from the state root, not the CW9 root").
+
+  Want to scope that as the next pipeline feature, or think through the
+  packaging/distribution question more first?
+
+# Here is the scope:
+The coupling surface is narrower than the LLM suggested — it's essentially one    
+  anchor (PROJECT_ROOT) with known relative paths below it. Here's how I'd scope          
+  packaging:                                                                              
+                                                                                          
+  Packaging Scope: What You Actually Need                                                 
+                                                                                          
+  The path analysis shows three distinct path concerns, not five:                         
+                                                                                          
+  1. Engine root — where CW9's own code lives (templates, tla2tools.jar, bridge logic)    
+  2. Target root — where the external project's source code lives
+  3. State root — where the DAG, schemas, specs, and artifacts live for that project
+
+  Today all three are the same directory. Decoupling them is the prerequisite for
+  everything.
+
+  Staged Plan
+
+  Stage 0: ProjectContext dataclass (the real work)
+
+  @dataclass
+  class ProjectContext:
+      engine_root: Path   # CW9 install location (templates, tools, python/registry)
+      target_root: Path   # external project's root
+      state_root: Path    # target_root/.cw9 by default
+
+      # Derived (all under state_root)
+      schema_dir: Path
+      spec_dir: Path
+      artifact_dir: Path
+      session_dir: Path
+
+      # Under target_root
+      test_output_dir: Path
+
+  What changes:
+  - SchemaExtractor.__init__ — already takes schema_dir, just pass ctx.schema_dir
+  - OneShotLoop — takes project_root, split into ctx.engine_root (for template reads) and
+  ctx.state_root (for spec writes)
+  - _find_tla2tools — looks in ctx.engine_root / "tools" instead of PROJECT_ROOT / "tools"
+  - Loop scripts — the big surface area (all those PROJECT_ROOT / ... joins). Each gets a
+  ProjectContext instead of computing PROJECT_ROOT
+  - Node path= strings in _self_describe — these are metadata for CW9's own DAG, leave
+  them as-is. External projects get their own DAG with their own paths.
+
+  What doesn't change:
+  - dag.py, bridge.py, composer.py, types.py — no hardcoded paths, already clean
+  - Rust crate — no paths at all
+  - pyproject.toml — stays as-is, pytest config is per-project
+
+  This is ~6 files touched, mostly the 5 loop scripts + one_shot_loop.py. The registry
+  core is already decoupled.
+
+  Stage 1: cw9 init
+
+  A script (not yet a binary) that creates .cw9/ in a target directory:
+
+  cw9 init /path/to/my-project
+
+  Creates:
+  my-project/.cw9/
+    config.toml      # engine_root = "/path/to/CodeWriter9.0"
+    schema/           # empty starter schemas
+    dag.json          # empty DAG
+    specs/            # TLA+ instances will go here
+    bridge/           # bridge artifacts will go here
+    sessions/         # handoffs and loop logs
+
+  Greenfield starts here. User writes schemas (or Stage 2 helps them).
+
+  Stage 2: cw9 ingest (brownfield)
+
+  This is the hard problem and can be deferred. For now, brownfield = "user writes schemas
+   by hand, CW9 validates them." The pipeline already handles everything after schemas
+  exist.
+
+  Stage 3: CLI binary
+
+  Wrap with a thin entry point. Could be a Python CLI (click or argparse) first, Rust
+  binary later. The Rust crate already has the DAG engine — but the pipeline (LLM calls,
+  TLC invocation, bridge) is all Python today, so a Python CLI is the pragmatic first
+  step.
+
+  What I'd Build Next
+
+  Stage 0 only. The ProjectContext refactor. It's a pipeline candidate — you can express
+  it as GWT behaviors:
+
+  - gwt-0024: Given a ProjectContext pointing to an external directory, when
+  SchemaExtractor runs, schemas are read from state_root/schema
+  - gwt-0025: Given a ProjectContext, when the loop runs, specs are written to
+  state_root/specs, not engine_root
+  - gwt-0026: Given a ProjectContext, when bridge generates tests, they land in
+  target_root/tests/generated
+
+  That's req-0008, 3 GWT behaviors, one pipeline run. The implementation is a refactor of
+  existing code, not new functionality — but it's verified refactoring.
+
+  Stage 1 (cw9 init) follows naturally once ProjectContext exists. Stages 2-3 are separate
+   decisions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 What's Correct
                                                                                           
   The CSP framing is right. The nested loop problem IS arc-consistency propagation. CW7's
