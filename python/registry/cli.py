@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -69,6 +70,12 @@ def cmd_init(args: argparse.Namespace) -> int:
     dag_path = state_root / "dag.json"
     dag_path.write_text(json.dumps(_EMPTY_DAG, indent=2) + "\n")
 
+    # Copy starter schema templates if schema dir is empty
+    schema_templates_dir = ENGINE_ROOT / "templates" / "schema"
+    if schema_templates_dir.is_dir() and not list((state_root / "schema").glob("*.json")):
+        for tmpl in schema_templates_dir.glob("*.json"):
+            shutil.copy2(tmpl, state_root / "schema" / tmpl.name)
+
     # Verify it loads
     ctx = ProjectContext.from_target(target, ENGINE_ROOT)
 
@@ -83,8 +90,14 @@ def cmd_init(args: argparse.Namespace) -> int:
     print(f"  session_dir:    {ctx.session_dir}")
     print(f"  test_output_dir:{ctx.test_output_dir}")
     print()
+    schemas = list(ctx.schema_dir.glob("*.json"))
+    if schemas:
+        print(f"  Starter schemas copied ({len(schemas)}):")
+        for s in sorted(schemas):
+            print(f"    - {s.name}")
+        print()
     print("Next steps:")
-    print("  1. Add JSON schemas to .cw9/schema/")
+    print("  1. Edit schemas in .cw9/schema/ to match your project")
     print("  2. Run: cw9 status")
 
     return 0
