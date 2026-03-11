@@ -491,6 +491,91 @@ class TestTypeScriptPrompts:
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Phase 2: B10 — TypeScript test file verification
+# ─────────────────────────────────────────────────────────────────────
+
+class TestTypeScriptVerification:
+    """Unit tests for verify_test_file() using mocked subprocess."""
+
+    def test_verify_catches_compile_error(self, tmp_path):
+        from unittest.mock import patch, MagicMock
+        from registry.lang_typescript import TypeScriptProfile
+
+        profile = TypeScriptProfile()
+        test_file = tmp_path / "bad.test.ts"
+        test_file.write_text("const x: string = 42;")  # type error
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "error TS2322: Type 'number' is not assignable to type 'string'."
+
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            result = profile.verify_test_file(test_file, tmp_path)
+            assert not result.passed
+            assert result.stage == "compile"
+            # Should have called tsc
+            mock_run.assert_called_once()
+            assert "tsc" in mock_run.call_args[0][0]
+
+    def test_verify_catches_collect_error(self, tmp_path):
+        from unittest.mock import patch, MagicMock
+        from registry.lang_typescript import TypeScriptProfile
+
+        profile = TypeScriptProfile()
+        test_file = tmp_path / "ok.test.ts"
+        test_file.write_text('describe("test", () => { it("works", () => { expect(1).toBe(1); }); });')
+
+        tsc_ok = MagicMock(returncode=0, stdout="", stderr="")
+        jest_fail = MagicMock(returncode=1, stdout="", stderr="jest --listTests failed")
+
+        with patch("subprocess.run", side_effect=[tsc_ok, jest_fail]):
+            result = profile.verify_test_file(test_file, tmp_path)
+            assert not result.passed
+            assert result.stage == "collect"
+
+    def test_verify_catches_run_error(self, tmp_path):
+        from unittest.mock import patch, MagicMock
+        from registry.lang_typescript import TypeScriptProfile
+
+        profile = TypeScriptProfile()
+        test_file = tmp_path / "fail.test.ts"
+        test_file.write_text('describe("test", () => { it("fails", () => { expect(1).toBe(2); }); });')
+
+        tsc_ok = MagicMock(returncode=0, stdout="", stderr="")
+        collect_ok = MagicMock(returncode=0, stdout=str(test_file), stderr="")
+        run_fail = MagicMock(returncode=1, stdout="FAIL", stderr="")
+
+        with patch("subprocess.run", side_effect=[tsc_ok, collect_ok, run_fail]):
+            result = profile.verify_test_file(test_file, tmp_path)
+            assert not result.passed
+            assert result.stage == "run"
+
+    def test_verify_passes_valid_test(self, tmp_path):
+        from unittest.mock import patch, MagicMock
+        from registry.lang_typescript import TypeScriptProfile
+
+        profile = TypeScriptProfile()
+        test_file = tmp_path / "ok.test.ts"
+        test_file.write_text(
+            'describe("test", () => {\n'
+            '  it("works", () => {\n'
+            '    expect(1 + 1).toBe(2);\n'
+            '  });\n'
+            '});\n'
+        )
+
+        tsc_ok = MagicMock(returncode=0, stdout="", stderr="")
+        collect_ok = MagicMock(returncode=0, stdout=str(test_file), stderr="")
+        run_ok = MagicMock(returncode=0, stdout="PASS  ok.test.ts\nTests: 1 passed", stderr="")
+
+        with patch("subprocess.run", side_effect=[tsc_ok, collect_ok, run_ok]):
+            result = profile.verify_test_file(test_file, tmp_path)
+            assert result.passed
+            assert result.stage == "run"
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Phase 2: B11 — TypeScript code extraction
 # ─────────────────────────────────────────────────────────────────────
 
@@ -577,6 +662,68 @@ class TestRustCompiler:
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Phase 3: B13 — Rust API context discovery
+# ─────────────────────────────────────────────────────────────────────
+
+class TestRustApiDiscovery:
+    def test_finds_pub_functions(self, tmp_path):
+        from registry.lang_rust import RustProfile
+        profile = RustProfile()
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "dag.rs").write_text(
+            "pub struct RegistryDag {\n"
+            "    nodes: Vec<Node>,\n"
+            "}\n\n"
+            "impl RegistryDag {\n"
+            "    pub fn query_impact(&self, node_id: &str) -> ImpactResult {\n"
+            "        todo!()\n"
+            "    }\n"
+            "}\n"
+        )
+        result = profile.discover_api_context(tmp_path, "RegistryDag")
+        assert "pub struct RegistryDag" in result
+        assert "pub fn query_impact" in result
+
+    def test_finds_traits(self, tmp_path):
+        from registry.lang_rust import RustProfile
+        profile = RustProfile()
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "types.rs").write_text(
+            "pub trait Queryable {\n"
+            "    fn query(&self, id: &str) -> Option<Node>;\n"
+            "}\n\n"
+            "pub enum EdgeType {\n"
+            "    Imports,\n"
+            "    Exports,\n"
+            "}\n"
+        )
+        result = profile.discover_api_context(tmp_path, "Queryable")
+        assert "pub trait Queryable" in result
+        assert "pub enum EdgeType" in result
+
+    def test_finds_impl_blocks(self, tmp_path):
+        from registry.lang_rust import RustProfile
+        profile = RustProfile()
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "lib.rs").write_text(
+            "impl Dag {\n"
+            "    pub fn new() -> Self { todo!() }\n"
+            "}\n"
+        )
+        result = profile.discover_api_context(tmp_path, "Dag")
+        assert "pub fn new" in result
+
+    def test_no_source_returns_comment(self, tmp_path):
+        from registry.lang_rust import RustProfile
+        profile = RustProfile()
+        result = profile.discover_api_context(tmp_path, "Missing")
+        assert "No source found" in result
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Phase 3: B14 — Rust prompts
 # ─────────────────────────────────────────────────────────────────────
 
@@ -600,9 +747,51 @@ class TestRustPrompts:
         assert "assert" in patterns
         assert "fn test_" in patterns
 
+    def test_structural_patterns_has_use_statements(self):
+        patterns = self.profile.build_structural_patterns()
+        assert "use " in patterns
+
     def test_import_instructions_has_rust_syntax(self):
         instructions = self.profile.build_import_instructions("sample_module")
         assert "use " in instructions
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Phase 3: B15 — Rust test file verification
+# ─────────────────────────────────────────────────────────────────────
+
+@pytest.mark.integration
+class TestRustVerification:
+    def test_verify_catches_compile_error(self, tmp_path):
+        from registry.lang_rust import RustProfile
+        profile = RustProfile()
+        test_file = tmp_path / "test_bad.rs"
+        test_file.write_text('fn main() { let x: i32 = "not a number"; }')
+        result = profile.verify_test_file(test_file, tmp_path)
+        assert not result.passed
+        assert result.stage == "compile"
+
+    def test_verify_passes_valid_test(self, tmp_path):
+        """Integration test — requires cargo in PATH."""
+        from registry.lang_rust import RustProfile
+        profile = RustProfile()
+        # Set up minimal Cargo project
+        (tmp_path / "Cargo.toml").write_text(
+            '[package]\nname = "test_proj"\nversion = "0.1.0"\nedition = "2021"\n'
+        )
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "lib.rs").write_text(
+            "#[cfg(test)]\n"
+            "mod tests {\n"
+            "    #[test]\n"
+            "    fn it_works() {\n"
+            "        assert_eq!(2 + 2, 4);\n"
+            "    }\n"
+            "}\n"
+        )
+        result = profile.verify_test_file(src / "lib.rs", tmp_path)
+        assert result.passed
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -617,6 +806,22 @@ class TestRustExtraction:
         code = profile.extract_code_from_response(response)
         assert code.startswith("#[test]")
         assert "```" not in code
+
+    def test_strips_bare_fences(self):
+        from registry.lang_rust import RustProfile
+        profile = RustProfile()
+        response = '```\nfn main() {}\n```'
+        code = profile.extract_code_from_response(response)
+        assert "```" not in code
+        assert "fn main" in code
+
+    def test_strips_rs_fences(self):
+        from registry.lang_rust import RustProfile
+        profile = RustProfile()
+        response = '```rs\nfn main() { println!("hello"); }\n```'
+        code = profile.extract_code_from_response(response)
+        assert "```" not in code
+        assert "fn main" in code
 
     def test_handles_no_fences(self):
         from registry.lang_rust import RustProfile
@@ -640,6 +845,11 @@ class TestRustOutputPath:
         from registry.lang_rust import RustProfile
         profile = RustProfile()
         assert profile.test_file_extension == ".rs"
+
+    def test_rust_fence_tag(self):
+        from registry.lang_rust import RustProfile
+        profile = RustProfile()
+        assert profile.fence_language_tag == "rust|rs"
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -748,6 +958,33 @@ class TestGoApiDiscovery:
         assert "QueryImpact" in result
         assert "func NewDag" in result
 
+    def test_finds_interfaces(self, tmp_path):
+        from registry.lang_go import GoProfile
+        profile = GoProfile()
+        (tmp_path / "types.go").write_text(
+            "package registry\n\n"
+            "type Queryable interface {\n"
+            "\tQuery(id string) (*Node, error)\n"
+            "}\n"
+        )
+        result = profile.discover_api_context(tmp_path, "Queryable")
+        assert "type Queryable interface" in result
+
+    def test_excludes_test_files(self, tmp_path):
+        from registry.lang_go import GoProfile
+        profile = GoProfile()
+        (tmp_path / "dag.go").write_text(
+            "package registry\n\n"
+            "func NewDag() *Dag { return &Dag{} }\n"
+        )
+        (tmp_path / "dag_test.go").write_text(
+            "package registry\n\n"
+            "func TestNewDag(t *testing.T) {}\n"
+        )
+        result = profile.discover_api_context(tmp_path, "Dag")
+        assert "func NewDag" in result
+        assert "TestNewDag" not in result
+
     def test_no_source_returns_comment(self, tmp_path):
         from registry.lang_go import GoProfile
         profile = GoProfile()
@@ -785,6 +1022,84 @@ class TestGoPrompts:
     def test_import_instructions_has_go_syntax(self):
         instructions = self.profile.build_import_instructions("sample_module")
         assert "import" in instructions
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Phase 4: B21 — Go test file verification
+# ─────────────────────────────────────────────────────────────────────
+
+class TestGoVerification:
+    """Unit tests for verify_test_file() using mocked subprocess."""
+
+    def test_verify_catches_compile_error(self, tmp_path):
+        from unittest.mock import patch, MagicMock
+        from registry.lang_go import GoProfile
+
+        profile = GoProfile()
+        test_file = tmp_path / "bad_test.go"
+        test_file.write_text("package main\nfunc broken() {")
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "vet: ./bad_test.go: expected declaration"
+
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            result = profile.verify_test_file(test_file, tmp_path)
+            assert not result.passed
+            assert result.stage == "compile"
+            mock_run.assert_called_once()
+            assert "go" in mock_run.call_args[0][0]
+
+    def test_verify_catches_collect_error(self, tmp_path):
+        from unittest.mock import patch, MagicMock
+        from registry.lang_go import GoProfile
+
+        profile = GoProfile()
+        test_file = tmp_path / "ok_test.go"
+        test_file.write_text('package main\nimport "testing"\nfunc TestOk(t *testing.T) {}')
+
+        vet_ok = MagicMock(returncode=0, stdout="", stderr="")
+        list_fail = MagicMock(returncode=1, stdout="", stderr="go test -list failed")
+
+        with patch("subprocess.run", side_effect=[vet_ok, list_fail]):
+            result = profile.verify_test_file(test_file, tmp_path)
+            assert not result.passed
+            assert result.stage == "collect"
+
+    def test_verify_catches_run_error(self, tmp_path):
+        from unittest.mock import patch, MagicMock
+        from registry.lang_go import GoProfile
+
+        profile = GoProfile()
+        test_file = tmp_path / "fail_test.go"
+        test_file.write_text('package main\nimport "testing"\nfunc TestFail(t *testing.T) { t.Fatal("oops") }')
+
+        vet_ok = MagicMock(returncode=0, stdout="", stderr="")
+        list_ok = MagicMock(returncode=0, stdout="TestFail", stderr="")
+        run_fail = MagicMock(returncode=1, stdout="FAIL", stderr="")
+
+        with patch("subprocess.run", side_effect=[vet_ok, list_ok, run_fail]):
+            result = profile.verify_test_file(test_file, tmp_path)
+            assert not result.passed
+            assert result.stage == "run"
+
+    def test_verify_passes_valid_test(self, tmp_path):
+        from unittest.mock import patch, MagicMock
+        from registry.lang_go import GoProfile
+
+        profile = GoProfile()
+        test_file = tmp_path / "ok_test.go"
+        test_file.write_text('package main\nimport "testing"\nfunc TestOk(t *testing.T) {}')
+
+        vet_ok = MagicMock(returncode=0, stdout="", stderr="")
+        list_ok = MagicMock(returncode=0, stdout="TestOk", stderr="")
+        run_ok = MagicMock(returncode=0, stdout="ok  \tcommand-line-arguments\t0.001s", stderr="")
+
+        with patch("subprocess.run", side_effect=[vet_ok, list_ok, run_ok]):
+            result = profile.verify_test_file(test_file, tmp_path)
+            assert result.passed
+            assert result.stage == "run"
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -830,6 +1145,11 @@ class TestGoOutputPath:
         from registry.lang_go import GoProfile
         profile = GoProfile()
         assert profile.test_file_extension == "_test.go"
+
+    def test_go_fence_tag(self):
+        from registry.lang_go import GoProfile
+        profile = GoProfile()
+        assert profile.fence_language_tag == "go|golang"
 
 
 # ─────────────────────────────────────────────────────────────────────
