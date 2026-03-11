@@ -1,13 +1,13 @@
 ---
 date: 2026-03-10T17:24:16-04:00
 researcher: claude-opus
-git_commit: 458acdf4f879057f8e3b7f0f0618e8a9ed508ccd
+git_commit: 6767c74cc483f48449ba4f43a441015ab2b9d3ab
 branch: master
 repository: CodeWriter9.0
 topic: "How-to: CW9 CLI Pipeline Commands"
-tags: [documentation, howto, cli, pipeline, cw9]
+tags: [documentation, howto, cli, pipeline, cw9, multi-language]
 status: complete
-last_updated: 2026-03-10
+last_updated: 2026-03-11
 last_updated_by: claude-opus
 type: howto
 ---
@@ -16,7 +16,7 @@ type: howto
 
 ## Introduction
 
-This guide walks through using the `cw9` CLI to initialize a project, extract a registry DAG from schemas, run the LLM→PlusCal→TLC verification loop, generate bridge artifacts, produce pytest files, and run tests with smart targeting. Each step produces artifacts that the next step consumes.
+This guide walks through using the `cw9` CLI to initialize a project, extract a registry DAG from schemas, run the LLM→PlusCal→TLC verification loop, generate bridge artifacts, produce test files (Python, TypeScript, Rust, or Go), and run tests with smart targeting. Each step produces artifacts that the next step consumes.
 
 ## Prerequisites
 
@@ -25,6 +25,17 @@ This guide walks through using the `cw9` CLI to initialize a project, extract a 
 - TLA+ tools in `<engine_root>/tools/` (tla2tools.jar)
 - Claude Agent SDK configured (for `cw9 loop` and `cw9 gen-tests`)
 - Project schemas in JSON format (or use the starter templates)
+
+### Language-Specific Toolchains (for `--lang` flag)
+
+| Language | Toolchain Required | Verification Pipeline |
+|----------|-------------------|----------------------|
+| `python` (default) | Python 3.11+, pytest | `compile()` -> `pytest --collect-only` -> `pytest -x` |
+| `typescript` | Node.js, npx, tsc, jest | `npx tsc --noEmit` -> `npx jest --listTests` -> `npx jest` |
+| `rust` | Rust toolchain, cargo | `cargo check` -> `cargo test --no-run` -> `cargo test` |
+| `go` | Go 1.21+ | `go vet ./...` -> `go test -list .` -> `go test -v` |
+
+Only the toolchain for your chosen `--lang` is required. Python is the default and requires no additional setup.
 
 # Install globally (your machine)                                                         
                                                                                           
@@ -51,7 +62,8 @@ This guide walks through using the `cw9` CLI to initialize a project, extract a 
   Distribute
 
   From git (no PyPI needed):
-  uv tool install git+https://github.com/user/CodeWriter9.0#subdirectory=python
+  uv tool install git+https://github.com/tha-hammer/CodeWriter9.0#subdirectory=python
+
 
   Via PyPI (public):
   pip install twine
@@ -200,7 +212,7 @@ PASS — verified spec saved: .cw9/specs/gwt-0024.tla
 
 ## Step 6: Generate Bridge Artifacts
 
-Translate the verified spec into structured Python-domain data:
+Translate the verified spec into structured, language-neutral domain data:
 
 ```bash
 cw9 bridge gwt-0024 /path/to/your/project
@@ -225,22 +237,50 @@ The bridge reads the `.tla` spec and produces a JSON file containing:
 
 ## Step 7: Generate Tests
 
-Produce a pytest file from bridge artifacts using an LLM-in-the-loop:
+Produce a test file from bridge artifacts using an LLM-in-the-loop. Tests can target Python (default), TypeScript, Rust, or Go:
 
 ```bash
+# Python (default — same as before)
 cw9 gen-tests gwt-0024 /path/to/your/project
+
+# TypeScript
+cw9 gen-tests gwt-0024 /path/to/your/project --lang typescript
+
+# Rust
+cw9 gen-tests gwt-0024 /path/to/your/project --lang rust
+
+# Go
+cw9 gen-tests gwt-0024 /path/to/your/project --lang go
 ```
+
+The `--lang` flag selects a **language profile** that controls the entire downstream pipeline:
+
+- **Assertion compiler** — TLA+ conditions are translated into idiomatic target-language expressions (e.g., `\A x \in S : P` becomes `S.every((x) => P)` in TypeScript, `s.iter().all(|x| P)` in Rust, or an `allSatisfy()` helper call in Go)
+- **API context discovery** — source files are scanned for public signatures using language-appropriate patterns (`export function` for TS, `pub fn` for Rust, `func` for Go)
+- **LLM prompts** — system prompt, structural patterns, and import instructions are tailored to the target language's test framework (jest/vitest, `#[test]`, `testing` package)
+- **Code extraction** — LLM response fences are matched by language tag (`typescript|ts`, `rust|rs`, `go|golang`)
+- **Mechanical verification** — a 3-stage compile→collect→run pipeline using the target language's toolchain
 
 The test generation loop runs three LLM passes:
 1. **Test plan** — uses TLC simulation traces (primary context) + API signatures + compiler hints to plan fixtures, assertions, and scenarios
 2. **Review** — checks the plan against bridge verifiers for correctness
-3. **Code generation** — emits the pytest file from the reviewed plan
+3. **Code generation** — emits the test file from the reviewed plan
 
-The generated file is verified mechanically: `compile()` → `pytest --collect-only` → `pytest -x`. On failure, the loop retries with error feedback.
+The generated file is verified mechanically through the language-specific pipeline. On failure, the loop retries with error feedback.
 
-Output:
+Output examples by language:
 ```
+# Python
 Generated: tests/generated/test_gwt_0024.py (2 attempt(s))
+
+# TypeScript
+Generated: tests/generated/gwt_0024.test.ts (2 attempt(s))
+
+# Rust
+Generated: tests/generated/test_gwt_0024.rs (2 attempt(s))
+
+# Go
+Generated: tests/generated/gwt_0024_test.go (2 attempt(s))
 ```
 
 ### Arguments
@@ -249,6 +289,7 @@ Generated: tests/generated/test_gwt_0024.py (2 attempt(s))
 |----------|---------|-------------|
 | `gwt_id` | required | GWT behavior ID |
 | `target_dir` | `.` | Project directory |
+| `--lang` | `python` | Target language: `python`, `typescript`, `rust`, `go` |
 | `--max-attempts` | `3` | Maximum generation attempts |
 
 ## Step 8: Run Tests
@@ -305,6 +346,9 @@ cw9 loop gwt-0024 /path/to/myapp
 cw9 bridge gwt-0024 /path/to/myapp
 cw9 gen-tests gwt-0024 /path/to/myapp
 cw9 test /path/to/myapp
+
+# Or generate tests in another language
+cw9 gen-tests gwt-0024 /path/to/myapp --lang typescript
 ```
 
 ## Checking Project Status
@@ -336,7 +380,10 @@ CodeWriter9 project: /path/to/your/project
 | TLC config | `.cw9/specs/<gwt-id>.cfg` | `cw9 loop` |
 | Simulation traces | `.cw9/specs/<gwt-id>_sim_traces.json` | `cw9 loop` |
 | Bridge artifacts | `.cw9/bridge/<gwt-id>_bridge_artifacts.json` | `cw9 bridge` |
-| Generated tests | `tests/generated/test_<gwt_id>.py` | `cw9 gen-tests` |
+| Generated tests (Python) | `tests/generated/test_<gwt_id>.py` | `cw9 gen-tests` |
+| Generated tests (TypeScript) | `tests/generated/<gwt_id>.test.ts` | `cw9 gen-tests --lang typescript` |
+| Generated tests (Rust) | `tests/generated/test_<gwt_id>.rs` | `cw9 gen-tests --lang rust` |
+| Generated tests (Go) | `tests/generated/<gwt_id>_test.go` | `cw9 gen-tests --lang go` |
 | Session logs | `.cw9/sessions/<gwt-id>_attempt{N}.txt` | `cw9 loop` / `cw9 gen-tests` |
 
 ## Next Steps
