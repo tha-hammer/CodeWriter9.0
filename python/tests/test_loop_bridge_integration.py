@@ -34,7 +34,7 @@ class TestLoopDrivesBridge:
 
     def setup_method(self):
         schema_dir = os.path.join(PROJECT_ROOT, 'schema')
-        e = SchemaExtractor(schema_dir=schema_dir)
+        e = SchemaExtractor(schema_dir=schema_dir, self_host=True)
         self.dag = e.extract()
         self.loop = OneShotLoop(dag=self.dag, project_root=PROJECT_ROOT)
 

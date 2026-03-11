@@ -135,9 +135,10 @@ class SchemaExtractor:
         dag = extractor.extract()
     """
 
-    def __init__(self, schema_dir: str | Path, registry_path: str | Path | None = None):
+    def __init__(self, schema_dir: str | Path, registry_path: str | Path | None = None, self_host: bool = False):
         self.schema_dir = Path(schema_dir)
         self.registry_path = Path(registry_path) if registry_path else self.schema_dir / "resource_registry.generic.json"
+        self.self_host = self_host
 
     def extract(self) -> RegistryDag:
         """Run the full extraction pipeline: load registry, load schemas, extract edges."""
@@ -160,7 +161,8 @@ class SchemaExtractor:
                 self._extract_schema_edges(dag, schema, schema_file)
 
         # Step 3: Self-describe the registry (Phase 0 bootstrap act)
-        self._self_describe(dag)
+        if self.self_host:
+            self._self_describe(dag)
 
         return dag
 

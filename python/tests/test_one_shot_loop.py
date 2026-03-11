@@ -334,7 +334,7 @@ class TestSelfRegistration:
         from registry.extractor import SchemaExtractor
         import os
         schema_dir = os.path.join(os.path.dirname(__file__), "..", "..", "schema")
-        self.extractor = SchemaExtractor(schema_dir=schema_dir)
+        self.extractor = SchemaExtractor(schema_dir=schema_dir, self_host=True)
         self.dag = self.extractor.extract()
 
     def test_phase3_gwt_nodes_exist(self):

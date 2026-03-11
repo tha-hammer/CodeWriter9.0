@@ -16,7 +16,7 @@ SCHEMA_DIR = Path(__file__).parent.parent.parent / "schema"
 @pytest.fixture
 def dag():
     """Extract the full DAG from the actual schema files."""
-    extractor = SchemaExtractor(schema_dir=SCHEMA_DIR)
+    extractor = SchemaExtractor(schema_dir=SCHEMA_DIR, self_host=True)
     return extractor.extract()
 
 

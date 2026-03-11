@@ -372,7 +372,7 @@ class TestBridgeOnBridgeSpec:
 class TestBridgeRegistration:
     def setup_method(self):
         schema_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'schema')
-        e = SchemaExtractor(schema_dir=schema_dir)
+        e = SchemaExtractor(schema_dir=schema_dir, self_host=True)
         self.dag = e.extract()
 
     def test_bridge_requirement_exists(self):

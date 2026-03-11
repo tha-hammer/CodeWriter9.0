@@ -65,6 +65,25 @@ class TestInit:
         rc = main(["init", str(tmp_path / "nonexistent")])
         assert rc == 1
 
+    def test_ensure_is_noop_when_exists(self, target_dir):
+        main(["init", str(target_dir)])
+        # Modify DAG to prove it's not overwritten
+        dag_path = target_dir / ".cw9" / "dag.json"
+        dag_path.write_text('{"nodes": {"x": {}}, "edges": [], "test_artifacts": {}}')
+        rc = main(["init", str(target_dir), "--ensure"])
+        assert rc == 0
+        data = json.loads(dag_path.read_text())
+        assert "x" in data["nodes"]  # DAG was NOT overwritten
+
+    def test_ensure_creates_when_absent(self, target_dir):
+        rc = main(["init", str(target_dir), "--ensure"])
+        assert rc == 0
+        assert (target_dir / ".cw9").is_dir()
+
+    def test_ensure_and_force_conflict(self, target_dir):
+        rc = main(["init", str(target_dir), "--ensure", "--force"])
+        assert rc == 1
+
     def test_does_not_overwrite_existing_schemas(self, target_dir):
         """If user already has schemas, init --force should not clobber them."""
         main(["init", str(target_dir)])
@@ -113,8 +132,9 @@ class TestExtract:
         rc = main(["extract", str(target_dir)])
         assert rc == 0
         dag_data = json.loads((target_dir / ".cw9" / "dag.json").read_text())
-        assert len(dag_data["nodes"]) > 0
-        assert len(dag_data["edges"]) > 0
+        # External projects start with empty templates — 0 nodes is correct
+        assert isinstance(dag_data["nodes"], dict)
+        assert isinstance(dag_data["edges"], list)
 
     def test_extract_no_cw9_fails(self, target_dir):
         rc = main(["extract", str(target_dir)])
@@ -130,12 +150,13 @@ class TestExtract:
         # On re-extract with no changes, delta is 0
         assert "(0)" in out
 
-    def test_extract_status_shows_nodes(self, target_dir, capsys):
+    def test_extract_status_shows_dag(self, target_dir, capsys):
         main(["init", str(target_dir)])
         main(["extract", str(target_dir)])
         main(["status", str(target_dir)])
         out = capsys.readouterr().out
-        assert "0 nodes" not in out
+        # External project with empty templates produces 0 nodes
+        assert "DAG:" in out
 
     def test_extract_preserves_registered_gwts(self, target_dir, capsys):
         """register_gwt() -> extract -> GWT survives."""

@@ -216,7 +216,7 @@ async def run_loop() -> None:
 
     # Step 1: Load registry DAG
     log("\n[1/5] Loading registry DAG...")
-    extractor = SchemaExtractor(schema_dir=str(ctx.schema_dir))
+    extractor = SchemaExtractor(schema_dir=str(ctx.schema_dir), self_host=ctx.is_self_hosting)
     dag = extractor.extract()
     log(f"  DAG: {len(dag.nodes)} nodes, {len(dag.edges)} edges")
 

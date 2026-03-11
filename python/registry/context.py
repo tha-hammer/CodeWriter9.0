@@ -38,6 +38,11 @@ class ProjectContext:
     # Derived path under target_root (generated output for the project)
     test_output_dir: Path
 
+    @property
+    def is_self_hosting(self) -> bool:
+        """True when CW9 is working on its own codebase."""
+        return self.engine_root is not None and self.engine_root == self.target_root
+
     @classmethod
     def self_hosting(cls, engine_root: Path) -> ProjectContext:
         """CW9 working on itself — all three roots are the same directory."""

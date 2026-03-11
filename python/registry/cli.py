@@ -60,7 +60,15 @@ def cmd_init(args: argparse.Namespace) -> int:
         print(f"Error: {target} is not a directory", file=sys.stderr)
         return 1
 
+    if args.ensure and args.force:
+        print("Error: --ensure and --force are mutually exclusive", file=sys.stderr)
+        return 1
+
     state_root = target / ".cw9"
+
+    if args.ensure and state_root.exists():
+        return 0
+
     if state_root.exists() and not args.force:
         print(f".cw9/ already exists in {target}")
         print("Use --force to reinitialize.")
@@ -90,14 +98,17 @@ def cmd_init(args: argparse.Namespace) -> int:
     dag_path = state_root / "dag.json"
     dag_path.write_text(json.dumps(_EMPTY_DAG, indent=2) + "\n")
 
+    # Verify it loads
+    ctx = ProjectContext.from_target(target, engine_root)
+
     # Copy starter schema templates if schema dir is empty
-    schema_templates_dir = get_template_dir("schema")
+    if ctx.is_self_hosting:
+        schema_templates_dir = get_template_dir("schema")
+    else:
+        schema_templates_dir = get_template_dir("schema_external")
     if schema_templates_dir.is_dir() and not list((state_root / "schema").glob("*.json")):
         for tmpl in schema_templates_dir.glob("*.json"):
             shutil.copy2(tmpl, state_root / "schema" / tmpl.name)
-
-    # Verify it loads
-    ctx = ProjectContext.from_target(target, engine_root)
 
     print(f"Initialized .cw9/ in {target}")
     print()
@@ -182,7 +193,7 @@ def cmd_extract(args: argparse.Namespace) -> int:
 
     # Extract fresh DAG from schemas
     from registry.extractor import SchemaExtractor
-    extractor = SchemaExtractor(schema_dir=str(ctx.schema_dir))
+    extractor = SchemaExtractor(schema_dir=str(ctx.schema_dir), self_host=ctx.is_self_hosting)
     dag = extractor.extract()
 
     # Merge registered GWTs from old DAG back in
@@ -389,6 +400,115 @@ def cmd_gen_tests(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_register(args: argparse.Namespace) -> int:
+    """Register requirements + GWT behaviors from JSON stdin. Emit JSON stdout."""
+    target = Path(args.target_dir).resolve()
+    if not (target / ".cw9").exists():
+        print(json.dumps({"error": f"No .cw9/ found in {target}"}), file=sys.stderr)
+        return 1
+
+    # Read and parse stdin
+    try:
+        payload = json.loads(sys.stdin.read())
+    except (json.JSONDecodeError, ValueError) as e:
+        print(json.dumps({"error": f"Invalid JSON: {e}"}), file=sys.stderr)
+        return 1
+
+    from registry.dag import RegistryDag
+    from registry.bindings import load_bindings, save_bindings
+
+    ctx = ProjectContext.from_target(target)
+    dag_path = ctx.state_root / "dag.json"
+    dag = RegistryDag.load(dag_path)
+    bindings = load_bindings(ctx.state_root)
+
+    requirements = payload.get("requirements", [])
+    gwts = payload.get("gwts", [])
+
+    # Validate requirements have id
+    for i, req in enumerate(requirements):
+        if "id" not in req:
+            print(json.dumps({"error": f"requirements[{i}]: missing required field 'id'"}),
+                  file=sys.stderr)
+            return 1
+
+    # Validate GWTs have criterion_id and given/when/then
+    for i, gwt in enumerate(gwts):
+        if "criterion_id" not in gwt:
+            print(json.dumps({"error": f"gwts[{i}]: missing required field 'criterion_id'"}),
+                  file=sys.stderr)
+            return 1
+        for field in ("given", "when", "then"):
+            if field not in gwt:
+                print(json.dumps({"error": f"gwts[{i}]: missing required field '{field}'"}),
+                      file=sys.stderr)
+                return 1
+
+    # Phase 1: Register requirements
+    req_output = []
+    req_id_map = {}  # CW7 id -> CW9 req-NNNN
+    for req in requirements:
+        cw7_id = req["id"]
+        binding_key = f"req:{cw7_id}"
+
+        if binding_key in bindings:
+            req_id = bindings[binding_key]
+        else:
+            req_id = dag.register_requirement(
+                text=req.get("text", cw7_id),
+                name=req.get("name"),
+            )
+            bindings[binding_key] = req_id
+
+        req_id_map[cw7_id] = req_id
+        req_output.append({"id": cw7_id, "req_id": req_id})
+
+    # Phase 2: Register GWTs
+    gwt_output = []
+    for gwt in gwts:
+        criterion_id = gwt["criterion_id"]
+        binding_key = f"gwt:{criterion_id}"
+
+        if binding_key in bindings:
+            gwt_id = bindings[binding_key]
+        else:
+            # Resolve parent_req: CW7 id -> CW9 req-NNNN
+            parent_req = None
+            if gwt.get("parent_req"):
+                cw7_req_id = gwt["parent_req"]
+                parent_req = req_id_map.get(cw7_req_id)
+                if parent_req is None:
+                    # Check if it's already a CW9 req-NNNN ID in the DAG
+                    if cw7_req_id in dag.nodes:
+                        parent_req = cw7_req_id
+                    else:
+                        # Check bindings from a prior run
+                        parent_req = bindings.get(f"req:{cw7_req_id}")
+
+            gwt_id = dag.register_gwt(
+                given=gwt["given"],
+                when=gwt["when"],
+                then=gwt["then"],
+                parent_req=parent_req,
+                name=gwt.get("name"),
+            )
+            bindings[binding_key] = gwt_id
+
+        gwt_output.append({"criterion_id": criterion_id, "gwt_id": gwt_id})
+
+    # Save
+    dag.save(dag_path)
+    save_bindings(ctx.state_root, bindings)
+
+    # Emit JSON stdout
+    result = {
+        "requirements": req_output,
+        "gwts": gwt_output,
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def cmd_test(args: argparse.Namespace) -> int:
     import subprocess as sp
 
@@ -451,6 +571,8 @@ def main(argv: list[str] | None = None) -> int:
     p_init = sub.add_parser("init", help="Initialize .cw9/ in a target directory")
     p_init.add_argument("target_dir", nargs="?", default=".", help="Target project directory (default: .)")
     p_init.add_argument("--force", action="store_true", help="Reinitialize existing .cw9/")
+    p_init.add_argument("--ensure", action="store_true",
+                         help="No-op if .cw9/ already exists (idempotent init)")
 
     # status
     p_status = sub.add_parser("status", help="Show project context and DAG summary")
@@ -482,6 +604,10 @@ def main(argv: list[str] | None = None) -> int:
         help="Target language for test generation (default: python)",
     )
 
+    # register
+    p_reg = sub.add_parser("register", help="Register requirements + GWTs from JSON stdin")
+    p_reg.add_argument("target_dir", nargs="?", default=".")
+
     # test
     p_test = sub.add_parser("test", help="Run generated tests (smart targeting optional)")
     p_test.add_argument("--node", dest="node_id", help="Only run tests affected by this node")
@@ -501,6 +627,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_bridge(args)
     elif args.command == "gen-tests":
         return cmd_gen_tests(args)
+    elif args.command == "register":
+        return cmd_register(args)
     elif args.command == "test":
         return cmd_test(args)
     else:

@@ -247,10 +247,9 @@ def external_dag(external_ctx):
 class TestExternalExtraction:
     def test_node_count_differs_from_self_hosting(self, external_dag):
         """Custom schemas should produce a different DAG than CW9's own."""
-        # CW9 self-hosting has 96 nodes — this should have far fewer
-        # 6 resources + self-description nodes (req-0001, gwt-0001..0004, res-0001..0004)
-        assert len(external_dag.nodes) < 96
-        assert len(external_dag.nodes) >= 6  # at least our 6 resources
+        # 6 resource nodes from fixture's hand-crafted registry;
+        # no self-description nodes (gated off for external projects)
+        assert len(external_dag.nodes) == 6
 
     def test_edge_count_differs_from_self_hosting(self, external_dag):
         """Custom schemas should produce different edges."""
@@ -281,9 +280,9 @@ class TestExternalExtraction:
         to_ids = {e.to_id for e in edges_from_frontend}
         assert "cfg-f7s8" in to_ids  # shared/data_types
 
-    def test_self_description_still_works(self, external_dag):
-        """Phase 0 bootstrap self-description should apply to any DAG."""
-        assert "req-0001" in external_dag.nodes
+    def test_self_description_excluded_from_external(self, external_dag):
+        """Self-description nodes should not appear in external project DAGs."""
+        assert "req-0001" not in external_dag.nodes
 
     def test_impact_query(self, external_dag):
         """Changing shared/data_types should impact both processor and frontend."""
