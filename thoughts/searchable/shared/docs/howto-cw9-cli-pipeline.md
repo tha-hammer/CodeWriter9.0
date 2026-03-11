@@ -56,8 +56,8 @@ Only the toolchain for your chosen `--lang` is required. Python is the default a
   python -m build
 
   This produces two files in python/dist/:
-  - codewriter_registry-0.1.0.tar.gz (source)
-  - codewriter_registry-0.1.0-py3-none-any.whl (wheel)
+  - codewriter_registry-0.3.0.tar.gz (source)
+  - codewriter_registry-0.3.0-py3-none-any.whl (wheel)
 
   Distribute
 
@@ -71,7 +71,7 @@ Only the toolchain for your chosen `--lang` is required. Python is the default a
   # Then anyone can: uv tool install codewriter-registry
 
   Via private registry or direct wheel:
-  pip install codewriter_registry-0.1.0-py3-none-any.whl
+  pip install codewriter_registry-0.3.0-py3-none-any.whl
 
 
 

@@ -831,11 +831,6 @@ Always verify:
 
 ## Relationship to Other Commands
 
-Recommended workflow:
-1. `/implement_plan` - Execute the implementation
-2. `/commit` - Create atomic commits for changes
-3. `/validate_plan` - Verify implementation correctness
-4. `/describe_pr` - Generate PR description
 
 The validation works best after commits are made, as it can analyze the git history to understand what was implemented.
 
@@ -851,6 +846,7 @@ After successful validation:
 4. **Review ready work**: Run `bd ready` to see what's now available to work on next
 
 Plan file to validate: {plan_file}
+Save or append the validation report to: `VALIDATION_REPORT.md`
 """
         # Send to Claude
         await self.client.query(prompt)
