@@ -19,6 +19,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+from registry.lang import (
+    CompiledExpression,
+    LanguageProfile,
+    PythonProfile,
+    VerifyResult,
+)
 from registry.tla_compiler import compile_assertions
 
 
@@ -37,34 +43,40 @@ class TestGenContext:
     gwt_text: dict          # {"given": ..., "when": ..., "then": ...}
     module_name: str
     bridge_artifacts: dict   # Full bridge JSON
-    compiler_hints: dict     # verifier_name → {"python_expr", "original_tla", "variables_used"}
+    compiler_hints: dict     # verifier_name → {"target_expr", "original_tla", "variables_used"}
     api_context: str         # Target module imports + class/method signatures
     test_scenarios: list[dict[str, Any]]     # From counterexample trace pipeline (Phase 5A)
     simulation_traces: list[list[dict[str, Any]]]  # v5: From TLC -simulate (PRIMARY context)
     tla_spec_text: str = ""  # v5: Verified TLA+ spec content (full picture)
     output_dir: Path = Path(".")
-    python_dir: Path = Path(".")
+    source_dir: Path = Path(".")
+    lang_profile: LanguageProfile = field(default_factory=PythonProfile)
 
 
-@dataclass
-class VerifyResult:
-    """Result of mechanical test verification."""
-    passed: bool
-    stage: str               # "compile", "collect", "run"
-    errors: list[str] = field(default_factory=list)
-    stdout: str = ""
-    stderr: str = ""
-    attempt: int = 0
+def build_compiler_hints(bridge_artifacts: dict, lang_profile: LanguageProfile | None = None) -> dict:
+    """Run the TLA+ compiler on bridge verifier conditions.
 
-
-def build_compiler_hints(bridge_artifacts: dict) -> dict:
-    """Run the TLA+ compiler on bridge verifier conditions."""
+    If lang_profile is provided, uses the profile's compile_assertions()
+    to produce target-language expressions. Otherwise falls back to the
+    old Python-only tla_compiler.compile_assertions().
+    """
     verifiers = bridge_artifacts.get("verifiers", {})
+    if lang_profile is not None:
+        compiled = lang_profile.compile_assertions(verifiers)
+        hints = {}
+        for vname, ce in compiled.items():
+            hints[vname] = {
+                "target_expr": ce.target_expr,
+                "original_tla": ce.original_tla,
+                "variables_used": ce.variables_used,
+            }
+        return hints
+    # Legacy fallback
     compiled = compile_assertions(verifiers)
     hints = {}
     for vname, ca in compiled.items():
         hints[vname] = {
-            "python_expr": ca.python_expr,
+            "target_expr": ca.target_expr,
             "original_tla": ca.original_tla,
             "variables_used": ca.variables_used,
         }
@@ -161,7 +173,8 @@ def build_test_plan_prompt(ctx: TestGenContext) -> str:
             sections.append(f"    Applies to: {applies_to}")
             if vname in ctx.compiler_hints:
                 hint = ctx.compiler_hints[vname]
-                sections.append(f"    Partial Python: {hint['python_expr']}")
+                expr_key = "target_expr" if "target_expr" in hint else "python_expr"
+                sections.append(f"    Partial translation: {hint[expr_key]}")
                 sections.append(
                     f"    ↑ Variables {hint['variables_used']} need binding to real API calls"
                 )
@@ -173,26 +186,7 @@ def build_test_plan_prompt(ctx: TestGenContext) -> str:
 
     # ── RANK 5: STRUCTURAL PATTERNS (the FORM) ───────────────────────
     sections.append(
-        "## Structural Patterns\n"
-        "```python\n"
-        "# Pattern: fixture construction from trace Init state\n"
-        "def _make_dag(nodes, edges, artifacts):\n"
-        "    dag = RegistryDag()\n"
-        "    for nid in nodes:\n"
-        "        dag.add_node(Node.behavior(nid, nid, 'g', 'w', 't'))\n"
-        "    for src, dst in edges:\n"
-        "        dag.add_edge(Edge(src, dst, EdgeType.IMPORTS))\n"
-        "    dag.test_artifacts = artifacts\n"
-        "    return dag\n\n"
-        "# Pattern: invariant verification\n"
-        "def test_invariant(dag):\n"
-        "    result = dag.some_query('node_id')\n"
-        "    assert property_of(result)\n\n"
-        "# Pattern: error case\n"
-        "def test_invalid_input(dag):\n"
-        "    with pytest.raises(NodeNotFoundError):\n"
-        "        dag.some_query('nonexistent')\n"
-        "```\n"
+        "## Structural Patterns\n" + ctx.lang_profile.build_structural_patterns()
     )
 
     # Fallback: if no simulation traces, fall back to counterexample scenarios
@@ -258,22 +252,22 @@ def build_review_prompt(test_plan: str, ctx: TestGenContext) -> str:
 
 
 def build_codegen_prompt(reviewed_plan: str, ctx: TestGenContext) -> str:
-    """Pass 3: Emit a complete pytest file from the reviewed plan."""
+    """Pass 3: Emit a complete test file from the reviewed plan.
+
+    Profile provides import instructions matching the target language.
+    """
+    import_instructions = ctx.lang_profile.build_import_instructions(ctx.module_name)
     return (
-        f"Generate a complete, runnable pytest file from this test plan.\n\n"
+        f"Generate a complete, runnable test file from this test plan.\n\n"
         f"## Reviewed Test Plan\n{reviewed_plan}\n\n"
         f"## API Context (EXACT imports to use)\n{ctx.api_context}\n\n"
         f"## Requirements\n"
         f"- Module: {ctx.module_name}, GWT ID: {ctx.gwt_id}\n"
-        f"- CRITICAL: Use EXACT import paths from the API Context section above.\n"
-        f"  Use `from registry.dag import RegistryDag` NOT `from {ctx.module_name}.dag`\n"
-        f"  Use `from registry.types import Node, Edge, EdgeType` for type imports\n"
-        f"- Use `import pytest` and relevant imports from the API context\n"
+        f"{import_instructions}"
         f"- Each verifier becomes a test function or method with a real assertion\n"
         f"- Fixtures construct concrete DAG/state objects (not mocks)\n"
         f"- Include docstrings referencing the TLA+ invariant being tested\n"
-        f"- Code must pass `compile()`, `pytest --collect-only`, and `pytest -x`\n"
-        f"- Output ONLY the Python code, no markdown fences or explanation\n"
+        f"- Output ONLY code, no markdown fences or explanation\n"
     )
 
 
@@ -282,19 +276,23 @@ def build_retry_prompt(
     verify_result: VerifyResult,
     ctx: TestGenContext,
 ) -> str:
-    """Build retry prompt from previous attempt's errors."""
+    """Build retry prompt from previous attempt's errors.
+
+    Profile provides import instructions matching the target language.
+    """
+    fence_tag = ctx.lang_profile.fence_language_tag.split("|")[0]
+    import_instructions = ctx.lang_profile.build_import_instructions(ctx.module_name)
     return (
         f"The previous test file failed at the '{verify_result.stage}' stage.\n\n"
-        f"## Previous code\n```python\n{previous_code}\n```\n\n"
+        f"## Previous code\n```{fence_tag}\n{previous_code}\n```\n\n"
         f"## Errors\n{chr(10).join(verify_result.errors)}\n\n"
         f"## stderr\n{verify_result.stderr[:2000]}\n\n"
         f"## Available API (EXACT imports)\n{ctx.api_context}\n\n"
         f"## Instructions\n"
-        f"Fix the errors and output the corrected Python file.\n"
-        f"CRITICAL: Use EXACT import paths: `from registry.dag import RegistryDag`, "
-        f"`from registry.types import Node, Edge, EdgeType`.\n"
-        f"Do NOT create mock classes — use the real API from the imports above.\n"
-        f"Output ONLY the Python code, no markdown fences or explanation.\n"
+        f"Fix the errors and output the corrected file.\n"
+        f"{import_instructions}"
+        f"Do NOT create mock classes -- use the real API from the imports above.\n"
+        f"Output ONLY code, no markdown fences or explanation.\n"
     )
 
 
@@ -304,89 +302,21 @@ def verify_test_file(
 ) -> VerifyResult:
     """Three-stage mechanical verification of a generated test file.
 
-    Stage 1: compile() — syntax check
-    Stage 2: pytest --collect-only — test discovery
-    Stage 3: pytest -x — run tests (fail fast)
+    Legacy standalone function — delegates to PythonProfile.verify_test_file().
+    Kept for backwards compatibility with existing callers.
     """
-    code = test_path.read_text()
-
-    # Stage 1: Compile
-    try:
-        compile(code, str(test_path), "exec")
-    except SyntaxError as e:
-        return VerifyResult(
-            passed=False, stage="compile",
-            errors=[f"SyntaxError: {e.msg} (line {e.lineno})"],
-        )
-
-    # Stage 2: Collect
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", str(test_path), "--collect-only", "-q"],
-        capture_output=True, text=True, cwd=str(python_dir), timeout=collect_timeout,
-    )
-    if result.returncode != 0:
-        return VerifyResult(
-            passed=False, stage="collect",
-            errors=[f"pytest --collect-only failed (rc={result.returncode})"],
-            stdout=result.stdout, stderr=result.stderr,
-        )
-
-    # Stage 3: Run
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", str(test_path), "-x", "-v"],
-        capture_output=True, text=True, cwd=str(python_dir), timeout=run_timeout,
-    )
-    if result.returncode != 0:
-        return VerifyResult(
-            passed=False, stage="run",
-            errors=[f"pytest -x failed (rc={result.returncode})"],
-            stdout=result.stdout, stderr=result.stderr,
-        )
-
-    return VerifyResult(passed=True, stage="run", stdout=result.stdout)
+    profile = PythonProfile()
+    return profile.verify_test_file(test_path, python_dir, collect_timeout, run_timeout)
 
 
 def _extract_code_from_response(response: str) -> str:
     """Extract Python code from LLM response, stripping markdown fences if present.
 
-    Handles multiple code blocks by extracting the largest one, and deduplicates
-    content if the response contains repeated code (e.g., from SDK returning
-    both AssistantMessage and ResultMessage with the same content).
+    Legacy standalone function — delegates to _extract_code_by_fence_tag().
+    Kept for backwards compatibility.
     """
-    text = response.strip()
-
-    # If there are markdown fences, extract the largest fenced block
-    import re
-    fenced = re.findall(r"```(?:python)?\n(.*?)```", text, re.DOTALL)
-    if fenced:
-        text = max(fenced, key=len).strip()
-    else:
-        # Strip single opening/closing fences
-        lines = text.splitlines()
-        if lines and lines[0].strip().startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        text = "\n".join(lines)
-
-    # Deduplicate: if the code is exactly repeated, take just the first copy
-    half = len(text) // 2
-    if half > 100:  # Only for substantial code
-        first_half = text[:half].rstrip()
-        second_half = text[half:].lstrip()
-        if first_half == second_half:
-            text = first_half
-
-    return text
-
-
-_TEST_GEN_SYSTEM_PROMPT = (
-    "You are a Python test generation expert. You generate complete, runnable "
-    "pytest test files from formal specifications and API documentation. "
-    "You use ONLY the real API imports provided — never create mock classes "
-    "or re-implement the API. Output ONLY Python code, no markdown fencing "
-    "or explanation."
-)
+    from registry.lang import _extract_code_by_fence_tag
+    return _extract_code_by_fence_tag(response, "python")
 
 
 async def run_test_gen_loop(
@@ -396,6 +326,9 @@ async def run_test_gen_loop(
     session_dir: Optional[Path] = None,
 ) -> VerifyResult:
     """Run the LLM test generation loop.
+
+    Uses ctx.lang_profile throughout for language-specific behavior:
+    system prompt, code extraction, verification, and output naming.
 
     Args:
         ctx: Test generation context (bridge artifacts, API context, etc.)
@@ -408,11 +341,13 @@ async def run_test_gen_loop(
         VerifyResult with passed=True if tests were generated and verified,
         or passed=False with error details.
     """
-    test_path = ctx.output_dir / f"test_{ctx.gwt_id.replace('-', '_')}.py"
+    profile = ctx.lang_profile
+    output_name = profile.test_file_name(ctx.gwt_id)
+    test_path = ctx.output_dir / output_name
     ctx.output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Use test-generation-specific system prompt
-    sys_prompt = _TEST_GEN_SYSTEM_PROMPT
+    # Use target-language system prompt from profile
+    sys_prompt = profile.build_system_prompt()
 
     # Pass 1: Generate test plan
     plan_prompt = build_test_plan_prompt(ctx)
@@ -425,7 +360,7 @@ async def run_test_gen_loop(
     # Pass 3: Generate code
     codegen_prompt = build_codegen_prompt(reviewed_plan, ctx)
     code_response = await call_llm(codegen_prompt, system_prompt=sys_prompt)
-    test_code = _extract_code_from_response(code_response)
+    test_code = profile.extract_code_from_response(code_response)
     test_path.write_text(test_code)
 
     if session_dir:
@@ -433,8 +368,8 @@ async def run_test_gen_loop(
         (session_dir / f"{ctx.gwt_id}_plan.txt").write_text(test_plan)
         (session_dir / f"{ctx.gwt_id}_review.txt").write_text(reviewed_plan)
 
-    # Verify
-    result = verify_test_file(test_path, ctx.python_dir)
+    # Verify using profile
+    result = profile.verify_test_file(test_path, ctx.source_dir)
     attempt = 1
 
     # Retry loop
@@ -442,7 +377,7 @@ async def run_test_gen_loop(
         attempt += 1
         retry_prompt = build_retry_prompt(test_code, result, ctx)
         code_response = await call_llm(retry_prompt, system_prompt=sys_prompt)
-        test_code = _extract_code_from_response(code_response)
+        test_code = profile.extract_code_from_response(code_response)
         test_path.write_text(test_code)
 
         if session_dir:
@@ -451,7 +386,7 @@ async def run_test_gen_loop(
                 "\n".join(result.errors) + "\n" + result.stderr
             )
 
-        result = verify_test_file(test_path, ctx.python_dir)
+        result = profile.verify_test_file(test_path, ctx.source_dir)
 
     result.attempt = attempt
     return result

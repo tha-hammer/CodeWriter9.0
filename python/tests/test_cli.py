@@ -324,7 +324,7 @@ class TestGenTests:
         }
         hints = build_compiler_hints(artifacts)
         assert "NoFalsePositives" in hints
-        assert "all(" in hints["NoFalsePositives"]["python_expr"]
+        assert "all(" in hints["NoFalsePositives"]["target_expr"]
 
     def test_prompt_includes_compiler_hints(self):
         from registry.test_gen_loop import TestGenContext, build_test_plan_prompt
@@ -342,7 +342,7 @@ class TestGenTests:
             },
             compiler_hints={
                 "NoFalsePositives": {
-                    "python_expr": "all(t in candidates for t in affected)",
+                    "target_expr": "all(t in candidates for t in affected)",
                     "original_tla": "\\A t \\in affected : t \\in candidates",
                     "variables_used": ["affected", "candidates"],
                 },
@@ -351,7 +351,7 @@ class TestGenTests:
             test_scenarios=[],
             simulation_traces=[],
             output_dir=Path("/tmp"),
-            python_dir=Path("/tmp"),
+            source_dir=Path("/tmp"),
         )
         prompt = build_test_plan_prompt(ctx)
         assert "NoFalsePositives" in prompt
@@ -386,7 +386,7 @@ class TestGenTests:
                 ],
             ],
             output_dir=Path("/tmp"),
-            python_dir=Path("/tmp"),
+            source_dir=Path("/tmp"),
         )
         prompt = build_test_plan_prompt(ctx)
         traces_pos = prompt.find("Concrete Verified Scenarios")
@@ -412,7 +412,7 @@ class TestGenTests:
             test_scenarios=[],
             simulation_traces=[],
             output_dir=Path("/tmp"),
-            python_dir=Path("/tmp"),
+            source_dir=Path("/tmp"),
         )
         prompt = build_test_plan_prompt(ctx)
         assert "Concrete Verified Scenarios" not in prompt

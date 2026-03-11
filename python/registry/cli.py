@@ -329,13 +329,15 @@ def cmd_gen_tests(args: argparse.Namespace) -> int:
             }
 
     # Build context
+    from registry.lang import TargetLanguage, get_profile
     from registry.test_gen_loop import (
         TestGenContext, build_compiler_hints, discover_api_context,
         run_test_gen_loop,
     )
 
-    compiler_hints = build_compiler_hints(bridge_artifacts)
-    api_context = discover_api_context(ctx.python_dir, module_name)
+    lang_profile = get_profile(TargetLanguage(args.lang))
+    compiler_hints = build_compiler_hints(bridge_artifacts, lang_profile)
+    api_context = lang_profile.discover_api_context(ctx.python_dir, module_name)
     test_scenarios = bridge_artifacts.get("test_scenarios", [])
 
     # v5: Load simulation traces (PRIMARY context for test generation)
@@ -362,7 +364,8 @@ def cmd_gen_tests(args: argparse.Namespace) -> int:
         simulation_traces=simulation_traces,
         tla_spec_text=tla_spec_text,
         output_dir=ctx.test_output_dir,
-        python_dir=ctx.python_dir,
+        source_dir=ctx.python_dir,
+        lang_profile=lang_profile,
     )
 
     from registry.loop_runner import call_llm
@@ -375,7 +378,8 @@ def cmd_gen_tests(args: argparse.Namespace) -> int:
     ))
 
     if result.passed:
-        test_path = ctx.test_output_dir / f"test_{gwt_id.replace('-', '_')}.py"
+        output_name = lang_profile.test_file_name(gwt_id)
+        test_path = ctx.test_output_dir / output_name
         print(f"Generated: {test_path} ({result.attempt} attempt(s))")
         return 0
     else:
@@ -468,10 +472,15 @@ def main(argv: list[str] | None = None) -> int:
     p_bridge.add_argument("target_dir", nargs="?", default=".")
 
     # gen-tests
-    p_gen = sub.add_parser("gen-tests", help="Generate pytest file from bridge artifacts (LLM loop)")
+    p_gen = sub.add_parser("gen-tests", help="Generate test file from bridge artifacts (LLM loop)")
     p_gen.add_argument("gwt_id", help="GWT behavior ID")
     p_gen.add_argument("target_dir", nargs="?", default=".")
     p_gen.add_argument("--max-attempts", type=int, default=3, help="Max generation attempts")
+    p_gen.add_argument(
+        "--lang", default="python",
+        choices=["python", "typescript", "rust", "go"],
+        help="Target language for test generation (default: python)",
+    )
 
     # test
     p_test = sub.add_parser("test", help="Run generated tests (smart targeting optional)")

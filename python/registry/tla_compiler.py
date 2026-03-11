@@ -12,18 +12,11 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-
-class CompileError(Exception):
-    """Raised when a TLA+ expression uses unsupported operators."""
-    pass
+from registry.lang import CompileError, CompiledExpression
 
 
-@dataclass
-class CompiledAssertion:
-    """A compiled Python assertion string with metadata."""
-    python_expr: str          # e.g., "all(x in impact_set for x in ...)"
-    original_tla: str         # The raw TLA+ condition
-    variables_used: list[str] # State variables referenced
+# Backwards-compatible aliases
+CompiledAssertion = CompiledExpression
 
 
 def compile_condition(tla_expr: str, state_var: str = "state") -> CompiledAssertion:
@@ -101,8 +94,8 @@ def compile_condition(tla_expr: str, state_var: str = "state") -> CompiledAssert
             f"Unsupported TLA+ operators: {remaining_tla} in expression: {original}"
         )
 
-    return CompiledAssertion(
-        python_expr=expr.strip(),
+    return CompiledExpression(
+        target_expr=expr.strip(),
         original_tla=original,
         variables_used=list(set(variables)),
     )
@@ -111,7 +104,7 @@ def compile_condition(tla_expr: str, state_var: str = "state") -> CompiledAssert
 def compile_assertions(
     verifiers: dict,
     state_var: str = "state",
-) -> dict[str, CompiledAssertion]:
+) -> dict[str, CompiledExpression]:
     """Compile all verifier conditions from bridge artifacts.
 
     Args:
@@ -119,7 +112,7 @@ def compile_assertions(
         state_var: Python variable name for state
 
     Returns:
-        Dict mapping verifier name → CompiledAssertion.
+        Dict mapping verifier name → CompiledExpression.
         Verifiers with no conditions or with CompileError are skipped
         with a warning comment in the assertion.
     """
@@ -137,20 +130,20 @@ def compile_assertions(
                 compiled = compile_condition(cond, state_var)
                 compiled_parts.append(compiled)
             except CompileError as e:
-                compiled_parts.append(CompiledAssertion(
-                    python_expr=f"True  # SKIP: {e}",
+                compiled_parts.append(CompiledExpression(
+                    target_expr=f"True  # SKIP: {e}",
                     original_tla=cond,
                     variables_used=[],
                 ))
 
         # Combine conditions with 'and'
-        combined_expr = " and ".join(f"({c.python_expr})" for c in compiled_parts)
+        combined_expr = " and ".join(f"({c.target_expr})" for c in compiled_parts)
         all_vars: list[str] = []
         for c in compiled_parts:
             all_vars.extend(c.variables_used)
 
-        results[vname] = CompiledAssertion(
-            python_expr=combined_expr,
+        results[vname] = CompiledExpression(
+            target_expr=combined_expr,
             original_tla=" /\\ ".join(c.original_tla for c in compiled_parts),
             variables_used=list(set(all_vars)),
         )

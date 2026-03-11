@@ -8,27 +8,27 @@ from registry.tla_compiler import compile_condition, compile_assertions, Compile
 class TestTlaCompiler:
     def test_basic_operators(self):
         r = compile_condition("x \\in S /\\ y = 3")
-        assert "in" in r.python_expr
-        assert "and" in r.python_expr
-        assert "==" in r.python_expr
+        assert "in" in r.target_expr
+        assert "and" in r.target_expr
+        assert "==" in r.target_expr
 
     def test_universal_quantifier(self):
         r = compile_condition("\\A x \\in S : x > 0")
-        assert "all(" in r.python_expr
-        assert "for x in S" in r.python_expr
+        assert "all(" in r.target_expr
+        assert "for x in S" in r.target_expr
 
     def test_record_field_access(self):
         r = compile_condition("state.count > 0", state_var="state")
-        assert 'state["count"]' in r.python_expr
+        assert 'state["count"]' in r.target_expr
 
     def test_len_cardinality(self):
         r = compile_condition("Len(seq) > 0 /\\ Cardinality(S) = 3")
-        assert "len(seq)" in r.python_expr
-        assert "len(S)" in r.python_expr
+        assert "len(seq)" in r.target_expr
+        assert "len(S)" in r.target_expr
 
     def test_boolean_literals(self):
         r = compile_condition("dirty = TRUE")
-        assert "True" in r.python_expr
+        assert "True" in r.target_expr
 
     def test_unsupported_operator_raises(self):
         with pytest.raises(CompileError):
@@ -36,8 +36,8 @@ class TestTlaCompiler:
 
     def test_dirty_guard_stripped(self):
         r = compile_condition("dirty = TRUE /\\ x > 0")
-        assert "dirty" not in r.python_expr
-        assert "x" in r.python_expr
+        assert "dirty" not in r.target_expr
+        assert "x" in r.target_expr
 
     def test_compile_assertions_from_verifiers(self):
         verifiers = {
@@ -52,6 +52,6 @@ class TestTlaCompiler:
         }
         results = compile_assertions(verifiers)
         assert "NoFalsePositives" in results
-        assert "all(" in results["NoFalsePositives"].python_expr
+        assert "all(" in results["NoFalsePositives"].target_expr
         assert "ValidState" in results
-        assert "len(result)" in results["ValidState"].python_expr
+        assert "len(result)" in results["ValidState"].target_expr
