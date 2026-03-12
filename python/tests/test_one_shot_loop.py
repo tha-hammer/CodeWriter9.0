@@ -16,6 +16,7 @@ from registry.one_shot_loop import (
     TLCResult,
     extract_pluscal,
     format_prompt_context,
+    generate_cfg,
     parse_counterexample,
     query_context,
     route_result,
@@ -383,3 +384,166 @@ class TestSelfRegistration:
         """Phase 8 adds 5 nodes (1 req + 3 GWT + 1 resource) and 22 edges over Phase 7 (91/176)."""
         assert self.dag.node_count == 96
         assert self.dag.edge_count == 198
+
+
+# ---------------------------------------------------------------------------
+# generate_cfg tests
+# ---------------------------------------------------------------------------
+
+class TestGenerateCfg:
+    """Tests for generate_cfg() — TLC .cfg auto-generation from TLA+ module text."""
+
+    FULL_SPEC = textwrap.dedent("""\
+        ---- MODULE TestSpec ----
+        EXTENDS Integers, TLC
+
+        CONSTANTS
+            MaxSteps,
+            MaxAttempts
+
+        ASSUME MaxSteps \\in Nat /\\ MaxSteps > 0
+
+        (* --algorithm TestAlgo
+
+        variables phase = "idle", count = 0;
+
+        define
+
+            AllPhases ==
+                {"idle", "running", "done"}
+
+            TerminalPhases == {"done"}
+
+            TypeInvariant ==
+                /\\ phase \\in AllPhases
+                /\\ count \\in 0..MaxSteps
+
+            BoundedExecution == count <= MaxSteps
+
+            SafetyGate ==
+                phase = "done" => count > 0
+
+        end define;
+
+        fair process P = "p"
+        begin L: skip;
+        end process;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    SPEC_WITH_STANDARD_OPS = textwrap.dedent("""\
+        ---- MODULE WithStandard ----
+        EXTENDS Integers
+
+        (* --algorithm Foo
+
+        variables x = 0;
+
+        define
+
+            Init == x = 0
+
+            Next == x' = x + 1
+
+            Spec == Init /\\ [][Next]_x
+
+            vars == <<x>>
+
+            Fairness == WF_vars(Next)
+
+            Termination == <>(x = 5)
+
+            Liveness == []<>(x > 0)
+
+            RealInvariant ==
+                x >= 0
+
+        end define;
+
+        begin L: x := x + 1;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    BARE_SPEC = textwrap.dedent("""\
+        ---- MODULE Bare ----
+        EXTENDS Integers
+
+        (* --algorithm Simple
+
+        variables x = 0;
+
+        begin L: x := 1;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    SPEC_NO_DEFINE = textwrap.dedent("""\
+        ---- MODULE NoDefine ----
+        EXTENDS Integers
+
+        CONSTANTS N
+
+        ASSUME N > 0
+
+        (* --algorithm NoDef
+
+        variables x = 0;
+
+        begin L: x := 1;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    def test_constants_and_invariants_from_full_spec(self):
+        """CONSTANTS get default values; invariants extracted, sets skipped."""
+        cfg = generate_cfg(self.FULL_SPEC)
+        assert "SPECIFICATION Spec" in cfg
+        assert "CONSTANT MaxSteps = 3" in cfg
+        assert "CONSTANT MaxAttempts = 3" in cfg
+        assert "INVARIANT TypeInvariant" in cfg
+        assert "INVARIANT BoundedExecution" in cfg
+        assert "INVARIANT SafetyGate" in cfg
+        # Set definitions must NOT appear as invariants
+        assert "INVARIANT AllPhases" not in cfg
+        assert "INVARIANT TerminalPhases" not in cfg
+
+    def test_standard_tla_names_excluded(self):
+        """Init, Next, Spec, vars, Fairness, Liveness, Termination must not be invariants."""
+        cfg = generate_cfg(self.SPEC_WITH_STANDARD_OPS)
+        for name in ("Init", "Next", "Spec", "vars", "Fairness", "Liveness", "Termination"):
+            assert f"INVARIANT {name}" not in cfg, f"{name} should be excluded"
+        # The real invariant should still be present
+        assert "INVARIANT RealInvariant" in cfg
+
+    def test_no_constants_produces_no_constant_lines(self):
+        """Spec without CONSTANTS should have no CONSTANT lines in cfg."""
+        cfg = generate_cfg(self.BARE_SPEC)
+        assert "SPECIFICATION Spec" in cfg
+        assert "CONSTANT" not in cfg.replace("SPECIFICATION", "")
+
+    def test_constants_without_define_block(self):
+        """CONSTANTS extracted even when there's no define block."""
+        cfg = generate_cfg(self.SPEC_NO_DEFINE)
+        assert "CONSTANT N = 3" in cfg
+        assert "INVARIANT" not in cfg
+
+    def test_no_define_no_constants_produces_bare_cfg(self):
+        """A minimal spec produces only SPECIFICATION Spec."""
+        cfg = generate_cfg(self.BARE_SPEC)
+        assert cfg.strip() == "SPECIFICATION Spec"
+
+    def test_custom_default_constant_value(self):
+        """default_constant_value parameter is respected."""
+        cfg = generate_cfg(self.FULL_SPEC, default_constant_value=5)
+        assert "CONSTANT MaxSteps = 5" in cfg
+        assert "CONSTANT MaxAttempts = 5" in cfg

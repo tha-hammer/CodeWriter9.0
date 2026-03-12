@@ -371,6 +371,77 @@ def run_tlc(
     return tlc_result
 
 
+# Standard TLA+/PlusCal operator names that are NOT state invariants.
+# Adding these as INVARIANT lines would cause TLC errors or false failures.
+_NON_INVARIANT_NAMES = frozenset({
+    "Init", "Next", "Spec", "vars", "Fairness", "Liveness",
+    "Termination", "Symmetry", "Constraint", "ActionConstraint",
+    "View", "Alias",
+})
+
+
+def generate_cfg(tla_text: str, default_constant_value: int = 3) -> str:
+    """Generate a TLC .cfg from CONSTANTS and define-block invariants.
+
+    Parses the module text to find:
+    - CONSTANTS declarations → assigns each a small default integer value
+    - Operator definitions in the PlusCal ``define`` block → adds state-predicate
+      operators as INVARIANT lines, filtering out data definitions and standard
+      TLA+ names (Init, Next, Spec, etc.)
+
+    Constant value assumption:
+        ``default_constant_value`` is assigned to every CONSTANT. This assumes all
+        constants are **numeric bounds** (MaxSteps, MaxRetries, etc.) — the pattern
+        produced by LLM-generated PlusCal specs with bounded model checking.
+        If a constant represents a model-value set, a boolean, or a string, TLC
+        will report a type error on the CONSTANT line. Callers with non-numeric
+        constants should supply their own cfg_text to compile_compose_verify().
+
+    Returns a complete cfg string suitable for TLC.
+    """
+    lines = ["SPECIFICATION Spec"]
+
+    # ── Extract CONSTANTS ──────────────────────────────────────────────
+    const_match = re.search(
+        r'CONSTANTS?\s+(.*?)(?=\n\s*\n|\nASSUME|\n\(\*|\nvariable)',
+        tla_text,
+        re.DOTALL,
+    )
+    if const_match:
+        raw = const_match.group(1)
+        for name in re.split(r'[,\n]', raw):
+            name = name.strip()
+            if name and re.match(r'^[A-Za-z]\w*$', name):
+                lines.append(f"CONSTANT {name} = {default_constant_value}")
+
+    # ── Extract invariants from define block ───────────────────────────
+    define_match = re.search(
+        r'define\s*\n(.*?)\nend\s+define',
+        tla_text,
+        re.DOTALL,
+    )
+    if define_match:
+        define_text = define_match.group(1)
+        ops = list(re.finditer(r'^\s+(\w+)\s*==\s*', define_text, re.MULTILINE))
+        for i, op in enumerate(ops):
+            name = op.group(1)
+            # Skip standard TLA+ operators that are not invariants
+            if name in _NON_INVARIANT_NAMES:
+                continue
+            # Extract RHS to classify
+            start = op.end()
+            end = ops[i + 1].start() if i + 1 < len(ops) else len(define_text)
+            rhs = define_text[start:end].strip()
+            # Skip empty, set literals, sequence literals, strings, numbers
+            if not rhs:
+                continue
+            if rhs[0] in ('{', '<', '"') or rhs[0].isdigit():
+                continue
+            lines.append(f"INVARIANT {name}")
+
+    return "\n".join(lines) + "\n"
+
+
 def compile_compose_verify(
     pluscal_fragment: str,
     module_name: str,
@@ -389,6 +460,11 @@ def compile_compose_verify(
     cfg_path = tmpdir / f"{module_name}.cfg"
 
     tla_path.write_text(pluscal_fragment)
+
+    # Auto-generate cfg from spec if caller provided only bare SPECIFICATION
+    if "CONSTANT" not in cfg_text and "INVARIANT" not in cfg_text:
+        cfg_text = generate_cfg(pluscal_fragment)
+
     cfg_path.write_text(cfg_text)
 
     # Compile PlusCal → TLA+
