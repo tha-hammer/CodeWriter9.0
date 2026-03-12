@@ -158,7 +158,7 @@ def setup_project(project_dir: Path) -> dict:
     log("  extract: OK")
 
     # Step 3: cw7_extract → cw9 register
-    from tools.cw7_extract import extract as cw7_extract
+    from registry.cw7 import extract as cw7_extract
 
     if not CW7_FIXTURE_DB.exists():
         log(f"  WARNING: CW7 fixture not found at {CW7_FIXTURE_DB}")

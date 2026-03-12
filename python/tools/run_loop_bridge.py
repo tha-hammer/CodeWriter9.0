@@ -134,7 +134,7 @@ def setup_project(project_dir: Path, db_path: Path, session_id: str | None = Non
 
     # register from CW7 fixture
     if db_path.exists():
-        from tools.cw7_extract import extract as cw7_extract
+        from registry.cw7 import extract as cw7_extract
         payload = cw7_extract(db_path, session_id)
         log(f"  CW7 source: {db_path}")
     else:
@@ -143,7 +143,7 @@ def setup_project(project_dir: Path, db_path: Path, session_id: str | None = Non
 
     # Copy plan_path context files to .cw9/context/
     if plan_path_dir is not None:
-        from tools.cw7_extract import copy_context_files, build_plan_path_map
+        from registry.cw7 import copy_context_files, build_plan_path_map
         context_dir = project_dir / ".cw9" / "context"
         # Build mapping: acceptance_criterion_id → plan_path_id (file naming)
         pp_map = build_plan_path_map(db_path, session_id) if db_path.exists() else None

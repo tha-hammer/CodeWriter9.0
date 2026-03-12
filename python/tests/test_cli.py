@@ -1,5 +1,6 @@
-"""Tests for the cw9 CLI (init, status)."""
+"""Tests for the cw9 CLI (init, status, register_payload)."""
 
+import io
 import json
 from pathlib import Path
 
@@ -464,3 +465,49 @@ class TestTest:
         (test_dir / "test_sample.py").write_text("def test_pass(): assert True\n")
         rc = main(["test", str(target_dir)])
         assert rc == 0
+
+
+class TestRegisterPayload:
+    def test_registers_requirements_and_gwts(self, target_dir):
+        main(["init", str(target_dir)])
+        main(["extract", str(target_dir)])
+
+        from registry.cli import _register_payload
+        payload = {
+            "requirements": [{"id": "REQ-1", "text": "Test req"}],
+            "gwts": [{"criterion_id": "c1", "given": "g", "when": "w", "then": "t"}],
+        }
+        result = _register_payload(target_dir, payload)
+        assert len(result["requirements"]) == 1
+        assert result["requirements"][0]["req_id"].startswith("req-")
+        assert len(result["gwts"]) == 1
+        assert result["gwts"][0]["gwt_id"].startswith("gwt-")
+
+    def test_idempotent_on_rerun(self, target_dir):
+        main(["init", str(target_dir)])
+        main(["extract", str(target_dir)])
+
+        from registry.cli import _register_payload
+        payload = {
+            "requirements": [{"id": "REQ-1", "text": "Test req"}],
+            "gwts": [{"criterion_id": "c1", "given": "g", "when": "w", "then": "t"}],
+        }
+        r1 = _register_payload(target_dir, payload)
+        r2 = _register_payload(target_dir, payload)
+        assert r1["gwts"][0]["gwt_id"] == r2["gwts"][0]["gwt_id"]
+
+    def test_register_via_stdin_still_works(self, target_dir, monkeypatch):
+        """cmd_register() thin wrapper still works."""
+        main(["init", str(target_dir)])
+        main(["extract", str(target_dir)])
+
+        payload = {"requirements": [], "gwts": [
+            {"criterion_id": "c1", "given": "g", "when": "w", "then": "t"},
+        ]}
+        monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+        stdout = io.StringIO()
+        monkeypatch.setattr("sys.stdout", stdout)
+        rc = main(["register", str(target_dir)])
+        assert rc == 0
+        result = json.loads(stdout.getvalue())
+        assert result["gwts"][0]["gwt_id"].startswith("gwt-")

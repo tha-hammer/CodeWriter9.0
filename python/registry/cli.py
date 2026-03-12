@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -404,20 +405,13 @@ def cmd_gen_tests(args: argparse.Namespace) -> int:
         return 1
 
 
-def cmd_register(args: argparse.Namespace) -> int:
-    """Register requirements + GWT behaviors from JSON stdin. Emit JSON stdout."""
-    target = Path(args.target_dir).resolve()
-    if not (target / ".cw9").exists():
-        print(json.dumps({"error": f"No .cw9/ found in {target}"}), file=sys.stderr)
-        return 1
+def _register_payload(target: Path, payload: dict) -> dict:
+    """Register requirements + GWT behaviors from a dict. Returns result dict.
 
-    # Read and parse stdin
-    try:
-        payload = json.loads(sys.stdin.read())
-    except (json.JSONDecodeError, ValueError) as e:
-        print(json.dumps({"error": f"Invalid JSON: {e}"}), file=sys.stderr)
-        return 1
-
+    Returns:
+        {"requirements": [{"id": cw7_id, "req_id": req_id}, ...],
+         "gwts": [{"criterion_id": criterion_id, "gwt_id": gwt_id}, ...]}
+    """
     from registry.dag import RegistryDag
     from registry.bindings import load_bindings, save_bindings
 
@@ -428,25 +422,6 @@ def cmd_register(args: argparse.Namespace) -> int:
 
     requirements = payload.get("requirements", [])
     gwts = payload.get("gwts", [])
-
-    # Validate requirements have id
-    for i, req in enumerate(requirements):
-        if "id" not in req:
-            print(json.dumps({"error": f"requirements[{i}]: missing required field 'id'"}),
-                  file=sys.stderr)
-            return 1
-
-    # Validate GWTs have criterion_id and given/when/then
-    for i, gwt in enumerate(gwts):
-        if "criterion_id" not in gwt:
-            print(json.dumps({"error": f"gwts[{i}]: missing required field 'criterion_id'"}),
-                  file=sys.stderr)
-            return 1
-        for field in ("given", "when", "then"):
-            if field not in gwt:
-                print(json.dumps({"error": f"gwts[{i}]: missing required field '{field}'"}),
-                      file=sys.stderr)
-                return 1
 
     # Phase 1: Register requirements
     req_output = []
@@ -504,13 +479,191 @@ def cmd_register(args: argparse.Namespace) -> int:
     dag.save(dag_path)
     save_bindings(ctx.state_root, bindings)
 
-    # Emit JSON stdout
-    result = {
-        "requirements": req_output,
-        "gwts": gwt_output,
-    }
+    return {"requirements": req_output, "gwts": gwt_output}
+
+
+def cmd_register(args: argparse.Namespace) -> int:
+    """Register requirements + GWT behaviors from JSON stdin. Emit JSON stdout."""
+    target = Path(args.target_dir).resolve()
+    if not (target / ".cw9").exists():
+        print(json.dumps({"error": f"No .cw9/ found in {target}"}), file=sys.stderr)
+        return 1
+
+    # Read and parse stdin
+    try:
+        payload = json.loads(sys.stdin.read())
+    except (json.JSONDecodeError, ValueError) as e:
+        print(json.dumps({"error": f"Invalid JSON: {e}"}), file=sys.stderr)
+        return 1
+
+    # Validate requirements have id
+    for i, req in enumerate(payload.get("requirements", [])):
+        if "id" not in req:
+            print(json.dumps({"error": f"requirements[{i}]: missing required field 'id'"}),
+                  file=sys.stderr)
+            return 1
+
+    # Validate GWTs have criterion_id and given/when/then
+    for i, gwt in enumerate(payload.get("gwts", [])):
+        if "criterion_id" not in gwt:
+            print(json.dumps({"error": f"gwts[{i}]: missing required field 'criterion_id'"}),
+                  file=sys.stderr)
+            return 1
+        for field in ("given", "when", "then"):
+            if field not in gwt:
+                print(json.dumps({"error": f"gwts[{i}]: missing required field '{field}'"}),
+                      file=sys.stderr)
+                return 1
+
+    result = _register_payload(target, payload)
     print(json.dumps(result, indent=2))
     return 0
+
+
+def _resolve_gwt_ids(
+    project_dir: Path,
+    register_output: dict | None,
+    explicit_gwts: list | None,
+) -> list[str]:
+    """Determine which GWT IDs to process.
+
+    Resolution order:
+    1. Explicit --gwt args (if provided)
+    2. register_output from setup phase (if available)
+    3. DAG nodes (fallback)
+    """
+    if explicit_gwts:
+        return explicit_gwts
+    if register_output and register_output.get("gwts"):
+        return [g["gwt_id"] for g in register_output["gwts"]]
+    dag_path = project_dir / ".cw9" / "dag.json"
+    if dag_path.exists():
+        dag_data = json.loads(dag_path.read_text())
+        return sorted(nid for nid in dag_data.get("nodes", {}) if nid.startswith("gwt-"))
+    return []
+
+
+def _find_context_file(project_dir: Path, gwt_id: str, gwt_to_criterion: dict | None) -> Path | None:
+    """Find context file for a GWT in .cw9/context/."""
+    context_dir = project_dir / ".cw9" / "context"
+    if not context_dir.exists():
+        return None
+    if gwt_to_criterion:
+        crit_id = gwt_to_criterion.get(gwt_id)
+        if crit_id:
+            ctx_file = context_dir / f"{crit_id}.md"
+            if ctx_file.exists():
+                return ctx_file
+    return None
+
+
+def cmd_pipeline(args: argparse.Namespace) -> int:
+    """Run full CW9 pipeline: setup -> loop -> bridge."""
+    target = Path(args.target_dir).resolve()
+    target.mkdir(parents=True, exist_ok=True)
+
+    need_setup = not args.skip_setup and not args.bridge_only
+
+    # DB validation
+    if need_setup:
+        db = args.db or (Path(os.environ["CW7_DB"]) if os.environ.get("CW7_DB") else None)
+        if not db:
+            print("Error: --db required (or set CW7_DB)", file=sys.stderr)
+            return 1
+        if not db.exists():
+            print(f"Error: CW7 database not found: {db}", file=sys.stderr)
+            return 1
+    else:
+        db = None
+
+    # Session inference from plan_path_dir
+    session_id = args.session
+    if session_id is None and args.plan_path_dir is not None:
+        dirname = args.plan_path_dir.name
+        if dirname.startswith("session-"):
+            session_id = dirname
+
+    # Phase 0: Setup
+    register_output = None
+    gwt_to_criterion: dict[str, str] = {}
+    if need_setup:
+        # init
+        rc = main(["init", str(target), "--ensure"])
+        if rc != 0:
+            return rc
+
+        # extract
+        rc = main(["extract", str(target)])
+        if rc != 0:
+            return rc
+
+        # CW7 extract + register
+        from registry.cw7 import extract as cw7_extract, build_plan_path_map, copy_context_files
+        payload = cw7_extract(db, session_id)
+
+        # Copy plan_path context files
+        if args.plan_path_dir is not None:
+            context_dir = target / ".cw9" / "context"
+            pp_map = build_plan_path_map(db, session_id) if session_id else None
+            copy_context_files(args.plan_path_dir, context_dir, payload["gwts"], pp_map)
+
+        register_output = _register_payload(target, payload)
+
+        # Build gwt_id -> criterion_id mapping
+        if register_output and register_output.get("gwts"):
+            for g in register_output["gwts"]:
+                gwt_to_criterion[g["gwt_id"]] = g["criterion_id"]
+
+    # Resolve targets
+    gwt_ids = _resolve_gwt_ids(target, register_output, args.gwts)
+    if not gwt_ids:
+        print("Error: No GWT IDs found. Provide --gwt or ensure register ran.", file=sys.stderr)
+        return 1
+
+    # Phase 1: Loop
+    loop_results: dict[str, bool] = {}
+    if not args.bridge_only:
+        for gwt_id in gwt_ids:
+            ctx_file_path = _find_context_file(target, gwt_id, gwt_to_criterion)
+            loop_ns = argparse.Namespace(
+                gwt_id=gwt_id,
+                target_dir=str(target),
+                max_retries=args.max_retries,
+                context_file=ctx_file_path,
+            )
+            rc = cmd_loop(loop_ns)
+            loop_results[gwt_id] = (rc == 0)
+
+    # Determine which GWTs to bridge
+    if args.bridge_only:
+        verified_ids = [
+            gid for gid in gwt_ids
+            if (target / ".cw9" / "specs" / f"{gid}.tla").exists()
+        ]
+    else:
+        verified_ids = [gid for gid, passed in loop_results.items() if passed]
+
+    # Phase 2: Bridge
+    bridge_results: dict[str, bool] = {}
+    if not args.loop_only and verified_ids:
+        for gwt_id in verified_ids:
+            spec_path = target / ".cw9" / "specs" / f"{gwt_id}.tla"
+            if not spec_path.exists():
+                continue
+            bridge_ns = argparse.Namespace(
+                gwt_id=gwt_id,
+                target_dir=str(target),
+            )
+            rc = cmd_bridge(bridge_ns)
+            bridge_results[gwt_id] = (rc == 0)
+
+    # Exit code: 0 if all attempted steps passed
+    all_passed = (
+        all(loop_results.values()) if loop_results else True
+    ) and (
+        all(bridge_results.values()) if bridge_results else True
+    )
+    return 0 if all_passed else 1
 
 
 def cmd_test(args: argparse.Namespace) -> int:
@@ -619,6 +772,19 @@ def main(argv: list[str] | None = None) -> int:
     p_test.add_argument("--node", dest="node_id", help="Only run tests affected by this node")
     p_test.add_argument("target_dir", nargs="?", default=".")
 
+    # pipeline
+    p_pipeline = sub.add_parser("pipeline", help="Run full CW9 pipeline: setup -> loop -> bridge")
+    p_pipeline.add_argument("target_dir", nargs="?", default=".")
+    p_pipeline.add_argument("--db", type=Path, default=None,
+                             help="CW7 SQLite database path (or set CW7_DB env var)")
+    p_pipeline.add_argument("--session", default=None)
+    p_pipeline.add_argument("--gwt", action="append", dest="gwts", default=None)
+    p_pipeline.add_argument("--max-retries", type=int, default=5)
+    p_pipeline.add_argument("--skip-setup", action="store_true")
+    p_pipeline.add_argument("--loop-only", action="store_true")
+    p_pipeline.add_argument("--bridge-only", action="store_true")
+    p_pipeline.add_argument("--plan-path-dir", type=Path, default=None)
+
     args = parser.parse_args(argv)
 
     if args.command == "init":
@@ -637,6 +803,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_register(args)
     elif args.command == "test":
         return cmd_test(args)
+    elif args.command == "pipeline":
+        return cmd_pipeline(args)
     else:
         parser.print_help()
         return 0
