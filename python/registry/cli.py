@@ -229,10 +229,14 @@ def cmd_loop(args: argparse.Namespace) -> int:
     from registry.one_shot_loop import LoopResult
 
     ctx = ProjectContext.from_target(target)
+    context_text = ""
+    if args.context_file and args.context_file.exists():
+        context_text = args.context_file.read_text()
     result, spec_path = asyncio.run(run_loop(
         ctx=ctx,
         gwt_id=args.gwt_id,
         max_retries=args.max_retries,
+        context_text=context_text,
     ))
 
     if result == LoopResult.PASS:
@@ -587,6 +591,8 @@ def main(argv: list[str] | None = None) -> int:
     p_loop.add_argument("gwt_id", help="GWT behavior ID (e.g., gwt-0024)")
     p_loop.add_argument("target_dir", nargs="?", default=".")
     p_loop.add_argument("--max-retries", type=int, default=5)
+    p_loop.add_argument("--context-file", type=Path, default=None,
+                        help="Supplementary context file passed verbatim to LLM")
 
     # bridge
     p_bridge = sub.add_parser("bridge", help="Translate verified spec → bridge artifacts")

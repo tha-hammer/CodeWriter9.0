@@ -208,10 +208,12 @@ def extract_pluscal(llm_response: str) -> str | None:
     # Check for a complete TLA+ module first — if the LLM output the whole
     # module (MODULE ... ====), use it as-is since pcal.trans needs the
     # full module wrapper, not just the algorithm block.
+    # Match MODULE header to a closing ==== line (must be at start of line
+    # to avoid matching ==== inside TLA+ comments like \* ======...).
     module_match = re.search(
-        r'(-{4,}\s*MODULE\s+\w+\s*-{4,}.*?={4,})',
+        r'(-{4,}\s*MODULE\s+\w+\s*-{4,}.*?^={4,})',
         llm_response,
-        re.DOTALL,
+        re.DOTALL | re.MULTILINE,
     )
     if module_match and '--algorithm' in module_match.group(1).lower():
         return module_match.group(1).strip()
@@ -641,9 +643,9 @@ class OneShotLoop:
         self.status.state = LoopState.EXTRACTING_FRAGMENT
         fragment = extract_pluscal(llm_response)
         if fragment is None:
-            self.status.state = LoopState.FAILED
+            self.status.state = LoopState.TRANSLATING_ERROR
             self.status.error = "No PlusCal fragment found in LLM response"
-            self.status.result = LoopResult.FAIL
+            self.status.result = LoopResult.RETRY
             return self.status
 
         # Steps 4-5: Compile → Compose → Verify
@@ -678,6 +680,7 @@ class OneShotLoop:
             self.status.consecutive_failures = 0
         elif result == LoopResult.RETRY:
             self.status.state = LoopState.IDLE  # Ready for next attempt
+            self.status.error = message
             self.status.consecutive_failures += 1
         else:  # FAIL
             self.status.state = LoopState.FAILED

@@ -24,6 +24,7 @@ from pathlib import Path
 os.environ.pop("CLAUDECODE", None)
 
 import claude_agent_sdk
+from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessage, ToolResultBlock, TextBlock, ResultMessage, tool, create_sdk_mcp_server
 
 # Add python/ to path so registry imports work
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -296,7 +297,6 @@ async def run_loop() -> None:
 async def call_llm(prompt: str) -> str:
     """Call Claude via the Agent SDK and collect the text response."""
     options = claude_agent_sdk.ClaudeAgentOptions(
-        # No tools needed — we just want text generation
         allowed_tools=[],
         system_prompt=(
             "You are a TLA+/PlusCal expert. Generate complete, syntactically correct "
@@ -305,20 +305,41 @@ async def call_llm(prompt: str) -> str:
             "be directly compilable by pcal.trans and verifiable by TLC."
         ),
         max_turns=1,
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
     )
 
-    result_text = []
-    async for message in claude_agent_sdk.query(prompt=prompt, options=options):
-        if isinstance(message, claude_agent_sdk.AssistantMessage):
-            for block in message.content:
-                if isinstance(block, claude_agent_sdk.TextBlock):
-                    result_text.append(block.text)
-        elif isinstance(message, claude_agent_sdk.ResultMessage):
-            if message.result:
-                result_text.append(message.result)
+    client = ClaudeSDKClient(options)
+    try:
+        await client.connect()
+        await client.query(prompt)
 
-    return "\n".join(result_text)
+        result_text = []
+        async for message in client.receive_response():
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        print(f"\033[94m{block.text}\033[0m\n", end="")
+                        result_text.append(block.text)
+                    elif isinstance(block, ToolResultBlock):
+                        print(f"\033[93mTool: {block.content}\033[0m\n")
+                    elif hasattr(block, "name"):
+                        print(f"\033[93mTool: {block.name}\033[0m\n")
+            elif isinstance(message, ResultMessage):
+                if message.result:
+                    print(f"\033[94m{message.result}\033[0m\n", end="")
+                    result_text.append(message.result)
+                print(f"\033[92mDone: {message.subtype}\033[0m\n")
+
+        return "\n".join(result_text)
+    finally:
+        try:
+            await asyncio.wait_for(client.disconnect(), timeout=10.0)
+        except (asyncio.TimeoutError, Exception):
+            if hasattr(client, '_tg') and client._tg:
+                try:
+                    client._tg.cancel_scope.cancel()
+                except Exception:
+                    pass
 
 
 def build_retry_prompt(status, original_prompt: str) -> str:

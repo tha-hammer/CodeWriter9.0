@@ -289,7 +289,7 @@ async def call_llm(prompt: str) -> str:
             "be directly compilable by pcal.trans and verifiable by TLC."
         ),
         max_turns=1,
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
     )
 
     result_text = []
