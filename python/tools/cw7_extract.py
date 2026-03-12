@@ -99,22 +99,50 @@ def extract(db_path: Path, session_id: str | None = None) -> dict:
     return {"requirements": requirements, "gwts": gwts}
 
 
+def build_plan_path_map(db_path: Path, session_id: str) -> dict[int, int]:
+    """Build acceptance_criterion_id → plan_path_id mapping from CW7 DB.
+
+    Plan-path files on disk are named ``{plan_path_id}-*.md`` but criterion_ids
+    use ``acceptance_criteria.id``.  This function queries the ``plan_paths``
+    table to bridge the two ID spaces.
+
+    Returns {acceptance_criterion_id: plan_path_id}.
+    """
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT id, acceptance_criterion_id FROM plan_paths "
+        "WHERE session_id = ? ORDER BY id",
+        (session_id,),
+    ).fetchall()
+    conn.close()
+    return {r["acceptance_criterion_id"]: r["id"] for r in rows}
+
+
 def copy_context_files(
     plan_path_dir: Path,
     context_dir: Path,
     gwts: list[dict],
+    plan_path_map: dict[int, int] | None = None,
 ) -> int:
     """Copy plan_path files into .cw9/context/ keyed by criterion_id.
+
+    ``plan_path_map`` translates acceptance_criterion_id → plan_path_id
+    (the number in the filename).  When provided, the glob uses the
+    plan_path_id; otherwise falls back to the criterion numeric suffix
+    (works only when the two ID spaces happen to coincide).
 
     Returns the number of files copied.
     """
     context_dir.mkdir(parents=True, exist_ok=True)
     copied = 0
     for gwt in gwts:
-        crit_id_str = gwt["criterion_id"]  # e.g. "cw7-crit-1046"
-        # Extract the numeric ID for matching plan_path filenames
-        numeric_id = crit_id_str.split("-")[-1]
-        matches = list(plan_path_dir.glob(f"{numeric_id}-*.md"))
+        crit_id_str = gwt["criterion_id"]  # e.g. "cw7-crit-3328"
+        ac_id = int(crit_id_str.split("-")[-1])
+
+        # Use plan_path_id for the glob if mapping is available
+        file_id = plan_path_map.get(ac_id, ac_id) if plan_path_map else ac_id
+        matches = list(plan_path_dir.glob(f"{file_id}-*.md"))
         if matches:
             dest = context_dir / f"{crit_id_str}.md"
             dest.write_text(matches[0].read_text())

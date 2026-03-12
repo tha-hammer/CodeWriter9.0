@@ -380,7 +380,7 @@ _NON_INVARIANT_NAMES = frozenset({
 })
 
 
-def generate_cfg(tla_text: str, default_constant_value: int = 3) -> str:
+def generate_cfg(tla_text: str, default_constant_value: int = 10) -> str:
     """Generate a TLC .cfg from CONSTANTS and define-block invariants.
 
     Parses the module text to find:

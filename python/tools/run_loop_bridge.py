@@ -143,9 +143,11 @@ def setup_project(project_dir: Path, db_path: Path, session_id: str | None = Non
 
     # Copy plan_path context files to .cw9/context/
     if plan_path_dir is not None:
-        from tools.cw7_extract import copy_context_files
+        from tools.cw7_extract import copy_context_files, build_plan_path_map
         context_dir = project_dir / ".cw9" / "context"
-        n_copied = copy_context_files(plan_path_dir, context_dir, payload["gwts"])
+        # Build mapping: acceptance_criterion_id → plan_path_id (file naming)
+        pp_map = build_plan_path_map(db_path, session_id) if db_path.exists() else None
+        n_copied = copy_context_files(plan_path_dir, context_dir, payload["gwts"], pp_map)
         log(f"  Context files: {n_copied}/{len(payload['gwts'])} copied to {context_dir}")
 
     log(f"  Payload: {len(payload['requirements'])} reqs, "

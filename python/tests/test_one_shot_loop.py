@@ -508,8 +508,8 @@ class TestGenerateCfg:
         """CONSTANTS get default values; invariants extracted, sets skipped."""
         cfg = generate_cfg(self.FULL_SPEC)
         assert "SPECIFICATION Spec" in cfg
-        assert "CONSTANT MaxSteps = 3" in cfg
-        assert "CONSTANT MaxAttempts = 3" in cfg
+        assert "CONSTANT MaxSteps = 10" in cfg
+        assert "CONSTANT MaxAttempts = 10" in cfg
         assert "INVARIANT TypeInvariant" in cfg
         assert "INVARIANT BoundedExecution" in cfg
         assert "INVARIANT SafetyGate" in cfg
@@ -534,7 +534,7 @@ class TestGenerateCfg:
     def test_constants_without_define_block(self):
         """CONSTANTS extracted even when there's no define block."""
         cfg = generate_cfg(self.SPEC_NO_DEFINE)
-        assert "CONSTANT N = 3" in cfg
+        assert "CONSTANT N = 10" in cfg
         assert "INVARIANT" not in cfg
 
     def test_no_define_no_constants_produces_bare_cfg(self):
