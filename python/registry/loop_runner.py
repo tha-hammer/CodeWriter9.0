@@ -17,7 +17,7 @@ from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessa
 from registry.context import ProjectContext
 from registry.one_shot_loop import (
     OneShotLoop, query_context, format_prompt_context,
-    LoopResult, LoopStatus, extract_pluscal,
+    LoopResult, LoopStatus, TLCErrorClass, extract_pluscal,
 )
 
 # ---------------------------------------------------------------------------
@@ -108,6 +108,51 @@ async def call_llm(prompt: str, system_prompt: str | None = None) -> str:
         await safe_disconnect(client)
 
 
+_ERROR_CLASS_INSTRUCTIONS: dict[TLCErrorClass, str] = {
+    TLCErrorClass.SYNTAX_ERROR: (
+        "### Failure Type: PlusCal SYNTAX ERROR\n"
+        "Your PlusCal code did not compile. This is a syntax issue, not a logic issue.\n"
+        "Focus on fixing PlusCal syntax (missing semicolons, bad labels, mismatched "
+        "begin/end, reserved words like 'Done'). Do NOT change your algorithm logic — "
+        "only fix the syntax so pcal.trans accepts it."
+    ),
+    TLCErrorClass.PARSE_ERROR: (
+        "### Failure Type: TLA+ PARSE/SEMANTIC ERROR\n"
+        "PlusCal compiled but the generated TLA+ has a parse or semantic error.\n"
+        "Check for undefined operators, missing EXTENDS, or malformed expressions."
+    ),
+    TLCErrorClass.TYPE_ERROR: (
+        "### Failure Type: TLC TYPE MISMATCH\n"
+        "PlusCal compiled successfully. TLC found a type error at runtime.\n"
+        "A variable or expression has the wrong type (e.g., applying arithmetic to "
+        "a string, or using a set where a number is expected). Fix the type of the "
+        "offending variable or expression. The algorithm structure is correct."
+    ),
+    TLCErrorClass.INVARIANT_VIOLATION: (
+        "### Failure Type: INVARIANT VIOLATION (counterexample below)\n"
+        "PlusCal compiled successfully and TLC ran, but found a state that violates "
+        "an invariant. The spec structure is correct — only the algorithm logic or "
+        "invariant definition needs to change. Study the counterexample trace below "
+        "to understand which state transition is wrong."
+    ),
+    TLCErrorClass.DEADLOCK: (
+        "### Failure Type: DEADLOCK\n"
+        "PlusCal compiled successfully but TLC found a deadlock — a reachable state "
+        "with no enabled actions. Common fixes:\n"
+        "- Add a termination label with skip (if the process should end)\n"
+        "- Add an `either` branch for the stuck case\n"
+        "- Check `await` conditions that can never be satisfied"
+    ),
+    TLCErrorClass.CONSTANT_MISMATCH: (
+        "### Failure Type: CONSTANT/OPERATOR MISMATCH\n"
+        "TLC cannot find an operator or CONSTANT that the spec references. Either:\n"
+        "- Add a CONSTANTS declaration for the missing name\n"
+        "- Add the missing operator definition in the `define` block\n"
+        "- Check that the .cfg file defines all CONSTANTS"
+    ),
+}
+
+
 def build_retry_prompt(
     initial_prompt: str,
     attempt: int,
@@ -116,11 +161,21 @@ def build_retry_prompt(
 ) -> str:
     """Build a retry prompt from the LoopStatus counterexample and error.
 
-    Includes the failed spec so the LLM knows what to fix.
+    Uses error classification to give targeted fix instructions instead of
+    dumping raw TLC output and hoping the LLM figures out the failure class.
     """
     parts = [initial_prompt, "\n\n## RETRY — Previous Attempt Failed\n"]
 
     parts.append(f"Attempt {attempt} failed.")
+
+    # Classified error instructions (the key improvement)
+    error_class = (
+        status.tlc_result.error_class
+        if status.tlc_result and status.tlc_result.error_class
+        else None
+    )
+    if error_class and error_class in _ERROR_CLASS_INSTRUCTIONS:
+        parts.append(f"\n{_ERROR_CLASS_INSTRUCTIONS[error_class]}")
 
     if previous_response:
         parts.append(f"\n### Your Previous Output\n```\n{previous_response}\n```")

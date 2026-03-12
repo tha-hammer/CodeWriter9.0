@@ -16,7 +16,9 @@ from registry.one_shot_loop import (
     LoopState,
     LoopStatus,
     OneShotLoop,
+    TLCErrorClass,
     TLCResult,
+    classify_tlc_error,
     extract_module_name,
     extract_pluscal,
     format_prompt_context,
@@ -864,3 +866,337 @@ class TestRunTlcSimulateFilenameFix:
         cmd = call_args[0][0] if call_args[0] else call_args[1]["args"]
         tla_arg = [arg for arg in cmd if arg.endswith(".tla")][0]
         assert tla_arg == str(no_module)
+
+
+# ---------------------------------------------------------------------------
+# TLC Error Classification Tests (Bug 1: smarter retries)
+# ---------------------------------------------------------------------------
+
+class TestTLCErrorClassification:
+    """Tests for classify_tlc_error() — regex-based TLC error signal extraction."""
+
+    def test_classify_pluscal_syntax_error(self):
+        """PlusCal compilation failure → SYNTAX_ERROR."""
+        raw = "PlusCal compilation failed: Unrecoverable error at line 42, column 5."
+        result = classify_tlc_error(raw, pluscal_compile_failed=True)
+        assert result == TLCErrorClass.SYNTAX_ERROR
+
+    def test_classify_tlc_parse_error(self):
+        """TLC parsing/semantic analysis failure → PARSE_ERROR."""
+        raw = (
+            "Error: Parsing or semantic analysis failed.\n"
+            "Was expecting 'Expression'\n"
+            "Encountered 'Bogus' at line 10, column 1"
+        )
+        result = classify_tlc_error(raw)
+        assert result == TLCErrorClass.PARSE_ERROR
+
+    def test_classify_type_error(self):
+        """TLC type mismatch → TYPE_ERROR."""
+        raw = (
+            "Error: Attempted to apply the operator overridden by "
+            "the Java method public static tlc2.value.impl.Value "
+            "tlc2.module.Integers.Plus(tlc2.value.impl.Value, "
+            "tlc2.value.impl.Value) to the non-integer arguments:\n"
+            '"hello"\n1'
+        )
+        result = classify_tlc_error(raw)
+        assert result == TLCErrorClass.TYPE_ERROR
+
+    def test_classify_invariant_violation(self):
+        """Invariant violation → INVARIANT_VIOLATION."""
+        raw = (
+            "Error: Invariant SafetyInvariant is violated.\n"
+            "Error: The behavior up to this point is:\n"
+            "State 1: <Initial predicate>\n"
+            "/\\ x = 0\n"
+            "State 2: <Step line 42>\n"
+            "/\\ x = -1"
+        )
+        result = classify_tlc_error(raw)
+        assert result == TLCErrorClass.INVARIANT_VIOLATION
+
+    def test_classify_deadlock(self):
+        """Deadlock → DEADLOCK."""
+        raw = (
+            "Error: Deadlock reached.\n"
+            "Error: The behavior up to this point is:\n"
+            "State 1: <Initial predicate>\n"
+            "/\\ x = 0"
+        )
+        result = classify_tlc_error(raw)
+        assert result == TLCErrorClass.DEADLOCK
+
+    def test_classify_constant_mismatch(self):
+        """Unknown operator (missing CONSTANT) → CONSTANT_MISMATCH."""
+        raw = (
+            "Error: Unknown operator: `MaxRetries'.\n"
+            "line 15, col 10 to line 15, col 19 of module TestSpec"
+        )
+        result = classify_tlc_error(raw)
+        assert result == TLCErrorClass.CONSTANT_MISMATCH
+
+    def test_classify_unknown_error(self):
+        """Unrecognized error format → UNKNOWN."""
+        raw = "Something went terribly wrong but in an unexpected way."
+        result = classify_tlc_error(raw)
+        assert result == TLCErrorClass.UNKNOWN
+
+    def test_empty_output_classifies_as_unknown(self):
+        """Empty output → UNKNOWN."""
+        result = classify_tlc_error("")
+        assert result == TLCErrorClass.UNKNOWN
+
+    def test_syntax_error_takes_priority_over_content(self):
+        """When pluscal_compile_failed=True, always SYNTAX_ERROR regardless of content."""
+        raw = "Error: Invariant Foo is violated."
+        result = classify_tlc_error(raw, pluscal_compile_failed=True)
+        assert result == TLCErrorClass.SYNTAX_ERROR
+
+
+class TestTLCResultErrorClass:
+    """Tests that TLCResult carries error_class field."""
+
+    def test_tlc_result_has_error_class_field(self):
+        """TLCResult should have an error_class field defaulting to None."""
+        r = TLCResult(success=True)
+        assert r.error_class is None
+
+    def test_tlc_result_accepts_error_class(self):
+        """TLCResult should accept an explicit error_class."""
+        r = TLCResult(success=False, error_class=TLCErrorClass.DEADLOCK)
+        assert r.error_class == TLCErrorClass.DEADLOCK
+
+    def test_run_tlc_sets_error_class_on_failure(self):
+        """run_tlc should set error_class when verification fails."""
+        raw_output = (
+            "Error: Invariant TypeInvariant is violated.\n"
+            "Error: The behavior up to this point is:\n"
+            "State 1: <Initial predicate>\n/\\ x = 0\n"
+        )
+        with patch("registry.one_shot_loop._find_tla2tools", return_value="/fake.jar"), \
+             patch("registry.one_shot_loop.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                stdout=raw_output, stderr="", returncode=12,
+            )
+            from registry.one_shot_loop import run_tlc
+            result = run_tlc("/fake/spec.tla")
+            assert result.error_class == TLCErrorClass.INVARIANT_VIOLATION
+
+    def test_run_tlc_sets_none_on_success(self):
+        """run_tlc should leave error_class as None on success."""
+        raw_output = "Model checking completed. No error has been found.\n42 states generated, 20 distinct."
+        with patch("registry.one_shot_loop._find_tla2tools", return_value="/fake.jar"), \
+             patch("registry.one_shot_loop.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                stdout=raw_output, stderr="", returncode=0,
+            )
+            from registry.one_shot_loop import run_tlc
+            result = run_tlc("/fake/spec.tla")
+            assert result.error_class is None
+
+
+# ---------------------------------------------------------------------------
+# Build Retry Prompt with Error Classification Tests (Bug 1 continued)
+# ---------------------------------------------------------------------------
+
+class TestBuildRetryPromptClassified:
+    """Tests that build_retry_prompt uses error classification for targeted instructions."""
+
+    def test_syntax_error_retry_prompt(self):
+        """SYNTAX_ERROR → tells LLM to fix PlusCal syntax, not semantics."""
+        from registry.loop_runner import build_retry_prompt
+        status = LoopStatus(
+            error="PlusCal compilation failed: line 42, col 5",
+            tlc_result=TLCResult(
+                success=False,
+                raw_output="Unrecoverable error at line 42",
+                error_message="PlusCal compilation failed",
+                error_class=TLCErrorClass.SYNTAX_ERROR,
+            ),
+        )
+        prompt = build_retry_prompt("original prompt", 1, status)
+        # Must mention it's a syntax error
+        assert "syntax" in prompt.lower() or "SYNTAX" in prompt
+        # Must NOT talk about invariants or state space
+        assert "invariant" not in prompt.lower().split("previous attempt")[0]
+
+    def test_invariant_violation_retry_prompt(self):
+        """INVARIANT_VIOLATION → tells LLM to fix logic, structure is correct."""
+        from registry.loop_runner import build_retry_prompt
+        trace = CounterexampleTrace(
+            raw_trace="State 1: ...",
+            violated_invariant="SafetyInvariant",
+            pluscal_summary="Step 1: x=0, Step 2: x=-1",
+        )
+        status = LoopStatus(
+            error="TLC verification failed",
+            counterexample=trace,
+            tlc_result=TLCResult(
+                success=False,
+                raw_output="Invariant SafetyInvariant is violated",
+                error_message="Invariant SafetyInvariant is violated",
+                error_class=TLCErrorClass.INVARIANT_VIOLATION,
+            ),
+        )
+        prompt = build_retry_prompt("original prompt", 1, status)
+        # Must tell LLM the structure compiled correctly
+        assert "compil" in prompt.lower()  # "compiled" or "compilation"
+        # Must focus on invariant/logic fix
+        assert "invariant" in prompt.lower()
+
+    def test_deadlock_retry_prompt(self):
+        """DEADLOCK → tells LLM to add termination or fix process structure."""
+        from registry.loop_runner import build_retry_prompt
+        status = LoopStatus(
+            error="Deadlock reached",
+            tlc_result=TLCResult(
+                success=False,
+                raw_output="Error: Deadlock reached.",
+                error_message="Deadlock reached",
+                error_class=TLCErrorClass.DEADLOCK,
+            ),
+        )
+        prompt = build_retry_prompt("original prompt", 1, status)
+        assert "deadlock" in prompt.lower()
+
+    def test_type_error_retry_prompt(self):
+        """TYPE_ERROR → tells LLM about type mismatch."""
+        from registry.loop_runner import build_retry_prompt
+        status = LoopStatus(
+            error="Type mismatch",
+            tlc_result=TLCResult(
+                success=False,
+                raw_output="Attempted to apply the operator overridden by...",
+                error_message="Type mismatch",
+                error_class=TLCErrorClass.TYPE_ERROR,
+            ),
+        )
+        prompt = build_retry_prompt("original prompt", 1, status)
+        assert "type" in prompt.lower()
+
+    def test_constant_mismatch_retry_prompt(self):
+        """CONSTANT_MISMATCH → tells LLM about missing constant definition."""
+        from registry.loop_runner import build_retry_prompt
+        status = LoopStatus(
+            error="Unknown operator",
+            tlc_result=TLCResult(
+                success=False,
+                raw_output="Error: Unknown operator: `MaxRetries'.",
+                error_message="Unknown operator: MaxRetries",
+                error_class=TLCErrorClass.CONSTANT_MISMATCH,
+            ),
+        )
+        prompt = build_retry_prompt("original prompt", 1, status)
+        assert "constant" in prompt.lower() or "CONSTANT" in prompt
+
+
+# ---------------------------------------------------------------------------
+# Simulation Trace File Reading Tests (Bug 2)
+# ---------------------------------------------------------------------------
+
+class TestRunTlcSimulateFileOutput:
+    """Tests that run_tlc_simulate reads traces from files, not stdout."""
+
+    SPEC_TEXT = textwrap.dedent("""\
+        ---- MODULE SimTest ----
+        EXTENDS Integers
+
+        (* --algorithm Simple
+        variables x = 0;
+        begin L: x := 1;
+        end algorithm; *)
+
+        ====
+    """)
+
+    @pytest.fixture(autouse=True)
+    def setup_files(self, tmp_path):
+        self.tla_file = tmp_path / "SimTest.tla"
+        self.tla_file.write_text(self.SPEC_TEXT)
+        self.cfg_file = tmp_path / "SimTest.cfg"
+        self.cfg_file.write_text("SPECIFICATION Spec\n")
+        self.tmp_path = tmp_path
+
+    @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
+    @patch("registry.one_shot_loop.subprocess.run")
+    def test_simulate_cmd_includes_file_param(self, mock_run, mock_jar):
+        """The -simulate flag must include file=<path> to capture trace files."""
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        run_tlc_simulate(self.tla_file, self.cfg_file)
+
+        call_args = mock_run.call_args
+        cmd = call_args[0][0] if call_args[0] else call_args[1]["args"]
+        # Find the -simulate argument
+        sim_args = [arg for arg in cmd if "-simulate" in str(arg) or "file=" in str(arg)]
+        sim_str = " ".join(str(a) for a in cmd)
+        assert "file=" in sim_str, \
+            f"Expected 'file=' in simulate args, got cmd: {cmd}"
+
+    @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
+    @patch("registry.one_shot_loop.subprocess.run")
+    def test_simulate_reads_trace_files(self, mock_run, mock_jar, tmp_path):
+        """After TLC runs, should read trace files from disk, not parse stdout."""
+        # Simulate TLC writing trace files
+        trace_content = textwrap.dedent("""\
+            State 1: <Initial predicate>
+            /\\ x = 0
+
+            State 2: <L line 6>
+            /\\ x = 1
+        """)
+
+        def side_effect(cmd, **kwargs):
+            # Figure out where traces should be written
+            sim_str = " ".join(str(a) for a in cmd)
+            import re
+            file_match = re.search(r'file=([^\s,]+)', sim_str)
+            if file_match:
+                base_path = file_match.group(1)
+                # TLC creates files like traces_0_0, traces_0_1, etc.
+                Path(f"{base_path}_0_0").write_text(trace_content)
+            return MagicMock(stdout="", stderr="", returncode=0)
+
+        mock_run.side_effect = side_effect
+
+        traces = run_tlc_simulate(self.tla_file, self.cfg_file)
+
+        # Should have found the trace from the file, not from empty stdout
+        assert len(traces) >= 1, "Should have read at least one trace from files"
+        assert traces[0][0]["vars"]["x"] == "0"
+
+    @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
+    @patch("registry.one_shot_loop.subprocess.run")
+    def test_simulate_returns_empty_when_no_trace_files(self, mock_run, mock_jar):
+        """If TLC produces no trace files, return empty list."""
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        traces = run_tlc_simulate(self.tla_file, self.cfg_file)
+        assert traces == []
+
+    @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
+    @patch("registry.one_shot_loop.subprocess.run")
+    def test_simulate_reads_multiple_trace_files(self, mock_run, mock_jar):
+        """Multiple trace files should produce multiple traces."""
+        trace1 = "State 1: <Initial predicate>\n/\\ x = 0\n\nState 2: <L line 6>\n/\\ x = 1\n"
+        trace2 = "State 1: <Initial predicate>\n/\\ x = 0\n\nState 2: <L line 6>\n/\\ x = 2\n"
+
+        def side_effect(cmd, **kwargs):
+            sim_str = " ".join(str(a) for a in cmd)
+            import re
+            file_match = re.search(r'file=([^\s,]+)', sim_str)
+            if file_match:
+                base_path = file_match.group(1)
+                Path(f"{base_path}_0_0").write_text(trace1)
+                Path(f"{base_path}_0_1").write_text(trace2)
+            return MagicMock(stdout="", stderr="", returncode=0)
+
+        mock_run.side_effect = side_effect
+
+        traces = run_tlc_simulate(self.tla_file, self.cfg_file)
+
+        assert len(traces) == 2
+        # First trace ends with x=1, second with x=2
+        assert traces[0][-1]["vars"]["x"] == "1"
+        assert traces[1][-1]["vars"]["x"] == "2"

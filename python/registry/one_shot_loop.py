@@ -29,6 +29,17 @@ from registry.types import Edge, EdgeType, Node, NodeKind, QueryResult
 # Data types
 # ---------------------------------------------------------------------------
 
+class TLCErrorClass(str, Enum):
+    """Classification of TLC/PlusCal failure modes for targeted retry."""
+    SYNTAX_ERROR = "syntax_error"              # PlusCal didn't compile
+    PARSE_ERROR = "parse_error"                # TLC parsing/semantic analysis failed
+    TYPE_ERROR = "type_error"                  # TLC type mismatch
+    INVARIANT_VIOLATION = "invariant_violation" # Counterexample found
+    DEADLOCK = "deadlock"                      # No enabled actions
+    CONSTANT_MISMATCH = "constant_mismatch"    # Unknown operator (missing CONSTANT)
+    UNKNOWN = "unknown"                        # Unrecognized error
+
+
 class LoopResult(str, Enum):
     PASS = "pass"
     RETRY = "retry"
@@ -58,6 +69,7 @@ class TLCResult:
     counterexample: str | None = None
     raw_output: str = ""
     error_message: str | None = None
+    error_class: TLCErrorClass | None = None
 
 
 @dataclass
@@ -292,6 +304,30 @@ def _find_tla2tools(tools_dir: str | Path | None = None) -> str:
     )
 
 
+def classify_tlc_error(
+    raw_output: str,
+    pluscal_compile_failed: bool = False,
+) -> TLCErrorClass:
+    """Classify a TLC/PlusCal failure from raw output using regex.
+
+    TLC error formats are stable (Java tool with fixed output). This classifier
+    enables targeted retry prompts instead of dumping raw text at the LLM.
+    """
+    if pluscal_compile_failed:
+        return TLCErrorClass.SYNTAX_ERROR
+    if "Parsing or semantic analysis failed" in raw_output:
+        return TLCErrorClass.PARSE_ERROR
+    if "Attempted to apply the operator" in raw_output:
+        return TLCErrorClass.TYPE_ERROR
+    if re.search(r'Invariant\s+\w+\s+is\s+violated', raw_output):
+        return TLCErrorClass.INVARIANT_VIOLATION
+    if "Deadlock reached" in raw_output:
+        return TLCErrorClass.DEADLOCK
+    if re.search(r'Unknown operator:\s*', raw_output):
+        return TLCErrorClass.CONSTANT_MISMATCH
+    return TLCErrorClass.UNKNOWN
+
+
 def compile_pluscal(
     tla_path: str | Path,
     tools_dir: str | Path | None = None,
@@ -376,6 +412,10 @@ def run_tlc(
     # Also check for "Model checking completed. No error has been found."
     if "No error has been found" in raw:
         tlc_result.success = True
+
+    # Classify the error if verification failed
+    if not tlc_result.success:
+        tlc_result.error_class = classify_tlc_error(raw)
 
     return tlc_result
 
@@ -555,6 +595,7 @@ def compile_compose_verify(
             success=False,
             raw_output=compile_output,
             error_message=f"PlusCal compilation failed: {compile_output}",
+            error_class=TLCErrorClass.SYNTAX_ERROR,
         ), tla_path
 
     # Optionally compose with another spec
@@ -934,18 +975,29 @@ def run_tlc_simulate(
             sim_cfg.write_text(cfg_path.read_text())
             cfg_path = sim_cfg
 
+    # Use a temp directory for trace file output
+    trace_dir = Path(tempfile.mkdtemp(prefix="cw9_traces_"))
+    trace_base = trace_dir / "traces"
+
     cmd = [
         "java", "-XX:+UseParallelGC",
         "-cp", jar,
         "tlc2.TLC",
         str(tla_path),
-        "-simulate", f"num={num_traces}",
+        "-simulate", f"num={num_traces},file={trace_base}",
         "-nowarning",
     ]
     if cfg_path:
         cmd.extend(["-config", str(cfg_path)])
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-    raw = result.stdout + result.stderr
+    subprocess.run(cmd, capture_output=True, text=True, timeout=300)
 
-    return parse_simulation_traces(raw)
+    # TLC writes trace files as <base>_0_0, <base>_0_1, etc.
+    trace_files = sorted(trace_dir.glob("traces*"))
+    all_traces: list[list[dict[str, Any]]] = []
+    for tf in trace_files:
+        raw = tf.read_text()
+        parsed = parse_simulation_traces(raw)
+        all_traces.extend(parsed)
+
+    return all_traces
