@@ -622,11 +622,15 @@ def compile_compose_verify(
 # Counterexample Translator
 # ---------------------------------------------------------------------------
 
-# TLC state line patterns
+# TLC state line patterns — stdout format: "State 1: <Init>"
 _STATE_HEADER_RE = re.compile(r'State\s+(\d+):\s*<(.+?)>')
 _VAR_ASSIGN_RE = re.compile(r'/\\\s+(\w+)\s*=\s*(.+)')
 _INVARIANT_VIOLATED_RE = re.compile(r'Invariant\s+(\w+)\s+is\s+violated')
 _BACK_TO_STATE_RE = re.compile(r'Back\s+to\s+state\s+(\d+)')
+
+# TLC trace file format — module-style: "STATE_1 ==" with "\* <Init line ...>" comment
+_TRACE_FILE_ACTION_RE = re.compile(r'\\\*\s*<(\w+)\s+line\s+')
+_TRACE_FILE_STATE_RE = re.compile(r'STATE_(\d+)\s*==')
 
 # PlusCal label/pc mapping
 _PC_LABEL_RE = re.compile(r'pc\s*=\s*(?:\[.*?"main"\s*\|->\s*)?["\']?(\w+)["\']?')
@@ -894,11 +898,72 @@ class OneShotLoop:
 def parse_simulation_traces(raw: str) -> list[list[dict[str, Any]]]:
     """Parse TLC -simulate output into structured traces.
 
-    Reuses the same _STATE_HEADER_RE and _VAR_ASSIGN_RE regexes as
-    parse_counterexample(). Traces are delimited by the State 1 restart
-    pattern — each time we see State 1 after already having states,
-    we know a new trace has begun.
+    Handles two formats:
+    1. Stdout format:  "State 1: <Init>"  (used by TLC stdout, counterexamples)
+    2. File format:    "\\* <Init line 235, ...>\\nSTATE_1 ==" (TLC trace files)
+
+    Each trace file typically contains one trace. Multiple traces from stdout
+    are split on State 1 restart.
     """
+    # Detect which format we're dealing with
+    if _TRACE_FILE_STATE_RE.search(raw):
+        return _parse_trace_file_format(raw)
+    return _parse_trace_stdout_format(raw)
+
+
+def _parse_trace_file_format(raw: str) -> list[list[dict[str, Any]]]:
+    """Parse TLC trace file format (TLA+ module-style).
+
+    Format:
+        \\* <ActionName line N, col M to line P of module Foo>
+        STATE_K ==
+        /\\ var1 = val1
+        /\\ var2 = val2
+    """
+    traces: list[list[dict[str, Any]]] = []
+    current_trace: list[dict[str, Any]] = []
+    current_state: dict[str, Any] | None = None
+    pending_label: str | None = None
+
+    for line in raw.split("\n"):
+        stripped = line.strip()
+
+        # Action comment: \* <Init line 235, col 9 to ...>
+        action_m = _TRACE_FILE_ACTION_RE.match(stripped)
+        if action_m:
+            pending_label = action_m.group(1)
+            continue
+
+        # State header: STATE_1 ==
+        state_m = _TRACE_FILE_STATE_RE.match(stripped)
+        if state_m:
+            if current_state is not None:
+                current_trace.append(current_state)
+            state_num = int(state_m.group(1))
+            current_state = {
+                "state_num": state_num,
+                "label": pending_label or "unknown",
+                "vars": {},
+            }
+            pending_label = None
+            continue
+
+        # Variable assignment: /\ var = val
+        if current_state is not None:
+            var_m = _VAR_ASSIGN_RE.match(stripped)
+            if var_m:
+                current_state["vars"][var_m.group(1)] = var_m.group(2).strip()
+
+    if current_state is not None:
+        current_trace.append(current_state)
+    if current_trace:
+        traces.append(current_trace)
+
+    return traces
+
+
+def _parse_trace_stdout_format(raw: str) -> list[list[dict[str, Any]]]:
+    """Parse TLC stdout format: State N: <label>."""
     traces: list[list[dict[str, Any]]] = []
     current_trace: list[dict[str, Any]] = []
     current_state: dict[str, Any] | None = None

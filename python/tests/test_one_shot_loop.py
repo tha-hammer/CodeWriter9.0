@@ -1095,6 +1095,124 @@ class TestBuildRetryPromptClassified:
 # Simulation Trace File Reading Tests (Bug 2)
 # ---------------------------------------------------------------------------
 
+class TestParseSimulationTracesFileFormat:
+    """Tests for parsing the REAL TLC trace file format (TLA+ module-style).
+
+    TLC trace files use this format (not the stdout State N: <label> format):
+        \\* <Init line 235, col 9 to line 244, col 49 of module Foo>
+        STATE_1 ==
+        /\\ x = 0
+        /\\ y = 1
+
+        \\* <MainLoop line 246, col 13 to line 291 of module Foo>
+        STATE_2 ==
+        /\\ x = 1
+
+    The parser must handle both this format AND the stdout format for backward compat.
+    """
+
+    REAL_TRACE_FILE = textwrap.dedent("""\
+        ---------------- MODULE /tmp/traces_0_0 -----------------
+        \\* <Init line 235, col 9 to line 244, col 49 of module ControlPlaneKnowledgeLifecycle>
+        STATE_1 ==
+        /\\ knowledgeState = "Proposed"
+        /\\ pendingResponse = "none"
+        /\\ pc = [main |-> "MainLoop"]
+        /\\ stepCount = 0
+
+        \\* <MainLoop line 246, col 13 to line 291, col 75 of module ControlPlaneKnowledgeLifecycle>
+        STATE_2 ==
+        /\\ knowledgeState = "ChallengeIssued"
+        /\\ pendingResponse = "none"
+        /\\ pc = [main |-> "MainLoop"]
+        /\\ stepCount = 1
+
+        \\* <MainLoop line 246, col 13 to line 291, col 75 of module ControlPlaneKnowledgeLifecycle>
+        STATE_3 ==
+        /\\ knowledgeState = "Active"
+        /\\ pendingResponse = "none"
+        /\\ pc = [main |-> "Finish"]
+        /\\ stepCount = 2
+
+        =================================================
+    """)
+
+    def test_parse_real_trace_file_extracts_states(self):
+        """Must parse STATE_N == format and extract all states."""
+        traces = parse_simulation_traces(self.REAL_TRACE_FILE)
+        assert len(traces) == 1, f"Expected 1 trace, got {len(traces)}"
+        assert len(traces[0]) == 3, f"Expected 3 states, got {len(traces[0])}"
+
+    def test_parse_real_trace_file_extracts_state_numbers(self):
+        """STATE_1, STATE_2, STATE_3 → state_num 1, 2, 3."""
+        traces = parse_simulation_traces(self.REAL_TRACE_FILE)
+        state_nums = [s["state_num"] for s in traces[0]]
+        assert state_nums == [1, 2, 3]
+
+    def test_parse_real_trace_file_extracts_labels(self):
+        """\\* <Init ...> and \\* <MainLoop ...> → labels Init, MainLoop."""
+        traces = parse_simulation_traces(self.REAL_TRACE_FILE)
+        labels = [s["label"] for s in traces[0]]
+        assert labels[0] == "Init"
+        assert labels[1] == "MainLoop"
+        assert labels[2] == "MainLoop"
+
+    def test_parse_real_trace_file_extracts_variables(self):
+        """Variable assignments /\\ x = val are parsed correctly."""
+        traces = parse_simulation_traces(self.REAL_TRACE_FILE)
+        state1 = traces[0][0]
+        assert state1["vars"]["knowledgeState"] == '"Proposed"'
+        assert state1["vars"]["stepCount"] == "0"
+        state2 = traces[0][1]
+        assert state2["vars"]["knowledgeState"] == '"ChallengeIssued"'
+        assert state2["vars"]["stepCount"] == "1"
+
+    def test_parse_real_trace_file_from_disk(self):
+        """Parse an actual TLC trace file from the filesystem (if available)."""
+        real_file = Path("/tmp/cw9_traces_qpnome4m/traces_0_0")
+        if not real_file.exists():
+            pytest.skip("No real TLC trace file available")
+        raw = real_file.read_text()
+        traces = parse_simulation_traces(raw)
+        assert len(traces) >= 1, "Should parse at least 1 trace from real file"
+        assert len(traces[0]) >= 2, "Real trace should have at least 2 states"
+        # Verify the first state has the expected variables
+        assert "knowledgeState" in traces[0][0]["vars"]
+
+    def test_backward_compat_stdout_format_still_works(self):
+        """The old stdout format (State N: <label>) must still parse."""
+        stdout_format = textwrap.dedent("""\
+            State 1: <Initial predicate>
+            /\\ x = 0
+
+            State 2: <L line 6>
+            /\\ x = 1
+        """)
+        traces = parse_simulation_traces(stdout_format)
+        assert len(traces) == 1
+        assert len(traces[0]) == 2
+        assert traces[0][0]["vars"]["x"] == "0"
+
+    MULTI_STATE_TRACE_RESET = textwrap.dedent("""\
+        ---------------- MODULE /tmp/traces_0_0 -----------------
+        \\* <Init line 10, col 1 to line 15 of module Foo>
+        STATE_1 ==
+        /\\ x = 0
+
+        \\* <Step line 20, col 1 to line 25 of module Foo>
+        STATE_2 ==
+        /\\ x = 1
+
+        =================================================
+    """)
+
+    def test_single_file_single_trace(self):
+        """Each trace file contains exactly one trace (no STATE_1 reset splitting)."""
+        traces = parse_simulation_traces(self.MULTI_STATE_TRACE_RESET)
+        assert len(traces) == 1
+        assert len(traces[0]) == 2
+
+
 class TestRunTlcSimulateFileOutput:
     """Tests that run_tlc_simulate reads traces from files, not stdout."""
 
@@ -1108,6 +1226,20 @@ class TestRunTlcSimulateFileOutput:
         end algorithm; *)
 
         ====
+    """)
+
+    # Real TLC trace file format (not stdout format)
+    TRACE_FILE_CONTENT = textwrap.dedent("""\
+        ---------------- MODULE /tmp/traces_0_0 -----------------
+        \\* <Init line 10, col 1 to line 15 of module SimTest>
+        STATE_1 ==
+        /\\ x = 0
+
+        \\* <L line 20, col 1 to line 25 of module SimTest>
+        STATE_2 ==
+        /\\ x = 1
+
+        =================================================
     """)
 
     @pytest.fixture(autouse=True)
@@ -1128,43 +1260,30 @@ class TestRunTlcSimulateFileOutput:
 
         call_args = mock_run.call_args
         cmd = call_args[0][0] if call_args[0] else call_args[1]["args"]
-        # Find the -simulate argument
-        sim_args = [arg for arg in cmd if "-simulate" in str(arg) or "file=" in str(arg)]
         sim_str = " ".join(str(a) for a in cmd)
         assert "file=" in sim_str, \
             f"Expected 'file=' in simulate args, got cmd: {cmd}"
 
     @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
     @patch("registry.one_shot_loop.subprocess.run")
-    def test_simulate_reads_trace_files(self, mock_run, mock_jar, tmp_path):
-        """After TLC runs, should read trace files from disk, not parse stdout."""
-        # Simulate TLC writing trace files
-        trace_content = textwrap.dedent("""\
-            State 1: <Initial predicate>
-            /\\ x = 0
-
-            State 2: <L line 6>
-            /\\ x = 1
-        """)
-
+    def test_simulate_reads_trace_files(self, mock_run, mock_jar):
+        """After TLC runs, should read trace files from disk using real TLC format."""
         def side_effect(cmd, **kwargs):
-            # Figure out where traces should be written
             sim_str = " ".join(str(a) for a in cmd)
             import re
             file_match = re.search(r'file=([^\s,]+)', sim_str)
             if file_match:
                 base_path = file_match.group(1)
-                # TLC creates files like traces_0_0, traces_0_1, etc.
-                Path(f"{base_path}_0_0").write_text(trace_content)
+                Path(f"{base_path}_0_0").write_text(self.TRACE_FILE_CONTENT)
             return MagicMock(stdout="", stderr="", returncode=0)
 
         mock_run.side_effect = side_effect
 
         traces = run_tlc_simulate(self.tla_file, self.cfg_file)
 
-        # Should have found the trace from the file, not from empty stdout
         assert len(traces) >= 1, "Should have read at least one trace from files"
         assert traces[0][0]["vars"]["x"] == "0"
+        assert traces[0][1]["vars"]["x"] == "1"
 
     @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
     @patch("registry.one_shot_loop.subprocess.run")
@@ -1179,8 +1298,30 @@ class TestRunTlcSimulateFileOutput:
     @patch("registry.one_shot_loop.subprocess.run")
     def test_simulate_reads_multiple_trace_files(self, mock_run, mock_jar):
         """Multiple trace files should produce multiple traces."""
-        trace1 = "State 1: <Initial predicate>\n/\\ x = 0\n\nState 2: <L line 6>\n/\\ x = 1\n"
-        trace2 = "State 1: <Initial predicate>\n/\\ x = 0\n\nState 2: <L line 6>\n/\\ x = 2\n"
+        trace1 = textwrap.dedent("""\
+            ---------------- MODULE /tmp/t1 -----------------
+            \\* <Init line 10, col 1 to line 15 of module SimTest>
+            STATE_1 ==
+            /\\ x = 0
+
+            \\* <L line 20, col 1 to line 25 of module SimTest>
+            STATE_2 ==
+            /\\ x = 1
+
+            =================================================
+        """)
+        trace2 = textwrap.dedent("""\
+            ---------------- MODULE /tmp/t2 -----------------
+            \\* <Init line 10, col 1 to line 15 of module SimTest>
+            STATE_1 ==
+            /\\ x = 0
+
+            \\* <L line 20, col 1 to line 25 of module SimTest>
+            STATE_2 ==
+            /\\ x = 2
+
+            =================================================
+        """)
 
         def side_effect(cmd, **kwargs):
             sim_str = " ".join(str(a) for a in cmd)
@@ -1197,6 +1338,5 @@ class TestRunTlcSimulateFileOutput:
         traces = run_tlc_simulate(self.tla_file, self.cfg_file)
 
         assert len(traces) == 2
-        # First trace ends with x=1, second with x=2
         assert traces[0][-1]["vars"]["x"] == "1"
         assert traces[1][-1]["vars"]["x"] == "2"
