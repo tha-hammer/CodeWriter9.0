@@ -379,23 +379,58 @@ _NON_INVARIANT_NAMES = frozenset({
     "View", "Alias",
 })
 
+# Default number of model values for set-typed constants.
+_DEFAULT_SET_SIZE = 2
+
+
+def _classify_constants(
+    const_names: list[str],
+    tla_text: str,
+) -> dict[str, str]:
+    """Classify each CONSTANT as 'numeric' or 'set' based on ASSUME hints and usage.
+
+    Heuristics (checked in order):
+    1. ASSUME X /= {} or ASSUME X # {}  → set  (explicit non-empty-set assertion)
+    2. ASSUME X \\in Nat (or Int)        → numeric  (explicit type declaration)
+    3. Used as iterator range: \\in X     → set  (iterated in variable decls, with, \\A, \\E)
+    4. Default                           → numeric  (preserves backward compat)
+    """
+    result: dict[str, str] = {}
+    for name in const_names:
+        esc = re.escape(name)
+        # Check 1: ASSUME X /= {} or X # {}  →  set
+        if re.search(rf'{esc}\s*(?:/=|#)\s*\{{\s*\}}', tla_text):
+            result[name] = "set"
+        # Check 2: ASSUME X \in Nat or X \in Int  →  numeric
+        elif re.search(rf'{esc}\s*\\in\s+(?:Nat|Int)\b', tla_text):
+            result[name] = "numeric"
+        # Check 3: used as iterator range  →  set
+        elif re.search(rf'\\in\s+\(?\s*{esc}\b', tla_text):
+            result[name] = "set"
+        else:
+            result[name] = "numeric"
+    return result
+
 
 def generate_cfg(tla_text: str, default_constant_value: int = 10) -> str:
     """Generate a TLC .cfg from CONSTANTS and define-block invariants.
 
     Parses the module text to find:
-    - CONSTANTS declarations → assigns each a small default integer value
+    - CONSTANTS declarations → classifies each as numeric or set-valued,
+      assigns integer defaults or small model-value sets accordingly
     - Operator definitions in the PlusCal ``define`` block → adds state-predicate
       operators as INVARIANT lines, filtering out data definitions and standard
       TLA+ names (Init, Next, Spec, etc.)
 
-    Constant value assumption:
-        ``default_constant_value`` is assigned to every CONSTANT. This assumes all
-        constants are **numeric bounds** (MaxSteps, MaxRetries, etc.) — the pattern
-        produced by LLM-generated PlusCal specs with bounded model checking.
-        If a constant represents a model-value set, a boolean, or a string, TLC
-        will report a type error on the CONSTANT line. Callers with non-numeric
-        constants should supply their own cfg_text to compile_compose_verify().
+    Constant classification:
+        Numeric (``MaxSteps``, ``MaxRetries``, etc.) — detected by
+        ``ASSUME X \\in Nat`` or as fallback default.  Assigned
+        ``default_constant_value`` (default 10).
+
+        Set-valued (``NodeIds``, ``ChallengeIds``, etc.) — detected by
+        ``ASSUME X /= {}`` or usage as iterator range ``\\in X``.
+        Assigned a small model-value set ``{X_1, X_2}`` for tractable
+        state-space exploration.
 
     Returns a complete cfg string suitable for TLC.
     """
@@ -409,9 +444,16 @@ def generate_cfg(tla_text: str, default_constant_value: int = 10) -> str:
     )
     if const_match:
         raw = const_match.group(1)
-        for name in re.split(r'[,\n]', raw):
-            name = name.strip()
-            if name and re.match(r'^[A-Za-z]\w*$', name):
+        const_names = [
+            n.strip() for n in re.split(r'[,\n]', raw)
+            if n.strip() and re.match(r'^[A-Za-z]\w*$', n.strip())
+        ]
+        classifications = _classify_constants(const_names, tla_text)
+        for name in const_names:
+            if classifications.get(name) == "set":
+                vals = ", ".join(f"{name}_{i}" for i in range(1, _DEFAULT_SET_SIZE + 1))
+                lines.append(f"CONSTANT {name} = {{{vals}}}")
+            else:
                 lines.append(f"CONSTANT {name} = {default_constant_value}")
 
     # ── Extract invariants from define block ───────────────────────────
@@ -423,21 +465,46 @@ def generate_cfg(tla_text: str, default_constant_value: int = 10) -> str:
     if define_match:
         define_text = define_match.group(1)
         ops = list(re.finditer(r'^\s+(\w+)\s*==\s*', define_text, re.MULTILINE))
+
+        # First pass: collect all operator names for cross-reference
+        all_op_names = {m.group(1) for m in ops}
+
+        # Check for an umbrella invariant (conjunction of other operators).
+        # If present, use ONLY that instead of individual heuristics.
+        umbrella = None
         for i, op in enumerate(ops):
             name = op.group(1)
-            # Skip standard TLA+ operators that are not invariants
-            if name in _NON_INVARIANT_NAMES:
-                continue
-            # Extract RHS to classify
             start = op.end()
             end = ops[i + 1].start() if i + 1 < len(ops) else len(define_text)
             rhs = define_text[start:end].strip()
-            # Skip empty, set literals, sequence literals, strings, numbers
-            if not rhs:
-                continue
-            if rhs[0] in ('{', '<', '"') or rhs[0].isdigit():
-                continue
-            lines.append(f"INVARIANT {name}")
+            # Umbrella pattern: /\ A /\ B /\ C where A,B,C are other define ops
+            if rhs.startswith('/\\'):
+                conjuncts = re.findall(r'/\\\s+(\w+)', rhs)
+                if len(conjuncts) >= 3 and all(c in all_op_names for c in conjuncts):
+                    umbrella = name
+                    break
+
+        if umbrella:
+            lines.append(f"INVARIANT {umbrella}")
+        else:
+            for i, op in enumerate(ops):
+                name = op.group(1)
+                # Skip standard TLA+ operators that are not invariants
+                if name in _NON_INVARIANT_NAMES:
+                    continue
+                # Extract RHS to classify
+                start = op.end()
+                end = ops[i + 1].start() if i + 1 < len(ops) else len(define_text)
+                rhs = define_text[start:end].strip()
+                # Skip empty, set literals, sequence literals, strings, numbers
+                if not rhs:
+                    continue
+                if rhs[0] in ('{', '<', '"') or rhs[0].isdigit():
+                    continue
+                # Skip simple equality (progress conditions like AllProcessed == X = Y)
+                if re.match(r'\w+\s*=\s*\w+\s*$', rhs):
+                    continue
+                lines.append(f"INVARIANT {name}")
 
     return "\n".join(lines) + "\n"
 

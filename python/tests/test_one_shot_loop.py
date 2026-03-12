@@ -547,3 +547,166 @@ class TestGenerateCfg:
         cfg = generate_cfg(self.FULL_SPEC, default_constant_value=5)
         assert "CONSTANT MaxSteps = 5" in cfg
         assert "CONSTANT MaxAttempts = 5" in cfg
+
+    # -- Set-typed constant classification --
+
+    SPEC_WITH_SET_CONSTANTS = textwrap.dedent("""\
+        ---- MODULE SetConsts ----
+        EXTENDS Integers, FiniteSets
+
+        CONSTANTS
+            NodeIds,
+            MaxRetries
+
+        ASSUME NodeIds /= {}
+        ASSUME MaxRetries \\in Nat /\\ MaxRetries > 0
+
+        (* --algorithm SetTest
+
+        variables processed = {};
+
+        define
+
+            TypeInvariant ==
+                /\\ processed \\subseteq NodeIds
+                /\\ Cardinality(processed) <= Cardinality(NodeIds)
+
+            BoundedRetries == MaxRetries > 0
+
+        end define;
+
+        fair process worker \\in NodeIds
+        begin Work: processed := processed \\union {self};
+        end process;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    def test_set_constant_gets_model_values(self):
+        """Constants with ASSUME X /= {} should get model value sets."""
+        cfg = generate_cfg(self.SPEC_WITH_SET_CONSTANTS)
+        assert "CONSTANT NodeIds = {NodeIds_1, NodeIds_2}" in cfg
+        assert "CONSTANT MaxRetries = 10" in cfg
+
+    SPEC_WITH_ITERATOR_SET = textwrap.dedent("""\
+        ---- MODULE IterSet ----
+        EXTENDS Integers
+
+        CONSTANTS
+            Workers,
+            Limit
+
+        ASSUME Limit > 0
+
+        (* --algorithm Iter
+
+        variables count = 0;
+
+        define
+            SafeCount == count <= Limit
+        end define;
+
+        fair process w \\in Workers
+        begin Step: count := count + 1;
+        end process;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    def test_iterator_range_constant_gets_model_values(self):
+        """Constants used as \\in X iterator range should get model value sets."""
+        cfg = generate_cfg(self.SPEC_WITH_ITERATOR_SET)
+        assert "CONSTANT Workers = {Workers_1, Workers_2}" in cfg
+        assert "CONSTANT Limit = 10" in cfg
+
+    # -- Umbrella invariant detection --
+
+    SPEC_WITH_UMBRELLA = textwrap.dedent("""\
+        ---- MODULE Umbrella ----
+        EXTENDS Integers
+
+        CONSTANTS MaxSteps
+
+        ASSUME MaxSteps \\in Nat /\\ MaxSteps > 0
+
+        (* --algorithm UmbrellaTest
+
+        variables phase = "idle", count = 0;
+
+        define
+
+            TypeInvariant ==
+                /\\ phase \\in {"idle", "running", "done"}
+                /\\ count \\in 0..MaxSteps
+
+            BoundedExecution == count <= MaxSteps
+
+            SafetyGate ==
+                phase = "done" => count > 0
+
+            AllInvariants ==
+                /\\ TypeInvariant
+                /\\ BoundedExecution
+                /\\ SafetyGate
+
+        end define;
+
+        fair process P = "p"
+        begin L: skip;
+        end process;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    def test_umbrella_invariant_used_as_single_invariant(self):
+        """When an operator is a conjunction of 3+ other ops, use it as sole INVARIANT."""
+        cfg = generate_cfg(self.SPEC_WITH_UMBRELLA)
+        assert "INVARIANT AllInvariants" in cfg
+        # Individual invariants should NOT appear
+        assert "INVARIANT TypeInvariant" not in cfg
+        assert "INVARIANT BoundedExecution" not in cfg
+        assert "INVARIANT SafetyGate" not in cfg
+
+    # -- Progress condition filtering --
+
+    SPEC_WITH_PROGRESS = textwrap.dedent("""\
+        ---- MODULE Progress ----
+        EXTENDS Integers, FiniteSets
+
+        CONSTANTS NodeIds
+
+        ASSUME NodeIds /= {}
+
+        (* --algorithm ProgressTest
+
+        variables processed = {};
+
+        define
+
+            TypeInvariant ==
+                processed \\subseteq NodeIds
+
+            AllProcessed == processed = NodeIds
+
+        end define;
+
+        fair process w \\in NodeIds
+        begin Work: processed := processed \\union {self};
+        end process;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    def test_progress_condition_excluded(self):
+        """Simple X = Y equality (progress condition) should be excluded from invariants."""
+        cfg = generate_cfg(self.SPEC_WITH_PROGRESS)
+        assert "INVARIANT TypeInvariant" in cfg
+        assert "INVARIANT AllProcessed" not in cfg
