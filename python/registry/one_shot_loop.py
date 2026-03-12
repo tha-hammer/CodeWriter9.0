@@ -192,6 +192,15 @@ _FENCED_GENERIC_RE = re.compile(
 )
 
 
+def extract_module_name(tla_text: str) -> str | None:
+    """Extract the MODULE name from a TLA+ module header.
+
+    Returns the name string, or None if no MODULE header found.
+    """
+    m = re.search(r'-{4,}\s*MODULE\s+(\w+)\s*-{4,}', tla_text)
+    return m.group(1) if m else None
+
+
 def extract_pluscal(llm_response: str) -> str | None:
     """Parse LLM response to extract PlusCal code.
 
@@ -521,10 +530,15 @@ def compile_compose_verify(
 
     Returns (tlc_result, tla_path).
     """
+    # TLC requires filename to match MODULE name in the spec.
+    # The LLM may choose a different MODULE name than module_name,
+    # so extract the actual name from the spec text.
+    actual_name = extract_module_name(pluscal_fragment) or module_name
+
     # Write PlusCal to temp file
     tmpdir = Path(tempfile.mkdtemp(prefix="cw9_"))
-    tla_path = tmpdir / f"{module_name}.tla"
-    cfg_path = tmpdir / f"{module_name}.cfg"
+    tla_path = tmpdir / f"{actual_name}.tla"
+    cfg_path = tmpdir / f"{actual_name}.cfg"
 
     tla_path.write_text(pluscal_fragment)
 
@@ -896,9 +910,29 @@ def run_tlc_simulate(
 
     Returns list of traces, where each trace is a list of state dicts
     with keys: state_num, label, vars.
+
+    TLC requires the .tla filename to match the MODULE name inside the file.
+    If they differ (e.g. gwt-0002.tla containing MODULE FooBar), this function
+    creates a temp copy with the correct filename before invoking TLC.
     """
     jar = _find_tla2tools(tools_dir)
     tla_path = Path(tla_path)
+
+    # TLC requires filename == MODULE name. Fix mismatch if needed.
+    spec_text = tla_path.read_text()
+    actual_name = extract_module_name(spec_text)
+
+    if actual_name and tla_path.stem != actual_name:
+        tmpdir = Path(tempfile.mkdtemp(prefix="cw9_sim_"))
+        sim_tla = tmpdir / f"{actual_name}.tla"
+        sim_tla.write_text(spec_text)
+        tla_path = sim_tla
+
+        if cfg_path:
+            cfg_path = Path(cfg_path)
+            sim_cfg = tmpdir / f"{actual_name}.cfg"
+            sim_cfg.write_text(cfg_path.read_text())
+            cfg_path = sim_cfg
 
     cmd = [
         "java", "-XX:+UseParallelGC",

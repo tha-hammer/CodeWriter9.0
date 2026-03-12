@@ -1,6 +1,9 @@
 """Tests for the One-Shot Loop (Phase 3)."""
 
+import tempfile
 import textwrap
+from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -14,12 +17,15 @@ from registry.one_shot_loop import (
     LoopStatus,
     OneShotLoop,
     TLCResult,
+    extract_module_name,
     extract_pluscal,
     format_prompt_context,
     generate_cfg,
     parse_counterexample,
+    parse_simulation_traces,
     query_context,
     route_result,
+    run_tlc_simulate,
     translate_counterexample,
 )
 
@@ -387,6 +393,36 @@ class TestSelfRegistration:
 
 
 # ---------------------------------------------------------------------------
+# extract_module_name tests
+# ---------------------------------------------------------------------------
+
+class TestExtractModuleName:
+    """Tests for extract_module_name() — parse MODULE name from TLA+ text."""
+
+    def test_standard_module_header(self):
+        spec = "---- MODULE FooBar ----\nEXTENDS Integers\n===="
+        assert extract_module_name(spec) == "FooBar"
+
+    def test_long_dashes(self):
+        spec = "---------- MODULE MySpec ----------\nEXTENDS Naturals\n===="
+        assert extract_module_name(spec) == "MySpec"
+
+    def test_returns_none_for_no_module(self):
+        assert extract_module_name("just some text") is None
+
+    def test_returns_none_for_empty(self):
+        assert extract_module_name("") is None
+
+    def test_module_name_with_underscores(self):
+        spec = "---- MODULE Control_Plane_Lifecycle ----\n===="
+        assert extract_module_name(spec) == "Control_Plane_Lifecycle"
+
+    def test_module_name_with_numbers(self):
+        spec = "---- MODULE Phase1Changes ----\n===="
+        assert extract_module_name(spec) == "Phase1Changes"
+
+
+# ---------------------------------------------------------------------------
 # generate_cfg tests
 # ---------------------------------------------------------------------------
 
@@ -710,3 +746,121 @@ class TestGenerateCfg:
         cfg = generate_cfg(self.SPEC_WITH_PROGRESS)
         assert "INVARIANT TypeInvariant" in cfg
         assert "INVARIANT AllProcessed" not in cfg
+
+
+# ---------------------------------------------------------------------------
+# run_tlc_simulate filename-mismatch bug tests
+# ---------------------------------------------------------------------------
+
+class TestRunTlcSimulateFilenameFix:
+    """Tests that run_tlc_simulate handles filename/module name mismatch.
+
+    TLC requires the .tla filename to match the MODULE name inside the file.
+    When a spec is saved as e.g. gwt-0002.tla but contains MODULE FooBar,
+    run_tlc_simulate must create a temp file named FooBar.tla before invoking TLC.
+    """
+
+    SPEC_TEXT = textwrap.dedent("""\
+        ---- MODULE IssueChallengeCreatesOpenDispatchMapping ----
+        EXTENDS Integers
+
+        (* --algorithm IssueChallenge
+
+        variables x = 0;
+
+        begin
+            L: x := 1;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    CFG_TEXT = "SPECIFICATION Spec\n"
+
+    @pytest.fixture(autouse=True)
+    def setup_files(self, tmp_path):
+        """Create a .tla file whose filename does NOT match its MODULE name."""
+        self.tla_file = tmp_path / "gwt-0002.tla"
+        self.tla_file.write_text(self.SPEC_TEXT)
+        self.cfg_file = tmp_path / "gwt-0002.cfg"
+        self.cfg_file.write_text(self.CFG_TEXT)
+        self.tmp_path = tmp_path
+
+    @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
+    @patch("registry.one_shot_loop.subprocess.run")
+    def test_tlc_invoked_with_correct_module_filename(self, mock_run, mock_jar):
+        """TLC must be called with a .tla path whose stem matches the MODULE name."""
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        run_tlc_simulate(self.tla_file, self.cfg_file)
+
+        # Extract the tla_path argument passed to TLC
+        call_args = mock_run.call_args
+        cmd = call_args[0][0] if call_args[0] else call_args[1]["args"]
+        # Find the .tla argument in the command
+        tla_arg = [arg for arg in cmd if arg.endswith(".tla")][0]
+        assert Path(tla_arg).stem == "IssueChallengeCreatesOpenDispatchMapping", \
+            f"TLC was called with {tla_arg} but should use MODULE-matching filename"
+
+    @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
+    @patch("registry.one_shot_loop.subprocess.run")
+    def test_cfg_also_renamed_to_match_module(self, mock_run, mock_jar):
+        """The .cfg file passed to TLC must also match the MODULE name."""
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        run_tlc_simulate(self.tla_file, self.cfg_file)
+
+        call_args = mock_run.call_args
+        cmd = call_args[0][0] if call_args[0] else call_args[1]["args"]
+        # Find the -config argument
+        config_idx = cmd.index("-config")
+        cfg_arg = cmd[config_idx + 1]
+        assert Path(cfg_arg).stem == "IssueChallengeCreatesOpenDispatchMapping", \
+            f"TLC config was {cfg_arg} but should use MODULE-matching filename"
+
+    @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
+    @patch("registry.one_shot_loop.subprocess.run")
+    def test_matching_filename_not_renamed(self, mock_run, mock_jar):
+        """When filename already matches MODULE name, no rename needed."""
+        matching_tla = self.tmp_path / "IssueChallengeCreatesOpenDispatchMapping.tla"
+        matching_tla.write_text(self.SPEC_TEXT)
+
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        run_tlc_simulate(matching_tla)
+
+        call_args = mock_run.call_args
+        cmd = call_args[0][0] if call_args[0] else call_args[1]["args"]
+        tla_arg = [arg for arg in cmd if arg.endswith(".tla")][0]
+        # Should use the original file directly
+        assert tla_arg == str(matching_tla)
+
+    @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
+    @patch("registry.one_shot_loop.subprocess.run")
+    def test_temp_file_contains_same_content(self, mock_run, mock_jar):
+        """The renamed temp file must contain the same spec content."""
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        run_tlc_simulate(self.tla_file, self.cfg_file)
+
+        call_args = mock_run.call_args
+        cmd = call_args[0][0] if call_args[0] else call_args[1]["args"]
+        tla_arg = [arg for arg in cmd if arg.endswith(".tla")][0]
+        assert Path(tla_arg).read_text() == self.SPEC_TEXT
+
+    @patch("registry.one_shot_loop._find_tla2tools", return_value="/fake/tla2tools.jar")
+    @patch("registry.one_shot_loop.subprocess.run")
+    def test_no_module_header_uses_original_path(self, mock_run, mock_jar):
+        """If MODULE name can't be extracted, use the original file path."""
+        no_module = self.tmp_path / "weird.tla"
+        no_module.write_text("(* just some PlusCal without module header *)")
+
+        mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
+
+        run_tlc_simulate(no_module)
+
+        call_args = mock_run.call_args
+        cmd = call_args[0][0] if call_args[0] else call_args[1]["args"]
+        tla_arg = [arg for arg in cmd if arg.endswith(".tla")][0]
+        assert tla_arg == str(no_module)
