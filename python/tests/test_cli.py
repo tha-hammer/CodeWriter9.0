@@ -104,27 +104,28 @@ class TestStatus:
         assert rc == 0
         out = capsys.readouterr().out
         assert str(target_dir) in out
-        assert "DAG:" in out
-        assert "Schemas:" in out
+        assert "Pipeline:" in out
 
-    def test_status_shows_schema_count(self, target_dir, capsys):
+    def test_status_no_gwts(self, target_dir, capsys):
         main(["init", str(target_dir)])
         rc = main(["status", str(target_dir)])
         assert rc == 0
         out = capsys.readouterr().out
-        # Should show 5 schemas (4 schema files + resource_registry)
-        assert "Schemas: 5" in out
+        assert "no GWTs" in out
 
     def test_status_no_cw9_fails(self, target_dir):
         rc = main(["status", str(target_dir)])
         assert rc == 1
 
-    def test_status_shows_zero_dag(self, target_dir, capsys):
+    def test_status_json_output(self, target_dir, capsys):
         main(["init", str(target_dir)])
-        main(["status", str(target_dir)])
+        capsys.readouterr()  # discard init output
+        rc = main(["status", str(target_dir), "--json"])
+        assert rc == 0
         out = capsys.readouterr().out
-        assert "0 nodes" in out
-        assert "0 edges" in out
+        data = json.loads(out)
+        assert data["total"] == 0
+        assert data["gwts"] == {}
 
 
 class TestExtract:
@@ -151,13 +152,13 @@ class TestExtract:
         # On re-extract with no changes, delta is 0
         assert "(0)" in out
 
-    def test_extract_status_shows_dag(self, target_dir, capsys):
+    def test_extract_status_shows_pipeline(self, target_dir, capsys):
         main(["init", str(target_dir)])
         main(["extract", str(target_dir)])
         main(["status", str(target_dir)])
         out = capsys.readouterr().out
-        # External project with empty templates produces 0 nodes
-        assert "DAG:" in out
+        # External project with empty templates produces 0 GWTs
+        assert "Pipeline:" in out
 
     def test_extract_preserves_registered_gwts(self, target_dir, capsys):
         """register_gwt() -> extract -> GWT survives."""

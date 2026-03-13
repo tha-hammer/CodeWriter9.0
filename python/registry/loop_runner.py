@@ -15,6 +15,7 @@ import claude_agent_sdk
 from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessage, ToolResultBlock, TextBlock, ResultMessage
 
 from registry.context import ProjectContext
+from registry.status import write_result_file
 from registry.one_shot_loop import (
     OneShotLoop, query_context, format_prompt_context,
     LoopResult, LoopStatus, TLCErrorClass, extract_pluscal,
@@ -328,10 +329,12 @@ async def run_loop(
                     except Exception as e:
                         log_fn(f"  Warning: simulation trace generation failed: {e}")
 
+                    write_result_file(ctx.session_dir, gwt_id, "pass", attempt, None)
                     return LoopResult.PASS, dest_tla
 
             elif status.result == LoopResult.FAIL:
                 log_fn(f"FAIL — {status.error}")
+                write_result_file(ctx.session_dir, gwt_id, "fail", attempt, status.error)
                 return LoopResult.FAIL, None
 
             else:  # RETRY
@@ -352,6 +355,10 @@ async def run_loop(
                 log_fn(f"RETRY — {status.error}")
 
         log_fn(f"Exhausted {max_retries} attempts")
+        write_result_file(
+            ctx.session_dir, gwt_id, "fail", max_retries,
+            f"Exhausted {max_retries} attempts",
+        )
         return LoopResult.FAIL, None
     finally:
         await safe_disconnect(client)

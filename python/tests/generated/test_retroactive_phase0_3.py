@@ -274,21 +274,22 @@ class TestOneShotLoopInvariants:
         loop.query("gwt-test")
         assert loop.status.state == LoopState.PROMPTING_LLM
 
-    # -- TwoFailureLimit --
+    # -- ConsecutiveFailureLimit --
 
-    def test_two_failure_limit_first_failure_retries(self):
-        """TwoFailureLimit: first failure returns RETRY."""
+    def test_failure_limit_first_failure_retries(self):
+        """ConsecutiveFailureLimit: first failure returns RETRY."""
         result, _ = route_result(TLCResult(success=False, error_message="fail"), 0)
         assert result == LoopResult.RETRY
 
-    def test_two_failure_limit_second_failure_fails(self):
-        """TwoFailureLimit: second consecutive failure returns FAIL."""
-        result, _ = route_result(TLCResult(success=False, error_message="fail"), 1)
-        assert result == LoopResult.FAIL
+    def test_failure_limit_mid_failures_retry(self):
+        """ConsecutiveFailureLimit: failures below max still RETRY (default max=4)."""
+        for i in range(4):
+            result, _ = route_result(TLCResult(success=False, error_message="fail"), i)
+            assert result == LoopResult.RETRY
 
-    def test_two_failure_limit_third_still_fails(self):
-        """TwoFailureLimit: third consecutive failure also FAIL."""
-        result, _ = route_result(TLCResult(success=False, error_message="fail"), 2)
+    def test_failure_limit_at_max_fails(self):
+        """ConsecutiveFailureLimit: failure at max_consecutive_failures returns FAIL."""
+        result, _ = route_result(TLCResult(success=False, error_message="fail"), 4)
         assert result == LoopResult.FAIL
 
     # -- DeterministicRouting --
@@ -373,9 +374,13 @@ class TestLoopComposeComposedInvariants:
         composed = compose(mod_a, mod_b)
         assert isinstance(composed, ComposedModule)
 
-    def test_loop_two_failure_limit_independent_of_engine(self):
-        """LoopTwoFailureLimit: failure routing is pure, not affected by engine."""
+    def test_loop_failure_limit_independent_of_engine(self):
+        """LoopFailureLimit: failure routing is pure, not affected by engine."""
+        # Below max (default 4) → RETRY
         result, _ = route_result(TLCResult(success=False), 1)
+        assert result == LoopResult.RETRY
+        # At max → FAIL
+        result, _ = route_result(TLCResult(success=False), 4)
         assert result == LoopResult.FAIL
 
     def test_engine_monotonic_growth_verified_subset_registered(self):

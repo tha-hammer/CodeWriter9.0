@@ -1,5 +1,6 @@
 """Tests for the One-Shot Loop (Phase 3)."""
 
+import subprocess
 import tempfile
 import textwrap
 from pathlib import Path
@@ -294,18 +295,18 @@ class TestRouting:
         assert result == LoopResult.RETRY
         assert "attempt 1" in msg
 
-    def test_fail_on_second_consecutive_failure(self):
+    def test_retry_on_second_consecutive_failure(self):
+        """With default max_consecutive_failures=4, second failure still retries."""
         tlc = TLCResult(
             success=False,
             error_message="Invariant X violated",
         )
-        result, msg = route_result(tlc, consecutive_failures=1)
-        assert result == LoopResult.FAIL
-        assert "inconsistency" in msg.lower()
+        result, _ = route_result(tlc, consecutive_failures=1)
+        assert result == LoopResult.RETRY
 
-    def test_fail_on_third_consecutive_failure(self):
+    def test_fail_at_max_consecutive_failures(self):
         tlc = TLCResult(success=False, error_message="err")
-        result, msg = route_result(tlc, consecutive_failures=2)
+        result, msg = route_result(tlc, consecutive_failures=4)
         assert result == LoopResult.FAIL
         assert "not retry" in msg.lower()
 
@@ -317,18 +318,61 @@ class TestRouting:
         assert r1 == r2
         assert m1 == m2
 
-    def test_two_failures_then_requirements_inconsistency(self):
-        """The key GWT: two consecutive failures -> requirements inconsistency."""
+    def test_failures_then_requirements_inconsistency(self):
+        """Consecutive failures up to max → retry, then fail."""
         tlc_fail = TLCResult(success=False, error_message="inv violated")
 
-        # First failure -> retry
-        r1, _ = route_result(tlc_fail, consecutive_failures=0)
-        assert r1 == LoopResult.RETRY
+        # Failures 0 through 3 -> retry (default max=4)
+        for i in range(4):
+            r, _ = route_result(tlc_fail, consecutive_failures=i)
+            assert r == LoopResult.RETRY
 
-        # Second failure -> fail (requirements inconsistency)
-        r2, msg = route_result(tlc_fail, consecutive_failures=1)
-        assert r2 == LoopResult.FAIL
+        # Failure 4 -> fail (requirements inconsistency)
+        r, msg = route_result(tlc_fail, consecutive_failures=4)
+        assert r == LoopResult.FAIL
         assert "inconsistency" in msg.lower()
+
+    def test_retry_allows_multiple_consecutive_failures(self):
+        """route_result should RETRY up to max_consecutive_failures before FAILing."""
+        tlc = TLCResult(success=False, error_message="inv violated")
+
+        # With max_consecutive_failures=3, failures 0-2 should all RETRY
+        for i in range(3):
+            result, _ = route_result(tlc, consecutive_failures=i, max_consecutive_failures=3)
+            assert result == LoopResult.RETRY, f"Expected RETRY at consecutive_failures={i}"
+
+        # Failure 3 should FAIL
+        result, msg = route_result(tlc, consecutive_failures=3, max_consecutive_failures=3)
+        assert result == LoopResult.FAIL
+
+    def test_route_result_default_max_consecutive_failures(self):
+        """Default max_consecutive_failures should allow more than 1 retry."""
+        tlc = TLCResult(success=False, error_message="inv violated")
+        # consecutive_failures=1 should still RETRY with new default
+        result, _ = route_result(tlc, consecutive_failures=1)
+        assert result == LoopResult.RETRY
+
+
+class TestRunTlcTimeout:
+    """run_tlc should handle TLC timeouts gracefully, not crash the pipeline."""
+
+    def test_timeout_returns_failed_tlc_result(self):
+        """TimeoutExpired should be caught and returned as a failed TLCResult."""
+        from registry.one_shot_loop import run_tlc
+        with patch("registry.one_shot_loop._find_tla2tools", return_value="/fake.jar"), \
+             patch("registry.one_shot_loop.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(
+                cmd=["java", "tlc2.TLC"], timeout=300,
+            )
+            result = run_tlc("/fake/spec.tla")
+            assert result.success is False
+            assert result.error_class == TLCErrorClass.TIMEOUT
+            assert "timed out" in result.error_message.lower()
+
+    def test_timeout_has_error_class_timeout(self):
+        """TLCErrorClass should include a TIMEOUT variant."""
+        assert hasattr(TLCErrorClass, "TIMEOUT")
+        assert TLCErrorClass.TIMEOUT == "timeout"
 
 
 # ---------------------------------------------------------------------------

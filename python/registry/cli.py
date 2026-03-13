@@ -144,29 +144,52 @@ def cmd_status(args: argparse.Namespace) -> int:
         print("Run: cw9 init", file=sys.stderr)
         return 1
 
-    ctx = ProjectContext.from_target(target)
+    from registry.status import gather_status
+    status = gather_status(target)
 
+    if getattr(args, "output_json", False):
+        print(json.dumps(status.to_dict(), indent=2))
+        return 0
+
+    ctx = ProjectContext.from_target(target)
     print(f"CodeWriter9 project: {ctx.target_root}")
     print(f"  engine: {ctx.engine_root or '(installed mode)'}")
     print()
 
-    # DAG summary
-    dag_path = ctx.schema_dir.parent / "dag.json"
-    if dag_path.exists():
-        dag_data = json.loads(dag_path.read_text())
-        n_nodes = len(dag_data.get("nodes", {}))
-        n_edges = len(dag_data.get("edges", []))
-        print(f"  DAG: {n_nodes} nodes, {n_edges} edges")
-    else:
-        print("  DAG: not found")
+    # Scoreboard
+    parts = []
+    if status.verified:
+        parts.append(f"{status.verified} verified")
+    if status.failed:
+        parts.append(f"{status.failed} failed")
+    if status.in_progress:
+        parts.append(f"{status.in_progress} in progress")
+    if status.pending:
+        parts.append(f"{status.pending} pending")
+    print(f"Pipeline: {', '.join(parts) or 'no GWTs'} ({status.total} total)")
+    if status.verified:
+        print(f"Bridge:   {status.bridge_complete}/{status.verified} complete")
+    print()
 
-    # Schema count
-    schemas = list(ctx.schema_dir.glob("*.json"))
-    print(f"  Schemas: {len(schemas)}")
+    if not status.gwts:
+        return 0
 
-    # Spec count
-    specs = list(ctx.spec_dir.glob("*.tla"))
-    print(f"  Specs: {len(specs)}")
+    # Per-GWT table
+    print(f"  {'GWT':<16} {'SPEC':<14} {'ATTEMPTS':<10} {'BRIDGE':<8}")
+    for gwt_id, gs in sorted(status.gwts.items()):
+        result_str = gs.result.upper()
+        attempts_str = str(gs.attempts) if gs.attempts > 0 else "-"
+        bridge_str = "DONE" if gs.bridge_done else "-"
+        print(f"  {gwt_id:<16} {result_str:<14} {attempts_str:<10} {bridge_str:<8}")
+
+    # Failed summary
+    failed = {gid: gs for gid, gs in status.gwts.items() if gs.result == "fail"}
+    if failed:
+        print()
+        print(f"Failed ({len(failed)}):")
+        for gwt_id, gs in sorted(failed.items()):
+            err = gs.error or "unknown error"
+            print(f"  {gwt_id}  {err}")
 
     return 0
 
@@ -732,8 +755,9 @@ def main(argv: list[str] | None = None) -> int:
                          help="No-op if .cw9/ already exists (idempotent init)")
 
     # status
-    p_status = sub.add_parser("status", help="Show project context and DAG summary")
+    p_status = sub.add_parser("status", help="Show pipeline progress and per-GWT status")
     p_status.add_argument("target_dir", nargs="?", default=".", help="Target project directory (default: .)")
+    p_status.add_argument("--json", action="store_true", dest="output_json", help="Output machine-readable JSON")
 
     # extract
     p_extract = sub.add_parser("extract", help="Extract DAG from schemas")
@@ -743,7 +767,7 @@ def main(argv: list[str] | None = None) -> int:
     p_loop = sub.add_parser("loop", help="Run LLM → PlusCal → TLC for a GWT behavior")
     p_loop.add_argument("gwt_id", help="GWT behavior ID (e.g., gwt-0024)")
     p_loop.add_argument("target_dir", nargs="?", default=".")
-    p_loop.add_argument("--max-retries", type=int, default=5)
+    p_loop.add_argument("--max-retries", type=int, default=8)
     p_loop.add_argument("--context-file", type=Path, default=None,
                         help="Supplementary context file passed verbatim to LLM")
 
@@ -779,7 +803,7 @@ def main(argv: list[str] | None = None) -> int:
                              help="CW7 SQLite database path (or set CW7_DB env var)")
     p_pipeline.add_argument("--session", default=None)
     p_pipeline.add_argument("--gwt", action="append", dest="gwts", default=None)
-    p_pipeline.add_argument("--max-retries", type=int, default=5)
+    p_pipeline.add_argument("--max-retries", type=int, default=8)
     p_pipeline.add_argument("--skip-setup", action="store_true")
     p_pipeline.add_argument("--loop-only", action="store_true")
     p_pipeline.add_argument("--bridge-only", action="store_true")

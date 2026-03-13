@@ -37,6 +37,7 @@ class TLCErrorClass(str, Enum):
     INVARIANT_VIOLATION = "invariant_violation" # Counterexample found
     DEADLOCK = "deadlock"                      # No enabled actions
     CONSTANT_MISMATCH = "constant_mismatch"    # Unknown operator (missing CONSTANT)
+    TIMEOUT = "timeout"                        # TLC exceeded time limit
     UNKNOWN = "unknown"                        # Unrecognized error
 
 
@@ -375,12 +376,21 @@ def run_tlc(
     if cfg_path:
         cmd.extend(["-config", str(cfg_path)])
 
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=300,
-    )
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return TLCResult(
+            success=False,
+            error_message=f"TLC timed out after {exc.timeout} seconds",
+            error_class=TLCErrorClass.TIMEOUT,
+            raw_output=(exc.stdout or b"").decode(errors="replace")
+                     + (exc.stderr or b"").decode(errors="replace"),
+        )
 
     raw = result.stdout + result.stderr
     tlc_result = TLCResult(
@@ -747,13 +757,14 @@ def translate_counterexample(
 def route_result(
     tlc_result: TLCResult,
     consecutive_failures: int,
+    max_consecutive_failures: int = 4,
 ) -> tuple[LoopResult, str]:
     """Route based on TLC result and failure history.
 
     Deterministic routing:
     - TLC passes → PASS (done)
-    - First TLC failure → RETRY (with counterexample feedback)
-    - Second consecutive failure → FAIL (requirements inconsistency)
+    - Failures below max_consecutive_failures → RETRY (with feedback)
+    - Failures at or above max_consecutive_failures → FAIL
 
     Returns (result, message).
     """
@@ -764,8 +775,7 @@ def route_result(
             f"{tlc_result.states_distinct} distinct."
         )
 
-    if consecutive_failures >= 1:
-        # This is the second consecutive failure
+    if consecutive_failures >= max_consecutive_failures:
         return LoopResult.FAIL, (
             f"Requirements inconsistency detected after {consecutive_failures + 1} "
             f"consecutive failures. Last error: {tlc_result.error_message or 'unknown'}. "
