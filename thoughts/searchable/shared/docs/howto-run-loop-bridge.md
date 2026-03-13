@@ -1,11 +1,11 @@
 ---
-date: "2026-03-12T15:21:59-04:00"
+date: "2026-03-12T20:37:48-04:00"
 researcher: DustyForge
-git_commit: 833a539aeb3e4f5fbab1454752aa724d8788fd0a
+git_commit: fda7099bd6a6c4f51a759510b9453583bd8ed5c1
 branch: master
 repository: CodeWriter9.0
-topic: "How-to guide for run_loop_bridge.py — wiring CW9 into the CW7 pipeline"
-tags: [howto, cw7-integration, run_loop_bridge, pipeline, documentation]
+topic: "How-to: cw9 pipeline — batch CW7-to-CW9 pipeline"
+tags: [howto, cw7-integration, pipeline, cw9, batch-mode]
 status: complete
 last_updated: "2026-03-12"
 last_updated_by: DustyForge
@@ -15,18 +15,19 @@ last_updated_by: DustyForge
 
 ## Introduction
 
-`run_loop_bridge.py` orchestrates the full CW9 pipeline: it reads requirements and
-GWT acceptance criteria from a CW7 SQLite database, registers them in the CW9 DAG,
-generates formally verified TLA+ specifications via an LLM loop, and produces bridge
-artifacts for downstream test generation. At the end of a successful run, each GWT
-has a verified `.tla` spec, simulation traces, and a structured
+`cw9 pipeline` orchestrates the full CW9 pipeline in a single command: it reads
+requirements and GWT acceptance criteria from a CW7 SQLite database, registers them
+in the CW9 DAG, generates formally verified TLA+ specifications via an LLM loop, and
+produces bridge artifacts for downstream test generation. At the end of a successful
+run, each GWT has a verified `.tla` spec, simulation traces, and a structured
 `_bridge_artifacts.json` ready for `cw9 gen-tests`.
 
-**File:** `python/tools/run_loop_bridge.py`
+**Implementation:** `python/registry/cli.py` (`cmd_pipeline()`)
+**CW7 adapter:** `python/registry/cw7.py` (`extract`, `build_plan_path_map`, `copy_context_files`)
 
 ## Prerequisites
 
-- A completed CW7 session with data in `gate-outputs.db`
+- A completed CW7 session with data in a SQLite database (e.g., `gate-outputs.db`)
 - Java runtime (required by TLC model checker)
 - `tla2tools.jar` present at `tools/tla2tools.jar` in the CodeWriter9.0 tree
 - The `claude_agent_sdk` Python package installed (for LLM calls in the loop phase)
@@ -36,101 +37,79 @@ has a verified `.tla` spec, simulation traces, and a structured
 ## Step 1: Run the Full Pipeline Against a CW7 Session
 
 The simplest invocation points at a plan-path directory from a CW7 session. The
-session ID and database path are auto-detected:
+session ID is inferred from the directory name:
 
 ```bash
-cd ~/Dev/silmari-zero-knowledge
-python3 ~/Dev/CodeWriter9.0/python/tools/run_loop_bridge.py \
+cw9 pipeline /path/to/project \
+  --db ~/Dev/CodeWriter7/.cw7/gate-outputs.db \
   --plan-path-dir specs/orchestration/session-1773188666564
 ```
 
 This executes three phases in sequence:
 
-| Phase | What happens | Subcommands called |
-|-------|-------------|--------------------|
-| Phase 0: Setup | `cw9 init`, `cw9 extract`, `cw9 register` | Creates `.cw9/` tree, builds DAG, registers CW7 requirements and GWTs |
-| Phase 1: Loop | `cw9 loop` per GWT | LLM generates PlusCal, TLC verifies, retries on failure, saves sim traces |
-| Phase 2: Bridge | `cw9 bridge` per verified GWT | Parses verified spec into structured artifacts JSON |
-
-Output goes to a temp directory (printed at startup):
-
-```
-Project:     /tmp/cw9-pipeline-5ul0qwc2
-```
+| Phase | What happens | Subcommands called internally |
+|-------|-------------|-------------------------------|
+| Phase 0: Setup | `init --ensure`, `extract`, CW7 extract, `_register_payload()` | Creates `.cw9/` tree, builds DAG, registers CW7 requirements and GWTs |
+| Phase 1: Loop | `cmd_loop()` per GWT | LLM generates PlusCal, TLC verifies, retries on failure, saves sim traces |
+| Phase 2: Bridge | `cmd_bridge()` per verified GWT | Parses verified spec into structured artifacts JSON |
 
 ## Step 2: Point at a Specific CW7 Database
 
-By default, the script reads from `~/Dev/CodeWriter7/.cw7/gate-outputs.db`. To use a
-different database:
+The `--db` flag is required when setup runs. Alternatively, set the `CW7_DB`
+environment variable:
 
 ```bash
-python3 ~/Dev/CodeWriter9.0/python/tools/run_loop_bridge.py \
+export CW7_DB=/path/to/gate-outputs.db
+cw9 pipeline /path/to/project
+```
+
+The `--session` flag selects which CW7 session to extract. If omitted and
+`--plan-path-dir` is given, the session ID is inferred from the directory name when
+it starts with `session-`. If the database has exactly one session, it is
+auto-detected.
+
+```bash
+cw9 pipeline /path/to/project \
   --db /path/to/other/gate-outputs.db \
   --session session-1773188666564 \
   --plan-path-dir /path/to/plan-path-files/
 ```
 
-The `--session` flag selects which CW7 session to extract. If omitted and
-`--plan-path-dir` is given, the session ID is inferred from the directory name when
-it starts with `session-`.
+Missing or nonexistent `--db` is a hard error (rc=1) — there is no inline fixture
+fallback.
 
-Alternatively, set the `CW7_FIXTURE_DB` environment variable:
+## Step 3: Target Specific GWTs
 
-```bash
-export CW7_FIXTURE_DB=/path/to/gate-outputs.db
-```
-
-If no database is found at the resolved path, the script falls back to a built-in
-counter-app fixture (4 requirements, 4 GWTs) for testing purposes.
-
-## Step 3: Use a Persistent Project Directory
-
-By default, a temp directory is created. To use a fixed location (e.g., for
-incremental re-runs):
+To run only a subset of GWTs instead of all registered:
 
 ```bash
-python3 ~/Dev/CodeWriter9.0/python/tools/run_loop_bridge.py \
-  --project-dir /path/to/my-project \
-  --plan-path-dir specs/orchestration/session-1773188666564
-```
-
-The `--ensure` flag on `cw9 init` makes this idempotent: if `.cw9/` already exists,
-init is a no-op.
-
-## Step 4: Target Specific GWTs
-
-To run only a subset of GWTs instead of all 55:
-
-```bash
-python3 ~/Dev/CodeWriter9.0/python/tools/run_loop_bridge.py \
-  --plan-path-dir specs/orchestration/session-1773188666564 \
+cw9 pipeline /path/to/project --db /path/to/cw7.db \
   --gwt gwt-0001 --gwt gwt-0003 --gwt gwt-0010
 ```
 
-The `--gwt` flag is repeatable. If omitted, all registered GWTs are processed.
+The `--gwt` flag is repeatable. GWT ID resolution follows a priority chain:
 
-## Step 5: Control Retry Behavior
+1. Explicit `--gwt` args (if provided)
+2. GWT IDs from the register output (setup phase)
+3. All `gwt-*` nodes in the DAG (sorted, fallback)
+
+## Step 4: Control Retry Behavior
 
 The LLM loop retries up to 5 times by default when TLC verification fails. Each
-retry receives a classified error message (syntax error, type error, invariant
-violation, deadlock, or constant mismatch) with targeted fix instructions.
+retry receives a classified error message with targeted fix instructions.
 
 ```bash
-python3 ~/Dev/CodeWriter9.0/python/tools/run_loop_bridge.py \
-  --plan-path-dir specs/orchestration/session-1773188666564 \
-  --max-retries 3
+cw9 pipeline /path/to/project --db /path/to/cw7.db --max-retries 3
 ```
 
-## Step 6: Run Individual Phases
+## Step 5: Run Individual Phases
 
 ### Loop only (skip bridge)
 
 Useful when you want specs but not bridge artifacts yet:
 
 ```bash
-python3 ~/Dev/CodeWriter9.0/python/tools/run_loop_bridge.py \
-  --plan-path-dir specs/orchestration/session-1773188666564 \
-  --loop-only
+cw9 pipeline /path/to/project --db /path/to/cw7.db --loop-only
 ```
 
 ### Bridge only (skip setup and loop)
@@ -138,34 +117,31 @@ python3 ~/Dev/CodeWriter9.0/python/tools/run_loop_bridge.py \
 Useful when specs already exist and you want to regenerate bridge artifacts:
 
 ```bash
-python3 ~/Dev/CodeWriter9.0/python/tools/run_loop_bridge.py \
-  --project-dir /tmp/cw9-pipeline-5ul0qwc2 \
-  --bridge-only
+cw9 pipeline /path/to/project --bridge-only --gwt gwt-0001
 ```
 
-Requires that `.tla` spec files already exist in `.cw9/specs/`.
+Requires that `.tla` spec files already exist in `.cw9/specs/`. The `--db` flag is
+not required.
 
 ### Skip setup (re-run loop on existing project)
 
 ```bash
-python3 ~/Dev/CodeWriter9.0/python/tools/run_loop_bridge.py \
-  --project-dir /tmp/cw9-pipeline-5ul0qwc2 \
-  --skip-setup
+cw9 pipeline /path/to/project --skip-setup --gwt gwt-0001
 ```
 
-## Step 7: Run Test Generation on Bridge Artifacts
+The `--db` flag is not required when setup is skipped.
 
-After the pipeline completes, each verified GWT has a
-`.cw9/bridge/{gwt_id}_bridge_artifacts.json` file. Generate tests with:
+### Mode flag interactions
 
-```bash
-python3 -m registry gen-tests gwt-0003 /tmp/cw9-pipeline-5ul0qwc2
-```
+| Flag combination | Setup | Loop | Bridge |
+|-----------------|-------|------|--------|
+| (none) | runs | runs | runs |
+| `--skip-setup` | skipped | runs | runs |
+| `--loop-only` | runs | runs | skipped |
+| `--bridge-only` | skipped | skipped | runs |
+| `--skip-setup --loop-only` | skipped | runs | skipped |
 
-This must be run from a standalone terminal (not nested in Claude Code) because it
-calls the LLM via `claude_agent_sdk`.
-
-## How Context Files Flow Through the Pipeline
+## Step 6: Supply Context Files from CW7 Plan Paths
 
 When `--plan-path-dir` is given, CW7 plan-path markdown files are copied into the
 CW9 project as context for the LLM:
@@ -175,19 +151,31 @@ CW9 project as context for the LLM:
 2. `copy_context_files()` globs `{plan_path_id}-*.md` from the plan-path directory
 3. Each matched file is written to `.cw9/context/{criterion_id}.md`
 4. During the loop phase, the context file for each GWT is passed as
-   `--context-file` to `cw9 loop`
+   `context_file` to `cmd_loop()`
 
 The context file provides the LLM with detailed specification text that guides the
 PlusCal generation beyond what the GWT given/when/then alone conveys.
 
+## Step 7: Run Test Generation on Bridge Artifacts
+
+After the pipeline completes, each verified GWT has a
+`.cw9/bridge/{gwt_id}_bridge_artifacts.json` file. Generate tests with:
+
+```bash
+cw9 gen-tests gwt-0003 /path/to/project
+```
+
+This must be run from a standalone terminal (not nested in Claude Code) because it
+calls the LLM via `claude_agent_sdk`.
+
 ## How the CW7 Database Is Queried
 
-The extraction step (`cw7_extract.extract()`) runs three queries against
-`gate-outputs.db`:
+The extraction step (`registry.cw7.extract()`) runs three queries against the CW7
+SQLite database:
 
 | Query | Table | Returns |
 |-------|-------|---------|
-| Session resolution | `sessions` | Auto-selects the single session, or errors if ambiguous |
+| Session resolution | `sessions` | Auto-selects the single session, or raises `ValueError` if ambiguous |
 | Requirements | `requirements` | `{id, text}` per requirement |
 | GWT criteria | `acceptance_criteria` (where `format = 'gwt'`) | `{criterion_id, given, when, then, parent_req, name}` per GWT |
 
@@ -197,15 +185,24 @@ lookup.
 
 ## Idempotent Registration via Criterion Bindings
 
-`cw9 register` maintains `.cw9/criterion_bindings.json` — a mapping from CW7 IDs to
-CW9-allocated IDs:
+`_register_payload()` maintains `.cw9/criterion_bindings.json` — a mapping from CW7
+IDs to CW9-allocated IDs:
 
 - `"req:{cw7_requirement_id}"` maps to `"req-NNNN"`
 - `"gwt:{criterion_id}"` maps to `"gwt-NNNN"`
 
-Re-running `register` with the same CW7 data reuses existing CW9 IDs rather than
-allocating new ones. This means the pipeline can be re-run incrementally without
-creating duplicate nodes in the DAG.
+Re-running the pipeline with the same CW7 data reuses existing CW9 IDs rather than
+allocating new ones. The pipeline can be re-run incrementally without creating
+duplicate nodes in the DAG.
+
+## Partial Failure Behavior
+
+If GWT-1's loop passes but GWT-2's loop fails:
+
+- Bridge still runs for GWT-1 (the passing GWT)
+- The final exit code is `1` because not all GWTs passed
+
+This allows maximum forward progress even when some GWTs fail.
 
 ## Artifacts Produced on Disk
 
@@ -240,27 +237,19 @@ All paths are relative to the project directory.
 The bridge artifact JSON contains: `gwt_id`, `module_name`, `data_structures`,
 `operations`, `verifiers`, `assertions`, `test_scenarios`, `simulation_traces`.
 
-### Phase 3 — gen-tests (per GWT, separate invocation)
-
-| Artifact | Path |
-|----------|------|
-| Generated test file | `tests/generated/test_{gwt_id}.py` |
-| Plan transcript | `.cw9/sessions/{gwt_id}_plan.txt` |
-| Review transcript | `.cw9/sessions/{gwt_id}_review.txt` |
-
 ## CLI Reference Summary
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--db` | `~/Dev/CodeWriter7/.cw7/gate-outputs.db` | CW7 SQLite database path |
+| `target_dir` | `.` | Project directory (positional) |
+| `--db` | none | CW7 SQLite database path (or set `CW7_DB` env var) |
 | `--session` | auto-detected | CW7 session ID |
-| `--project-dir` | temp directory | Target project directory |
 | `--plan-path-dir` | none | Directory of CW7 plan-path `.md` files |
 | `--gwt` | all registered | GWT ID to process (repeatable) |
 | `--max-retries` | `5` | Max LLM retry attempts per GWT |
-| `--skip-setup` | `false` | Skip Phase 0 |
-| `--loop-only` | `false` | Run Phase 1 only |
-| `--bridge-only` | `false` | Run Phase 2 only |
+| `--skip-setup` | off | Skip Phase 0 |
+| `--loop-only` | off | Run Phase 1 only |
+| `--bridge-only` | off | Run Phase 2 only |
 
 ## Exit Codes
 
@@ -268,8 +257,21 @@ The bridge artifact JSON contains: `gwt_id`, `module_name`, `data_structures`,
 |-----------|------|
 | All targeted GWTs passed their phases | `0` |
 | Any GWT failed loop or bridge | `1` |
+| `--db` missing or nonexistent (when setup runs) | `1` |
 | No GWT IDs resolved | `1` |
-| Phase 0 assertion failure (init/extract/register) | non-zero (unhandled) |
+
+## Migration from `run_loop_bridge.py`
+
+The standalone `python/tools/run_loop_bridge.py` script is superseded by
+`cw9 pipeline`. The key differences:
+
+| `run_loop_bridge.py` | `cw9 pipeline` |
+|---------------------|----------------|
+| `--project-dir /tmp/foo` | `cw9 pipeline /tmp/foo` (positional arg) |
+| Falls back to inline fixture if DB missing | Hard error if `--db` missing |
+| `from tools.cw7_extract import ...` | `from registry.cw7 import ...` |
+| Mocks `sys.stdin`/`sys.stdout` to call `cw9 register` | Calls `_register_payload()` directly |
+| Standalone script with `sys.path` hack | Installed package, available as `cw9 pipeline` |
 
 ## Next Steps
 

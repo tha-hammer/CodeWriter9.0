@@ -1,14 +1,14 @@
 ---
 date: 2026-03-10T17:24:16-04:00
 researcher: claude-opus
-git_commit: 6767c74cc483f48449ba4f43a441015ab2b9d3ab
+git_commit: fda7099bd6a6c4f51a759510b9453583bd8ed5c1
 branch: master
 repository: CodeWriter9.0
 topic: "How-to: CW9 CLI Pipeline Commands"
-tags: [documentation, howto, cli, pipeline, cw9, multi-language]
+tags: [documentation, howto, cli, pipeline, cw9, multi-language, cw7-integration]
 status: complete
-last_updated: 2026-03-11
-last_updated_by: claude-opus
+last_updated: 2026-03-12
+last_updated_by: DustyForge
 type: howto
 ---
 
@@ -315,7 +315,89 @@ Smart targeting uses `query_affected_tests()` to trace the impact of a node chan
 | `target_dir` | `.` | Project directory |
 | `--node` | none | Only run tests affected by this node ID |
 
+## Batch Mode: `cw9 pipeline`
+
+Run the full pipeline (setup → loop → bridge) in a single command against a CW7 database:
+
+```bash
+cw9 pipeline /path/to/project --db /path/to/gate-outputs.db
+```
+
+This runs init, extract, CW7 extraction, register, then loop and bridge for every registered GWT. It replaces the standalone `run_loop_bridge.py` script.
+
+### Common Invocations
+
+```bash
+# Full pipeline with session inference from plan-path-dir
+cw9 pipeline /path/to/project --db /path/to/cw7.db \
+  --plan-path-dir specs/orchestration/session-1773188666564
+
+# Target specific GWTs
+cw9 pipeline /path/to/project --db /path/to/cw7.db \
+  --gwt gwt-0001 --gwt gwt-0003
+
+# Loop only (skip bridge)
+cw9 pipeline /path/to/project --db /path/to/cw7.db --loop-only
+
+# Bridge only (specs must already exist)
+cw9 pipeline /path/to/project --bridge-only --gwt gwt-0001
+
+# Skip setup (project already initialized and registered)
+cw9 pipeline /path/to/project --skip-setup --gwt gwt-0001
+```
+
+### Phase Flow
+
+| Phase | What happens | Skipped by |
+|-------|-------------|------------|
+| Setup | `init --ensure`, `extract`, CW7 extract, `register` | `--skip-setup`, `--bridge-only` |
+| Loop  | `cw9 loop` per GWT (LLM → PlusCal → TLC) | `--bridge-only` |
+| Bridge | `cw9 bridge` per verified GWT | `--loop-only` |
+
+When `--plan-path-dir` is provided, context files are copied from the CW7 plan-path directory to `.cw9/context/` and passed to each loop invocation as `--context-file`.
+
+### Arguments
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `target_dir` | `.` | Project directory |
+| `--db` | none | CW7 SQLite database path (or set `CW7_DB` env var) |
+| `--session` | auto-detected | CW7 session ID (inferred from `--plan-path-dir` dirname if it starts with `session-`) |
+| `--gwt` | all registered | GWT ID to process (repeatable) |
+| `--max-retries` | `5` | Max LLM retry attempts per GWT |
+| `--plan-path-dir` | none | Directory of CW7 plan-path `.md` files |
+| `--skip-setup` | off | Skip init/extract/register phase |
+| `--loop-only` | off | Run loop only, skip bridge |
+| `--bridge-only` | off | Run bridge only, skip setup and loop |
+
+### Exit Codes
+
+| Condition | Code |
+|-----------|------|
+| All targeted GWTs passed all attempted phases | `0` |
+| Any GWT failed loop or bridge | `1` |
+| `--db` missing or points to nonexistent file (when setup runs) | `1` |
+| No GWT IDs resolved | `1` |
+
+### Partial Failure Behavior
+
+If GWT-1's loop passes but GWT-2's loop fails, bridge still runs for GWT-1. The final exit code is `1` because not all GWTs passed.
+
 ## Full Pipeline Example
+
+### Batch mode (CW7 integration)
+
+```bash
+# Full pipeline from CW7 database
+cw9 pipeline /path/to/myapp --db /path/to/gate-outputs.db \
+  --plan-path-dir specs/orchestration/session-1773188666564
+
+# Then generate tests from bridge artifacts
+cw9 gen-tests gwt-0001 /path/to/myapp
+cw9 test /path/to/myapp
+```
+
+### Step-by-step mode (manual registration)
 
 ```bash
 # Initialize
@@ -374,7 +456,9 @@ CodeWriter9 project: /path/to/your/project
 | Artifact | Path | Created by |
 |----------|------|------------|
 | Config | `.cw9/config.toml` | `cw9 init` |
-| DAG | `.cw9/dag.json` | `cw9 extract` / `register_gwt()` |
+| DAG | `.cw9/dag.json` | `cw9 extract` / `register_gwt()` / `cw9 pipeline` |
+| Criterion bindings | `.cw9/criterion_bindings.json` | `cw9 register` / `cw9 pipeline` |
+| Context files | `.cw9/context/{criterion_id}.md` | `cw9 pipeline --plan-path-dir` |
 | Schemas | `.cw9/schema/*.json` | `cw9 init` (templates) / user |
 | TLA+ specs | `.cw9/specs/<gwt-id>.tla` | `cw9 loop` |
 | TLC config | `.cw9/specs/<gwt-id>.cfg` | `cw9 loop` |
