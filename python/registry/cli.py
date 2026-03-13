@@ -220,10 +220,18 @@ def cmd_extract(args: argparse.Namespace) -> int:
     extractor = SchemaExtractor(schema_dir=str(ctx.schema_dir), self_host=ctx.is_self_hosting)
     dag = extractor.extract()
 
-    # Merge registered GWTs from old DAG back in
+    # Check for crawl.db to preserve crawl-originated RESOURCE nodes
+    crawl_uuids = None
+    crawl_db_path = state_root / "crawl.db"
+    if crawl_db_path.exists():
+        from registry.crawl_store import CrawlStore
+        with CrawlStore(crawl_db_path) as store:
+            crawl_uuids = store.get_all_uuids()
+
+    # Merge registered GWTs (and crawl nodes) from old DAG back in
     merged = 0
     if old_dag is not None:
-        merged = dag.merge_registered_nodes(old_dag)
+        merged = dag.merge_registered_nodes(old_dag, crawl_uuids=crawl_uuids)
 
     # Save
     dag.save(dag_path)
@@ -496,6 +504,15 @@ def _register_payload(target: Path, payload: dict) -> dict:
             )
             bindings[binding_key] = gwt_id
 
+            # Wire DEPENDS_ON edges to crawl-originated RESOURCE nodes
+            from registry.types import Edge, EdgeType
+            for dep_uuid in gwt.get("depends_on", []):
+                if dep_uuid in dag.nodes:
+                    try:
+                        dag.add_edge(Edge(gwt_id, dep_uuid, EdgeType.DEPENDS_ON))
+                    except Exception:
+                        pass  # silently skip invalid edges (matching _add_edge_safe)
+
         gwt_output.append({"criterion_id": criterion_id, "gwt_id": gwt_id})
 
     # Save
@@ -740,6 +757,228 @@ def cmd_test(args: argparse.Namespace) -> int:
     return result.returncode
 
 
+def cmd_ingest(args: argparse.Namespace) -> int:
+    """Ingest an external codebase into the crawl store and DAG."""
+    target = Path(args.target_dir).resolve()
+    ingest_path = Path(args.ingest_path).resolve()
+
+    if not (target / ".cw9").exists():
+        print(f"No .cw9/ found in {target}. Run: cw9 init", file=sys.stderr)
+        return 1
+    if not ingest_path.exists():
+        print(f"Path not found: {ingest_path}", file=sys.stderr)
+        return 1
+
+    from registry.context import ProjectContext
+    from registry.crawl_bridge import bridge_crawl_to_dag
+    from registry.crawl_store import CrawlStore
+    from registry.crawl_types import make_record_uuid
+    from registry.dag import RegistryDag
+    from registry.entry_points import detect_codebase_type, discover_entry_points
+    from registry.scanner_python import scan_directory
+
+    ctx = ProjectContext.from_target(target)
+    state_root = ctx.state_root
+    crawl_db_path = state_root / "crawl.db"
+    dag_path = state_root / "dag.json"
+
+    # Detect language and codebase type
+    lang = getattr(args, "lang", None) or "python"
+    codebase_type = detect_codebase_type(ingest_path)
+    is_incremental = getattr(args, "incremental", False)
+    max_functions = getattr(args, "max_functions", None)
+
+    print(f"Ingesting {ingest_path} ({lang}, detected: {codebase_type})", file=sys.stderr)
+
+    # Phase 0: Skeleton pre-pass
+    skeletons = scan_directory(ingest_path)
+    if max_functions and len(skeletons) > max_functions:
+        skeletons = skeletons[:max_functions]
+    print(f"Phase 0: {len(skeletons)} skeletons extracted", file=sys.stderr)
+
+    # Phase 0b: Entry point discovery
+    entry_points = discover_entry_points(ingest_path, codebase_type)
+    print(f"Entry points: {len(entry_points)}", file=sys.stderr)
+
+    # Store skeletons as records in crawl.db
+    with CrawlStore(crawl_db_path) as store:
+        run_id = store.start_crawl_run(
+            str(ingest_path), lang, codebase_type, is_incremental,
+        )
+        created, updated, skipped, failed = 0, 0, 0, 0
+
+        for skel in skeletons:
+            uid = make_record_uuid(skel.file_path, skel.function_name, skel.class_name)
+
+            # Check if already up-to-date (incremental mode)
+            if is_incremental:
+                existing = store.get_record(uid)
+                if existing and existing.src_hash == skel.file_hash:
+                    skipped += 1
+                    continue
+
+            # Create a skeleton-only record (Phase 1 LLM extraction is a future step)
+            from registry.crawl_types import FnRecord, InField, OutField
+            record = FnRecord(
+                uuid=uid,
+                function_name=skel.function_name,
+                class_name=skel.class_name,
+                file_path=skel.file_path,
+                line_number=skel.line_number,
+                src_hash=skel.file_hash,
+                is_external=False,
+                ins=[],
+                do_description="SKELETON_ONLY",
+                do_steps=[],
+                outs=[],
+                failure_modes=[],
+                operational_claim=f"{skel.function_name} (skeleton only, awaiting LLM extraction)",
+                skeleton=skel,
+            )
+
+            existing = store.get_record(uid)
+            if existing:
+                store.upsert_record(record)
+                updated += 1
+            else:
+                store.insert_record(record)
+                created += 1
+
+        # Store entry points
+        for ep in entry_points:
+            store.insert_entry_point(ep)
+
+        store.finish_crawl_run(run_id, created, updated, skipped, failed)
+
+        # Back-fill source UUIDs
+        store.backfill_source_uuids()
+
+    # Phase post-crawl: Bridge to dag.json
+    dag = RegistryDag.load(dag_path) if dag_path.exists() else RegistryDag()
+    counters = bridge_crawl_to_dag(crawl_db_path, dag)
+    dag.save(dag_path)
+
+    print(
+        f"Phase 1: {created} created, {updated} updated, "
+        f"{skipped} skipped, {failed} failed",
+        file=sys.stderr,
+    )
+    print(
+        f"Bridge: {counters['nodes_added']} RESOURCE nodes, "
+        f"{counters['edges_added']} edges, "
+        f"{counters['orphans_removed']} orphans removed",
+        file=sys.stderr,
+    )
+
+    if getattr(args, "output_json", False):
+        print(json.dumps({
+            "created": created, "updated": updated,
+            "skipped": skipped, "failed": failed,
+            "bridge": counters,
+        }))
+    return 0
+
+
+def cmd_stale(args: argparse.Namespace) -> int:
+    """Check which ingested nodes are stale (file hashes changed)."""
+    import hashlib
+
+    target = Path(args.target_dir).resolve()
+    state_root = target / ".cw9"
+
+    if not state_root.exists():
+        print(f"No .cw9/ found in {target}", file=sys.stderr)
+        return 1
+
+    crawl_db_path = state_root / "crawl.db"
+    if not crawl_db_path.exists():
+        print("No crawl.db found. Run: cw9 ingest", file=sys.stderr)
+        return 1
+
+    from registry.crawl_store import CrawlStore
+
+    with CrawlStore(crawl_db_path) as store:
+        # Compute current file hashes
+        records = store.get_all_records()
+        file_paths = {r.file_path for r in records}
+        current_hashes: dict[str, str] = {}
+        for fp in file_paths:
+            p = Path(fp)
+            if p.exists():
+                current_hashes[fp] = hashlib.sha256(p.read_bytes()).hexdigest()
+
+        direct_stale = store.get_stale_records(current_hashes)
+        all_stale = store.get_transitive_stale(direct_stale) if direct_stale else []
+
+    if not all_stale:
+        print("No stale records.")
+        return 0
+
+    print(f"{len(all_stale)} stale record(s) ({len(direct_stale)} directly changed):")
+    for uid in all_stale:
+        rec = next((r for r in records if r.uuid == uid), None)
+        if rec:
+            marker = " [direct]" if uid in direct_stale else " [transitive]"
+            print(f"  {rec.function_name} @ {rec.file_path}{marker}")
+    return 0
+
+
+def cmd_show(args: argparse.Namespace) -> int:
+    """Show information about a node. With --card, show IN:DO:OUT card."""
+    target = Path(args.target_dir).resolve()
+    state_root = target / ".cw9"
+    node_id = args.node_id
+
+    if not state_root.exists():
+        print(f"No .cw9/ found in {target}", file=sys.stderr)
+        return 1
+
+    if getattr(args, "card", False):
+        crawl_db_path = state_root / "crawl.db"
+        if not crawl_db_path.exists():
+            print("No crawl.db found. Run: cw9 ingest", file=sys.stderr)
+            return 1
+        from registry.crawl_store import CrawlStore
+        with CrawlStore(crawl_db_path) as store:
+            text = store.get_card_text(node_id)
+            print(text)
+        return 0
+
+    # Default: show DAG node info
+    dag_path = state_root / "dag.json"
+    if not dag_path.exists():
+        print("No dag.json found. Run: cw9 extract or cw9 ingest", file=sys.stderr)
+        return 1
+
+    from registry.dag import RegistryDag
+    dag = RegistryDag.load(dag_path)
+    if node_id not in dag.nodes:
+        print(f"Node not found: {node_id}", file=sys.stderr)
+        return 1
+
+    node = dag.nodes[node_id]
+    print(f"ID: {node.id}")
+    print(f"Kind: {node.kind.value}")
+    print(f"Name: {node.name}")
+    if node.description:
+        print(f"Description: {node.description}")
+    if node.given:
+        print(f"Given: {node.given}")
+    if node.when:
+        print(f"When: {node.when}")
+    if node.then:
+        print(f"Then: {node.then}")
+
+    # Show edges
+    edges = [e for e in dag.edges if e.from_id == node_id or e.to_id == node_id]
+    if edges:
+        print(f"\nEdges ({len(edges)}):")
+        for e in edges:
+            print(f"  {e.from_id} --{e.edge_type.value}--> {e.to_id}")
+
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="cw9",
@@ -796,6 +1035,30 @@ def main(argv: list[str] | None = None) -> int:
     p_test.add_argument("--node", dest="node_id", help="Only run tests affected by this node")
     p_test.add_argument("target_dir", nargs="?", default=".")
 
+    # ingest
+    p_ingest = sub.add_parser("ingest", help="Ingest an external codebase into the registry")
+    p_ingest.add_argument("ingest_path", help="Path to the codebase to ingest")
+    p_ingest.add_argument("target_dir", nargs="?", default=".")
+    p_ingest.add_argument("--lang", default=None,
+                          choices=["python", "typescript", "go", "rust"],
+                          help="Source language (default: auto-detect)")
+    p_ingest.add_argument("--incremental", action="store_true",
+                          help="Only re-ingest stale records")
+    p_ingest.add_argument("--max-functions", type=int, default=None,
+                          help="Limit DFS to N functions")
+    p_ingest.add_argument("--json", action="store_true", dest="output_json",
+                          help="Output machine-readable JSON")
+
+    # stale
+    p_stale = sub.add_parser("stale", help="Check which ingested nodes are stale")
+    p_stale.add_argument("target_dir", nargs="?", default=".")
+
+    # show
+    p_show = sub.add_parser("show", help="Show information about a node")
+    p_show.add_argument("node_id", help="Node ID to show")
+    p_show.add_argument("target_dir", nargs="?", default=".")
+    p_show.add_argument("--card", action="store_true", help="Show IN:DO:OUT card from crawl.db")
+
     # pipeline
     p_pipeline = sub.add_parser("pipeline", help="Run full CW9 pipeline: setup -> loop -> bridge")
     p_pipeline.add_argument("target_dir", nargs="?", default=".")
@@ -829,6 +1092,12 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_test(args)
     elif args.command == "pipeline":
         return cmd_pipeline(args)
+    elif args.command == "ingest":
+        return cmd_ingest(args)
+    elif args.command == "stale":
+        return cmd_stale(args)
+    elif args.command == "show":
+        return cmd_show(args)
     else:
         parser.print_help()
         return 0

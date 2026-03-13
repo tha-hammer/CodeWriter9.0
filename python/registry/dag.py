@@ -370,11 +370,24 @@ class RegistryDag:
 
     # ── Merge support ────────────────────────────────────────────
 
-    def merge_registered_nodes(self, old_dag: "RegistryDag") -> int:
+    def remove_node(self, node_id: str) -> None:
+        """Remove a node and all edges referencing it."""
+        if node_id not in self.nodes:
+            return
+        del self.nodes[node_id]
+        self.edges = [e for e in self.edges if e.from_id != node_id and e.to_id != node_id]
+        self._recompute_closure()
+        self._recompute_components()
+
+    def merge_registered_nodes(
+        self, old_dag: "RegistryDag", crawl_uuids: set[str] | None = None,
+    ) -> int:
         """Merge nodes from old_dag that don't exist in self.
 
         Identifies "registered" nodes as those with gwt- or req- prefixed IDs
         that exist in old_dag but not in the freshly-extracted self.
+        When crawl_uuids is provided, also preserves crawl-originated RESOURCE
+        nodes whose UUIDs are in that set.
         Also preserves their edges.
 
         Returns the number of nodes merged.
@@ -386,7 +399,9 @@ class RegistryDag:
             if nid in fresh_ids:
                 continue
             prefix = nid.split("-")[0] if "-" in nid else ""
-            if prefix not in ("gwt", "req"):
+            is_registered = prefix in ("gwt", "req")
+            is_crawl = crawl_uuids is not None and nid in crawl_uuids
+            if not (is_registered or is_crawl):
                 continue
             self.add_node(node)
             merged += 1

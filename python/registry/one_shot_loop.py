@@ -92,6 +92,7 @@ class ContextBundle:
     schemas: list[str] = field(default_factory=list)
     templates: list[str] = field(default_factory=list)
     existing_specs: list[str] = field(default_factory=list)
+    cards: list = field(default_factory=list)  # list[FnRecord] from crawl.db
 
 
 @dataclass
@@ -110,11 +111,16 @@ class LoopStatus:
 # Registry Context Query
 # ---------------------------------------------------------------------------
 
-def query_context(dag: RegistryDag, behavior_id: str) -> ContextBundle:
+def query_context(
+    dag: RegistryDag, behavior_id: str, state_root: Path | None = None,
+) -> ContextBundle:
     """Given a GWT behavior ID, query the DAG for all transitive dependencies.
 
     Assembles schemas, templates, and existing specs into a context bundle
     suitable for LLM prompt construction.
+
+    If state_root is provided and .cw9/crawl.db exists, loads IN:DO:OUT
+    cards for any RESOURCE nodes found in transitive_deps.
     """
     if behavior_id not in dag.nodes:
         raise ValueError(f"Behavior {behavior_id!r} not found in registry")
@@ -140,6 +146,18 @@ def query_context(dag: RegistryDag, behavior_id: str) -> ContextBundle:
                 bundle.existing_specs.append(node.path)
 
     bundle.edges = query.all_edges
+
+    # Load IN:DO:OUT cards from crawl.db if available
+    if state_root is not None:
+        crawl_db = state_root / "crawl.db"
+        if crawl_db.exists():
+            from registry.crawl_store import CrawlStore
+            with CrawlStore(crawl_db) as store:
+                for dep_id in query.transitive_deps:
+                    record = store.get_record(dep_id)
+                    if record is not None:
+                        bundle.cards.append(record)
+
     return bundle
 
 
@@ -171,6 +189,14 @@ def format_prompt_context(bundle: ContextBundle) -> str:
     # Existing specs
     if bundle.existing_specs:
         sections.append("## Existing Specs\n" + "\n".join(f"- {s}" for s in bundle.existing_specs))
+
+    # Existing Code Behavior (IN:DO:OUT cards from crawl.db)
+    if bundle.cards:
+        from registry.crawl_store import render_card
+        card_parts = ["## Existing Code Behavior (IN:DO:OUT Cards)\n"]
+        for card in bundle.cards:
+            card_parts.append(render_card(card))
+        sections.append("\n".join(card_parts))
 
     # Dependency edges
     if bundle.edges:
