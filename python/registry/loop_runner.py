@@ -112,9 +112,20 @@ _ERROR_CLASS_INSTRUCTIONS: dict[TLCErrorClass, str] = {
     TLCErrorClass.SYNTAX_ERROR: (
         "### Failure Type: PlusCal SYNTAX ERROR\n"
         "Your PlusCal code did not compile. This is a syntax issue, not a logic issue.\n"
-        "Focus on fixing PlusCal syntax (missing semicolons, bad labels, mismatched "
-        "begin/end, reserved words like 'Done'). Do NOT change your algorithm logic — "
-        "only fix the syntax so pcal.trans accepts it."
+        "Focus on fixing PlusCal syntax. Do NOT change your algorithm logic — "
+        "only fix the syntax so pcal.trans accepts it.\n\n"
+        "Common PlusCal syntax issues:\n"
+        "- **Missing label after control flow with goto**: If ANY branch of an "
+        "`either/or` or `if/else` contains a `goto`, `call`, or `return`, then "
+        "the statement AFTER `end either`/`end if` MUST have a label. Also, within "
+        "`either/or`, avoid mixing `skip` with multi-statement `goto` branches — "
+        "restructure so each `or` branch is self-contained or extract the goto branch "
+        "into a separate labeled step.\n"
+        "- Missing semicolons after assignments or `skip`\n"
+        "- Mismatched `begin`/`end` or `either`/`end either`\n"
+        "- Using reserved words (`Done`, `pc`, `stack`) as labels or variables\n"
+        "- Label required: first statement in a process, after `while`, after any "
+        "control structure containing `goto`/`call`/`return`"
     ),
     TLCErrorClass.PARSE_ERROR: (
         "### Failure Type: TLA+ PARSE/SEMANTIC ERROR\n"
