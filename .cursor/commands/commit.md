@@ -46,3 +46,8 @@ After committing changes:
 2. **Update related issues**: If working on a tracked beads issue, consider:
    - `bd update <id> --status=in_progress` if work is ongoing
    - `bd close <id>` if the commit completes the issue
+
+## Post Commit
+1. Review `specs/` and update technical specifications with the latest work if required
+2. If new specification files are created update the `specs/SPECS.md` index file
+3. If architechture changed or modified update the `specs/ARCHITECHTURE.md` file   

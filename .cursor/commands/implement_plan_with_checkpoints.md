@@ -1,7 +1,11 @@
 # Implement Plan with Checkpoints
 
 You are tasked with implementing an approved technical plan from `thoughts/searchable/shared/plans/`. These plans contain phases with specific changes and success criteria. This enhanced version includes checkpoint management for better progress tracking and recovery.
-
+Use Haiku subagents for file searches, grep, ripgrep and other file tasks.
+Use up to 10 Sonnet subagents for researching files, codepaths, and getting line numbers.
+Strive to keep the main context for the actual plan, we don't want to run out of context window before it is time to write the file or be at the last 10% at the time of writing.
+Use beads and agent mail with subagents to track progress and store paths, filenames:line numbers
+Have subagents write to file to save the main context window.
 ## Getting Started
 
 When given a plan path:
@@ -11,6 +15,7 @@ When given a plan path:
 - Think deeply about how the pieces fit together
 - Think from a Test Driven Development perspective
 - Create a todo list to track your progress
+- **Update beads issue status**: If there's a tracked beads issue, run `bd update <id> --status=in_progress`
 - **Create a checkpoint** before starting implementation
 - Start implementing if you understand what needs to be done
 
@@ -36,6 +41,9 @@ Before starting implementation work:
 - `recovery_issue_description` for recovery points
 - `commit_feature_name` for commit boundaries
 - `discovery_finding_name` for significant discoveries
+- Include RR gate status where relevant:
+  - `rr-gate-pass_*`
+  - `rr-gate-fail_*`
 
 ## Implementation Philosophy
 
@@ -51,6 +59,44 @@ Plans are carefully designed, but reality can be messy. Your job is to:
 - **Create checkpoints at natural stopping points**
 
 When things don't match the plan exactly, think about why and communicate clearly. The plan is your guide, but your judgment matters too.
+
+## Deterministic Resource Registry Gate (MANDATORY)
+
+Treat implementation as a single-piece deterministic loop per function behavior unit.
+
+### Unit Identity (fail-closed parsing contract)
+For the generated TDD plan markdown:
+1. Split sections by `^## Step <N>:` (preferred) or `^## Behavior <N>:` (legacy).
+2. Inside each section, find each `Function Documentation Contract` fenced code block.
+3. Parse tag lines with `^@(?<tag>[a-z.]+)\s+(?<value>.+)$`.
+4. Each valid contract block = one unit `(path_id, step_ordinal, contract_index)`.
+5. If a step has zero valid contract blocks, fail closed.
+
+### Deterministic Manifest Producer
+Build one unit manifest before coding:
+- `artifacts/impl/unit-<path>-<step>-<idx>.json`
+- Use structured state first (`plan_paths`, `plan_path_steps`, `acceptance_criteria`, `resource_registries`), markdown second (contract extraction only).
+- CW7 helper implementation: `frontend/src/impl-loop/unit-manifest.ts`.
+
+### Hard Gate (must pass before tests)
+Run:
+`silmari verify-rr-contract --manifest <unit_manifest> --registry artifacts/impl/resource_registry.snapshot.json --changed-files <comma-separated-files>`
+
+Execution order for each unit:
+1. Build manifest
+2. Run `verify-rr-contract`
+3. Run smallest relevant test target
+4. Mark unit complete in plan
+5. Create checkpoint (`rr-gate-pass_*`) after each successful unit loop.
+
+If step 2 fails, create recovery checkpoint (`rr-gate-fail_*`) and fix contract/registry binding before retrying.
+
+Required contract tags per unit:
+- `@rr.id`, `@rr.alias`, `@path.id`, `@gwt.given`, `@gwt.when`, `@gwt.then`, `@reads`, `@writes`, `@raises`
+
+Identity rule:
+- UUID (`@rr.id`) is canonical identity.
+- Alias is supplemental metadata only.
 
 If you encounter a mismatch:
 - **Create a recovery checkpoint** before proceeding
@@ -142,3 +188,10 @@ silmari-oracle checkpoint cleanup [--keep-recent N]
 ```
 
 Remember: You're implementing a solution with proper checkpoint management, not just checking boxes. Keep the end goal in mind, maintain forward momentum, and use checkpoints to ensure you can always recover and resume work effectively.
+
+## Beads Integration
+
+When implementation is complete:
+1. **Sync beads**: Run `bd dolt push and bd dolt pull` to commit any beads changes
+2. **Close the issue**: If all work is done, run `bd close <id>`
+3. **Update dependencies**: If this unblocks other work, check `bd blocked` to see what's now ready

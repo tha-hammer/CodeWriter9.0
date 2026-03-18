@@ -1,3 +1,8 @@
+---
+name: debug
+description: Execute the imported Claude Code 'debug' workflow. Use when the user asks to debug.
+---
+
 # Debug
 
 You are tasked with helping debug issues during manual testing or implementation. This command allows you to investigate problems by examining logs, database state, and git history without editing files. Think of this as a way to bootstrap a debugging session without using the primary window's context.
@@ -28,11 +33,10 @@ Please describe what's going wrong:
 I can investigate logs, database state, and recent changes to help identify the issue.
 ```
 
-## Environment Information
 
 ## Process Steps
 
-### Step 0: Check Beads for Related Issues - CRITICALLY IMPORTANT
+### Step 0: Check Beads for Related Issues
 
 Before diving into investigation:
 1. **Sync beads**: Run `bd dolt push and bd dolt pull` to get latest issue state
@@ -63,29 +67,14 @@ Spawn parallel Task agents for efficient investigation:
 ```
 Task 1 - Check Recent Logs:
 Find and analyze the most recent logs for errors:
-1. Find latest daemon log: ls -t ~/.silmari-oracle/logs/daemon-*.log | head -1
-2. Find latest WUI log: ls -t ~/.silmari-oracle/logs/wui-*.log | head -1
-3. Search for errors, warnings, or issues around the problem timeframe
+1. Search for errors, warnings, or issues around the problem timeframe
 4. Note the working directory (first line of log)
 5. Look for stack traces or repeated errors
 Return: Key errors/warnings with timestamps
 ```
 
 ```
-Task 2 - Database State:
-Check the current database state:
-1. Connect to database: sqlite3 ~/.silmari-oracle/daemon.db
-2. Check schema: .tables and .schema for relevant tables
-3. Query recent data:
-   - SELECT * FROM sessions ORDER BY created_at DESC LIMIT 5;
-   - SELECT * FROM conversation_events WHERE created_at > datetime('now', '-1 hour');
-   - Other queries based on the issue
-4. Look for stuck states or anomalies
-Return: Relevant database findings
-```
-
-```
-Task 3 - Git and File State:
+Task 2 - Git and File State:
 Understand what changed recently:
 1. Check git status and current branch
 2. Look at recent commits: git log --oneline -10
@@ -107,15 +96,10 @@ Based on the investigation, present a focused debug report:
 
 ### Evidence Found
 
-**From Logs** (`~/.silmari-oracle/logs/`):
+**From beads**:
 - [Error/warning with timestamp]
 - [Pattern or repeated issue]
 
-**From Database**:
-```sql
--- Relevant query and result
-[Finding from database]
-```
 
 **From Git/Files**:
 - [Recent changes that might be related]
@@ -132,9 +116,9 @@ Based on the investigation, present a focused debug report:
    ```
 
 2. **If That Doesn't Work**:
-   - Restart services: `make daemon` and `make wui`
-   - Check browser console for WUI errors
-   - Run with debug: `silmari-oracle_DEBUG=true make daemon`
+   - Alternative 1
+   - Alternative 2
+   - ...
 
 ### Can't Access?
 Some issues might be outside my reach:
@@ -142,7 +126,7 @@ Some issues might be outside my reach:
 - MCP server internal state
 - System-level issues
 
-### Beads Tracking - CRITICALLY IPORTANT
+### Beads Tracking
 - Related issue: [bd-XXX if found, or "None found"]
 - Suggested action: [Create new bug / Update existing / None needed]
 
