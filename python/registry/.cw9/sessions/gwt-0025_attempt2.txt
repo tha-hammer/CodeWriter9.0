@@ -1,0 +1,290 @@
+---- MODULE GwtAuthor ----
+EXTENDS Integers, TLC
+
+CONSTANTS
+    MaxTime
+
+ASSUME /\ MaxTime \in Nat
+       /\ MaxTime >= 10
+
+(* --algorithm GwtAuthor
+
+variables
+    phase = "Idle",
+    research_notes_ready = TRUE,
+    crawl_db_ready = TRUE,
+    dag_json_ready = TRUE,
+    llm_call_count = 0,
+    prompt_built = FALSE,
+    llm_response = "none",
+    parse_ok = FALSE,
+    depends_on_valid = FALSE,
+    validation_ok = FALSE,
+    gwt_json = "none",
+    returned_to_caller = FALSE,
+    elapsed = 0,
+    job_ok = TRUE;
+
+define
+
+    Phases == { "Idle", "BuildingPrompt", "CallingLLM",
+                "ParsingResponse", "ValidatingDependsOn",
+                "ReturningResult", "Completed", "Failed" }
+
+    ValidPhase == phase \in Phases
+
+    LLMNeverExceedsOne == llm_call_count <= 1
+
+    ExactlyOneLLMAtCompletion ==
+        phase = "Completed" => llm_call_count = 1
+
+    PromptBuiltBeforeLLM ==
+        llm_call_count > 0 => prompt_built
+
+    ParseBeforeValidation ==
+        validation_ok => parse_ok
+
+    ValidationBeforeReturn ==
+        returned_to_caller => validation_ok
+
+    GwtJsonSetOnSuccess ==
+        phase = "Completed" => gwt_json /= "none"
+
+    ReturnedOnSuccess ==
+        phase = "Completed" => returned_to_caller = TRUE
+
+    TimeBound ==
+        phase = "Completed" => elapsed < 60
+
+    BoundedElapsed ==
+        elapsed <= MaxTime
+
+    PhaseOrderRespected ==
+        /\ (phase = "CallingLLM"         => prompt_built)
+        /\ (phase = "ParsingResponse"    => llm_call_count = 1)
+        /\ (phase = "ValidatingDependsOn" => parse_ok)
+        /\ (phase = "ReturningResult"    => validation_ok)
+
+end define;
+
+fair process GwtAuthorJob = "gwt_author"
+begin
+
+    Dequeue:
+        await research_notes_ready /\ crawl_db_ready /\ dag_json_ready;
+        phase := "BuildingPrompt";
+        elapsed := elapsed + 1;
+
+    BuildPrompt:
+        prompt_built := TRUE;
+        phase := "CallingLLM";
+        elapsed := elapsed + 1;
+
+    CallLLM:
+        llm_call_count := llm_call_count + 1;
+        llm_response := "llm_raw_response";
+        phase := "ParsingResponse";
+        elapsed := elapsed + 1;
+
+    ParseResponse:
+        parse_ok := TRUE;
+        elapsed := elapsed + 1;
+        either
+            depends_on_valid := TRUE;
+        or
+            depends_on_valid := FALSE;
+        end either;
+        phase := "ValidatingDependsOn";
+
+    ValidateDependsOn:
+        elapsed := elapsed + 1;
+        if depends_on_valid then
+            validation_ok := TRUE;
+            phase := "ReturningResult";
+        else
+            job_ok := FALSE;
+            phase := "Failed";
+        end if;
+
+    AfterValidate:
+        if phase = "Failed" then
+            goto Terminate;
+        end if;
+
+    ReturnResult:
+        elapsed := elapsed + 1;
+        if elapsed < 60 then
+            gwt_json := "gwt_output";
+            returned_to_caller := TRUE;
+            phase := "Completed";
+        else
+            job_ok := FALSE;
+            phase := "Failed";
+        end if;
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+THEOREM Spec =>
+    []( ValidPhase
+      /\ LLMNeverExceedsOne
+      /\ ExactlyOneLLMAtCompletion
+      /\ PromptBuiltBeforeLLM
+      /\ ParseBeforeValidation
+      /\ ValidationBeforeReturn
+      /\ GwtJsonSetOnSuccess
+      /\ ReturnedOnSuccess
+      /\ TimeBound
+      /\ BoundedElapsed
+      /\ PhaseOrderRespected )
+
+====
+---- MODULE GwtAuthor ----
+EXTENDS Integers, TLC
+
+CONSTANTS
+    MaxTime
+
+ASSUME /\ MaxTime \in Nat
+       /\ MaxTime >= 10
+
+(* --algorithm GwtAuthor
+
+variables
+    phase = "Idle",
+    research_notes_ready = TRUE,
+    crawl_db_ready = TRUE,
+    dag_json_ready = TRUE,
+    llm_call_count = 0,
+    prompt_built = FALSE,
+    llm_response = "none",
+    parse_ok = FALSE,
+    depends_on_valid = FALSE,
+    validation_ok = FALSE,
+    gwt_json = "none",
+    returned_to_caller = FALSE,
+    elapsed = 0,
+    job_ok = TRUE;
+
+define
+
+    Phases == { "Idle", "BuildingPrompt", "CallingLLM",
+                "ParsingResponse", "ValidatingDependsOn",
+                "ReturningResult", "Completed", "Failed" }
+
+    ValidPhase == phase \in Phases
+
+    LLMNeverExceedsOne == llm_call_count <= 1
+
+    ExactlyOneLLMAtCompletion ==
+        phase = "Completed" => llm_call_count = 1
+
+    PromptBuiltBeforeLLM ==
+        llm_call_count > 0 => prompt_built
+
+    ParseBeforeValidation ==
+        validation_ok => parse_ok
+
+    ValidationBeforeReturn ==
+        returned_to_caller => validation_ok
+
+    GwtJsonSetOnSuccess ==
+        phase = "Completed" => gwt_json /= "none"
+
+    ReturnedOnSuccess ==
+        phase = "Completed" => returned_to_caller = TRUE
+
+    TimeBound ==
+        phase = "Completed" => elapsed < 60
+
+    BoundedElapsed ==
+        elapsed <= MaxTime
+
+    PhaseOrderRespected ==
+        /\ (phase = "CallingLLM"         => prompt_built)
+        /\ (phase = "ParsingResponse"    => llm_call_count = 1)
+        /\ (phase = "ValidatingDependsOn" => parse_ok)
+        /\ (phase = "ReturningResult"    => validation_ok)
+
+end define;
+
+fair process GwtAuthorJob = "gwt_author"
+begin
+
+    Dequeue:
+        await research_notes_ready /\ crawl_db_ready /\ dag_json_ready;
+        phase := "BuildingPrompt";
+        elapsed := elapsed + 1;
+
+    BuildPrompt:
+        prompt_built := TRUE;
+        phase := "CallingLLM";
+        elapsed := elapsed + 1;
+
+    CallLLM:
+        llm_call_count := llm_call_count + 1;
+        llm_response := "llm_raw_response";
+        phase := "ParsingResponse";
+        elapsed := elapsed + 1;
+
+    ParseResponse:
+        parse_ok := TRUE;
+        elapsed := elapsed + 1;
+        either
+            depends_on_valid := TRUE;
+        or
+            depends_on_valid := FALSE;
+        end either;
+        phase := "ValidatingDependsOn";
+
+    ValidateDependsOn:
+        elapsed := elapsed + 1;
+        if depends_on_valid then
+            validation_ok := TRUE;
+            phase := "ReturningResult";
+        else
+            job_ok := FALSE;
+            phase := "Failed";
+        end if;
+
+    AfterValidate:
+        if phase = "Failed" then
+            goto Terminate;
+        end if;
+
+    ReturnResult:
+        elapsed := elapsed + 1;
+        if elapsed < 60 then
+            gwt_json := "gwt_output";
+            returned_to_caller := TRUE;
+            phase := "Completed";
+        else
+            job_ok := FALSE;
+            phase := "Failed";
+        end if;
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+THEOREM Spec =>
+    []( ValidPhase
+      /\ LLMNeverExceedsOne
+      /\ ExactlyOneLLMAtCompletion
+      /\ PromptBuiltBeforeLLM
+      /\ ParseBeforeValidation
+      /\ ValidationBeforeReturn
+      /\ GwtJsonSetOnSuccess
+      /\ ReturnedOnSuccess
+      /\ TimeBound
+      /\ BoundedElapsed
+      /\ PhaseOrderRespected )
+
+====

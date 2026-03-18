@@ -1,0 +1,280 @@
+---- MODULE ProjectContextHosted ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    PROJECT_ID,
+    WORKSPACE,
+    STORAGE_CLIENT,
+    CONTAINER_TEMPLATE_DIR,
+    CONTAINER_TOOLS_DIR,
+    NULL_STORAGE,
+    SELF_HOST_STATE_ROOT,
+    SELF_HOST_TEMPLATE_DIR,
+    SELF_HOST_TOOLS_DIR,
+    EXTERNAL_STATE_ROOT,
+    EXTERNAL_TEMPLATE_DIR,
+    EXTERNAL_TOOLS_DIR,
+    INSTALLED_STATE_ROOT,
+    INSTALLED_TEMPLATE_DIR,
+    INSTALLED_TOOLS_DIR
+
+PathJoin(base, suffix) == <<base, suffix>>
+
+FactoryModes == {"hosted", "self_hosting", "external", "installed"}
+
+(* --algorithm ProjectContextHosted
+
+variables
+    chosen_mode = "none",
+    ctx = [ state_root     |-> NULL_STORAGE,
+            template_dir   |-> NULL_STORAGE,
+            tools_dir      |-> NULL_STORAGE,
+            storage_client |-> NULL_STORAGE,
+            frozen         |-> FALSE ],
+    phase = "init",
+    verified = FALSE;
+
+define
+
+    HostedStateRoot == PathJoin(WORKSPACE, ".cw9/")
+
+    TypeOK ==
+        /\ chosen_mode \in (FactoryModes \union {"none"})
+        /\ phase \in {"init", "dispatched", "complete", "verified"}
+        /\ ctx.frozen \in BOOLEAN
+        /\ verified \in BOOLEAN
+
+    HostedContextCorrect ==
+        ( phase \in {"complete", "verified"} /\ chosen_mode = "hosted" ) =>
+            /\ ctx.state_root     = HostedStateRoot
+            /\ ctx.template_dir   = CONTAINER_TEMPLATE_DIR
+            /\ ctx.tools_dir      = CONTAINER_TOOLS_DIR
+            /\ ctx.storage_client = STORAGE_CLIENT
+            /\ ctx.frozen         = TRUE
+
+    NonHostedLackStorage ==
+        ( phase \in {"complete", "verified"} /\
+          chosen_mode \in {"self_hosting", "external", "installed"} ) =>
+            ctx.storage_client = NULL_STORAGE
+
+    FrozenOnceComplete ==
+        phase \in {"complete", "verified"} => ctx.frozen = TRUE
+
+    HostedPathDerivedFromWorkspace ==
+        ( phase \in {"complete", "verified"} /\ chosen_mode = "hosted" ) =>
+            ctx.state_root = PathJoin(WORKSPACE, ".cw9/")
+
+    SafetyInvariant ==
+        /\ TypeOK
+        /\ HostedContextCorrect
+        /\ NonHostedLackStorage
+        /\ FrozenOnceComplete
+        /\ HostedPathDerivedFromWorkspace
+
+    EventuallyVerified == <>(verified = TRUE)
+
+end define;
+
+fair process factory = "factory"
+begin
+    SelectMode:
+        with m \in FactoryModes do
+            chosen_mode := m
+        end with;
+        phase := "dispatched";
+
+    Dispatch:
+        if chosen_mode = "hosted" then
+            ctx := [ state_root     |-> PathJoin(WORKSPACE, ".cw9/"),
+                     template_dir   |-> CONTAINER_TEMPLATE_DIR,
+                     tools_dir      |-> CONTAINER_TOOLS_DIR,
+                     storage_client |-> STORAGE_CLIENT,
+                     frozen         |-> TRUE ];
+        elsif chosen_mode = "self_hosting" then
+            ctx := [ state_root     |-> SELF_HOST_STATE_ROOT,
+                     template_dir   |-> SELF_HOST_TEMPLATE_DIR,
+                     tools_dir      |-> SELF_HOST_TOOLS_DIR,
+                     storage_client |-> NULL_STORAGE,
+                     frozen         |-> TRUE ];
+        elsif chosen_mode = "external" then
+            ctx := [ state_root     |-> EXTERNAL_STATE_ROOT,
+                     template_dir   |-> EXTERNAL_TEMPLATE_DIR,
+                     tools_dir      |-> EXTERNAL_TOOLS_DIR,
+                     storage_client |-> NULL_STORAGE,
+                     frozen         |-> TRUE ];
+        else
+            ctx := [ state_root     |-> INSTALLED_STATE_ROOT,
+                     template_dir   |-> INSTALLED_TEMPLATE_DIR,
+                     tools_dir      |-> INSTALLED_TOOLS_DIR,
+                     storage_client |-> NULL_STORAGE,
+                     frozen         |-> TRUE ];
+        end if;
+
+    AfterDispatch:
+        phase := "complete";
+
+    CheckHosted:
+        if chosen_mode = "hosted" then
+            assert ctx.state_root     = PathJoin(WORKSPACE, ".cw9/");
+            assert ctx.template_dir   = CONTAINER_TEMPLATE_DIR;
+            assert ctx.tools_dir      = CONTAINER_TOOLS_DIR;
+            assert ctx.storage_client = STORAGE_CLIENT;
+            assert ctx.frozen         = TRUE;
+        else
+            assert ctx.storage_client = NULL_STORAGE;
+            assert ctx.frozen         = TRUE;
+        end if;
+
+    AfterCheck:
+        verified := TRUE;
+        phase := "verified";
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE ProjectContextHosted ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    PROJECT_ID,
+    WORKSPACE,
+    STORAGE_CLIENT,
+    CONTAINER_TEMPLATE_DIR,
+    CONTAINER_TOOLS_DIR,
+    NULL_STORAGE,
+    SELF_HOST_STATE_ROOT,
+    SELF_HOST_TEMPLATE_DIR,
+    SELF_HOST_TOOLS_DIR,
+    EXTERNAL_STATE_ROOT,
+    EXTERNAL_TEMPLATE_DIR,
+    EXTERNAL_TOOLS_DIR,
+    INSTALLED_STATE_ROOT,
+    INSTALLED_TEMPLATE_DIR,
+    INSTALLED_TOOLS_DIR
+
+PathJoin(base, suffix) == <<base, suffix>>
+
+FactoryModes == {"hosted", "self_hosting", "external", "installed"}
+
+(* --algorithm ProjectContextHosted
+
+variables
+    chosen_mode = "none",
+    ctx = [ state_root     |-> NULL_STORAGE,
+            template_dir   |-> NULL_STORAGE,
+            tools_dir      |-> NULL_STORAGE,
+            storage_client |-> NULL_STORAGE,
+            frozen         |-> FALSE ],
+    phase = "init",
+    verified = FALSE;
+
+define
+
+    HostedStateRoot == PathJoin(WORKSPACE, ".cw9/")
+
+    TypeOK ==
+        /\ chosen_mode \in (FactoryModes \union {"none"})
+        /\ phase \in {"init", "dispatched", "complete", "verified"}
+        /\ ctx.frozen \in BOOLEAN
+        /\ verified \in BOOLEAN
+
+    HostedContextCorrect ==
+        ( phase \in {"complete", "verified"} /\ chosen_mode = "hosted" ) =>
+            /\ ctx.state_root     = HostedStateRoot
+            /\ ctx.template_dir   = CONTAINER_TEMPLATE_DIR
+            /\ ctx.tools_dir      = CONTAINER_TOOLS_DIR
+            /\ ctx.storage_client = STORAGE_CLIENT
+            /\ ctx.frozen         = TRUE
+
+    NonHostedLackStorage ==
+        ( phase \in {"complete", "verified"} /\
+          chosen_mode \in {"self_hosting", "external", "installed"} ) =>
+            ctx.storage_client = NULL_STORAGE
+
+    FrozenOnceComplete ==
+        phase \in {"complete", "verified"} => ctx.frozen = TRUE
+
+    HostedPathDerivedFromWorkspace ==
+        ( phase \in {"complete", "verified"} /\ chosen_mode = "hosted" ) =>
+            ctx.state_root = PathJoin(WORKSPACE, ".cw9/")
+
+    SafetyInvariant ==
+        /\ TypeOK
+        /\ HostedContextCorrect
+        /\ NonHostedLackStorage
+        /\ FrozenOnceComplete
+        /\ HostedPathDerivedFromWorkspace
+
+    EventuallyVerified == <>(verified = TRUE)
+
+end define;
+
+fair process factory = "factory"
+begin
+    SelectMode:
+        with m \in FactoryModes do
+            chosen_mode := m
+        end with;
+        phase := "dispatched";
+
+    Dispatch:
+        if chosen_mode = "hosted" then
+            ctx := [ state_root     |-> PathJoin(WORKSPACE, ".cw9/"),
+                     template_dir   |-> CONTAINER_TEMPLATE_DIR,
+                     tools_dir      |-> CONTAINER_TOOLS_DIR,
+                     storage_client |-> STORAGE_CLIENT,
+                     frozen         |-> TRUE ];
+        elsif chosen_mode = "self_hosting" then
+            ctx := [ state_root     |-> SELF_HOST_STATE_ROOT,
+                     template_dir   |-> SELF_HOST_TEMPLATE_DIR,
+                     tools_dir      |-> SELF_HOST_TOOLS_DIR,
+                     storage_client |-> NULL_STORAGE,
+                     frozen         |-> TRUE ];
+        elsif chosen_mode = "external" then
+            ctx := [ state_root     |-> EXTERNAL_STATE_ROOT,
+                     template_dir   |-> EXTERNAL_TEMPLATE_DIR,
+                     tools_dir      |-> EXTERNAL_TOOLS_DIR,
+                     storage_client |-> NULL_STORAGE,
+                     frozen         |-> TRUE ];
+        else
+            ctx := [ state_root     |-> INSTALLED_STATE_ROOT,
+                     template_dir   |-> INSTALLED_TEMPLATE_DIR,
+                     tools_dir      |-> INSTALLED_TOOLS_DIR,
+                     storage_client |-> NULL_STORAGE,
+                     frozen         |-> TRUE ];
+        end if;
+
+    AfterDispatch:
+        phase := "complete";
+
+    CheckHosted:
+        if chosen_mode = "hosted" then
+            assert ctx.state_root     = PathJoin(WORKSPACE, ".cw9/");
+            assert ctx.template_dir   = CONTAINER_TEMPLATE_DIR;
+            assert ctx.tools_dir      = CONTAINER_TOOLS_DIR;
+            assert ctx.storage_client = STORAGE_CLIENT;
+            assert ctx.frozen         = TRUE;
+        else
+            assert ctx.storage_client = NULL_STORAGE;
+            assert ctx.frozen         = TRUE;
+        end if;
+
+    AfterCheck:
+        verified := TRUE;
+        phase := "verified";
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

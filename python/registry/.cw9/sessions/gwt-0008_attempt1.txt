@@ -1,0 +1,288 @@
+------------------------ MODULE WorkerClientInit ------------------------
+
+EXTENDS Integers, TLC, Sequences
+
+CONSTANTS MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+
+WorkerStates == {
+    "starting",
+    "env_checking",
+    "env_validated",
+    "client_initializing",
+    "client_ready",
+    "env_missing",
+    "env_tainted"
+}
+
+TerminalWorkerStates == {"client_ready", "env_missing", "env_tainted"}
+
+CredSources == {"none", "injected", "inherited"}
+
+InitPaths == {"none", "make_client", "build_llm_fn"}
+
+(* --algorithm WorkerClientInit
+
+variables
+    worker_state           = "starting",
+    injected_has_claudecode  = FALSE,
+    inherited_has_claudecode = FALSE,
+    env_source             = "none",
+    init_path              = "none",
+    credentials_source     = "none",
+    client_initialized     = FALSE,
+    step_count             = 0;
+
+define
+
+    TypeInvariant ==
+        /\ worker_state            \in WorkerStates
+        /\ env_source              \in CredSources
+        /\ init_path               \in InitPaths
+        /\ credentials_source      \in CredSources
+        /\ client_initialized      \in BOOLEAN
+        /\ injected_has_claudecode  \in BOOLEAN
+        /\ inherited_has_claudecode \in BOOLEAN
+
+    BoundedExecution == step_count <= MaxSteps
+
+    CredentialsFromInjectedOnly ==
+        client_initialized => credentials_source = "injected"
+
+    ClientReadyImpliesInjectedEnv ==
+        worker_state = "client_ready" =>
+            ( injected_has_claudecode = TRUE /\ env_source = "injected" )
+
+    NoClientFromInheritedEnv ==
+        client_initialized => env_source /= "inherited"
+
+    NoClientFromMissingEnv ==
+        client_initialized => env_source /= "none"
+
+    InheritedNeverUsedAsCredentials ==
+        credentials_source /= "inherited"
+
+    TaintedEnvBlocksClientInit ==
+        worker_state = "env_tainted" => client_initialized = FALSE
+
+    MissingEnvBlocksClientInit ==
+        worker_state = "env_missing" => client_initialized = FALSE
+
+    ClientInitRequiresExclusiveInjectedSource ==
+        client_initialized =>
+            ( injected_has_claudecode = TRUE
+              /\ env_source            = "injected"
+              /\ credentials_source    = "injected" )
+
+end define;
+
+fair process worker = "worker"
+begin
+    StartWorker:
+        worker_state := "env_checking";
+        step_count   := step_count + 1;
+
+    SetupEnv:
+        either
+            injected_has_claudecode  := TRUE  ||
+            inherited_has_claudecode := FALSE;
+        or
+            injected_has_claudecode  := FALSE ||
+            inherited_has_claudecode := FALSE;
+        or
+            injected_has_claudecode  := FALSE ||
+            inherited_has_claudecode := TRUE;
+        or
+            injected_has_claudecode  := TRUE  ||
+            inherited_has_claudecode := TRUE;
+        end either;
+
+    ValidateEnv:
+        step_count := step_count + 1;
+        if injected_has_claudecode = TRUE then
+            env_source   := "injected";
+            worker_state := "env_validated";
+        elsif inherited_has_claudecode = TRUE then
+            env_source   := "inherited";
+            worker_state := "env_tainted";
+        else
+            env_source   := "none";
+            worker_state := "env_missing";
+        end if;
+
+    RouteOrAbort:
+        step_count := step_count + 1;
+        if worker_state /= "env_validated" then
+            goto Terminate;
+        end if;
+
+    ChooseInitPath:
+        either
+            init_path := "make_client";
+        or
+            init_path := "build_llm_fn";
+        end either;
+        worker_state := "client_initializing";
+        step_count   := step_count + 1;
+
+    InitializeClient:
+        assert env_source              = "injected";
+        assert injected_has_claudecode = TRUE;
+        credentials_source := "injected";
+        client_initialized := TRUE;
+        worker_state       := "client_ready";
+        step_count         := step_count + 1;
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+=============================================================================
+------------------------ MODULE WorkerClientInit ------------------------
+
+EXTENDS Integers, TLC, Sequences
+
+CONSTANTS MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+
+WorkerStates == {
+    "starting",
+    "env_checking",
+    "env_validated",
+    "client_initializing",
+    "client_ready",
+    "env_missing",
+    "env_tainted"
+}
+
+TerminalWorkerStates == {"client_ready", "env_missing", "env_tainted"}
+
+CredSources == {"none", "injected", "inherited"}
+
+InitPaths == {"none", "make_client", "build_llm_fn"}
+
+(* --algorithm WorkerClientInit
+
+variables
+    worker_state           = "starting",
+    injected_has_claudecode  = FALSE,
+    inherited_has_claudecode = FALSE,
+    env_source             = "none",
+    init_path              = "none",
+    credentials_source     = "none",
+    client_initialized     = FALSE,
+    step_count             = 0;
+
+define
+
+    TypeInvariant ==
+        /\ worker_state            \in WorkerStates
+        /\ env_source              \in CredSources
+        /\ init_path               \in InitPaths
+        /\ credentials_source      \in CredSources
+        /\ client_initialized      \in BOOLEAN
+        /\ injected_has_claudecode  \in BOOLEAN
+        /\ inherited_has_claudecode \in BOOLEAN
+
+    BoundedExecution == step_count <= MaxSteps
+
+    CredentialsFromInjectedOnly ==
+        client_initialized => credentials_source = "injected"
+
+    ClientReadyImpliesInjectedEnv ==
+        worker_state = "client_ready" =>
+            ( injected_has_claudecode = TRUE /\ env_source = "injected" )
+
+    NoClientFromInheritedEnv ==
+        client_initialized => env_source /= "inherited"
+
+    NoClientFromMissingEnv ==
+        client_initialized => env_source /= "none"
+
+    InheritedNeverUsedAsCredentials ==
+        credentials_source /= "inherited"
+
+    TaintedEnvBlocksClientInit ==
+        worker_state = "env_tainted" => client_initialized = FALSE
+
+    MissingEnvBlocksClientInit ==
+        worker_state = "env_missing" => client_initialized = FALSE
+
+    ClientInitRequiresExclusiveInjectedSource ==
+        client_initialized =>
+            ( injected_has_claudecode = TRUE
+              /\ env_source            = "injected"
+              /\ credentials_source    = "injected" )
+
+end define;
+
+fair process worker = "worker"
+begin
+    StartWorker:
+        worker_state := "env_checking";
+        step_count   := step_count + 1;
+
+    SetupEnv:
+        either
+            injected_has_claudecode  := TRUE  ||
+            inherited_has_claudecode := FALSE;
+        or
+            injected_has_claudecode  := FALSE ||
+            inherited_has_claudecode := FALSE;
+        or
+            injected_has_claudecode  := FALSE ||
+            inherited_has_claudecode := TRUE;
+        or
+            injected_has_claudecode  := TRUE  ||
+            inherited_has_claudecode := TRUE;
+        end either;
+
+    ValidateEnv:
+        step_count := step_count + 1;
+        if injected_has_claudecode = TRUE then
+            env_source   := "injected";
+            worker_state := "env_validated";
+        elsif inherited_has_claudecode = TRUE then
+            env_source   := "inherited";
+            worker_state := "env_tainted";
+        else
+            env_source   := "none";
+            worker_state := "env_missing";
+        end if;
+
+    RouteOrAbort:
+        step_count := step_count + 1;
+        if worker_state /= "env_validated" then
+            goto Terminate;
+        end if;
+
+    ChooseInitPath:
+        either
+            init_path := "make_client";
+        or
+            init_path := "build_llm_fn";
+        end either;
+        worker_state := "client_initializing";
+        step_count   := step_count + 1;
+
+    InitializeClient:
+        assert env_source              = "injected";
+        assert injected_has_claudecode = TRUE;
+        credentials_source := "injected";
+        client_initialized := TRUE;
+        worker_state       := "client_ready";
+        step_count         := step_count + 1;
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+=============================================================================

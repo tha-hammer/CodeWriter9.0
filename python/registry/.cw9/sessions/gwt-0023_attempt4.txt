@@ -1,0 +1,238 @@
+---- MODULE RegisterPayload ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    NumGWT,
+    NumREQ
+
+(* --algorithm RegisterPayload
+
+variables
+    phase = "Init",
+    dag_loaded = FALSE,
+    bindings_loaded = FALSE,
+    gwt_done = 0,
+    req_done = 0,
+    closure_valid = FALSE,
+    bindings_saved = FALSE,
+    dag_uploaded = FALSE,
+    bindings_uploaded = FALSE,
+    llm_called = FALSE;
+
+define
+
+    AllGWTsRegistered == gwt_done = NumGWT
+    AllREQsRegistered == req_done = NumREQ
+    AllItemsRegistered == AllGWTsRegistered /\ AllREQsRegistered
+
+    NeverCallsLLM == ~llm_called
+
+    BindingsSavedBeforeUpload ==
+        bindings_uploaded => bindings_saved
+
+    DagUploadedOnlyAfterMutation ==
+        dag_uploaded => (AllItemsRegistered /\ closure_valid)
+
+    DagUploadedOnlyAfterBindingsSaved ==
+        dag_uploaded => bindings_saved
+
+    CompletionImpliesFullProtocol ==
+        (phase = "Complete") =>
+            (dag_loaded
+             /\ bindings_loaded
+             /\ AllItemsRegistered
+             /\ closure_valid
+             /\ bindings_saved
+             /\ dag_uploaded
+             /\ bindings_uploaded
+             /\ ~llm_called)
+
+    TypeOK ==
+        /\ phase \in {"Init", "LoadDag", "LoadBindings",
+                      "RegisterGWT", "RegisterREQ",
+                      "ClosureRecomputed",
+                      "SaveBindings", "UploadDag", "UploadBindings",
+                      "Complete"}
+        /\ dag_loaded \in BOOLEAN
+        /\ bindings_loaded \in BOOLEAN
+        /\ gwt_done \in 0..NumGWT
+        /\ req_done \in 0..NumREQ
+        /\ closure_valid \in BOOLEAN
+        /\ bindings_saved \in BOOLEAN
+        /\ dag_uploaded \in BOOLEAN
+        /\ bindings_uploaded \in BOOLEAN
+        /\ llm_called \in BOOLEAN
+
+    GWTProgressMonotone == gwt_done >= 0
+    REQProgressMonotone == req_done >= 0
+
+    UploadOrderCorrect == dag_uploaded => bindings_saved
+
+end define;
+
+fair process register = "register_payload"
+begin
+    LoadDag:
+        dag_loaded := TRUE;
+        phase := "LoadDag";
+
+    LoadBindings:
+        bindings_loaded := TRUE;
+        phase := "LoadBindings";
+
+    RegisterGWTs:
+        while gwt_done < NumGWT do
+            gwt_done := gwt_done + 1;
+            phase    := "RegisterGWT";
+        end while;
+
+    RegisterREQs:
+        while req_done < NumREQ do
+            req_done := req_done + 1;
+            phase    := "RegisterREQ";
+        end while;
+
+    MarkClosure:
+        closure_valid := TRUE;
+        phase         := "ClosureRecomputed";
+
+    SaveBindings:
+        bindings_saved := TRUE;
+        phase          := "SaveBindings";
+
+    UploadDag:
+        dag_uploaded := TRUE;
+        phase        := "UploadDag";
+
+    UploadBindings:
+        bindings_uploaded := TRUE;
+        phase             := "UploadBindings";
+
+    Complete:
+        phase := "Complete";
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE RegisterPayload ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    NumGWT,
+    NumREQ
+
+(* --algorithm RegisterPayload
+
+variables
+    phase = "Init",
+    dag_loaded = FALSE,
+    bindings_loaded = FALSE,
+    gwt_done = 0,
+    req_done = 0,
+    closure_valid = FALSE,
+    bindings_saved = FALSE,
+    dag_uploaded = FALSE,
+    bindings_uploaded = FALSE,
+    llm_called = FALSE;
+
+define
+
+    AllGWTsRegistered == gwt_done = NumGWT
+    AllREQsRegistered == req_done = NumREQ
+    AllItemsRegistered == AllGWTsRegistered /\ AllREQsRegistered
+
+    NeverCallsLLM == ~llm_called
+
+    BindingsSavedBeforeUpload ==
+        bindings_uploaded => bindings_saved
+
+    DagUploadedOnlyAfterMutation ==
+        dag_uploaded => (AllItemsRegistered /\ closure_valid)
+
+    DagUploadedOnlyAfterBindingsSaved ==
+        dag_uploaded => bindings_saved
+
+    CompletionImpliesFullProtocol ==
+        (phase = "Complete") =>
+            (dag_loaded
+             /\ bindings_loaded
+             /\ AllItemsRegistered
+             /\ closure_valid
+             /\ bindings_saved
+             /\ dag_uploaded
+             /\ bindings_uploaded
+             /\ ~llm_called)
+
+    TypeOK ==
+        /\ phase \in {"Init", "LoadDag", "LoadBindings",
+                      "RegisterGWT", "RegisterREQ",
+                      "ClosureRecomputed",
+                      "SaveBindings", "UploadDag", "UploadBindings",
+                      "Complete"}
+        /\ dag_loaded \in BOOLEAN
+        /\ bindings_loaded \in BOOLEAN
+        /\ gwt_done \in 0..NumGWT
+        /\ req_done \in 0..NumREQ
+        /\ closure_valid \in BOOLEAN
+        /\ bindings_saved \in BOOLEAN
+        /\ dag_uploaded \in BOOLEAN
+        /\ bindings_uploaded \in BOOLEAN
+        /\ llm_called \in BOOLEAN
+
+    GWTProgressMonotone == gwt_done >= 0
+    REQProgressMonotone == req_done >= 0
+
+    UploadOrderCorrect == dag_uploaded => bindings_saved
+
+end define;
+
+fair process register = "register_payload"
+begin
+    LoadDag:
+        dag_loaded := TRUE;
+        phase := "LoadDag";
+
+    LoadBindings:
+        bindings_loaded := TRUE;
+        phase := "LoadBindings";
+
+    RegisterGWTs:
+        while gwt_done < NumGWT do
+            gwt_done := gwt_done + 1;
+            phase    := "RegisterGWT";
+        end while;
+
+    RegisterREQs:
+        while req_done < NumREQ do
+            req_done := req_done + 1;
+            phase    := "RegisterREQ";
+        end while;
+
+    MarkClosure:
+        closure_valid := TRUE;
+        phase         := "ClosureRecomputed";
+
+    SaveBindings:
+        bindings_saved := TRUE;
+        phase          := "SaveBindings";
+
+    UploadDag:
+        dag_uploaded := TRUE;
+        phase        := "UploadDag";
+
+    UploadBindings:
+        bindings_uploaded := TRUE;
+        phase             := "UploadBindings";
+
+    Complete:
+        phase := "Complete";
+
+end process;
+
+end algorithm; *)
+
+====

@@ -1,0 +1,1645 @@
+{
+  "gwt_id": "gwt-0007",
+  "module_name": "GWT0007Isolation",
+  "data_structures": {
+    "GWT0007IsolationState": {
+      "function_id": "fn-GWT0007Isolation-state",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"MakeClient\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "sdk_clients": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[g \\in GwtIds |-> 0]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "dag_copies": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[g \\in GwtIds |-> 0]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "crawl_conns": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[g \\in GwtIds |-> 0]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "next_id": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "worker_state": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[g \\in GwtIds |-> \"INIT\"]",
+          "validation": [
+            "NotNull"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from GWT0007Isolation TLA+ spec"
+    }
+  },
+  "operations": {},
+  "verifiers": {
+    "WorkerStates": {
+      "function_id": "fn-GWT0007Isolation-verify-WorkerStates",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-WorkerStates",
+      "conditions": [
+        "{\"INIT\", \"CLIENT_READY\", \"DAG_LOADED\", \"CRAWL_READY\", \"FINISHED\"}"
+      ],
+      "message": "WorkerStates violation: {\"INIT\", \"CLIENT_READY\", \"DAG_LOADED\", \"CRAWL_READY\", \"FINISHED\"}",
+      "applies_to": [
+        "GWT0007Isolation"
+      ],
+      "description": "Verifier for invariant WorkerStates from GWT0007Isolation spec"
+    },
+    "AllStatesValid": {
+      "function_id": "fn-GWT0007Isolation-verify-AllStatesValid",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-AllStatesValid",
+      "conditions": [
+        "\\A g \\in GwtIds : worker_state[g] \\in WorkerStates"
+      ],
+      "message": "AllStatesValid violation: \\A g \\in GwtIds : worker_state[g] \\in WorkerStates",
+      "applies_to": [
+        "worker_state"
+      ],
+      "description": "Verifier for invariant AllStatesValid from GWT0007Isolation spec"
+    },
+    "NoSharedSDKClient": {
+      "function_id": "fn-GWT0007Isolation-verify-NoSharedSDKClient",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-NoSharedSDKClient",
+      "conditions": [
+        "\\A g1, g2 \\in GwtIds :\n        (g1 # g2",
+        "sdk_clients[g1] # 0",
+        "sdk_clients[g2] # 0)\n        => sdk_clients[g1] # sdk_clients[g2]"
+      ],
+      "message": "NoSharedSDKClient violation: \\A g1, g2 \\in GwtIds :\n        (g1 # g2 /\\ sdk_clients[g1] # 0 /\\ sdk_clients[g2] # 0)\n        => sdk_clients[g1] # s...",
+      "applies_to": [
+        "sdk_clients"
+      ],
+      "description": "Verifier for invariant NoSharedSDKClient from GWT0007Isolation spec"
+    },
+    "NoSharedDAG": {
+      "function_id": "fn-GWT0007Isolation-verify-NoSharedDAG",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-NoSharedDAG",
+      "conditions": [
+        "\\A g1, g2 \\in GwtIds :\n        (g1 # g2",
+        "dag_copies[g1] # 0",
+        "dag_copies[g2] # 0)\n        => dag_copies[g1] # dag_copies[g2]"
+      ],
+      "message": "NoSharedDAG violation: \\A g1, g2 \\in GwtIds :\n        (g1 # g2 /\\ dag_copies[g1] # 0 /\\ dag_copies[g2] # 0)\n        => dag_copies[g1] # dag_...",
+      "applies_to": [
+        "dag_copies"
+      ],
+      "description": "Verifier for invariant NoSharedDAG from GWT0007Isolation spec"
+    },
+    "NoSharedCrawlStore": {
+      "function_id": "fn-GWT0007Isolation-verify-NoSharedCrawlStore",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-NoSharedCrawlStore",
+      "conditions": [
+        "\\A g1, g2 \\in GwtIds :\n        (g1 # g2",
+        "crawl_conns[g1] # 0",
+        "crawl_conns[g2] # 0)\n        => crawl_conns[g1] # crawl_conns[g2]"
+      ],
+      "message": "NoSharedCrawlStore violation: \\A g1, g2 \\in GwtIds :\n        (g1 # g2 /\\ crawl_conns[g1] # 0 /\\ crawl_conns[g2] # 0)\n        => crawl_conns[g1] # c...",
+      "applies_to": [
+        "crawl_conns"
+      ],
+      "description": "Verifier for invariant NoSharedCrawlStore from GWT0007Isolation spec"
+    },
+    "ResourceIdsMonotonicallyGrow": {
+      "function_id": "fn-GWT0007Isolation-verify-ResourceIdsMonotonicallyGrow",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-ResourceIdsMonotonicallyGrow",
+      "conditions": [
+        "next_id >= 1"
+      ],
+      "message": "ResourceIdsMonotonicallyGrow violation: next_id >= 1",
+      "applies_to": [
+        "next_id"
+      ],
+      "description": "Verifier for invariant ResourceIdsMonotonicallyGrow from GWT0007Isolation spec"
+    },
+    "AllocatedClientIds": {
+      "function_id": "fn-GWT0007Isolation-verify-AllocatedClientIds",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-AllocatedClientIds",
+      "conditions": [
+        "{sdk_clients[g] : g \\in GwtIds} \\ {0}"
+      ],
+      "message": "AllocatedClientIds violation: {sdk_clients[g] : g \\in GwtIds} \\ {0}",
+      "applies_to": [
+        "sdk_clients"
+      ],
+      "description": "Verifier for invariant AllocatedClientIds from GWT0007Isolation spec"
+    },
+    "AllocatedDagIds": {
+      "function_id": "fn-GWT0007Isolation-verify-AllocatedDagIds",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-AllocatedDagIds",
+      "conditions": [
+        "{dag_copies[g]  : g \\in GwtIds} \\ {0}"
+      ],
+      "message": "AllocatedDagIds violation: {dag_copies[g]  : g \\in GwtIds} \\ {0}",
+      "applies_to": [
+        "dag_copies"
+      ],
+      "description": "Verifier for invariant AllocatedDagIds from GWT0007Isolation spec"
+    },
+    "AllocatedConnIds": {
+      "function_id": "fn-GWT0007Isolation-verify-AllocatedConnIds",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-AllocatedConnIds",
+      "conditions": [
+        "{crawl_conns[g] : g \\in GwtIds} \\ {0}"
+      ],
+      "message": "AllocatedConnIds violation: {crawl_conns[g] : g \\in GwtIds} \\ {0}",
+      "applies_to": [
+        "crawl_conns"
+      ],
+      "description": "Verifier for invariant AllocatedConnIds from GWT0007Isolation spec"
+    },
+    "ClientCountConsistent": {
+      "function_id": "fn-GWT0007Isolation-verify-ClientCountConsistent",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-ClientCountConsistent",
+      "conditions": [
+        "Cardinality(AllocatedClientIds) =\n        Cardinality({g \\in GwtIds : sdk_clients[g] # 0}"
+      ],
+      "message": "ClientCountConsistent violation: Cardinality(AllocatedClientIds) =\n        Cardinality({g \\in GwtIds : sdk_clients[g] # 0})",
+      "applies_to": [
+        "sdk_clients"
+      ],
+      "description": "Verifier for invariant ClientCountConsistent from GWT0007Isolation spec"
+    },
+    "DagCountConsistent": {
+      "function_id": "fn-GWT0007Isolation-verify-DagCountConsistent",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-DagCountConsistent",
+      "conditions": [
+        "Cardinality(AllocatedDagIds) =\n        Cardinality({g \\in GwtIds : dag_copies[g] # 0}"
+      ],
+      "message": "DagCountConsistent violation: Cardinality(AllocatedDagIds) =\n        Cardinality({g \\in GwtIds : dag_copies[g] # 0})",
+      "applies_to": [
+        "dag_copies"
+      ],
+      "description": "Verifier for invariant DagCountConsistent from GWT0007Isolation spec"
+    },
+    "ConnCountConsistent": {
+      "function_id": "fn-GWT0007Isolation-verify-ConnCountConsistent",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-ConnCountConsistent",
+      "conditions": [
+        "Cardinality(AllocatedConnIds) =\n        Cardinality({g \\in GwtIds : crawl_conns[g] # 0}"
+      ],
+      "message": "ConnCountConsistent violation: Cardinality(AllocatedConnIds) =\n        Cardinality({g \\in GwtIds : crawl_conns[g] # 0})",
+      "applies_to": [
+        "crawl_conns"
+      ],
+      "description": "Verifier for invariant ConnCountConsistent from GWT0007Isolation spec"
+    },
+    "IsolationInvariant": {
+      "function_id": "fn-GWT0007Isolation-verify-IsolationInvariant",
+      "acceptance_criteria_id": "ac-GWT0007Isolation-IsolationInvariant",
+      "conditions": [
+        "NoSharedSDKClient",
+        "NoSharedDAG",
+        "NoSharedCrawlStore"
+      ],
+      "message": "IsolationInvariant violation: NoSharedSDKClient /\\ NoSharedDAG /\\ NoSharedCrawlStore",
+      "applies_to": [
+        "GWT0007Isolation"
+      ],
+      "description": "Verifier for invariant IsolationInvariant from GWT0007Isolation spec"
+    }
+  },
+  "assertions": {
+    "assert_WorkerStates": {
+      "condition": "{\"INIT\", \"CLIENT_READY\", \"DAG_LOADED\", \"CRAWL_READY\", \"FINISHED\"}",
+      "message": "Assertion failed: WorkerStates \u2014 {\"INIT\", \"CLIENT_READY\", \"DAG_LOADED\", \"CRAWL_READY\", \"FINISHED\"}",
+      "description": "Test assertion for WorkerStates from GWT0007Isolation spec"
+    },
+    "assert_AllStatesValid": {
+      "condition": "\\A g in GwtIds : worker_state[g] in WorkerStates",
+      "message": "Assertion failed: AllStatesValid \u2014 \\A g \\in GwtIds : worker_state[g] \\in WorkerStates",
+      "description": "Test assertion for AllStatesValid from GWT0007Isolation spec"
+    },
+    "assert_NoSharedSDKClient": {
+      "condition": "\\A g1, g2 in GwtIds :\n        (g1 # g2 and sdk_clients[g1] # 0 and sdk_clients[g2] # 0)\n        implies sdk_clients[g1] # sdk_clients[g2]",
+      "message": "Assertion failed: NoSharedSDKClient \u2014 \\A g1, g2 \\in GwtIds :\n        (g1 # g2 /\\ sdk_clients[g1] # 0 /\\ sdk_clients[g2] # 0)\n        => sdk_clients[g1] # s...",
+      "description": "Test assertion for NoSharedSDKClient from GWT0007Isolation spec"
+    },
+    "assert_NoSharedDAG": {
+      "condition": "\\A g1, g2 in GwtIds :\n        (g1 # g2 and dag_copies[g1] # 0 and dag_copies[g2] # 0)\n        implies dag_copies[g1] # dag_copies[g2]",
+      "message": "Assertion failed: NoSharedDAG \u2014 \\A g1, g2 \\in GwtIds :\n        (g1 # g2 /\\ dag_copies[g1] # 0 /\\ dag_copies[g2] # 0)\n        => dag_copies[g1] # dag_...",
+      "description": "Test assertion for NoSharedDAG from GWT0007Isolation spec"
+    },
+    "assert_NoSharedCrawlStore": {
+      "condition": "\\A g1, g2 in GwtIds :\n        (g1 # g2 and crawl_conns[g1] # 0 and crawl_conns[g2] # 0)\n        implies crawl_conns[g1] # crawl_conns[g2]",
+      "message": "Assertion failed: NoSharedCrawlStore \u2014 \\A g1, g2 \\in GwtIds :\n        (g1 # g2 /\\ crawl_conns[g1] # 0 /\\ crawl_conns[g2] # 0)\n        => crawl_conns[g1] # c...",
+      "description": "Test assertion for NoSharedCrawlStore from GWT0007Isolation spec"
+    },
+    "assert_ResourceIdsMonotonicallyGrow": {
+      "condition": "next_id >= 1",
+      "message": "Assertion failed: ResourceIdsMonotonicallyGrow \u2014 next_id >= 1",
+      "description": "Test assertion for ResourceIdsMonotonicallyGrow from GWT0007Isolation spec"
+    },
+    "assert_AllocatedClientIds": {
+      "condition": "{sdk_clients[g] : g in GwtIds} \\ {0}",
+      "message": "Assertion failed: AllocatedClientIds \u2014 {sdk_clients[g] : g \\in GwtIds} \\ {0}",
+      "description": "Test assertion for AllocatedClientIds from GWT0007Isolation spec"
+    },
+    "assert_AllocatedDagIds": {
+      "condition": "{dag_copies[g]  : g in GwtIds} \\ {0}",
+      "message": "Assertion failed: AllocatedDagIds \u2014 {dag_copies[g]  : g \\in GwtIds} \\ {0}",
+      "description": "Test assertion for AllocatedDagIds from GWT0007Isolation spec"
+    },
+    "assert_AllocatedConnIds": {
+      "condition": "{crawl_conns[g] : g in GwtIds} \\ {0}",
+      "message": "Assertion failed: AllocatedConnIds \u2014 {crawl_conns[g] : g \\in GwtIds} \\ {0}",
+      "description": "Test assertion for AllocatedConnIds from GWT0007Isolation spec"
+    },
+    "assert_ClientCountConsistent": {
+      "condition": "Cardinality(AllocatedClientIds) =\n        Cardinality({g in GwtIds : sdk_clients[g] # 0})",
+      "message": "Assertion failed: ClientCountConsistent \u2014 Cardinality(AllocatedClientIds) =\n        Cardinality({g \\in GwtIds : sdk_clients[g] # 0})",
+      "description": "Test assertion for ClientCountConsistent from GWT0007Isolation spec"
+    },
+    "assert_DagCountConsistent": {
+      "condition": "Cardinality(AllocatedDagIds) =\n        Cardinality({g in GwtIds : dag_copies[g] # 0})",
+      "message": "Assertion failed: DagCountConsistent \u2014 Cardinality(AllocatedDagIds) =\n        Cardinality({g \\in GwtIds : dag_copies[g] # 0})",
+      "description": "Test assertion for DagCountConsistent from GWT0007Isolation spec"
+    },
+    "assert_ConnCountConsistent": {
+      "condition": "Cardinality(AllocatedConnIds) =\n        Cardinality({g in GwtIds : crawl_conns[g] # 0})",
+      "message": "Assertion failed: ConnCountConsistent \u2014 Cardinality(AllocatedConnIds) =\n        Cardinality({g \\in GwtIds : crawl_conns[g] # 0})",
+      "description": "Test assertion for ConnCountConsistent from GWT0007Isolation spec"
+    },
+    "assert_IsolationInvariant": {
+      "condition": "NoSharedSDKClient and NoSharedDAG and NoSharedCrawlStore",
+      "message": "Assertion failed: IsolationInvariant \u2014 NoSharedSDKClient /\\ NoSharedDAG /\\ NoSharedCrawlStore",
+      "description": "Test assertion for IsolationInvariant from GWT0007Isolation spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 4)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 4)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 4)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 4)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 4)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 4)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 1)",
+          "dag_copies": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 4)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 4)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 5)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 3)",
+          "dag_copies": "(GwtIds_1 :> 2 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 6 @@ GwtIds_2 :> 5)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 4 @@ GwtIds_2 :> 3)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"MakeClient\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"INIT\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 0)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"MakeClient\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"INIT\")",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"LoadDag\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CLIENT_READY\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 0)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"LoadDag\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"CLIENT_READY\")",
+          "next_id": "4"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"InitCrawlStore\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 0 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"DAG_LOADED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "5"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"RunLoop\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"CRAWL_READY\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"InitCrawlStore\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 0)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"DAG_LOADED\")",
+          "next_id": "6"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"RunLoop\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"CRAWL_READY\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Terminate\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Terminate\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "sdk_clients": "(GwtIds_1 :> 1 @@ GwtIds_2 :> 2)",
+          "dag_copies": "(GwtIds_1 :> 3 @@ GwtIds_2 :> 4)",
+          "pc": "(GwtIds_1 :> \"Done\" @@ GwtIds_2 :> \"Done\")",
+          "crawl_conns": "(GwtIds_1 :> 5 @@ GwtIds_2 :> 6)",
+          "worker_state": "(GwtIds_1 :> \"FINISHED\" @@ GwtIds_2 :> \"FINISHED\")",
+          "next_id": "7"
+        }
+      }
+    ]
+  ]
+}

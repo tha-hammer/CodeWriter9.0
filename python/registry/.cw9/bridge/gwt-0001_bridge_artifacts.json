@@ -1,0 +1,1676 @@
+{
+  "gwt_id": "gwt-0001",
+  "module_name": "WorkerArtifactDownload",
+  "data_structures": {
+    "WorkerArtifactDownloadState": {
+      "function_id": "fn-WorkerArtifactDownload-state",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"BeginExecution\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "worker_state": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "dequeued",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "downloaded": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "pipeline_fn_invoked": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "job_result": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from WorkerArtifactDownload TLA+ spec"
+    }
+  },
+  "operations": {
+    "BeginExecution": {
+      "function_id": "fn-WorkerArtifactDownload-BeginExecution",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-BeginExecution",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action BeginExecution from WorkerArtifactDownload spec"
+    },
+    "DownloadArtifacts": {
+      "function_id": "fn-WorkerArtifactDownload-DownloadArtifacts",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-DownloadArtifacts",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action DownloadArtifacts from WorkerArtifactDownload spec"
+    },
+    "DownloadNext": {
+      "function_id": "fn-WorkerArtifactDownload-DownloadNext",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-DownloadNext",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action DownloadNext from WorkerArtifactDownload spec"
+    },
+    "CheckWorkspace": {
+      "function_id": "fn-WorkerArtifactDownload-CheckWorkspace",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-CheckWorkspace",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/CheckWorkspaceFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action CheckWorkspace from WorkerArtifactDownload spec"
+    },
+    "SelectPipelineFunction": {
+      "function_id": "fn-WorkerArtifactDownload-SelectPipelineFunction",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-SelectPipelineFunction",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SelectPipelineFunction from WorkerArtifactDownload spec"
+    },
+    "AwaitPipelineResult": {
+      "function_id": "fn-WorkerArtifactDownload-AwaitPipelineResult",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-AwaitPipelineResult",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/AwaitPipelineResultFailure",
+        "shared/error_definitions/AwaitPipelineResultError"
+      ],
+      "error_handling": "raise",
+      "description": "Action AwaitPipelineResult from WorkerArtifactDownload spec"
+    },
+    "Terminate": {
+      "function_id": "fn-WorkerArtifactDownload-Terminate",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from WorkerArtifactDownload spec"
+    }
+  },
+  "verifiers": {
+    "AllDownloaded": {
+      "function_id": "fn-WorkerArtifactDownload-verify-AllDownloaded",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-AllDownloaded",
+      "conditions": [
+        "downloaded = ArtifactTypes"
+      ],
+      "message": "AllDownloaded violation: downloaded = ArtifactTypes",
+      "applies_to": [
+        "downloaded"
+      ],
+      "description": "Verifier for invariant AllDownloaded from WorkerArtifactDownload spec"
+    },
+    "PipelineInvoked": {
+      "function_id": "fn-WorkerArtifactDownload-verify-PipelineInvoked",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-PipelineInvoked",
+      "conditions": [
+        "pipeline_fn_invoked /= \"none\""
+      ],
+      "message": "PipelineInvoked violation: pipeline_fn_invoked /= \"none\"",
+      "applies_to": [
+        "pipeline_fn_invoked"
+      ],
+      "description": "Verifier for invariant PipelineInvoked from WorkerArtifactDownload spec"
+    },
+    "SafetyNoEarlyPipelineInvocation": {
+      "function_id": "fn-WorkerArtifactDownload-verify-SafetyNoEarlyPipelineInvocation",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-SafetyNoEarlyPipelineInvocation",
+      "conditions": [
+        "PipelineInvoked => AllDownloaded"
+      ],
+      "message": "SafetyNoEarlyPipelineInvocation violation: PipelineInvoked => AllDownloaded",
+      "applies_to": [
+        "WorkerArtifactDownload"
+      ],
+      "description": "Verifier for invariant SafetyNoEarlyPipelineInvocation from WorkerArtifactDownload spec"
+    },
+    "PipelineOnlyAfterWorkspaceReady": {
+      "function_id": "fn-WorkerArtifactDownload-verify-PipelineOnlyAfterWorkspaceReady",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-PipelineOnlyAfterWorkspaceReady",
+      "conditions": [
+        "worker_state = \"pipeline_running\" => AllDownloaded"
+      ],
+      "message": "PipelineOnlyAfterWorkspaceReady violation: worker_state = \"pipeline_running\" => AllDownloaded",
+      "applies_to": [
+        "worker_state"
+      ],
+      "description": "Verifier for invariant PipelineOnlyAfterWorkspaceReady from WorkerArtifactDownload spec"
+    },
+    "WorkspacePrefixCorrect": {
+      "function_id": "fn-WorkerArtifactDownload-verify-WorkspacePrefixCorrect",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-WorkspacePrefixCorrect",
+      "conditions": [
+        "worker_state = \"workspace_ready\" => AllDownloaded"
+      ],
+      "message": "WorkspacePrefixCorrect violation: worker_state = \"workspace_ready\" => AllDownloaded",
+      "applies_to": [
+        "worker_state"
+      ],
+      "description": "Verifier for invariant WorkspacePrefixCorrect from WorkerArtifactDownload spec"
+    },
+    "ValidState": {
+      "function_id": "fn-WorkerArtifactDownload-verify-ValidState",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-ValidState",
+      "conditions": [
+        "worker_state \\in {\n        \"dequeued\", \"downloading\", \"workspace_ready\",\n        \"pipeline_running\", \"completed\", \"failed\"\n    }"
+      ],
+      "message": "ValidState violation: worker_state \\in {\n        \"dequeued\", \"downloading\", \"workspace_ready\",\n        \"pipeline_running\", \"completed\", \"fa...",
+      "applies_to": [
+        "worker_state"
+      ],
+      "description": "Verifier for invariant ValidState from WorkerArtifactDownload spec"
+    },
+    "DownloadedSubset": {
+      "function_id": "fn-WorkerArtifactDownload-verify-DownloadedSubset",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-DownloadedSubset",
+      "conditions": [
+        "downloaded \\subseteq ArtifactTypes"
+      ],
+      "message": "DownloadedSubset violation: downloaded \\subseteq ArtifactTypes",
+      "applies_to": [
+        "downloaded"
+      ],
+      "description": "Verifier for invariant DownloadedSubset from WorkerArtifactDownload spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-WorkerArtifactDownload-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from WorkerArtifactDownload spec"
+    },
+    "ValidPipelineFn": {
+      "function_id": "fn-WorkerArtifactDownload-verify-ValidPipelineFn",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-ValidPipelineFn",
+      "conditions": [
+        "pipeline_fn_invoked = \"none\" \\/ pipeline_fn_invoked \\in PipelineFunctions"
+      ],
+      "message": "ValidPipelineFn violation: pipeline_fn_invoked = \"none\" \\/ pipeline_fn_invoked \\in PipelineFunctions",
+      "applies_to": [
+        "pipeline_fn_invoked"
+      ],
+      "description": "Verifier for invariant ValidPipelineFn from WorkerArtifactDownload spec"
+    },
+    "TypeInvariant": {
+      "function_id": "fn-WorkerArtifactDownload-verify-TypeInvariant",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-TypeInvariant",
+      "conditions": [
+        "ValidState",
+        "DownloadedSubset",
+        "BoundedExecution",
+        "ValidPipelineFn"
+      ],
+      "message": "TypeInvariant violation: /\\ ValidState\n    /\\ DownloadedSubset\n    /\\ BoundedExecution\n    /\\ ValidPipelineFn",
+      "applies_to": [
+        "WorkerArtifactDownload"
+      ],
+      "description": "Verifier for invariant TypeInvariant from WorkerArtifactDownload spec"
+    },
+    "GwtThenCondition": {
+      "function_id": "fn-WorkerArtifactDownload-verify-GwtThenCondition",
+      "acceptance_criteria_id": "ac-WorkerArtifactDownload-GwtThenCondition",
+      "conditions": [
+        "SafetyNoEarlyPipelineInvocation",
+        "PipelineOnlyAfterWorkspaceReady"
+      ],
+      "message": "GwtThenCondition violation: /\\ SafetyNoEarlyPipelineInvocation\n    /\\ PipelineOnlyAfterWorkspaceReady",
+      "applies_to": [
+        "WorkerArtifactDownload"
+      ],
+      "description": "Verifier for invariant GwtThenCondition from WorkerArtifactDownload spec"
+    }
+  },
+  "assertions": {
+    "assert_AllDownloaded": {
+      "condition": "downloaded = ArtifactTypes",
+      "message": "Assertion failed: AllDownloaded \u2014 downloaded = ArtifactTypes",
+      "description": "Test assertion for AllDownloaded from WorkerArtifactDownload spec"
+    },
+    "assert_PipelineInvoked": {
+      "condition": "pipeline_fn_invoked /= \"none\"",
+      "message": "Assertion failed: PipelineInvoked \u2014 pipeline_fn_invoked /= \"none\"",
+      "description": "Test assertion for PipelineInvoked from WorkerArtifactDownload spec"
+    },
+    "assert_SafetyNoEarlyPipelineInvocation": {
+      "condition": "PipelineInvoked implies AllDownloaded",
+      "message": "Assertion failed: SafetyNoEarlyPipelineInvocation \u2014 PipelineInvoked => AllDownloaded",
+      "description": "Test assertion for SafetyNoEarlyPipelineInvocation from WorkerArtifactDownload spec"
+    },
+    "assert_PipelineOnlyAfterWorkspaceReady": {
+      "condition": "worker_state = \"pipeline_running\" implies AllDownloaded",
+      "message": "Assertion failed: PipelineOnlyAfterWorkspaceReady \u2014 worker_state = \"pipeline_running\" => AllDownloaded",
+      "description": "Test assertion for PipelineOnlyAfterWorkspaceReady from WorkerArtifactDownload spec"
+    },
+    "assert_WorkspacePrefixCorrect": {
+      "condition": "worker_state = \"workspace_ready\" implies AllDownloaded",
+      "message": "Assertion failed: WorkspacePrefixCorrect \u2014 worker_state = \"workspace_ready\" => AllDownloaded",
+      "description": "Test assertion for WorkspacePrefixCorrect from WorkerArtifactDownload spec"
+    },
+    "assert_ValidState": {
+      "condition": "worker_state in {\n        \"dequeued\", \"downloading\", \"workspace_ready\",\n        \"pipeline_running\", \"completed\", \"failed\"\n    }",
+      "message": "Assertion failed: ValidState \u2014 worker_state \\in {\n        \"dequeued\", \"downloading\", \"workspace_ready\",\n        \"pipeline_running\", \"completed\", \"fa...",
+      "description": "Test assertion for ValidState from WorkerArtifactDownload spec"
+    },
+    "assert_DownloadedSubset": {
+      "condition": "downloaded \\subseteq ArtifactTypes",
+      "message": "Assertion failed: DownloadedSubset \u2014 downloaded \\subseteq ArtifactTypes",
+      "description": "Test assertion for DownloadedSubset from WorkerArtifactDownload spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from WorkerArtifactDownload spec"
+    },
+    "assert_ValidPipelineFn": {
+      "condition": "pipeline_fn_invoked = \"none\" or pipeline_fn_invoked in PipelineFunctions",
+      "message": "Assertion failed: ValidPipelineFn \u2014 pipeline_fn_invoked = \"none\" \\/ pipeline_fn_invoked \\in PipelineFunctions",
+      "description": "Test assertion for ValidPipelineFn from WorkerArtifactDownload spec"
+    },
+    "assert_TypeInvariant": {
+      "condition": "and ValidState\n    and DownloadedSubset\n    and BoundedExecution\n    and ValidPipelineFn",
+      "message": "Assertion failed: TypeInvariant \u2014 /\\ ValidState\n    /\\ DownloadedSubset\n    /\\ BoundedExecution\n    /\\ ValidPipelineFn",
+      "description": "Test assertion for TypeInvariant from WorkerArtifactDownload spec"
+    },
+    "assert_GwtThenCondition": {
+      "condition": "and SafetyNoEarlyPipelineInvocation\n    and PipelineOnlyAfterWorkspaceReady",
+      "message": "Assertion failed: GwtThenCondition \u2014 /\\ SafetyNoEarlyPipelineInvocation\n    /\\ PipelineOnlyAfterWorkspaceReady",
+      "description": "Test assertion for GwtThenCondition from WorkerArtifactDownload spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"success\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"success\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"failed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"pipeline_error\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"failed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"pipeline_error\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"failed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"pipeline_error\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"failed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"pipeline_error\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"failed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"pipeline_error\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"failed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"pipeline_error\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"success\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"success\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"failed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"pipeline_error\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"failed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"pipeline_error\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"success\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"success\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"success\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"success\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"success\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_1",
+          "job_result": "\"success\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "worker_state": "\"dequeued\"",
+          "step_count": "0",
+          "pc": "[worker |-> \"BeginExecution\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "BeginExecution",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "1",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "2",
+          "pc": "[worker |-> \"DownloadNext\"]",
+          "downloaded": "{ArtifactTypes_1}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DownloadNext",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"DownloadArtifacts\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DownloadArtifacts",
+        "vars": {
+          "worker_state": "\"downloading\"",
+          "step_count": "3",
+          "pc": "[worker |-> \"CheckWorkspace\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWorkspace",
+        "vars": {
+          "worker_state": "\"workspace_ready\"",
+          "step_count": "4",
+          "pc": "[worker |-> \"SelectPipelineFunction\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "\"none\"",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SelectPipelineFunction",
+        "vars": {
+          "worker_state": "\"pipeline_running\"",
+          "step_count": "5",
+          "pc": "[worker |-> \"AwaitPipelineResult\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AwaitPipelineResult",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Terminate\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"success\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Terminate",
+        "vars": {
+          "worker_state": "\"completed\"",
+          "step_count": "6",
+          "pc": "[worker |-> \"Done\"]",
+          "downloaded": "{ArtifactTypes_1, ArtifactTypes_2}",
+          "pipeline_fn_invoked": "PipelineFunctions_2",
+          "job_result": "\"success\""
+        }
+      }
+    ]
+  ]
+}

@@ -1,0 +1,1765 @@
+{
+  "gwt_id": "gwt-0003",
+  "module_name": "WorkerContextReconstruction",
+  "data_structures": {
+    "WorkerContextReconstructionState": {
+      "function_id": "fn-WorkerContextReconstruction-state",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Reconstruct\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "object_storage_ok": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "postgres_ok": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "current_state": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Fresh",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "artifacts_downloaded": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "postgres_data_read": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "project_context_ready": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "registry_dag_ready": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "crawl_store_ready": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "session_affinity_used": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "warm_cache_used": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "prev_worker_conn_used": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from WorkerContextReconstruction TLA+ spec"
+    }
+  },
+  "operations": {
+    "Reconstruct": {
+      "function_id": "fn-WorkerContextReconstruction-Reconstruct",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-Reconstruct",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/ReconstructFailure",
+        "shared/error_definitions/ReconstructFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action Reconstruct from WorkerContextReconstruction spec"
+    },
+    "Finish": {
+      "function_id": "fn-WorkerContextReconstruction-Finish",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from WorkerContextReconstruction spec"
+    }
+  },
+  "verifiers": {
+    "AllStates": {
+      "function_id": "fn-WorkerContextReconstruction-verify-AllStates",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-AllStates",
+      "conditions": [
+        "{\n    \"Fresh\",\n    \"FetchingArtifacts\",\n    \"ReadingPostgres\",\n    \"BuildingProjectContext\",\n    \"BuildingRegistryDag\",\n    \"BuildingCrawlStore\",\n    \"Reconstructed\",\n    \"Failed\"\n}"
+      ],
+      "message": "AllStates violation: {\n    \"Fresh\",\n    \"FetchingArtifacts\",\n    \"ReadingPostgres\",\n    \"BuildingProjectContext\",\n    \"BuildingRegistryDag...",
+      "applies_to": [
+        "WorkerContextReconstruction"
+      ],
+      "description": "Verifier for invariant AllStates from WorkerContextReconstruction spec"
+    },
+    "TerminalStates": {
+      "function_id": "fn-WorkerContextReconstruction-verify-TerminalStates",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-TerminalStates",
+      "conditions": [
+        "{\"Reconstructed\", \"Failed\"}"
+      ],
+      "message": "TerminalStates violation: {\"Reconstructed\", \"Failed\"}",
+      "applies_to": [
+        "WorkerContextReconstruction"
+      ],
+      "description": "Verifier for invariant TerminalStates from WorkerContextReconstruction spec"
+    },
+    "ValidState": {
+      "function_id": "fn-WorkerContextReconstruction-verify-ValidState",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-ValidState",
+      "conditions": [
+        "current_state \\in AllStates"
+      ],
+      "message": "ValidState violation: current_state \\in AllStates",
+      "applies_to": [
+        "current_state"
+      ],
+      "description": "Verifier for invariant ValidState from WorkerContextReconstruction spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-WorkerContextReconstruction-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from WorkerContextReconstruction spec"
+    },
+    "FullReconstructionOnSuccess": {
+      "function_id": "fn-WorkerContextReconstruction-verify-FullReconstructionOnSuccess",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-FullReconstructionOnSuccess",
+      "conditions": [
+        "current_state = \"Reconstructed\" =>",
+        "project_context_ready",
+        "registry_dag_ready",
+        "crawl_store_ready"
+      ],
+      "message": "FullReconstructionOnSuccess violation: current_state = \"Reconstructed\" =>\n        /\\ project_context_ready\n        /\\ registry_dag_ready\n        /\\ crawl_st...",
+      "applies_to": [
+        "crawl_store_ready",
+        "current_state",
+        "project_context_ready",
+        "registry_dag_ready"
+      ],
+      "description": "Verifier for invariant FullReconstructionOnSuccess from WorkerContextReconstruction spec"
+    },
+    "NoSessionAffinityEver": {
+      "function_id": "fn-WorkerContextReconstruction-verify-NoSessionAffinityEver",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-NoSessionAffinityEver",
+      "conditions": [
+        "~session_affinity_used"
+      ],
+      "message": "NoSessionAffinityEver violation: ~session_affinity_used",
+      "applies_to": [
+        "session_affinity_used"
+      ],
+      "description": "Verifier for invariant NoSessionAffinityEver from WorkerContextReconstruction spec"
+    },
+    "NoWarmCacheEver": {
+      "function_id": "fn-WorkerContextReconstruction-verify-NoWarmCacheEver",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-NoWarmCacheEver",
+      "conditions": [
+        "~warm_cache_used"
+      ],
+      "message": "NoWarmCacheEver violation: ~warm_cache_used",
+      "applies_to": [
+        "warm_cache_used"
+      ],
+      "description": "Verifier for invariant NoWarmCacheEver from WorkerContextReconstruction spec"
+    },
+    "NoPrevWorkerConnEver": {
+      "function_id": "fn-WorkerContextReconstruction-verify-NoPrevWorkerConnEver",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-NoPrevWorkerConnEver",
+      "conditions": [
+        "~prev_worker_conn_used"
+      ],
+      "message": "NoPrevWorkerConnEver violation: ~prev_worker_conn_used",
+      "applies_to": [
+        "prev_worker_conn_used"
+      ],
+      "description": "Verifier for invariant NoPrevWorkerConnEver from WorkerContextReconstruction spec"
+    },
+    "StatelessReconstruction": {
+      "function_id": "fn-WorkerContextReconstruction-verify-StatelessReconstruction",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-StatelessReconstruction",
+      "conditions": [
+        "project_context_ready \\/ registry_dag_ready \\/ crawl_store_ready) =>",
+        "~session_affinity_used",
+        "~warm_cache_used",
+        "~prev_worker_conn_used"
+      ],
+      "message": "StatelessReconstruction violation: (project_context_ready \\/ registry_dag_ready \\/ crawl_store_ready) =>\n        /\\ ~session_affinity_used\n        /\\ ~w...",
+      "applies_to": [
+        "crawl_store_ready",
+        "prev_worker_conn_used",
+        "project_context_ready",
+        "registry_dag_ready",
+        "session_affinity_used",
+        "warm_cache_used"
+      ],
+      "description": "Verifier for invariant StatelessReconstruction from WorkerContextReconstruction spec"
+    },
+    "ArtifactsPrecedeContext": {
+      "function_id": "fn-WorkerContextReconstruction-verify-ArtifactsPrecedeContext",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-ArtifactsPrecedeContext",
+      "conditions": [
+        "project_context_ready => artifacts_downloaded"
+      ],
+      "message": "ArtifactsPrecedeContext violation: project_context_ready => artifacts_downloaded",
+      "applies_to": [
+        "artifacts_downloaded",
+        "project_context_ready"
+      ],
+      "description": "Verifier for invariant ArtifactsPrecedeContext from WorkerContextReconstruction spec"
+    },
+    "PostgresPrecedesCrawlStore": {
+      "function_id": "fn-WorkerContextReconstruction-verify-PostgresPrecedesCrawlStore",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-PostgresPrecedesCrawlStore",
+      "conditions": [
+        "crawl_store_ready => postgres_data_read"
+      ],
+      "message": "PostgresPrecedesCrawlStore violation: crawl_store_ready => postgres_data_read",
+      "applies_to": [
+        "crawl_store_ready",
+        "postgres_data_read"
+      ],
+      "description": "Verifier for invariant PostgresPrecedesCrawlStore from WorkerContextReconstruction spec"
+    },
+    "BothSourcesRequiredForSuccess": {
+      "function_id": "fn-WorkerContextReconstruction-verify-BothSourcesRequiredForSuccess",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-BothSourcesRequiredForSuccess",
+      "conditions": [
+        "current_state = \"Reconstructed\" =>",
+        "artifacts_downloaded",
+        "postgres_data_read"
+      ],
+      "message": "BothSourcesRequiredForSuccess violation: current_state = \"Reconstructed\" =>\n        /\\ artifacts_downloaded\n        /\\ postgres_data_read",
+      "applies_to": [
+        "artifacts_downloaded",
+        "current_state",
+        "postgres_data_read"
+      ],
+      "description": "Verifier for invariant BothSourcesRequiredForSuccess from WorkerContextReconstruction spec"
+    },
+    "GivenImpliesThen": {
+      "function_id": "fn-WorkerContextReconstruction-verify-GivenImpliesThen",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-GivenImpliesThen",
+      "conditions": [
+        "object_storage_ok",
+        "postgres_ok) =>\n        (current_state = \"Reconstructed\" =>",
+        "project_context_ready",
+        "registry_dag_ready",
+        "crawl_store_ready",
+        "~session_affinity_used",
+        "~warm_cache_used",
+        "~prev_worker_conn_used"
+      ],
+      "message": "GivenImpliesThen violation: (object_storage_ok /\\ postgres_ok) =>\n        (current_state = \"Reconstructed\" =>\n            /\\ project_context_read...",
+      "applies_to": [
+        "crawl_store_ready",
+        "current_state",
+        "object_storage_ok",
+        "postgres_ok",
+        "prev_worker_conn_used",
+        "project_context_ready",
+        "registry_dag_ready",
+        "session_affinity_used",
+        "warm_cache_used"
+      ],
+      "description": "Verifier for invariant GivenImpliesThen from WorkerContextReconstruction spec"
+    },
+    "ReconstructionOrderRespected": {
+      "function_id": "fn-WorkerContextReconstruction-verify-ReconstructionOrderRespected",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-ReconstructionOrderRespected",
+      "conditions": [
+        "registry_dag_ready => project_context_ready"
+      ],
+      "message": "ReconstructionOrderRespected violation: registry_dag_ready => project_context_ready",
+      "applies_to": [
+        "project_context_ready",
+        "registry_dag_ready"
+      ],
+      "description": "Verifier for invariant ReconstructionOrderRespected from WorkerContextReconstruction spec"
+    },
+    "CrawlStoreLastInChain": {
+      "function_id": "fn-WorkerContextReconstruction-verify-CrawlStoreLastInChain",
+      "acceptance_criteria_id": "ac-WorkerContextReconstruction-CrawlStoreLastInChain",
+      "conditions": [
+        "crawl_store_ready => registry_dag_ready"
+      ],
+      "message": "CrawlStoreLastInChain violation: crawl_store_ready => registry_dag_ready",
+      "applies_to": [
+        "crawl_store_ready",
+        "registry_dag_ready"
+      ],
+      "description": "Verifier for invariant CrawlStoreLastInChain from WorkerContextReconstruction spec"
+    }
+  },
+  "assertions": {
+    "assert_AllStates": {
+      "condition": "{\n    \"Fresh\",\n    \"FetchingArtifacts\",\n    \"ReadingPostgres\",\n    \"BuildingProjectContext\",\n    \"BuildingRegistryDag\",\n    \"BuildingCrawlStore\",\n    \"Reconstructed\",\n    \"Failed\"\n}",
+      "message": "Assertion failed: AllStates \u2014 {\n    \"Fresh\",\n    \"FetchingArtifacts\",\n    \"ReadingPostgres\",\n    \"BuildingProjectContext\",\n    \"BuildingRegistryDag...",
+      "description": "Test assertion for AllStates from WorkerContextReconstruction spec"
+    },
+    "assert_TerminalStates": {
+      "condition": "{\"Reconstructed\", \"Failed\"}",
+      "message": "Assertion failed: TerminalStates \u2014 {\"Reconstructed\", \"Failed\"}",
+      "description": "Test assertion for TerminalStates from WorkerContextReconstruction spec"
+    },
+    "assert_ValidState": {
+      "condition": "current_state in AllStates",
+      "message": "Assertion failed: ValidState \u2014 current_state \\in AllStates",
+      "description": "Test assertion for ValidState from WorkerContextReconstruction spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from WorkerContextReconstruction spec"
+    },
+    "assert_FullReconstructionOnSuccess": {
+      "condition": "current_state = \"Reconstructed\" implies\n        and project_context_ready\n        and registry_dag_ready\n        and crawl_store_ready",
+      "message": "Assertion failed: FullReconstructionOnSuccess \u2014 current_state = \"Reconstructed\" =>\n        /\\ project_context_ready\n        /\\ registry_dag_ready\n        /\\ crawl_st...",
+      "description": "Test assertion for FullReconstructionOnSuccess from WorkerContextReconstruction spec"
+    },
+    "assert_NoSessionAffinityEver": {
+      "condition": "~session_affinity_used",
+      "message": "Assertion failed: NoSessionAffinityEver \u2014 ~session_affinity_used",
+      "description": "Test assertion for NoSessionAffinityEver from WorkerContextReconstruction spec"
+    },
+    "assert_NoWarmCacheEver": {
+      "condition": "~warm_cache_used",
+      "message": "Assertion failed: NoWarmCacheEver \u2014 ~warm_cache_used",
+      "description": "Test assertion for NoWarmCacheEver from WorkerContextReconstruction spec"
+    },
+    "assert_NoPrevWorkerConnEver": {
+      "condition": "~prev_worker_conn_used",
+      "message": "Assertion failed: NoPrevWorkerConnEver \u2014 ~prev_worker_conn_used",
+      "description": "Test assertion for NoPrevWorkerConnEver from WorkerContextReconstruction spec"
+    },
+    "assert_StatelessReconstruction": {
+      "condition": "(project_context_ready or registry_dag_ready or crawl_store_ready) implies\n        and ~session_affinity_used\n        and ~warm_cache_used\n        and ~prev_worker_conn_used",
+      "message": "Assertion failed: StatelessReconstruction \u2014 (project_context_ready \\/ registry_dag_ready \\/ crawl_store_ready) =>\n        /\\ ~session_affinity_used\n        /\\ ~w...",
+      "description": "Test assertion for StatelessReconstruction from WorkerContextReconstruction spec"
+    },
+    "assert_ArtifactsPrecedeContext": {
+      "condition": "project_context_ready implies artifacts_downloaded",
+      "message": "Assertion failed: ArtifactsPrecedeContext \u2014 project_context_ready => artifacts_downloaded",
+      "description": "Test assertion for ArtifactsPrecedeContext from WorkerContextReconstruction spec"
+    },
+    "assert_PostgresPrecedesCrawlStore": {
+      "condition": "crawl_store_ready implies postgres_data_read",
+      "message": "Assertion failed: PostgresPrecedesCrawlStore \u2014 crawl_store_ready => postgres_data_read",
+      "description": "Test assertion for PostgresPrecedesCrawlStore from WorkerContextReconstruction spec"
+    },
+    "assert_BothSourcesRequiredForSuccess": {
+      "condition": "current_state = \"Reconstructed\" implies\n        and artifacts_downloaded\n        and postgres_data_read",
+      "message": "Assertion failed: BothSourcesRequiredForSuccess \u2014 current_state = \"Reconstructed\" =>\n        /\\ artifacts_downloaded\n        /\\ postgres_data_read",
+      "description": "Test assertion for BothSourcesRequiredForSuccess from WorkerContextReconstruction spec"
+    },
+    "assert_GivenImpliesThen": {
+      "condition": "(object_storage_ok and postgres_ok) implies\n        (current_state = \"Reconstructed\" implies\n            and project_context_ready\n            and registry_dag_ready\n            and crawl_store_ready\n            and ~session_affinity_used\n            and ~warm_cache_used\n            and ~prev_worker_conn_used)",
+      "message": "Assertion failed: GivenImpliesThen \u2014 (object_storage_ok /\\ postgres_ok) =>\n        (current_state = \"Reconstructed\" =>\n            /\\ project_context_read...",
+      "description": "Test assertion for GivenImpliesThen from WorkerContextReconstruction spec"
+    },
+    "assert_ReconstructionOrderRespected": {
+      "condition": "registry_dag_ready implies project_context_ready",
+      "message": "Assertion failed: ReconstructionOrderRespected \u2014 registry_dag_ready => project_context_ready",
+      "description": "Test assertion for ReconstructionOrderRespected from WorkerContextReconstruction spec"
+    },
+    "assert_CrawlStoreLastInChain": {
+      "condition": "crawl_store_ready implies registry_dag_ready",
+      "message": "Assertion failed: CrawlStoreLastInChain \u2014 crawl_store_ready => registry_dag_ready",
+      "description": "Test assertion for CrawlStoreLastInChain from WorkerContextReconstruction spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "0",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "1",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "2",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"ReadingPostgres\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "0",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "1",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"ReadingPostgres\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingProjectContext\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "4",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingRegistryDag\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "5",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingCrawlStore\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "0",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "1",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "0",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "1",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"ReadingPostgres\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingProjectContext\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "4",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingRegistryDag\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "5",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingCrawlStore\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "0",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "1",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "0",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "1",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "0",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "1",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "2",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"ReadingPostgres\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "FALSE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "0",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "1",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"ReadingPostgres\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingProjectContext\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "4",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingRegistryDag\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "5",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingCrawlStore\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "0",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "1",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "FALSE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Failed\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "0",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Fresh\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "1",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"FetchingArtifacts\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "FALSE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "2",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "FALSE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"ReadingPostgres\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "3",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "FALSE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingProjectContext\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "4",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingRegistryDag\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "5",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"BuildingCrawlStore\"",
+          "crawl_store_ready": "FALSE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Reconstruct\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Reconstruct",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Finish\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "postgres_ok": "TRUE",
+          "step_count": "6",
+          "object_storage_ok": "TRUE",
+          "project_context_ready": "TRUE",
+          "session_affinity_used": "FALSE",
+          "pc": "[worker |-> \"Done\"]",
+          "postgres_data_read": "TRUE",
+          "warm_cache_used": "FALSE",
+          "prev_worker_conn_used": "FALSE",
+          "current_state": "\"Reconstructed\"",
+          "crawl_store_ready": "TRUE",
+          "artifacts_downloaded": "TRUE",
+          "registry_dag_ready": "TRUE"
+        }
+      }
+    ]
+  ]
+}

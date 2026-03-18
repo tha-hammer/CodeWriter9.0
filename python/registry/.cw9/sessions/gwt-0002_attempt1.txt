@@ -1,0 +1,180 @@
+--------------------------- MODULE ArtifactUpload ---------------------------
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    ArtifactPatterns,
+    StoragePrefix,
+    MaxSteps
+
+ASSUME ArtifactPatterns # {}
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+
+(* --algorithm ArtifactUpload
+
+variables
+    core_result   = "none",
+    worker_phase  = "idle",
+    pending       = ArtifactPatterns,
+    uploaded      = {},
+    container_up  = TRUE,
+    step_count    = 0;
+
+define
+
+    CoreFinished == core_result \in {"passed", "failed"}
+
+    AllUploaded  == pending = {} /\ uploaded = ArtifactPatterns
+
+    UploadBeforeExit == ~container_up => AllUploaded
+
+    UploadAfterCore  == worker_phase = "uploading" => CoreFinished
+
+    ContainerExitRequiresUpload ==
+        ~container_up => (AllUploaded /\ CoreFinished)
+
+    ValidWorkerPhase ==
+        worker_phase \in {"idle", "uploading", "complete", "exited"}
+
+    ValidCoreResult ==
+        core_result \in {"none", "passed", "failed"}
+
+    BoundedSteps == step_count <= MaxSteps
+
+end define;
+
+fair process core_pipeline = "core"
+begin
+    RunCore:
+        either
+            core_result := "passed"
+        or
+            core_result := "failed"
+        end either;
+end process;
+
+fair process artifact_uploader = "worker"
+begin
+    AwaitCore:
+        await CoreFinished;
+        worker_phase := "uploading";
+    UploadArtifacts:
+        while pending # {} do
+            UploadOne:
+                with artifact \in pending do
+                    uploaded   := uploaded \union {artifact};
+                    pending    := pending \ {artifact};
+                    step_count := step_count + 1;
+                end with;
+        end while;
+    MarkComplete:
+        worker_phase := "complete";
+    Terminate:
+        assert AllUploaded;
+        container_up := FALSE;
+        worker_phase := "exited";
+end process;
+
+end algorithm; *)
+
+THEOREM Spec =>
+    [](
+        ContainerExitRequiresUpload /\
+        UploadBeforeExit            /\
+        UploadAfterCore             /\
+        ValidWorkerPhase            /\
+        ValidCoreResult             /\
+        BoundedSteps
+    )
+
+===========================================================================
+--------------------------- MODULE ArtifactUpload ---------------------------
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    ArtifactPatterns,
+    StoragePrefix,
+    MaxSteps
+
+ASSUME ArtifactPatterns # {}
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+
+(* --algorithm ArtifactUpload
+
+variables
+    core_result   = "none",
+    worker_phase  = "idle",
+    pending       = ArtifactPatterns,
+    uploaded      = {},
+    container_up  = TRUE,
+    step_count    = 0;
+
+define
+
+    CoreFinished == core_result \in {"passed", "failed"}
+
+    AllUploaded  == pending = {} /\ uploaded = ArtifactPatterns
+
+    UploadBeforeExit == ~container_up => AllUploaded
+
+    UploadAfterCore  == worker_phase = "uploading" => CoreFinished
+
+    ContainerExitRequiresUpload ==
+        ~container_up => (AllUploaded /\ CoreFinished)
+
+    ValidWorkerPhase ==
+        worker_phase \in {"idle", "uploading", "complete", "exited"}
+
+    ValidCoreResult ==
+        core_result \in {"none", "passed", "failed"}
+
+    BoundedSteps == step_count <= MaxSteps
+
+end define;
+
+fair process core_pipeline = "core"
+begin
+    RunCore:
+        either
+            core_result := "passed"
+        or
+            core_result := "failed"
+        end either;
+end process;
+
+fair process artifact_uploader = "worker"
+begin
+    AwaitCore:
+        await CoreFinished;
+        worker_phase := "uploading";
+    UploadArtifacts:
+        while pending # {} do
+            UploadOne:
+                with artifact \in pending do
+                    uploaded   := uploaded \union {artifact};
+                    pending    := pending \ {artifact};
+                    step_count := step_count + 1;
+                end with;
+        end while;
+    MarkComplete:
+        worker_phase := "complete";
+    Terminate:
+        assert AllUploaded;
+        container_up := FALSE;
+        worker_phase := "exited";
+end process;
+
+end algorithm; *)
+
+THEOREM Spec =>
+    [](
+        ContainerExitRequiresUpload /\
+        UploadBeforeExit            /\
+        UploadAfterCore             /\
+        ValidWorkerPhase            /\
+        ValidCoreResult             /\
+        BoundedSteps
+    )
+
+===========================================================================

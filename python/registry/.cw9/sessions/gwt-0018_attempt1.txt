@@ -1,0 +1,248 @@
+---- MODULE IngestScanner ----
+
+EXTENDS Integers, Sequences, TLC
+
+CONSTANTS MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps >= 6
+
+(* --algorithm IngestScanner
+
+variables
+    phase = "Dequeued",
+    step_count = 0,
+    llm_called = FALSE,
+    subprocess_called = FALSE,
+    crawldb_exists \in {TRUE, FALSE},
+    fn_records_written = FALSE,
+    dag_loaded = FALSE,
+    resource_nodes_written = FALSE,
+    crawldb_uploaded = FALSE,
+    dag_json_uploaded = FALSE,
+    op = "idle",
+    result = "none";
+
+define
+
+    Phases == {
+        "Dequeued", "ScanningFS", "WritingCrawlDB",
+        "LoadingDag", "WritingDagJson", "UploadingStorage",
+        "Finished"
+    }
+
+    ValidPhase == phase \in Phases
+
+    NoLLMCalls == llm_called = FALSE
+
+    NoSubprocessCalls == subprocess_called = FALSE
+
+    BoundedExecution == step_count <= MaxSteps
+
+    UploadOrdering ==
+        (crawldb_uploaded => fn_records_written) /\
+        (dag_json_uploaded => resource_nodes_written)
+
+    CompletionRequiresAll ==
+        phase = "Finished" =>
+            (crawldb_uploaded /\ dag_json_uploaded /\
+             fn_records_written /\ resource_nodes_written /\
+             llm_called = FALSE /\ subprocess_called = FALSE)
+
+    PureExecution == NoLLMCalls /\ NoSubprocessCalls
+
+    SafePhaseOrder ==
+        (resource_nodes_written => dag_loaded) /\
+        (crawldb_uploaded       => fn_records_written) /\
+        (dag_json_uploaded      => resource_nodes_written)
+
+end define;
+
+fair process ingest = "ingest"
+begin
+    StartIngest:
+        phase     := "ScanningFS";
+        step_count := step_count + 1;
+        op        := "job_dequeued";
+
+    RunScanner:
+        assert llm_called = FALSE;
+        assert subprocess_called = FALSE;
+        phase      := "WritingCrawlDB";
+        step_count := step_count + 1;
+        op         := "scanner_complete";
+
+    WriteFnRecords:
+        if crawldb_exists then
+            op := "upsert_record"
+        else
+            op := "insert_record"
+        end if;
+
+    AfterFnWrite:
+        fn_records_written := TRUE;
+        phase              := "LoadingDag";
+        step_count         := step_count + 1;
+
+    LoadDag:
+        dag_loaded := TRUE;
+        phase      := "WritingDagJson";
+        step_count := step_count + 1;
+        op         := "dag_loaded";
+
+    WriteResourceNodes:
+        assert dag_loaded = TRUE;
+        assert llm_called = FALSE;
+        assert subprocess_called = FALSE;
+        resource_nodes_written := TRUE;
+        phase                  := "UploadingStorage";
+        step_count             := step_count + 1;
+        op                     := "resource_nodes_written";
+
+    UploadArtifacts:
+        assert fn_records_written = TRUE;
+        assert resource_nodes_written = TRUE;
+        crawldb_uploaded  := TRUE;
+        dag_json_uploaded := TRUE;
+        phase             := "Finished";
+        step_count        := step_count + 1;
+        op                := "artifacts_uploaded";
+
+    Finish:
+        assert crawldb_uploaded  = TRUE;
+        assert dag_json_uploaded = TRUE;
+        assert llm_called        = FALSE;
+        assert subprocess_called = FALSE;
+        assert step_count        <= MaxSteps;
+        result := "success";
+
+end process;
+
+end algorithm; *)
+
+EventuallyFinished == <>(phase = "Finished")
+
+====
+---- MODULE IngestScanner ----
+
+EXTENDS Integers, Sequences, TLC
+
+CONSTANTS MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps >= 6
+
+(* --algorithm IngestScanner
+
+variables
+    phase = "Dequeued",
+    step_count = 0,
+    llm_called = FALSE,
+    subprocess_called = FALSE,
+    crawldb_exists \in {TRUE, FALSE},
+    fn_records_written = FALSE,
+    dag_loaded = FALSE,
+    resource_nodes_written = FALSE,
+    crawldb_uploaded = FALSE,
+    dag_json_uploaded = FALSE,
+    op = "idle",
+    result = "none";
+
+define
+
+    Phases == {
+        "Dequeued", "ScanningFS", "WritingCrawlDB",
+        "LoadingDag", "WritingDagJson", "UploadingStorage",
+        "Finished"
+    }
+
+    ValidPhase == phase \in Phases
+
+    NoLLMCalls == llm_called = FALSE
+
+    NoSubprocessCalls == subprocess_called = FALSE
+
+    BoundedExecution == step_count <= MaxSteps
+
+    UploadOrdering ==
+        (crawldb_uploaded => fn_records_written) /\
+        (dag_json_uploaded => resource_nodes_written)
+
+    CompletionRequiresAll ==
+        phase = "Finished" =>
+            (crawldb_uploaded /\ dag_json_uploaded /\
+             fn_records_written /\ resource_nodes_written /\
+             llm_called = FALSE /\ subprocess_called = FALSE)
+
+    PureExecution == NoLLMCalls /\ NoSubprocessCalls
+
+    SafePhaseOrder ==
+        (resource_nodes_written => dag_loaded) /\
+        (crawldb_uploaded       => fn_records_written) /\
+        (dag_json_uploaded      => resource_nodes_written)
+
+end define;
+
+fair process ingest = "ingest"
+begin
+    StartIngest:
+        phase     := "ScanningFS";
+        step_count := step_count + 1;
+        op        := "job_dequeued";
+
+    RunScanner:
+        assert llm_called = FALSE;
+        assert subprocess_called = FALSE;
+        phase      := "WritingCrawlDB";
+        step_count := step_count + 1;
+        op         := "scanner_complete";
+
+    WriteFnRecords:
+        if crawldb_exists then
+            op := "upsert_record"
+        else
+            op := "insert_record"
+        end if;
+
+    AfterFnWrite:
+        fn_records_written := TRUE;
+        phase              := "LoadingDag";
+        step_count         := step_count + 1;
+
+    LoadDag:
+        dag_loaded := TRUE;
+        phase      := "WritingDagJson";
+        step_count := step_count + 1;
+        op         := "dag_loaded";
+
+    WriteResourceNodes:
+        assert dag_loaded = TRUE;
+        assert llm_called = FALSE;
+        assert subprocess_called = FALSE;
+        resource_nodes_written := TRUE;
+        phase                  := "UploadingStorage";
+        step_count             := step_count + 1;
+        op                     := "resource_nodes_written";
+
+    UploadArtifacts:
+        assert fn_records_written = TRUE;
+        assert resource_nodes_written = TRUE;
+        crawldb_uploaded  := TRUE;
+        dag_json_uploaded := TRUE;
+        phase             := "Finished";
+        step_count        := step_count + 1;
+        op                := "artifacts_uploaded";
+
+    Finish:
+        assert crawldb_uploaded  = TRUE;
+        assert dag_json_uploaded = TRUE;
+        assert llm_called        = FALSE;
+        assert subprocess_called = FALSE;
+        assert step_count        <= MaxSteps;
+        result := "success";
+
+end process;
+
+end algorithm; *)
+
+EventuallyFinished == <>(phase = "Finished")
+
+====

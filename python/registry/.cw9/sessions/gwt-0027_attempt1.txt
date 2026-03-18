@@ -1,0 +1,226 @@
+---- MODULE GWT0027RetryPromptBuilder ----
+
+EXTENDS Integers, Sequences, TLC
+
+CONSTANTS MaxAttempts
+
+ASSUME MaxAttempts >= 1
+
+(* --algorithm GWT0027RetryPromptBuilder
+
+variables
+    attempt_no          = 1,
+    loop_result         = "NONE",
+    raw_ce_available    = FALSE,
+    structured_trace    = FALSE,
+    error_class         = "NONE",
+    human_trace         = FALSE,
+    prev_pluscal        = FALSE,
+    retry_prompt        = [has_trace       |-> FALSE,
+                           has_error_class |-> FALSE,
+                           has_prev_pluscal|-> FALSE],
+    prompt_sent         = FALSE,
+    client_history      = <<>>;
+
+define
+
+    BoundedExecution ==
+        attempt_no <= MaxAttempts + 1
+
+    RetryPromptCompleteness ==
+        prompt_sent =>
+            ( retry_prompt.has_trace        = TRUE
+           /\ retry_prompt.has_error_class  = TRUE
+           /\ retry_prompt.has_prev_pluscal = TRUE )
+
+    AllHistoryEntriesComplete ==
+        \A i \in 1..Len(client_history) :
+            client_history[i].has_trace        = TRUE /\
+            client_history[i].has_error_class  = TRUE /\
+            client_history[i].has_prev_pluscal = TRUE
+
+    SentImpliesNonEmptyHistory ==
+        prompt_sent => Len(client_history) > 0
+
+    HistoryCountBelowAttemptNo ==
+        Len(client_history) < attempt_no
+
+    FullCorrectionHistoryPreserved ==
+        \A i \in 1..Len(client_history) :
+            client_history[i].has_trace = TRUE
+
+end define;
+
+fair process RetryPromptLoop = "main"
+begin
+    AttemptStart:
+        while attempt_no <= MaxAttempts do
+            either
+                TriggerRetry:
+                    loop_result      := "RETRY";
+                    raw_ce_available := TRUE;
+                    prev_pluscal     := TRUE;
+            or
+                TriggerSuccess:
+                    loop_result := "SUCCESS";
+                    goto Terminate;
+            end either;
+
+            ParseCE:
+                assert loop_result      = "RETRY";
+                assert raw_ce_available = TRUE;
+                structured_trace := TRUE;
+
+            ClassifyError:
+                assert structured_trace = TRUE;
+                error_class := "COUNTEREXAMPLE_VIOLATION";
+
+            TranslateCE:
+                assert structured_trace = TRUE;
+                human_trace := TRUE;
+
+            BuildPrompt:
+                assert human_trace  = TRUE;
+                assert error_class /= "NONE";
+                assert prev_pluscal = TRUE;
+                retry_prompt := [
+                    has_trace        |-> TRUE,
+                    has_error_class  |-> TRUE,
+                    has_prev_pluscal |-> TRUE
+                ];
+
+            SendToClient:
+                assert retry_prompt.has_trace        = TRUE;
+                assert retry_prompt.has_error_class  = TRUE;
+                assert retry_prompt.has_prev_pluscal = TRUE;
+                client_history   := Append(client_history, retry_prompt);
+                prompt_sent      := TRUE;
+                attempt_no       := attempt_no + 1;
+                raw_ce_available := FALSE;
+                structured_trace := FALSE;
+                human_trace      := FALSE;
+                error_class      := "NONE";
+                prev_pluscal     := FALSE;
+                loop_result      := "NONE";
+        end while;
+
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE GWT0027RetryPromptBuilder ----
+
+EXTENDS Integers, Sequences, TLC
+
+CONSTANTS MaxAttempts
+
+ASSUME MaxAttempts >= 1
+
+(* --algorithm GWT0027RetryPromptBuilder
+
+variables
+    attempt_no          = 1,
+    loop_result         = "NONE",
+    raw_ce_available    = FALSE,
+    structured_trace    = FALSE,
+    error_class         = "NONE",
+    human_trace         = FALSE,
+    prev_pluscal        = FALSE,
+    retry_prompt        = [has_trace       |-> FALSE,
+                           has_error_class |-> FALSE,
+                           has_prev_pluscal|-> FALSE],
+    prompt_sent         = FALSE,
+    client_history      = <<>>;
+
+define
+
+    BoundedExecution ==
+        attempt_no <= MaxAttempts + 1
+
+    RetryPromptCompleteness ==
+        prompt_sent =>
+            ( retry_prompt.has_trace        = TRUE
+           /\ retry_prompt.has_error_class  = TRUE
+           /\ retry_prompt.has_prev_pluscal = TRUE )
+
+    AllHistoryEntriesComplete ==
+        \A i \in 1..Len(client_history) :
+            client_history[i].has_trace        = TRUE /\
+            client_history[i].has_error_class  = TRUE /\
+            client_history[i].has_prev_pluscal = TRUE
+
+    SentImpliesNonEmptyHistory ==
+        prompt_sent => Len(client_history) > 0
+
+    HistoryCountBelowAttemptNo ==
+        Len(client_history) < attempt_no
+
+    FullCorrectionHistoryPreserved ==
+        \A i \in 1..Len(client_history) :
+            client_history[i].has_trace = TRUE
+
+end define;
+
+fair process RetryPromptLoop = "main"
+begin
+    AttemptStart:
+        while attempt_no <= MaxAttempts do
+            either
+                TriggerRetry:
+                    loop_result      := "RETRY";
+                    raw_ce_available := TRUE;
+                    prev_pluscal     := TRUE;
+            or
+                TriggerSuccess:
+                    loop_result := "SUCCESS";
+                    goto Terminate;
+            end either;
+
+            ParseCE:
+                assert loop_result      = "RETRY";
+                assert raw_ce_available = TRUE;
+                structured_trace := TRUE;
+
+            ClassifyError:
+                assert structured_trace = TRUE;
+                error_class := "COUNTEREXAMPLE_VIOLATION";
+
+            TranslateCE:
+                assert structured_trace = TRUE;
+                human_trace := TRUE;
+
+            BuildPrompt:
+                assert human_trace  = TRUE;
+                assert error_class /= "NONE";
+                assert prev_pluscal = TRUE;
+                retry_prompt := [
+                    has_trace        |-> TRUE,
+                    has_error_class  |-> TRUE,
+                    has_prev_pluscal |-> TRUE
+                ];
+
+            SendToClient:
+                assert retry_prompt.has_trace        = TRUE;
+                assert retry_prompt.has_error_class  = TRUE;
+                assert retry_prompt.has_prev_pluscal = TRUE;
+                client_history   := Append(client_history, retry_prompt);
+                prompt_sent      := TRUE;
+                attempt_no       := attempt_no + 1;
+                raw_ce_available := FALSE;
+                structured_trace := FALSE;
+                human_trace      := FALSE;
+                error_class      := "NONE";
+                prev_pluscal     := FALSE;
+                loop_result      := "NONE";
+        end while;
+
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

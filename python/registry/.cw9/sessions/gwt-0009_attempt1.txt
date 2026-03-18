@@ -1,0 +1,280 @@
+---- MODULE GWT0009_CompileComposeVerify ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Jobs,
+    MaxSteps
+
+ASSUME Jobs # {} /\ IsFiniteSet(Jobs)
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+
+(* --algorithm GWT0009_CompileComposeVerify
+
+variables
+    job_state        = [j \in Jobs |-> "idle"],
+    temp_dir         = [j \in Jobs |-> "none"],
+    verified_tla     = [j \in Jobs |-> FALSE],
+    verified_cfg     = [j \in Jobs |-> FALSE],
+    files_uploaded   = [j \in Jobs |-> FALSE],
+    container_exited = [j \in Jobs |-> FALSE],
+    pcal_ok          = [j \in Jobs |-> FALSE],
+    tlc_ok           = [j \in Jobs |-> FALSE],
+    step_count       = [j \in Jobs |-> 0];
+
+define
+
+    AllStates == {"idle", "tempdir_created", "pcal_running",
+                  "tlc_running", "pass", "fail",
+                  "files_read", "uploaded", "exited"}
+
+    ValidStates ==
+        \A j \in Jobs : job_state[j] \in AllStates
+
+    TempDirIsolation ==
+        \A j1, j2 \in Jobs :
+            (j1 # j2 /\ temp_dir[j1] # "none" /\ temp_dir[j2] # "none")
+            => temp_dir[j1] # temp_dir[j2]
+
+    UploadBeforeExit ==
+        \A j \in Jobs :
+            (container_exited[j] /\ pcal_ok[j] /\ tlc_ok[j])
+            => files_uploaded[j]
+
+    FilesReadBeforeUpload ==
+        \A j \in Jobs :
+            files_uploaded[j] => (verified_tla[j] /\ verified_cfg[j])
+
+    UploadRequiresTempDir ==
+        \A j \in Jobs :
+            files_uploaded[j] => temp_dir[j] # "none"
+
+    NoUploadOnFail ==
+        \A j \in Jobs :
+            (job_state[j] = "fail") => ~files_uploaded[j]
+
+    TempDirOwnedByJob ==
+        \A j \in Jobs :
+            temp_dir[j] # "none" => temp_dir[j] = j
+
+    BoundedExecution ==
+        \A j \in Jobs : step_count[j] <= MaxSteps
+
+end define;
+
+fair process container \in Jobs
+begin
+    CreateTempDir:
+        temp_dir[self]   := self;
+        job_state[self]  := "tempdir_created";
+        step_count[self] := step_count[self] + 1;
+
+    RunPCal:
+        job_state[self]  := "pcal_running";
+        step_count[self] := step_count[self] + 1;
+
+    PCAlChoice:
+        either
+            pcal_ok[self] := TRUE;
+        or
+            pcal_ok[self] := FALSE;
+        end either;
+
+    AfterPCal:
+        if ~pcal_ok[self] then
+            job_state[self] := "fail";
+            goto CleanupFail;
+        end if;
+
+    RunTLC:
+        job_state[self]  := "tlc_running";
+        step_count[self] := step_count[self] + 1;
+
+    TLCChoice:
+        either
+            tlc_ok[self] := TRUE;
+        or
+            tlc_ok[self] := FALSE;
+        end either;
+
+    AfterTLC:
+        if ~tlc_ok[self] then
+            job_state[self] := "fail";
+            goto CleanupFail;
+        end if;
+
+    MarkPass:
+        job_state[self]  := "pass";
+        step_count[self] := step_count[self] + 1;
+
+    ReadVerifiedFiles:
+        assert temp_dir[self] = self;
+        verified_tla[self] := TRUE;
+        verified_cfg[self] := TRUE;
+        job_state[self]    := "files_read";
+        step_count[self]   := step_count[self] + 1;
+
+    UploadToStorage:
+        assert verified_tla[self] /\ verified_cfg[self];
+        files_uploaded[self] := TRUE;
+        job_state[self]      := "uploaded";
+        step_count[self]     := step_count[self] + 1;
+
+    ExitContainer:
+        container_exited[self] := TRUE;
+        job_state[self]        := "exited";
+        step_count[self]       := step_count[self] + 1;
+        goto Finish;
+
+    CleanupFail:
+        container_exited[self] := TRUE;
+        step_count[self]       := step_count[self] + 1;
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE GWT0009_CompileComposeVerify ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Jobs,
+    MaxSteps
+
+ASSUME Jobs # {} /\ IsFiniteSet(Jobs)
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+
+(* --algorithm GWT0009_CompileComposeVerify
+
+variables
+    job_state        = [j \in Jobs |-> "idle"],
+    temp_dir         = [j \in Jobs |-> "none"],
+    verified_tla     = [j \in Jobs |-> FALSE],
+    verified_cfg     = [j \in Jobs |-> FALSE],
+    files_uploaded   = [j \in Jobs |-> FALSE],
+    container_exited = [j \in Jobs |-> FALSE],
+    pcal_ok          = [j \in Jobs |-> FALSE],
+    tlc_ok           = [j \in Jobs |-> FALSE],
+    step_count       = [j \in Jobs |-> 0];
+
+define
+
+    AllStates == {"idle", "tempdir_created", "pcal_running",
+                  "tlc_running", "pass", "fail",
+                  "files_read", "uploaded", "exited"}
+
+    ValidStates ==
+        \A j \in Jobs : job_state[j] \in AllStates
+
+    TempDirIsolation ==
+        \A j1, j2 \in Jobs :
+            (j1 # j2 /\ temp_dir[j1] # "none" /\ temp_dir[j2] # "none")
+            => temp_dir[j1] # temp_dir[j2]
+
+    UploadBeforeExit ==
+        \A j \in Jobs :
+            (container_exited[j] /\ pcal_ok[j] /\ tlc_ok[j])
+            => files_uploaded[j]
+
+    FilesReadBeforeUpload ==
+        \A j \in Jobs :
+            files_uploaded[j] => (verified_tla[j] /\ verified_cfg[j])
+
+    UploadRequiresTempDir ==
+        \A j \in Jobs :
+            files_uploaded[j] => temp_dir[j] # "none"
+
+    NoUploadOnFail ==
+        \A j \in Jobs :
+            (job_state[j] = "fail") => ~files_uploaded[j]
+
+    TempDirOwnedByJob ==
+        \A j \in Jobs :
+            temp_dir[j] # "none" => temp_dir[j] = j
+
+    BoundedExecution ==
+        \A j \in Jobs : step_count[j] <= MaxSteps
+
+end define;
+
+fair process container \in Jobs
+begin
+    CreateTempDir:
+        temp_dir[self]   := self;
+        job_state[self]  := "tempdir_created";
+        step_count[self] := step_count[self] + 1;
+
+    RunPCal:
+        job_state[self]  := "pcal_running";
+        step_count[self] := step_count[self] + 1;
+
+    PCAlChoice:
+        either
+            pcal_ok[self] := TRUE;
+        or
+            pcal_ok[self] := FALSE;
+        end either;
+
+    AfterPCal:
+        if ~pcal_ok[self] then
+            job_state[self] := "fail";
+            goto CleanupFail;
+        end if;
+
+    RunTLC:
+        job_state[self]  := "tlc_running";
+        step_count[self] := step_count[self] + 1;
+
+    TLCChoice:
+        either
+            tlc_ok[self] := TRUE;
+        or
+            tlc_ok[self] := FALSE;
+        end either;
+
+    AfterTLC:
+        if ~tlc_ok[self] then
+            job_state[self] := "fail";
+            goto CleanupFail;
+        end if;
+
+    MarkPass:
+        job_state[self]  := "pass";
+        step_count[self] := step_count[self] + 1;
+
+    ReadVerifiedFiles:
+        assert temp_dir[self] = self;
+        verified_tla[self] := TRUE;
+        verified_cfg[self] := TRUE;
+        job_state[self]    := "files_read";
+        step_count[self]   := step_count[self] + 1;
+
+    UploadToStorage:
+        assert verified_tla[self] /\ verified_cfg[self];
+        files_uploaded[self] := TRUE;
+        job_state[self]      := "uploaded";
+        step_count[self]     := step_count[self] + 1;
+
+    ExitContainer:
+        container_exited[self] := TRUE;
+        job_state[self]        := "exited";
+        step_count[self]       := step_count[self] + 1;
+        goto Finish;
+
+    CleanupFail:
+        container_exited[self] := TRUE;
+        step_count[self]       := step_count[self] + 1;
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

@@ -1,0 +1,1628 @@
+{
+  "gwt_id": "gwt-0006",
+  "module_name": "GWT0006_SafeDisconnect",
+  "data_structures": {
+    "GWT0006_SafeDisconnectState": {
+      "function_id": "fn-GWT0006_SafeDisconnect-state",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"MakeClient\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "client_state": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "loop_outcome": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "retry_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "finally_entered": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "worker_exited": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "session_active": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from GWT0006_SafeDisconnect TLA+ spec"
+    }
+  },
+  "operations": {
+    "MakeClient": {
+      "function_id": "fn-GWT0006_SafeDisconnect-MakeClient",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-MakeClient",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action MakeClient from GWT0006_SafeDisconnect spec"
+    },
+    "RetryLoop": {
+      "function_id": "fn-GWT0006_SafeDisconnect-RetryLoop",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-RetryLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RetryLoop from GWT0006_SafeDisconnect spec"
+    },
+    "PassBranch": {
+      "function_id": "fn-GWT0006_SafeDisconnect-PassBranch",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-PassBranch",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action PassBranch from GWT0006_SafeDisconnect spec"
+    },
+    "FailBranch": {
+      "function_id": "fn-GWT0006_SafeDisconnect-FailBranch",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-FailBranch",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/FailBranchFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action FailBranch from GWT0006_SafeDisconnect spec"
+    },
+    "ExhaustCheck": {
+      "function_id": "fn-GWT0006_SafeDisconnect-ExhaustCheck",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-ExhaustCheck",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ExhaustCheck from GWT0006_SafeDisconnect spec"
+    },
+    "FinallyBlock": {
+      "function_id": "fn-GWT0006_SafeDisconnect-FinallyBlock",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-FinallyBlock",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FinallyBlock from GWT0006_SafeDisconnect spec"
+    },
+    "SafeDisconnectCall": {
+      "function_id": "fn-GWT0006_SafeDisconnect-SafeDisconnectCall",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-SafeDisconnectCall",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SafeDisconnectCall from GWT0006_SafeDisconnect spec"
+    },
+    "WorkerExit": {
+      "function_id": "fn-GWT0006_SafeDisconnect-WorkerExit",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-WorkerExit",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action WorkerExit from GWT0006_SafeDisconnect spec"
+    },
+    "Finish": {
+      "function_id": "fn-GWT0006_SafeDisconnect-Finish",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from GWT0006_SafeDisconnect spec"
+    }
+  },
+  "verifiers": {
+    "ClientStates": {
+      "function_id": "fn-GWT0006_SafeDisconnect-verify-ClientStates",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-ClientStates",
+      "conditions": [
+        "{\"none\", \"connected\", \"disconnected\"}"
+      ],
+      "message": "ClientStates violation: {\"none\", \"connected\", \"disconnected\"}",
+      "applies_to": [
+        "GWT0006_SafeDisconnect"
+      ],
+      "description": "Verifier for invariant ClientStates from GWT0006_SafeDisconnect spec"
+    },
+    "LoopOutcomes": {
+      "function_id": "fn-GWT0006_SafeDisconnect-verify-LoopOutcomes",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-LoopOutcomes",
+      "conditions": [
+        "{\"none\", \"pass\", \"fail\", \"exhausted\"}"
+      ],
+      "message": "LoopOutcomes violation: {\"none\", \"pass\", \"fail\", \"exhausted\"}",
+      "applies_to": [
+        "GWT0006_SafeDisconnect"
+      ],
+      "description": "Verifier for invariant LoopOutcomes from GWT0006_SafeDisconnect spec"
+    },
+    "ClientValid": {
+      "function_id": "fn-GWT0006_SafeDisconnect-verify-ClientValid",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-ClientValid",
+      "conditions": [
+        "client_state \\in ClientStates"
+      ],
+      "message": "ClientValid violation: client_state \\in ClientStates",
+      "applies_to": [
+        "client_state"
+      ],
+      "description": "Verifier for invariant ClientValid from GWT0006_SafeDisconnect spec"
+    },
+    "OutcomeValid": {
+      "function_id": "fn-GWT0006_SafeDisconnect-verify-OutcomeValid",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-OutcomeValid",
+      "conditions": [
+        "loop_outcome \\in LoopOutcomes"
+      ],
+      "message": "OutcomeValid violation: loop_outcome \\in LoopOutcomes",
+      "applies_to": [
+        "loop_outcome"
+      ],
+      "description": "Verifier for invariant OutcomeValid from GWT0006_SafeDisconnect spec"
+    },
+    "RetryBounded": {
+      "function_id": "fn-GWT0006_SafeDisconnect-verify-RetryBounded",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-RetryBounded",
+      "conditions": [
+        "retry_count <= MaxRetries"
+      ],
+      "message": "RetryBounded violation: retry_count <= MaxRetries",
+      "applies_to": [
+        "retry_count"
+      ],
+      "description": "Verifier for invariant RetryBounded from GWT0006_SafeDisconnect spec"
+    },
+    "SafeDisconnectGuarantee": {
+      "function_id": "fn-GWT0006_SafeDisconnect-verify-SafeDisconnectGuarantee",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-SafeDisconnectGuarantee",
+      "conditions": [
+        "worker_exited => (client_state = \"disconnected\"",
+        "~session_active"
+      ],
+      "message": "SafeDisconnectGuarantee violation: worker_exited => (client_state = \"disconnected\" /\\ ~session_active)",
+      "applies_to": [
+        "client_state",
+        "session_active",
+        "worker_exited"
+      ],
+      "description": "Verifier for invariant SafeDisconnectGuarantee from GWT0006_SafeDisconnect spec"
+    },
+    "FinallyAlwaysEntered": {
+      "function_id": "fn-GWT0006_SafeDisconnect-verify-FinallyAlwaysEntered",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-FinallyAlwaysEntered",
+      "conditions": [
+        "worker_exited => finally_entered"
+      ],
+      "message": "FinallyAlwaysEntered violation: worker_exited => finally_entered",
+      "applies_to": [
+        "finally_entered",
+        "worker_exited"
+      ],
+      "description": "Verifier for invariant FinallyAlwaysEntered from GWT0006_SafeDisconnect spec"
+    },
+    "NoSessionAfterExit": {
+      "function_id": "fn-GWT0006_SafeDisconnect-verify-NoSessionAfterExit",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-NoSessionAfterExit",
+      "conditions": [
+        "worker_exited => ~session_active"
+      ],
+      "message": "NoSessionAfterExit violation: worker_exited => ~session_active",
+      "applies_to": [
+        "session_active",
+        "worker_exited"
+      ],
+      "description": "Verifier for invariant NoSessionAfterExit from GWT0006_SafeDisconnect spec"
+    },
+    "TypeInvariant": {
+      "function_id": "fn-GWT0006_SafeDisconnect-verify-TypeInvariant",
+      "acceptance_criteria_id": "ac-GWT0006_SafeDisconnect-TypeInvariant",
+      "conditions": [
+        "ClientValid",
+        "OutcomeValid",
+        "RetryBounded",
+        "finally_entered \\in BOOLEAN",
+        "worker_exited   \\in BOOLEAN",
+        "session_active  \\in BOOLEAN"
+      ],
+      "message": "TypeInvariant violation: /\\ ClientValid\n    /\\ OutcomeValid\n    /\\ RetryBounded\n    /\\ finally_entered \\in BOOLEAN\n    /\\ worker_exited   \\in ...",
+      "applies_to": [
+        "finally_entered",
+        "session_active",
+        "worker_exited"
+      ],
+      "description": "Verifier for invariant TypeInvariant from GWT0006_SafeDisconnect spec"
+    }
+  },
+  "assertions": {
+    "assert_ClientStates": {
+      "condition": "{\"none\", \"connected\", \"disconnected\"}",
+      "message": "Assertion failed: ClientStates \u2014 {\"none\", \"connected\", \"disconnected\"}",
+      "description": "Test assertion for ClientStates from GWT0006_SafeDisconnect spec"
+    },
+    "assert_LoopOutcomes": {
+      "condition": "{\"none\", \"pass\", \"fail\", \"exhausted\"}",
+      "message": "Assertion failed: LoopOutcomes \u2014 {\"none\", \"pass\", \"fail\", \"exhausted\"}",
+      "description": "Test assertion for LoopOutcomes from GWT0006_SafeDisconnect spec"
+    },
+    "assert_ClientValid": {
+      "condition": "client_state in ClientStates",
+      "message": "Assertion failed: ClientValid \u2014 client_state \\in ClientStates",
+      "description": "Test assertion for ClientValid from GWT0006_SafeDisconnect spec"
+    },
+    "assert_OutcomeValid": {
+      "condition": "loop_outcome in LoopOutcomes",
+      "message": "Assertion failed: OutcomeValid \u2014 loop_outcome \\in LoopOutcomes",
+      "description": "Test assertion for OutcomeValid from GWT0006_SafeDisconnect spec"
+    },
+    "assert_RetryBounded": {
+      "condition": "retry_count <= MaxRetries",
+      "message": "Assertion failed: RetryBounded \u2014 retry_count <= MaxRetries",
+      "description": "Test assertion for RetryBounded from GWT0006_SafeDisconnect spec"
+    },
+    "assert_SafeDisconnectGuarantee": {
+      "condition": "worker_exited implies (client_state = \"disconnected\" and ~session_active)",
+      "message": "Assertion failed: SafeDisconnectGuarantee \u2014 worker_exited => (client_state = \"disconnected\" /\\ ~session_active)",
+      "description": "Test assertion for SafeDisconnectGuarantee from GWT0006_SafeDisconnect spec"
+    },
+    "assert_FinallyAlwaysEntered": {
+      "condition": "worker_exited implies finally_entered",
+      "message": "Assertion failed: FinallyAlwaysEntered \u2014 worker_exited => finally_entered",
+      "description": "Test assertion for FinallyAlwaysEntered from GWT0006_SafeDisconnect spec"
+    },
+    "assert_NoSessionAfterExit": {
+      "condition": "worker_exited implies ~session_active",
+      "message": "Assertion failed: NoSessionAfterExit \u2014 worker_exited => ~session_active",
+      "description": "Test assertion for NoSessionAfterExit from GWT0006_SafeDisconnect spec"
+    },
+    "assert_TypeInvariant": {
+      "condition": "and ClientValid\n    and OutcomeValid\n    and RetryBounded\n    and finally_entered in BOOLEAN\n    and worker_exited   in BOOLEAN\n    and session_active  in BOOLEAN",
+      "message": "Assertion failed: TypeInvariant \u2014 /\\ ClientValid\n    /\\ OutcomeValid\n    /\\ RetryBounded\n    /\\ finally_entered \\in BOOLEAN\n    /\\ worker_exited   \\in ...",
+      "description": "Test assertion for TypeInvariant from GWT0006_SafeDisconnect spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"PassBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PassBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FailBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FailBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FailBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FailBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FailBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FailBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"ExhaustCheck\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExhaustCheck",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"PassBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PassBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "1",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "1",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "1",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "1",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FailBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FailBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"ExhaustCheck\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExhaustCheck",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"ExhaustCheck\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ExhaustCheck",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "2",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "2",
+          "pc": "[main |-> \"PassBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PassBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "2",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "2",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "2",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "2",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "2",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"pass\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "2",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FailBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FailBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FailBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FailBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "0",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"none\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"MakeClient\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "MakeClient",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "0",
+          "pc": "[main |-> \"ExhaustCheck\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExhaustCheck",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"none\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"FailBranch\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FailBranch",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"RetryLoop\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "FALSE",
+          "retry_count": "1",
+          "pc": "[main |-> \"FinallyBlock\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "FinallyBlock",
+        "vars": {
+          "session_active": "TRUE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"connected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "1",
+          "pc": "[main |-> \"SafeDisconnectCall\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SafeDisconnectCall",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "1",
+          "pc": "[main |-> \"WorkerExit\"]",
+          "worker_exited": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "WorkerExit",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "1",
+          "pc": "[main |-> \"Finish\"]",
+          "worker_exited": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Finish",
+        "vars": {
+          "session_active": "FALSE",
+          "loop_outcome": "\"fail\"",
+          "client_state": "\"disconnected\"",
+          "finally_entered": "TRUE",
+          "retry_count": "1",
+          "pc": "[main |-> \"Done\"]",
+          "worker_exited": "TRUE"
+        }
+      }
+    ]
+  ]
+}

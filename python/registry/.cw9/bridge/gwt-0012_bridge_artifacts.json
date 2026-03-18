@@ -1,0 +1,1401 @@
+{
+  "gwt_id": "gwt-0012",
+  "module_name": "gwt0012_ExtractJobDAGRebuild",
+  "data_structures": {
+    "gwt0012_ExtractJobDAGRebuildState": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-state",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Dequeue\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "old_registered_nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "new_dag_nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "merged_dag_nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "llm_called": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "subprocess_called": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "dag_uploaded": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "time_elapsed": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from gwt0012_ExtractJobDAGRebuild TLA+ spec"
+    }
+  },
+  "operations": {
+    "Dequeue": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-Dequeue",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-Dequeue",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Dequeue from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "LoadOldDag": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-LoadOldDag",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-LoadOldDag",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action LoadOldDag from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "RunExtract": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-RunExtract",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-RunExtract",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunExtract from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "MergeRegistered": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-MergeRegistered",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-MergeRegistered",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action MergeRegistered from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "UploadDag": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-UploadDag",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-UploadDag",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action UploadDag from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "Finish": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-Finish",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from gwt0012_ExtractJobDAGRebuild spec"
+    }
+  },
+  "verifiers": {
+    "ValidPhase": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-verify-ValidPhase",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-ValidPhase",
+      "conditions": [
+        "phase \\in {\"Idle\", \"Loading\", \"Extracting\", \"Merging\", \"Uploading\", \"Complete\", \"Failed\"}"
+      ],
+      "message": "ValidPhase violation: phase \\in {\"Idle\", \"Loading\", \"Extracting\", \"Merging\", \"Uploading\", \"Complete\", \"Failed\"}",
+      "applies_to": [
+        "phase"
+      ],
+      "description": "Verifier for invariant ValidPhase from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "NoLLMCall": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-verify-NoLLMCall",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-NoLLMCall",
+      "conditions": [
+        "llm_called = FALSE"
+      ],
+      "message": "NoLLMCall violation: llm_called = FALSE",
+      "applies_to": [
+        "llm_called"
+      ],
+      "description": "Verifier for invariant NoLLMCall from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "NoSubprocessCall": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-verify-NoSubprocessCall",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-NoSubprocessCall",
+      "conditions": [
+        "subprocess_called = FALSE"
+      ],
+      "message": "NoSubprocessCall violation: subprocess_called = FALSE",
+      "applies_to": [
+        "subprocess_called"
+      ],
+      "description": "Verifier for invariant NoSubprocessCall from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-BoundedExecution",
+      "conditions": [
+        "time_elapsed <= MAX_TIME_STEPS"
+      ],
+      "message": "BoundedExecution violation: time_elapsed <= MAX_TIME_STEPS",
+      "applies_to": [
+        "time_elapsed"
+      ],
+      "description": "Verifier for invariant BoundedExecution from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "UploadBeforeComplete": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-verify-UploadBeforeComplete",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-UploadBeforeComplete",
+      "conditions": [
+        "phase = \"Complete\" => dag_uploaded = TRUE"
+      ],
+      "message": "UploadBeforeComplete violation: phase = \"Complete\" => dag_uploaded = TRUE",
+      "applies_to": [
+        "dag_uploaded",
+        "phase"
+      ],
+      "description": "Verifier for invariant UploadBeforeComplete from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "RegisteredNodesMerged": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-verify-RegisteredNodesMerged",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-RegisteredNodesMerged",
+      "conditions": [
+        "phase = \"Complete\" =>\n        old_registered_nodes \\subseteq merged_dag_nodes"
+      ],
+      "message": "RegisteredNodesMerged violation: phase = \"Complete\" =>\n        old_registered_nodes \\subseteq merged_dag_nodes",
+      "applies_to": [
+        "merged_dag_nodes",
+        "old_registered_nodes",
+        "phase"
+      ],
+      "description": "Verifier for invariant RegisteredNodesMerged from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "NewNodesCovered": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-verify-NewNodesCovered",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-NewNodesCovered",
+      "conditions": [
+        "phase = \"Complete\" =>\n        new_dag_nodes \\subseteq merged_dag_nodes"
+      ],
+      "message": "NewNodesCovered violation: phase = \"Complete\" =>\n        new_dag_nodes \\subseteq merged_dag_nodes",
+      "applies_to": [
+        "merged_dag_nodes",
+        "new_dag_nodes",
+        "phase"
+      ],
+      "description": "Verifier for invariant NewNodesCovered from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "MergeIsUnion": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-verify-MergeIsUnion",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-MergeIsUnion",
+      "conditions": [
+        "phase \\in {\"Uploading\", \"Complete\"} =>\n        merged_dag_nodes = new_dag_nodes \\union old_registered_nodes"
+      ],
+      "message": "MergeIsUnion violation: phase \\in {\"Uploading\", \"Complete\"} =>\n        merged_dag_nodes = new_dag_nodes \\union old_registered_nodes",
+      "applies_to": [
+        "merged_dag_nodes",
+        "new_dag_nodes",
+        "old_registered_nodes",
+        "phase"
+      ],
+      "description": "Verifier for invariant MergeIsUnion from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "CompletionCorrect": {
+      "function_id": "fn-gwt0012_ExtractJobDAGRebuild-verify-CompletionCorrect",
+      "acceptance_criteria_id": "ac-gwt0012_ExtractJobDAGRebuild-CompletionCorrect",
+      "conditions": [
+        "phase = \"Complete\" =>",
+        "dag_uploaded = TRUE",
+        "llm_called = FALSE",
+        "subprocess_called = FALSE",
+        "time_elapsed <= MAX_TIME_STEPS",
+        "merged_dag_nodes = new_dag_nodes \\union old_registered_nodes"
+      ],
+      "message": "CompletionCorrect violation: phase = \"Complete\" =>\n        /\\ dag_uploaded = TRUE\n        /\\ llm_called = FALSE\n        /\\ subprocess_called = FAL...",
+      "applies_to": [
+        "dag_uploaded",
+        "llm_called",
+        "merged_dag_nodes",
+        "new_dag_nodes",
+        "old_registered_nodes",
+        "phase",
+        "subprocess_called",
+        "time_elapsed"
+      ],
+      "description": "Verifier for invariant CompletionCorrect from gwt0012_ExtractJobDAGRebuild spec"
+    }
+  },
+  "assertions": {
+    "assert_ValidPhase": {
+      "condition": "phase in {\"Idle\", \"Loading\", \"Extracting\", \"Merging\", \"Uploading\", \"Complete\", \"Failed\"}",
+      "message": "Assertion failed: ValidPhase \u2014 phase \\in {\"Idle\", \"Loading\", \"Extracting\", \"Merging\", \"Uploading\", \"Complete\", \"Failed\"}",
+      "description": "Test assertion for ValidPhase from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "assert_NoLLMCall": {
+      "condition": "llm_called = FALSE",
+      "message": "Assertion failed: NoLLMCall \u2014 llm_called = FALSE",
+      "description": "Test assertion for NoLLMCall from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "assert_NoSubprocessCall": {
+      "condition": "subprocess_called = FALSE",
+      "message": "Assertion failed: NoSubprocessCall \u2014 subprocess_called = FALSE",
+      "description": "Test assertion for NoSubprocessCall from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "time_elapsed <= MAX_TIME_STEPS",
+      "message": "Assertion failed: BoundedExecution \u2014 time_elapsed <= MAX_TIME_STEPS",
+      "description": "Test assertion for BoundedExecution from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "assert_UploadBeforeComplete": {
+      "condition": "phase = \"Complete\" implies dag_uploaded = TRUE",
+      "message": "Assertion failed: UploadBeforeComplete \u2014 phase = \"Complete\" => dag_uploaded = TRUE",
+      "description": "Test assertion for UploadBeforeComplete from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "assert_RegisteredNodesMerged": {
+      "condition": "phase = \"Complete\" implies\n        old_registered_nodes \\subseteq merged_dag_nodes",
+      "message": "Assertion failed: RegisteredNodesMerged \u2014 phase = \"Complete\" =>\n        old_registered_nodes \\subseteq merged_dag_nodes",
+      "description": "Test assertion for RegisteredNodesMerged from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "assert_NewNodesCovered": {
+      "condition": "phase = \"Complete\" implies\n        new_dag_nodes \\subseteq merged_dag_nodes",
+      "message": "Assertion failed: NewNodesCovered \u2014 phase = \"Complete\" =>\n        new_dag_nodes \\subseteq merged_dag_nodes",
+      "description": "Test assertion for NewNodesCovered from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "assert_MergeIsUnion": {
+      "condition": "phase in {\"Uploading\", \"Complete\"} implies\n        merged_dag_nodes = new_dag_nodes \\union old_registered_nodes",
+      "message": "Assertion failed: MergeIsUnion \u2014 phase \\in {\"Uploading\", \"Complete\"} =>\n        merged_dag_nodes = new_dag_nodes \\union old_registered_nodes",
+      "description": "Test assertion for MergeIsUnion from gwt0012_ExtractJobDAGRebuild spec"
+    },
+    "assert_CompletionCorrect": {
+      "condition": "phase = \"Complete\" implies\n        and dag_uploaded = TRUE\n        and llm_called = FALSE\n        and subprocess_called = FALSE\n        and time_elapsed <= MAX_TIME_STEPS\n        and merged_dag_nodes = new_dag_nodes \\union old_registered_nodes",
+      "message": "Assertion failed: CompletionCorrect \u2014 phase = \"Complete\" =>\n        /\\ dag_uploaded = TRUE\n        /\\ llm_called = FALSE\n        /\\ subprocess_called = FAL...",
+      "description": "Test assertion for CompletionCorrect from gwt0012_ExtractJobDAGRebuild spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "1..8",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "1..8",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "1..8",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "1..8",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "1..8",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "1..8",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "1..8",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "1..8",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "1..6",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "1..6",
+          "new_dag_nodes": "1..7",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "1..6",
+          "new_dag_nodes": "1..7",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "1..6",
+          "new_dag_nodes": "1..7",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "1..6",
+          "new_dag_nodes": "1..7",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "1..10",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "1..10",
+          "new_dag_nodes": "1..3",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "1..10",
+          "new_dag_nodes": "1..3",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "1..10",
+          "new_dag_nodes": "1..3",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "1..10",
+          "new_dag_nodes": "1..3",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "1..5",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "1..5",
+          "new_dag_nodes": "1..2",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "1..5",
+          "new_dag_nodes": "1..2",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "1..5",
+          "new_dag_nodes": "1..2",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "1..5",
+          "new_dag_nodes": "1..2",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "1..1",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "1..1",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "1..1",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "1..1",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "1..9",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "1..9",
+          "new_dag_nodes": "1..9",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "1..9",
+          "new_dag_nodes": "1..9",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "1..9",
+          "new_dag_nodes": "1..9",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "1..9",
+          "new_dag_nodes": "1..9",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "1..10",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "1..10",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "1..10",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "1..10",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "1..9",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "1..9",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "1..9",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "1..7",
+          "new_dag_nodes": "1..9",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "0",
+          "phase": "\"Idle\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Dequeue\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Dequeue",
+        "vars": {
+          "old_registered_nodes": "{}",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "1",
+          "phase": "\"Loading\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"LoadOldDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadOldDag",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "{}",
+          "time_elapsed": "2",
+          "phase": "\"Extracting\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"RunExtract\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunExtract",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "1..6",
+          "time_elapsed": "3",
+          "phase": "\"Merging\"",
+          "merged_dag_nodes": "{}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"MergeRegistered\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MergeRegistered",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "1..6",
+          "time_elapsed": "4",
+          "phase": "\"Uploading\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"UploadDag\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadDag",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "1..6",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Finish\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "old_registered_nodes": "1..1",
+          "new_dag_nodes": "1..6",
+          "time_elapsed": "5",
+          "phase": "\"Complete\"",
+          "merged_dag_nodes": "{1, 2, 3, 4, 5, 6}",
+          "llm_called": "FALSE",
+          "pc": "[cmd_extract |-> \"Done\"]",
+          "subprocess_called": "FALSE",
+          "dag_uploaded": "TRUE"
+        }
+      }
+    ]
+  ]
+}

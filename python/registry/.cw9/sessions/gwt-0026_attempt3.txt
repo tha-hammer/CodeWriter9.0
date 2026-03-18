@@ -1,0 +1,204 @@
+---- MODULE GWT0026PromptContext ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+
+(* --algorithm GWT0026PromptContext
+
+variables
+    current_state    = "Idle",
+    crawl_db_present \in BOOLEAN,
+    dag_nodes        = FALSE,
+    fn_records       = FALSE,
+    combined_context = FALSE,
+    prompt_built     = FALSE,
+    error_occurred   = FALSE,
+    step_count       = 0;
+
+define
+
+    StateSet ==
+        { "Idle", "QueryingDag", "FetchingRecords",
+          "FormattingCtx", "BuildingPrompt", "PromptReady" }
+
+    ValidState ==
+        current_state \in StateSet
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    PromptBuiltImpliesContextFormatted ==
+        prompt_built => combined_context
+
+    ContextFormattedImpliesDAGQueried ==
+        combined_context => dag_nodes
+
+    NoCrawlDbMeansNoFnRecords ==
+        (~crawl_db_present) => (~fn_records)
+
+    NoCrawlDbNoError ==
+        (~crawl_db_present) => (~error_occurred)
+
+    PromptReadyIsTerminal ==
+        (current_state = "PromptReady") =>
+            ( /\ prompt_built
+              /\ combined_context
+              /\ dag_nodes
+              /\ ~error_occurred )
+
+end define;
+
+fair process Worker = "loop_worker"
+begin
+
+    CallQueryContext:
+        current_state := "QueryingDag";
+        step_count    := step_count + 1;
+
+    RunDagQueryRelevant:
+        dag_nodes  := TRUE;
+        step_count := step_count + 1;
+        if crawl_db_present then
+            current_state := "FetchingRecords";
+        else
+            current_state := "FormattingCtx";
+        end if;
+
+    MaybeFetchRecords:
+        if current_state = "FetchingRecords" then
+            fn_records    := TRUE;
+            current_state := "FormattingCtx";
+            step_count    := step_count + 1;
+        end if;
+
+    RunFormatPromptContext:
+        assert dag_nodes = TRUE;
+        combined_context := TRUE;
+        current_state    := "BuildingPrompt";
+        step_count       := step_count + 1;
+
+    RunBuildPrompt:
+        assert combined_context = TRUE;
+        prompt_built  := TRUE;
+        current_state := "PromptReady";
+        step_count    := step_count + 1;
+
+    Finish:
+        assert current_state    = "PromptReady";
+        assert prompt_built     = TRUE;
+        assert combined_context = TRUE;
+        assert dag_nodes        = TRUE;
+        assert error_occurred   = FALSE;
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE GWT0026PromptContext ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+
+(* --algorithm GWT0026PromptContext
+
+variables
+    current_state    = "Idle",
+    crawl_db_present \in BOOLEAN,
+    dag_nodes        = FALSE,
+    fn_records       = FALSE,
+    combined_context = FALSE,
+    prompt_built     = FALSE,
+    error_occurred   = FALSE,
+    step_count       = 0;
+
+define
+
+    StateSet ==
+        { "Idle", "QueryingDag", "FetchingRecords",
+          "FormattingCtx", "BuildingPrompt", "PromptReady" }
+
+    ValidState ==
+        current_state \in StateSet
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    PromptBuiltImpliesContextFormatted ==
+        prompt_built => combined_context
+
+    ContextFormattedImpliesDAGQueried ==
+        combined_context => dag_nodes
+
+    NoCrawlDbMeansNoFnRecords ==
+        (~crawl_db_present) => (~fn_records)
+
+    NoCrawlDbNoError ==
+        (~crawl_db_present) => (~error_occurred)
+
+    PromptReadyIsTerminal ==
+        (current_state = "PromptReady") =>
+            ( /\ prompt_built
+              /\ combined_context
+              /\ dag_nodes
+              /\ ~error_occurred )
+
+end define;
+
+fair process Worker = "loop_worker"
+begin
+
+    CallQueryContext:
+        current_state := "QueryingDag";
+        step_count    := step_count + 1;
+
+    RunDagQueryRelevant:
+        dag_nodes  := TRUE;
+        step_count := step_count + 1;
+        if crawl_db_present then
+            current_state := "FetchingRecords";
+        else
+            current_state := "FormattingCtx";
+        end if;
+
+    MaybeFetchRecords:
+        if current_state = "FetchingRecords" then
+            fn_records    := TRUE;
+            current_state := "FormattingCtx";
+            step_count    := step_count + 1;
+        end if;
+
+    RunFormatPromptContext:
+        assert dag_nodes = TRUE;
+        combined_context := TRUE;
+        current_state    := "BuildingPrompt";
+        step_count       := step_count + 1;
+
+    RunBuildPrompt:
+        assert combined_context = TRUE;
+        prompt_built  := TRUE;
+        current_state := "PromptReady";
+        step_count    := step_count + 1;
+
+    Finish:
+        assert current_state    = "PromptReady";
+        assert prompt_built     = TRUE;
+        assert combined_context = TRUE;
+        assert dag_nodes        = TRUE;
+        assert error_occurred   = FALSE;
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

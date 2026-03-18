@@ -1,0 +1,1573 @@
+{
+  "gwt_id": "gwt-0002",
+  "module_name": "ArtifactUpload",
+  "data_structures": {
+    "ArtifactUploadState": {
+      "function_id": "fn-ArtifactUpload-state",
+      "acceptance_criteria_id": "ac-ArtifactUpload-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "core_result": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "worker_phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "pending": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "ArtifactPatterns",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "uploaded": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "container_up": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "true",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from ArtifactUpload TLA+ spec"
+    }
+  },
+  "operations": {
+    "RunCore": {
+      "function_id": "fn-ArtifactUpload-RunCore",
+      "acceptance_criteria_id": "ac-ArtifactUpload-RunCore",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/RunCoreFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action RunCore from ArtifactUpload spec"
+    },
+    "AwaitCore": {
+      "function_id": "fn-ArtifactUpload-AwaitCore",
+      "acceptance_criteria_id": "ac-ArtifactUpload-AwaitCore",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AwaitCore from ArtifactUpload spec"
+    },
+    "UploadArtifacts": {
+      "function_id": "fn-ArtifactUpload-UploadArtifacts",
+      "acceptance_criteria_id": "ac-ArtifactUpload-UploadArtifacts",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action UploadArtifacts from ArtifactUpload spec"
+    },
+    "UploadOne": {
+      "function_id": "fn-ArtifactUpload-UploadOne",
+      "acceptance_criteria_id": "ac-ArtifactUpload-UploadOne",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action UploadOne from ArtifactUpload spec"
+    },
+    "MarkComplete": {
+      "function_id": "fn-ArtifactUpload-MarkComplete",
+      "acceptance_criteria_id": "ac-ArtifactUpload-MarkComplete",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action MarkComplete from ArtifactUpload spec"
+    },
+    "Terminate": {
+      "function_id": "fn-ArtifactUpload-Terminate",
+      "acceptance_criteria_id": "ac-ArtifactUpload-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from ArtifactUpload spec"
+    }
+  },
+  "verifiers": {
+    "UploadBeforeExit": {
+      "function_id": "fn-ArtifactUpload-verify-UploadBeforeExit",
+      "acceptance_criteria_id": "ac-ArtifactUpload-UploadBeforeExit",
+      "conditions": [
+        "~container_up =>\n        (pending = {}",
+        "uploaded = ArtifactPatterns"
+      ],
+      "message": "UploadBeforeExit violation: ~container_up =>\n        (pending = {} /\\ uploaded = ArtifactPatterns)",
+      "applies_to": [
+        "container_up",
+        "pending",
+        "uploaded"
+      ],
+      "description": "Verifier for invariant UploadBeforeExit from ArtifactUpload spec"
+    },
+    "UploadAfterCore": {
+      "function_id": "fn-ArtifactUpload-verify-UploadAfterCore",
+      "acceptance_criteria_id": "ac-ArtifactUpload-UploadAfterCore",
+      "conditions": [
+        "worker_phase = \"uploading\" =>\n        core_result \\in {\"passed\", \"failed\"}"
+      ],
+      "message": "UploadAfterCore violation: worker_phase = \"uploading\" =>\n        core_result \\in {\"passed\", \"failed\"}",
+      "applies_to": [
+        "core_result",
+        "worker_phase"
+      ],
+      "description": "Verifier for invariant UploadAfterCore from ArtifactUpload spec"
+    },
+    "ContainerExitRequiresUpload": {
+      "function_id": "fn-ArtifactUpload-verify-ContainerExitRequiresUpload",
+      "acceptance_criteria_id": "ac-ArtifactUpload-ContainerExitRequiresUpload",
+      "conditions": [
+        "~container_up =>\n        ( pending = {}",
+        "uploaded = ArtifactPatterns",
+        "core_result \\in {\"passed\", \"failed\"}  "
+      ],
+      "message": "ContainerExitRequiresUpload violation: ~container_up =>\n        ( pending = {}                          /\\\n          uploaded = ArtifactPatterns           /...",
+      "applies_to": [
+        "container_up",
+        "core_result",
+        "pending",
+        "uploaded"
+      ],
+      "description": "Verifier for invariant ContainerExitRequiresUpload from ArtifactUpload spec"
+    },
+    "ValidWorkerPhase": {
+      "function_id": "fn-ArtifactUpload-verify-ValidWorkerPhase",
+      "acceptance_criteria_id": "ac-ArtifactUpload-ValidWorkerPhase",
+      "conditions": [
+        "worker_phase \\in {\"idle\", \"uploading\", \"complete\", \"exited\"}"
+      ],
+      "message": "ValidWorkerPhase violation: worker_phase \\in {\"idle\", \"uploading\", \"complete\", \"exited\"}",
+      "applies_to": [
+        "worker_phase"
+      ],
+      "description": "Verifier for invariant ValidWorkerPhase from ArtifactUpload spec"
+    },
+    "ValidCoreResult": {
+      "function_id": "fn-ArtifactUpload-verify-ValidCoreResult",
+      "acceptance_criteria_id": "ac-ArtifactUpload-ValidCoreResult",
+      "conditions": [
+        "core_result \\in {\"none\", \"passed\", \"failed\"}"
+      ],
+      "message": "ValidCoreResult violation: core_result \\in {\"none\", \"passed\", \"failed\"}",
+      "applies_to": [
+        "core_result"
+      ],
+      "description": "Verifier for invariant ValidCoreResult from ArtifactUpload spec"
+    },
+    "BoundedSteps": {
+      "function_id": "fn-ArtifactUpload-verify-BoundedSteps",
+      "acceptance_criteria_id": "ac-ArtifactUpload-BoundedSteps",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedSteps violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedSteps from ArtifactUpload spec"
+    }
+  },
+  "assertions": {
+    "assert_UploadBeforeExit": {
+      "condition": "~container_up implies\n        (pending = {} and uploaded = ArtifactPatterns)",
+      "message": "Assertion failed: UploadBeforeExit \u2014 ~container_up =>\n        (pending = {} /\\ uploaded = ArtifactPatterns)",
+      "description": "Test assertion for UploadBeforeExit from ArtifactUpload spec"
+    },
+    "assert_UploadAfterCore": {
+      "condition": "worker_phase = \"uploading\" implies\n        core_result in {\"passed\", \"failed\"}",
+      "message": "Assertion failed: UploadAfterCore \u2014 worker_phase = \"uploading\" =>\n        core_result \\in {\"passed\", \"failed\"}",
+      "description": "Test assertion for UploadAfterCore from ArtifactUpload spec"
+    },
+    "assert_ContainerExitRequiresUpload": {
+      "condition": "~container_up implies\n        ( pending = {}                          and\n          uploaded = ArtifactPatterns           and\n          core_result in {\"passed\", \"failed\"}  )",
+      "message": "Assertion failed: ContainerExitRequiresUpload \u2014 ~container_up =>\n        ( pending = {}                          /\\\n          uploaded = ArtifactPatterns           /...",
+      "description": "Test assertion for ContainerExitRequiresUpload from ArtifactUpload spec"
+    },
+    "assert_ValidWorkerPhase": {
+      "condition": "worker_phase in {\"idle\", \"uploading\", \"complete\", \"exited\"}",
+      "message": "Assertion failed: ValidWorkerPhase \u2014 worker_phase \\in {\"idle\", \"uploading\", \"complete\", \"exited\"}",
+      "description": "Test assertion for ValidWorkerPhase from ArtifactUpload spec"
+    },
+    "assert_ValidCoreResult": {
+      "condition": "core_result in {\"none\", \"passed\", \"failed\"}",
+      "message": "Assertion failed: ValidCoreResult \u2014 core_result \\in {\"none\", \"passed\", \"failed\"}",
+      "description": "Test assertion for ValidCoreResult from ArtifactUpload spec"
+    },
+    "assert_BoundedSteps": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedSteps \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedSteps from ArtifactUpload spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_1}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_1}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_1}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_1}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"passed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"none\"",
+          "pc": "[core |-> \"RunCore\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"idle\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"AwaitCore\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AwaitCore",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_1, ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "0",
+          "container_up": "TRUE",
+          "uploaded": "{}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{ArtifactPatterns_2}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadOne\"]",
+          "step_count": "1",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "UploadOne",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"UploadArtifacts\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "UploadArtifacts",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"uploading\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"MarkComplete\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "MarkComplete",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"complete\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Terminate\"]",
+          "step_count": "2",
+          "container_up": "TRUE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "worker_phase": "\"exited\"",
+          "core_result": "\"failed\"",
+          "pc": "[core |-> \"Done\", worker |-> \"Done\"]",
+          "step_count": "2",
+          "container_up": "FALSE",
+          "uploaded": "{ArtifactPatterns_1, ArtifactPatterns_2}"
+        }
+      }
+    ]
+  ]
+}

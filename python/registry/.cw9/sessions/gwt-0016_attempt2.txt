@@ -1,0 +1,382 @@
+-------------------------- MODULE GWT0016TestGenLoop --------------------------
+
+EXTENDS Integers, Sequences, TLC
+
+CONSTANTS
+    MaxRetries
+
+ASSUME MaxRetries \in Nat /\ MaxRetries >= 0
+
+(* --algorithm TestGenLoop
+
+variables
+    phase = "build_test_plan_prompt",
+    llm_call_count = 0,
+    pass1_done = FALSE,
+    pass2_done = FALSE,
+    pass3_done = FALSE,
+    code_extracted = FALSE,
+    verification_passed = FALSE,
+    retry_count = 0,
+    prompt_built = "none",
+    llm_response = "none",
+    terminated = FALSE,
+    retries_exhausted = FALSE;
+
+define
+
+    ValidPhase ==
+        phase \in {
+            "build_test_plan_prompt", "pass1_llm",
+            "build_review_prompt",    "pass2_llm",
+            "build_codegen_prompt",   "pass3_llm",
+            "extract_code",           "verify",
+            "build_retry_prompt",     "retry_llm",
+            "extract_code_retry",     "verify_retry",
+            "success",                "exhausted"
+        }
+
+    PassesAreOrdered ==
+        (pass2_done => pass1_done) /\ (pass3_done => pass2_done)
+
+    ExactlyThreeLLMCallsBeforeExtract ==
+        code_extracted => llm_call_count >= 3
+
+    NoExtraLLMCallsInMainPasses ==
+        (pass3_done /\ ~code_extracted) => llm_call_count = 3
+
+    RetryOnlyAfterVerifyFail ==
+        (retry_count > 0) =>
+            (pass1_done /\ pass2_done /\ pass3_done /\ code_extracted)
+
+    RetryBounded == retry_count <= MaxRetries
+
+    TerminationMeansSuccessOrExhausted ==
+        terminated => (phase = "success" \/ phase = "exhausted")
+
+    SuccessImpliesVerified ==
+        phase = "success" => verification_passed
+
+end define;
+
+fair process worker = "gen_tests_worker"
+begin
+
+    BuildTestPlanPrompt:
+        assert phase = "build_test_plan_prompt";
+        prompt_built := "test_plan_prompt";
+        phase := "pass1_llm";
+
+    Pass1LLM:
+        assert phase = "pass1_llm";
+        assert prompt_built = "test_plan_prompt";
+        llm_response := "test_plan_response";
+        llm_call_count := llm_call_count + 1;
+        pass1_done := TRUE;
+        phase := "build_review_prompt";
+
+    BuildReviewPrompt:
+        assert phase = "build_review_prompt";
+        assert pass1_done = TRUE;
+        prompt_built := "review_prompt";
+        phase := "pass2_llm";
+
+    Pass2LLM:
+        assert phase = "pass2_llm";
+        assert prompt_built = "review_prompt";
+        llm_response := "review_response";
+        llm_call_count := llm_call_count + 1;
+        pass2_done := TRUE;
+        phase := "build_codegen_prompt";
+
+    BuildCodegenPrompt:
+        assert phase = "build_codegen_prompt";
+        assert pass2_done = TRUE;
+        prompt_built := "codegen_prompt";
+        phase := "pass3_llm";
+
+    Pass3LLM:
+        assert phase = "pass3_llm";
+        assert prompt_built = "codegen_prompt";
+        llm_response := "codegen_response";
+        llm_call_count := llm_call_count + 1;
+        pass3_done := TRUE;
+        phase := "extract_code";
+
+    ExtractCode:
+        assert phase = "extract_code";
+        assert llm_call_count = 3;
+        assert pass1_done /\ pass2_done /\ pass3_done;
+        code_extracted := TRUE;
+        phase := "verify";
+
+    Verify:
+        assert phase = "verify";
+        assert code_extracted = TRUE;
+        either
+            verification_passed := TRUE;
+            phase := "success";
+        or
+            verification_passed := FALSE;
+            phase := "build_retry_prompt";
+        end either;
+
+    AfterVerify:
+        if verification_passed then
+            terminated := TRUE;
+            goto Terminate;
+        elsif retry_count >= MaxRetries then
+            retries_exhausted := TRUE;
+            phase := "exhausted";
+            terminated := TRUE;
+            goto Terminate;
+        else
+            skip;
+        end if;
+
+    BuildRetryPrompt:
+        assert phase = "build_retry_prompt";
+        assert ~verification_passed;
+        retry_count := retry_count + 1;
+        prompt_built := "retry_prompt";
+        phase := "retry_llm";
+
+    RetryLLM:
+        assert phase = "retry_llm";
+        assert prompt_built = "retry_prompt";
+        llm_response := "retry_response";
+        llm_call_count := llm_call_count + 1;
+        phase := "extract_code_retry";
+
+    ExtractCodeRetry:
+        assert phase = "extract_code_retry";
+        phase := "verify_retry";
+
+    VerifyRetry:
+        assert phase = "verify_retry";
+        either
+            verification_passed := TRUE;
+            phase := "success";
+        or
+            verification_passed := FALSE;
+            phase := "build_retry_prompt";
+        end either;
+
+    AfterVerifyRetry:
+        if verification_passed then
+            terminated := TRUE;
+            goto Terminate;
+        elsif retry_count >= MaxRetries then
+            retries_exhausted := TRUE;
+            phase := "exhausted";
+            terminated := TRUE;
+            goto Terminate;
+        else
+            goto BuildRetryPrompt;
+        end if;
+
+    Terminate:
+        assert terminated = TRUE;
+        assert phase = "success" \/ phase = "exhausted";
+        assert llm_call_count >= 3;
+        assert pass1_done /\ pass2_done /\ pass3_done;
+        assert code_extracted;
+        assert retry_count <= MaxRetries;
+        skip;
+
+end process;
+
+end algorithm; *)
+
+================================================================================
+-------------------------- MODULE GWT0016TestGenLoop --------------------------
+
+EXTENDS Integers, Sequences, TLC
+
+CONSTANTS
+    MaxRetries
+
+ASSUME MaxRetries \in Nat /\ MaxRetries >= 0
+
+(* --algorithm TestGenLoop
+
+variables
+    phase = "build_test_plan_prompt",
+    llm_call_count = 0,
+    pass1_done = FALSE,
+    pass2_done = FALSE,
+    pass3_done = FALSE,
+    code_extracted = FALSE,
+    verification_passed = FALSE,
+    retry_count = 0,
+    prompt_built = "none",
+    llm_response = "none",
+    terminated = FALSE,
+    retries_exhausted = FALSE;
+
+define
+
+    ValidPhase ==
+        phase \in {
+            "build_test_plan_prompt", "pass1_llm",
+            "build_review_prompt",    "pass2_llm",
+            "build_codegen_prompt",   "pass3_llm",
+            "extract_code",           "verify",
+            "build_retry_prompt",     "retry_llm",
+            "extract_code_retry",     "verify_retry",
+            "success",                "exhausted"
+        }
+
+    PassesAreOrdered ==
+        (pass2_done => pass1_done) /\ (pass3_done => pass2_done)
+
+    ExactlyThreeLLMCallsBeforeExtract ==
+        code_extracted => llm_call_count >= 3
+
+    NoExtraLLMCallsInMainPasses ==
+        (pass3_done /\ ~code_extracted) => llm_call_count = 3
+
+    RetryOnlyAfterVerifyFail ==
+        (retry_count > 0) =>
+            (pass1_done /\ pass2_done /\ pass3_done /\ code_extracted)
+
+    RetryBounded == retry_count <= MaxRetries
+
+    TerminationMeansSuccessOrExhausted ==
+        terminated => (phase = "success" \/ phase = "exhausted")
+
+    SuccessImpliesVerified ==
+        phase = "success" => verification_passed
+
+end define;
+
+fair process worker = "gen_tests_worker"
+begin
+
+    BuildTestPlanPrompt:
+        assert phase = "build_test_plan_prompt";
+        prompt_built := "test_plan_prompt";
+        phase := "pass1_llm";
+
+    Pass1LLM:
+        assert phase = "pass1_llm";
+        assert prompt_built = "test_plan_prompt";
+        llm_response := "test_plan_response";
+        llm_call_count := llm_call_count + 1;
+        pass1_done := TRUE;
+        phase := "build_review_prompt";
+
+    BuildReviewPrompt:
+        assert phase = "build_review_prompt";
+        assert pass1_done = TRUE;
+        prompt_built := "review_prompt";
+        phase := "pass2_llm";
+
+    Pass2LLM:
+        assert phase = "pass2_llm";
+        assert prompt_built = "review_prompt";
+        llm_response := "review_response";
+        llm_call_count := llm_call_count + 1;
+        pass2_done := TRUE;
+        phase := "build_codegen_prompt";
+
+    BuildCodegenPrompt:
+        assert phase = "build_codegen_prompt";
+        assert pass2_done = TRUE;
+        prompt_built := "codegen_prompt";
+        phase := "pass3_llm";
+
+    Pass3LLM:
+        assert phase = "pass3_llm";
+        assert prompt_built = "codegen_prompt";
+        llm_response := "codegen_response";
+        llm_call_count := llm_call_count + 1;
+        pass3_done := TRUE;
+        phase := "extract_code";
+
+    ExtractCode:
+        assert phase = "extract_code";
+        assert llm_call_count = 3;
+        assert pass1_done /\ pass2_done /\ pass3_done;
+        code_extracted := TRUE;
+        phase := "verify";
+
+    Verify:
+        assert phase = "verify";
+        assert code_extracted = TRUE;
+        either
+            verification_passed := TRUE;
+            phase := "success";
+        or
+            verification_passed := FALSE;
+            phase := "build_retry_prompt";
+        end either;
+
+    AfterVerify:
+        if verification_passed then
+            terminated := TRUE;
+            goto Terminate;
+        elsif retry_count >= MaxRetries then
+            retries_exhausted := TRUE;
+            phase := "exhausted";
+            terminated := TRUE;
+            goto Terminate;
+        else
+            skip;
+        end if;
+
+    BuildRetryPrompt:
+        assert phase = "build_retry_prompt";
+        assert ~verification_passed;
+        retry_count := retry_count + 1;
+        prompt_built := "retry_prompt";
+        phase := "retry_llm";
+
+    RetryLLM:
+        assert phase = "retry_llm";
+        assert prompt_built = "retry_prompt";
+        llm_response := "retry_response";
+        llm_call_count := llm_call_count + 1;
+        phase := "extract_code_retry";
+
+    ExtractCodeRetry:
+        assert phase = "extract_code_retry";
+        phase := "verify_retry";
+
+    VerifyRetry:
+        assert phase = "verify_retry";
+        either
+            verification_passed := TRUE;
+            phase := "success";
+        or
+            verification_passed := FALSE;
+            phase := "build_retry_prompt";
+        end either;
+
+    AfterVerifyRetry:
+        if verification_passed then
+            terminated := TRUE;
+            goto Terminate;
+        elsif retry_count >= MaxRetries then
+            retries_exhausted := TRUE;
+            phase := "exhausted";
+            terminated := TRUE;
+            goto Terminate;
+        else
+            goto BuildRetryPrompt;
+        end if;
+
+    Terminate:
+        assert terminated = TRUE;
+        assert phase = "success" \/ phase = "exhausted";
+        assert llm_call_count >= 3;
+        assert pass1_done /\ pass2_done /\ pass3_done;
+        assert code_extracted;
+        assert retry_count <= MaxRetries;
+        skip;
+
+end process;
+
+end algorithm; *)
+
+================================================================================

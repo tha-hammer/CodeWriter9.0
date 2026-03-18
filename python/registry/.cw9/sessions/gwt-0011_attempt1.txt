@@ -1,0 +1,282 @@
+---- MODULE gwt_0011_SimTraceUpload ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    GWT_ID,
+    SIM_TIMEOUT_LIMIT,
+    MaxSteps
+
+ASSUME SIM_TIMEOUT_LIMIT = 300
+ASSUME MaxSteps > 0
+
+States == {
+    "AwaitResult",
+    "PassReceived",
+    "Simulating",
+    "TracesWritten",
+    "UploadBatched",
+    "ContainerExit",
+    "NonPassTerminated"
+}
+
+TerminalStates == {"ContainerExit", "NonPassTerminated"}
+
+(* --algorithm gwt_0011_SimTraceUpload
+
+variables
+    loop_result       = "NONE",
+    tla_file_available = FALSE,
+    current_state     = "AwaitResult",
+    simulate_called   = FALSE,
+    simulate_timeout  = 0,
+    traces_written    = FALSE,
+    traces_file       = "NONE",
+    upload_batch      = {},
+    step_count        = 0;
+
+define
+
+    SimTracesFile == <<GWT_ID, "sim_traces_json">>
+
+    TypeInvariant ==
+        /\ loop_result        \in {"NONE", "PASS", "FAIL"}
+        /\ tla_file_available \in BOOLEAN
+        /\ current_state      \in States
+        /\ simulate_called    \in BOOLEAN
+        /\ simulate_timeout   \in 0..SIM_TIMEOUT_LIMIT
+        /\ traces_written     \in BOOLEAN
+
+    ValidState == current_state \in States
+
+    BoundedExecution == step_count <= MaxSteps
+
+    SimTimeoutBounded ==
+        simulate_called => simulate_timeout <= SIM_TIMEOUT_LIMIT
+
+    SimCalledOnlyAfterPass ==
+        simulate_called => loop_result = "PASS"
+
+    TlaFilePresentWhenSimCalled ==
+        simulate_called => tla_file_available
+
+    TracesWrittenImpliesSimCalled ==
+        traces_written => simulate_called
+
+    TracesFileCorrect ==
+        traces_written => traces_file = SimTracesFile
+
+    UploadBatchContainsTraces ==
+        current_state \in {"UploadBatched", "ContainerExit"} =>
+            traces_file \in upload_batch
+
+    ContainerExitSafety ==
+        current_state = "ContainerExit" =>
+            /\ simulate_called
+            /\ simulate_timeout <= SIM_TIMEOUT_LIMIT
+            /\ traces_written
+            /\ traces_file = SimTracesFile
+            /\ traces_file \in upload_batch
+
+    NonPassSkipsSimulation ==
+        current_state = "NonPassTerminated" => ~simulate_called
+
+    OrderingGuarantee ==
+        traces_file \in upload_batch =>
+            /\ traces_written
+            /\ simulate_called
+
+end define;
+
+fair process runner = "run_loop"
+begin
+    ReceiveResult:
+        either
+            loop_result        := "PASS";
+            tla_file_available := TRUE;
+            current_state      := "PassReceived";
+        or
+            loop_result   := "FAIL";
+            current_state := "NonPassTerminated";
+        end either;
+        step_count := step_count + 1;
+
+    RunSimulation:
+        if current_state = "PassReceived" /\ tla_file_available then
+            simulate_called  := TRUE;
+            simulate_timeout := SIM_TIMEOUT_LIMIT;
+            current_state    := "Simulating";
+            step_count       := step_count + 1;
+        end if;
+
+    WriteTraces:
+        if current_state = "Simulating" then
+            traces_written := TRUE;
+            traces_file    := SimTracesFile;
+            current_state  := "TracesWritten";
+            step_count     := step_count + 1;
+        end if;
+
+    AddToUploadBatch:
+        if current_state = "TracesWritten" then
+            upload_batch  := upload_batch \union {traces_file};
+            current_state := "UploadBatched";
+            step_count    := step_count + 1;
+        end if;
+
+    ExitContainer:
+        if current_state = "UploadBatched" then
+            current_state := "ContainerExit";
+        elsif current_state \notin TerminalStates then
+            current_state := "NonPassTerminated";
+        end if;
+        step_count := step_count + 1;
+
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE gwt_0011_SimTraceUpload ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    GWT_ID,
+    SIM_TIMEOUT_LIMIT,
+    MaxSteps
+
+ASSUME SIM_TIMEOUT_LIMIT = 300
+ASSUME MaxSteps > 0
+
+States == {
+    "AwaitResult",
+    "PassReceived",
+    "Simulating",
+    "TracesWritten",
+    "UploadBatched",
+    "ContainerExit",
+    "NonPassTerminated"
+}
+
+TerminalStates == {"ContainerExit", "NonPassTerminated"}
+
+(* --algorithm gwt_0011_SimTraceUpload
+
+variables
+    loop_result       = "NONE",
+    tla_file_available = FALSE,
+    current_state     = "AwaitResult",
+    simulate_called   = FALSE,
+    simulate_timeout  = 0,
+    traces_written    = FALSE,
+    traces_file       = "NONE",
+    upload_batch      = {},
+    step_count        = 0;
+
+define
+
+    SimTracesFile == <<GWT_ID, "sim_traces_json">>
+
+    TypeInvariant ==
+        /\ loop_result        \in {"NONE", "PASS", "FAIL"}
+        /\ tla_file_available \in BOOLEAN
+        /\ current_state      \in States
+        /\ simulate_called    \in BOOLEAN
+        /\ simulate_timeout   \in 0..SIM_TIMEOUT_LIMIT
+        /\ traces_written     \in BOOLEAN
+
+    ValidState == current_state \in States
+
+    BoundedExecution == step_count <= MaxSteps
+
+    SimTimeoutBounded ==
+        simulate_called => simulate_timeout <= SIM_TIMEOUT_LIMIT
+
+    SimCalledOnlyAfterPass ==
+        simulate_called => loop_result = "PASS"
+
+    TlaFilePresentWhenSimCalled ==
+        simulate_called => tla_file_available
+
+    TracesWrittenImpliesSimCalled ==
+        traces_written => simulate_called
+
+    TracesFileCorrect ==
+        traces_written => traces_file = SimTracesFile
+
+    UploadBatchContainsTraces ==
+        current_state \in {"UploadBatched", "ContainerExit"} =>
+            traces_file \in upload_batch
+
+    ContainerExitSafety ==
+        current_state = "ContainerExit" =>
+            /\ simulate_called
+            /\ simulate_timeout <= SIM_TIMEOUT_LIMIT
+            /\ traces_written
+            /\ traces_file = SimTracesFile
+            /\ traces_file \in upload_batch
+
+    NonPassSkipsSimulation ==
+        current_state = "NonPassTerminated" => ~simulate_called
+
+    OrderingGuarantee ==
+        traces_file \in upload_batch =>
+            /\ traces_written
+            /\ simulate_called
+
+end define;
+
+fair process runner = "run_loop"
+begin
+    ReceiveResult:
+        either
+            loop_result        := "PASS";
+            tla_file_available := TRUE;
+            current_state      := "PassReceived";
+        or
+            loop_result   := "FAIL";
+            current_state := "NonPassTerminated";
+        end either;
+        step_count := step_count + 1;
+
+    RunSimulation:
+        if current_state = "PassReceived" /\ tla_file_available then
+            simulate_called  := TRUE;
+            simulate_timeout := SIM_TIMEOUT_LIMIT;
+            current_state    := "Simulating";
+            step_count       := step_count + 1;
+        end if;
+
+    WriteTraces:
+        if current_state = "Simulating" then
+            traces_written := TRUE;
+            traces_file    := SimTracesFile;
+            current_state  := "TracesWritten";
+            step_count     := step_count + 1;
+        end if;
+
+    AddToUploadBatch:
+        if current_state = "TracesWritten" then
+            upload_batch  := upload_batch \union {traces_file};
+            current_state := "UploadBatched";
+            step_count    := step_count + 1;
+        end if;
+
+    ExitContainer:
+        if current_state = "UploadBatched" then
+            current_state := "ContainerExit";
+        elsif current_state \notin TerminalStates then
+            current_state := "NonPassTerminated";
+        end if;
+        step_count := step_count + 1;
+
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

@@ -1,0 +1,1773 @@
+{
+  "gwt_id": "gwt-0020",
+  "module_name": "RegistryDagHostedPersistence",
+  "data_structures": {
+    "RegistryDagHostedPersistenceState": {
+      "function_id": "fn-RegistryDagHostedPersistence-state",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"CallLoad\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "context": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "dag_state": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "uninitialized",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "backend_used": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "persist_op": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "last_in_memory_op": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "load_completed": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "save_completed": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from RegistryDagHostedPersistence TLA+ spec"
+    }
+  },
+  "operations": {
+    "CallLoad": {
+      "function_id": "fn-RegistryDagHostedPersistence-CallLoad",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-CallLoad",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CallLoad from RegistryDagHostedPersistence spec"
+    },
+    "SelectLoadBackend": {
+      "function_id": "fn-RegistryDagHostedPersistence-SelectLoadBackend",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-SelectLoadBackend",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SelectLoadBackend from RegistryDagHostedPersistence spec"
+    },
+    "ExecuteLoad": {
+      "function_id": "fn-RegistryDagHostedPersistence-ExecuteLoad",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-ExecuteLoad",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ExecuteLoad from RegistryDagHostedPersistence spec"
+    },
+    "InMemoryOps": {
+      "function_id": "fn-RegistryDagHostedPersistence-InMemoryOps",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-InMemoryOps",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action InMemoryOps from RegistryDagHostedPersistence spec"
+    },
+    "CallSave": {
+      "function_id": "fn-RegistryDagHostedPersistence-CallSave",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-CallSave",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CallSave from RegistryDagHostedPersistence spec"
+    },
+    "SelectSaveBackend": {
+      "function_id": "fn-RegistryDagHostedPersistence-SelectSaveBackend",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-SelectSaveBackend",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SelectSaveBackend from RegistryDagHostedPersistence spec"
+    },
+    "ExecuteSave": {
+      "function_id": "fn-RegistryDagHostedPersistence-ExecuteSave",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-ExecuteSave",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ExecuteSave from RegistryDagHostedPersistence spec"
+    },
+    "Finish": {
+      "function_id": "fn-RegistryDagHostedPersistence-Finish",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from RegistryDagHostedPersistence spec"
+    }
+  },
+  "verifiers": {
+    "TypeOK": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-TypeOK",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-TypeOK",
+      "conditions": [
+        "context \\in {\"local\", \"hosted\"}",
+        "dag_state \\in {\"uninitialized\", \"ready\", \"failed\"}",
+        "backend_used \\in {\"none\", \"file\", \"postgres\"}",
+        "persist_op \\in {\"idle\", \"loading\", \"saving\"}",
+        "last_in_memory_op \\in\n           {\"none\", \"add_node\", \"add_edge\", \"query_relevant\",\n            \"register_gwt\", \"register_requirement\",\n            \"merge_registered_nodes\"}",
+        "step_count \\in 0..MaxSteps",
+        "load_completed \\in BOOLEAN",
+        "save_completed \\in BOOLEAN"
+      ],
+      "message": "TypeOK violation: /\\ context \\in {\"local\", \"hosted\"}\n    /\\ dag_state \\in {\"uninitialized\", \"ready\", \"failed\"}\n    /\\ backend_used \\in ...",
+      "applies_to": [
+        "backend_used",
+        "context",
+        "dag_state",
+        "last_in_memory_op",
+        "load_completed",
+        "persist_op",
+        "save_completed",
+        "step_count"
+      ],
+      "description": "Verifier for invariant TypeOK from RegistryDagHostedPersistence spec"
+    },
+    "BackendMatchesContext": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-BackendMatchesContext",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-BackendMatchesContext",
+      "conditions": [
+        "load_completed \\/ save_completed) =>\n        backend_used = ExpectedBackend(context"
+      ],
+      "message": "BackendMatchesContext violation: (load_completed \\/ save_completed) =>\n        backend_used = ExpectedBackend(context)",
+      "applies_to": [
+        "backend_used",
+        "context",
+        "load_completed",
+        "save_completed"
+      ],
+      "description": "Verifier for invariant BackendMatchesContext from RegistryDagHostedPersistence spec"
+    },
+    "HostedLoadUsesPostgres": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-HostedLoadUsesPostgres",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-HostedLoadUsesPostgres",
+      "conditions": [
+        "context = \"hosted\"",
+        "load_completed) => backend_used = \"postgres\""
+      ],
+      "message": "HostedLoadUsesPostgres violation: (context = \"hosted\" /\\ load_completed) => backend_used = \"postgres\"",
+      "applies_to": [
+        "backend_used",
+        "context",
+        "load_completed"
+      ],
+      "description": "Verifier for invariant HostedLoadUsesPostgres from RegistryDagHostedPersistence spec"
+    },
+    "HostedSaveUsesPostgres": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-HostedSaveUsesPostgres",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-HostedSaveUsesPostgres",
+      "conditions": [
+        "context = \"hosted\"",
+        "save_completed) => backend_used = \"postgres\""
+      ],
+      "message": "HostedSaveUsesPostgres violation: (context = \"hosted\" /\\ save_completed) => backend_used = \"postgres\"",
+      "applies_to": [
+        "backend_used",
+        "context",
+        "save_completed"
+      ],
+      "description": "Verifier for invariant HostedSaveUsesPostgres from RegistryDagHostedPersistence spec"
+    },
+    "LocalLoadUsesFile": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-LocalLoadUsesFile",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-LocalLoadUsesFile",
+      "conditions": [
+        "context = \"local\"",
+        "load_completed) => backend_used = \"file\""
+      ],
+      "message": "LocalLoadUsesFile violation: (context = \"local\" /\\ load_completed) => backend_used = \"file\"",
+      "applies_to": [
+        "backend_used",
+        "context",
+        "load_completed"
+      ],
+      "description": "Verifier for invariant LocalLoadUsesFile from RegistryDagHostedPersistence spec"
+    },
+    "LocalSaveUsesFile": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-LocalSaveUsesFile",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-LocalSaveUsesFile",
+      "conditions": [
+        "context = \"local\"",
+        "save_completed) => backend_used = \"file\""
+      ],
+      "message": "LocalSaveUsesFile violation: (context = \"local\" /\\ save_completed) => backend_used = \"file\"",
+      "applies_to": [
+        "backend_used",
+        "context",
+        "save_completed"
+      ],
+      "description": "Verifier for invariant LocalSaveUsesFile from RegistryDagHostedPersistence spec"
+    },
+    "InMemoryInterfaceUnchanged": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-InMemoryInterfaceUnchanged",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-InMemoryInterfaceUnchanged",
+      "conditions": [
+        "dag_state = \"ready\" =>\n        last_in_memory_op \\in\n            {\"none\", \"add_node\", \"add_edge\", \"query_relevant\",\n             \"register_gwt\", \"register_requirement\",\n             \"merge_registered_nodes\"}"
+      ],
+      "message": "InMemoryInterfaceUnchanged violation: dag_state = \"ready\" =>\n        last_in_memory_op \\in\n            {\"none\", \"add_node\", \"add_edge\", \"query_relevant\",\n ...",
+      "applies_to": [
+        "dag_state",
+        "last_in_memory_op"
+      ],
+      "description": "Verifier for invariant InMemoryInterfaceUnchanged from RegistryDagHostedPersistence spec"
+    },
+    "OnlyBackendDiffers": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-OnlyBackendDiffers",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-OnlyBackendDiffers",
+      "conditions": [
+        "dag_state = \"ready\" =>\n        ",
+        "backend_used \\in {\"file\", \"postgres\"}",
+        "last_in_memory_op \\in\n                {\"none\", \"add_node\", \"add_edge\", \"query_relevant\",\n                 \"register_gwt\", \"register_requirement\",\n                 \"merge_registered_nodes\"}"
+      ],
+      "message": "OnlyBackendDiffers violation: dag_state = \"ready\" =>\n        (/\\ backend_used \\in {\"file\", \"postgres\"}\n         /\\ last_in_memory_op \\in\n          ...",
+      "applies_to": [
+        "backend_used",
+        "dag_state",
+        "last_in_memory_op"
+      ],
+      "description": "Verifier for invariant OnlyBackendDiffers from RegistryDagHostedPersistence spec"
+    },
+    "HostedReadyUsesPostgres": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-HostedReadyUsesPostgres",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-HostedReadyUsesPostgres",
+      "conditions": [
+        "context = \"hosted\"",
+        "dag_state = \"ready\") =>\n        backend_used = \"postgres\""
+      ],
+      "message": "HostedReadyUsesPostgres violation: (context = \"hosted\" /\\ dag_state = \"ready\") =>\n        backend_used = \"postgres\"",
+      "applies_to": [
+        "backend_used",
+        "context",
+        "dag_state"
+      ],
+      "description": "Verifier for invariant HostedReadyUsesPostgres from RegistryDagHostedPersistence spec"
+    },
+    "LocalReadyUsesFile": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-LocalReadyUsesFile",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-LocalReadyUsesFile",
+      "conditions": [
+        "context = \"local\"",
+        "dag_state = \"ready\") =>\n        backend_used = \"file\""
+      ],
+      "message": "LocalReadyUsesFile violation: (context = \"local\" /\\ dag_state = \"ready\") =>\n        backend_used = \"file\"",
+      "applies_to": [
+        "backend_used",
+        "context",
+        "dag_state"
+      ],
+      "description": "Verifier for invariant LocalReadyUsesFile from RegistryDagHostedPersistence spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-RegistryDagHostedPersistence-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-RegistryDagHostedPersistence-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from RegistryDagHostedPersistence spec"
+    }
+  },
+  "assertions": {
+    "assert_TypeOK": {
+      "condition": "and context in {\"local\", \"hosted\"}\n    and dag_state in {\"uninitialized\", \"ready\", \"failed\"}\n    and backend_used in {\"none\", \"file\", \"postgres\"}\n    and persist_op in {\"idle\", \"loading\", \"saving\"}\n    and last_in_memory_op in\n           {\"none\", \"add_node\", \"add_edge\", \"query_relevant\",\n            \"register_gwt\", \"register_requirement\",\n            \"merge_registered_nodes\"}\n    and step_count in 0..MaxSteps\n    and load_completed in BOOLEAN\n    and save_completed in BOOLEAN",
+      "message": "Assertion failed: TypeOK \u2014 /\\ context \\in {\"local\", \"hosted\"}\n    /\\ dag_state \\in {\"uninitialized\", \"ready\", \"failed\"}\n    /\\ backend_used \\in ...",
+      "description": "Test assertion for TypeOK from RegistryDagHostedPersistence spec"
+    },
+    "assert_BackendMatchesContext": {
+      "condition": "(load_completed or save_completed) implies\n        backend_used = ExpectedBackend(context)",
+      "message": "Assertion failed: BackendMatchesContext \u2014 (load_completed \\/ save_completed) =>\n        backend_used = ExpectedBackend(context)",
+      "description": "Test assertion for BackendMatchesContext from RegistryDagHostedPersistence spec"
+    },
+    "assert_HostedLoadUsesPostgres": {
+      "condition": "(context = \"hosted\" and load_completed) implies backend_used = \"postgres\"",
+      "message": "Assertion failed: HostedLoadUsesPostgres \u2014 (context = \"hosted\" /\\ load_completed) => backend_used = \"postgres\"",
+      "description": "Test assertion for HostedLoadUsesPostgres from RegistryDagHostedPersistence spec"
+    },
+    "assert_HostedSaveUsesPostgres": {
+      "condition": "(context = \"hosted\" and save_completed) implies backend_used = \"postgres\"",
+      "message": "Assertion failed: HostedSaveUsesPostgres \u2014 (context = \"hosted\" /\\ save_completed) => backend_used = \"postgres\"",
+      "description": "Test assertion for HostedSaveUsesPostgres from RegistryDagHostedPersistence spec"
+    },
+    "assert_LocalLoadUsesFile": {
+      "condition": "(context = \"local\" and load_completed) implies backend_used = \"file\"",
+      "message": "Assertion failed: LocalLoadUsesFile \u2014 (context = \"local\" /\\ load_completed) => backend_used = \"file\"",
+      "description": "Test assertion for LocalLoadUsesFile from RegistryDagHostedPersistence spec"
+    },
+    "assert_LocalSaveUsesFile": {
+      "condition": "(context = \"local\" and save_completed) implies backend_used = \"file\"",
+      "message": "Assertion failed: LocalSaveUsesFile \u2014 (context = \"local\" /\\ save_completed) => backend_used = \"file\"",
+      "description": "Test assertion for LocalSaveUsesFile from RegistryDagHostedPersistence spec"
+    },
+    "assert_InMemoryInterfaceUnchanged": {
+      "condition": "dag_state = \"ready\" implies\n        last_in_memory_op in\n            {\"none\", \"add_node\", \"add_edge\", \"query_relevant\",\n             \"register_gwt\", \"register_requirement\",\n             \"merge_registered_nodes\"}",
+      "message": "Assertion failed: InMemoryInterfaceUnchanged \u2014 dag_state = \"ready\" =>\n        last_in_memory_op \\in\n            {\"none\", \"add_node\", \"add_edge\", \"query_relevant\",\n ...",
+      "description": "Test assertion for InMemoryInterfaceUnchanged from RegistryDagHostedPersistence spec"
+    },
+    "assert_OnlyBackendDiffers": {
+      "condition": "dag_state = \"ready\" implies\n        (and backend_used in {\"file\", \"postgres\"}\n         and last_in_memory_op in\n                {\"none\", \"add_node\", \"add_edge\", \"query_relevant\",\n                 \"register_gwt\", \"register_requirement\",\n                 \"merge_registered_nodes\"})",
+      "message": "Assertion failed: OnlyBackendDiffers \u2014 dag_state = \"ready\" =>\n        (/\\ backend_used \\in {\"file\", \"postgres\"}\n         /\\ last_in_memory_op \\in\n          ...",
+      "description": "Test assertion for OnlyBackendDiffers from RegistryDagHostedPersistence spec"
+    },
+    "assert_HostedReadyUsesPostgres": {
+      "condition": "(context = \"hosted\" and dag_state = \"ready\") implies\n        backend_used = \"postgres\"",
+      "message": "Assertion failed: HostedReadyUsesPostgres \u2014 (context = \"hosted\" /\\ dag_state = \"ready\") =>\n        backend_used = \"postgres\"",
+      "description": "Test assertion for HostedReadyUsesPostgres from RegistryDagHostedPersistence spec"
+    },
+    "assert_LocalReadyUsesFile": {
+      "condition": "(context = \"local\" and dag_state = \"ready\") implies\n        backend_used = \"file\"",
+      "message": "Assertion failed: LocalReadyUsesFile \u2014 (context = \"local\" /\\ dag_state = \"ready\") =>\n        backend_used = \"file\"",
+      "description": "Test assertion for LocalReadyUsesFile from RegistryDagHostedPersistence spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from RegistryDagHostedPersistence spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"file\"",
+          "save_completed": "TRUE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_edge\"",
+          "backend_used": "\"file\"",
+          "save_completed": "TRUE",
+          "context": "\"local\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"file\"",
+          "save_completed": "TRUE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"file\"",
+          "save_completed": "TRUE",
+          "context": "\"local\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"file\"",
+          "save_completed": "FALSE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"file\"",
+          "save_completed": "TRUE",
+          "context": "\"local\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"merge_registered_nodes\"",
+          "backend_used": "\"file\"",
+          "save_completed": "TRUE",
+          "context": "\"local\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"query_relevant\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_node\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_node\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_node\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_node\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"add_node\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "load_completed": "FALSE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CallLoad",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"SelectLoadBackend\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"none\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectLoadBackend",
+        "vars": {
+          "step_count": "1",
+          "load_completed": "FALSE",
+          "persist_op": "\"loading\"",
+          "pc": "[worker |-> \"ExecuteLoad\"]",
+          "dag_state": "\"uninitialized\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExecuteLoad",
+        "vars": {
+          "step_count": "2",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"InMemoryOps\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"none\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "InMemoryOps",
+        "vars": {
+          "step_count": "3",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"CallSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"register_requirement\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CallSave",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"SelectSaveBackend\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"register_requirement\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectSaveBackend",
+        "vars": {
+          "step_count": "4",
+          "load_completed": "TRUE",
+          "persist_op": "\"saving\"",
+          "pc": "[worker |-> \"ExecuteSave\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"register_requirement\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "FALSE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ExecuteSave",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Finish\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"register_requirement\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Finish",
+        "vars": {
+          "step_count": "5",
+          "load_completed": "TRUE",
+          "persist_op": "\"idle\"",
+          "pc": "[worker |-> \"Done\"]",
+          "dag_state": "\"ready\"",
+          "last_in_memory_op": "\"register_requirement\"",
+          "backend_used": "\"postgres\"",
+          "save_completed": "TRUE",
+          "context": "\"hosted\""
+        }
+      }
+    ]
+  ]
+}

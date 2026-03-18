@@ -1,0 +1,214 @@
+---- MODULE gwt0014_SchedulerHeavyTLA ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Nodes,
+    MAX_RETRIES,
+    TLC_CHECK_SECONDS,
+    PCAL_TRANS_SECONDS
+
+TimeoutBudget == MAX_RETRIES * (TLC_CHECK_SECONDS + PCAL_TRANS_SECONDS)
+
+(* --algorithm gwt0014_SchedulerHeavyTLA
+
+variables
+    job_state = "pending",
+    selected_node = "none",
+    node_has_jre \in [Nodes -> BOOLEAN],
+    node_has_tla2tools \in [Nodes -> BOOLEAN],
+    node_has_sdk_creds \in [Nodes -> BOOLEAN],
+    retry_count = 0,
+    elapsed_seconds = 0;
+
+define
+
+    IsHeavyTLA(n) ==
+        /\ node_has_jre[n]
+        /\ node_has_tla2tools[n]
+        /\ node_has_sdk_creds[n]
+
+    HeavyTLANodes == { n \in Nodes : IsHeavyTLA(n) }
+
+    JobStates == {
+        "pending", "scheduling", "node_selected",
+        "validated", "rejected", "running",
+        "complete", "timed_out"
+    }
+
+    ValidState == job_state \in JobStates
+
+    SchedulerSafetyInvariant ==
+        job_state \in {"validated", "running", "complete"} =>
+            /\ selected_node \in Nodes
+            /\ IsHeavyTLA(selected_node)
+
+    NoNonHeavyTLASelected ==
+        selected_node # "none" => IsHeavyTLA(selected_node)
+
+    TimeoutBudgetRespected ==
+        job_state = "running" =>
+            elapsed_seconds <= TimeoutBudget
+
+    RetryBound == retry_count <= MAX_RETRIES
+
+    CompletionImpliesWithinBudget ==
+        job_state = "complete" => elapsed_seconds <= TimeoutBudget
+
+end define;
+
+fair process scheduler = "scheduler"
+begin
+    Schedule:
+        job_state := "scheduling";
+
+    SelectNode:
+        if HeavyTLANodes = {} then
+            job_state := "rejected";
+            goto Terminate;
+        else
+            with n \in HeavyTLANodes do
+                selected_node := n;
+                job_state := "node_selected";
+            end with;
+        end if;
+
+    ValidateNode:
+        if IsHeavyTLA(selected_node) then
+            job_state := "validated";
+        else
+            job_state := "rejected";
+            goto Terminate;
+        end if;
+
+    RunJob:
+        job_state := "running";
+
+    RetryLoop:
+        while retry_count < MAX_RETRIES do
+            elapsed_seconds := elapsed_seconds + TLC_CHECK_SECONDS + PCAL_TRANS_SECONDS;
+            retry_count := retry_count + 1;
+        end while;
+
+    CheckTimeout:
+        if elapsed_seconds <= TimeoutBudget then
+            job_state := "complete";
+        else
+            job_state := "timed_out";
+        end if;
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE gwt0014_SchedulerHeavyTLA ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Nodes,
+    MAX_RETRIES,
+    TLC_CHECK_SECONDS,
+    PCAL_TRANS_SECONDS
+
+TimeoutBudget == MAX_RETRIES * (TLC_CHECK_SECONDS + PCAL_TRANS_SECONDS)
+
+(* --algorithm gwt0014_SchedulerHeavyTLA
+
+variables
+    job_state = "pending",
+    selected_node = "none",
+    node_has_jre \in [Nodes -> BOOLEAN],
+    node_has_tla2tools \in [Nodes -> BOOLEAN],
+    node_has_sdk_creds \in [Nodes -> BOOLEAN],
+    retry_count = 0,
+    elapsed_seconds = 0;
+
+define
+
+    IsHeavyTLA(n) ==
+        /\ node_has_jre[n]
+        /\ node_has_tla2tools[n]
+        /\ node_has_sdk_creds[n]
+
+    HeavyTLANodes == { n \in Nodes : IsHeavyTLA(n) }
+
+    JobStates == {
+        "pending", "scheduling", "node_selected",
+        "validated", "rejected", "running",
+        "complete", "timed_out"
+    }
+
+    ValidState == job_state \in JobStates
+
+    SchedulerSafetyInvariant ==
+        job_state \in {"validated", "running", "complete"} =>
+            /\ selected_node \in Nodes
+            /\ IsHeavyTLA(selected_node)
+
+    NoNonHeavyTLASelected ==
+        selected_node # "none" => IsHeavyTLA(selected_node)
+
+    TimeoutBudgetRespected ==
+        job_state = "running" =>
+            elapsed_seconds <= TimeoutBudget
+
+    RetryBound == retry_count <= MAX_RETRIES
+
+    CompletionImpliesWithinBudget ==
+        job_state = "complete" => elapsed_seconds <= TimeoutBudget
+
+end define;
+
+fair process scheduler = "scheduler"
+begin
+    Schedule:
+        job_state := "scheduling";
+
+    SelectNode:
+        if HeavyTLANodes = {} then
+            job_state := "rejected";
+            goto Terminate;
+        else
+            with n \in HeavyTLANodes do
+                selected_node := n;
+                job_state := "node_selected";
+            end with;
+        end if;
+
+    ValidateNode:
+        if IsHeavyTLA(selected_node) then
+            job_state := "validated";
+        else
+            job_state := "rejected";
+            goto Terminate;
+        end if;
+
+    RunJob:
+        job_state := "running";
+
+    RetryLoop:
+        while retry_count < MAX_RETRIES do
+            elapsed_seconds := elapsed_seconds + TLC_CHECK_SECONDS + PCAL_TRANS_SECONDS;
+            retry_count := retry_count + 1;
+        end while;
+
+    CheckTimeout:
+        if elapsed_seconds <= TimeoutBudget then
+            job_state := "complete";
+        else
+            job_state := "timed_out";
+        end if;
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

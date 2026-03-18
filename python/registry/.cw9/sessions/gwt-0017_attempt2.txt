@@ -1,0 +1,190 @@
+---- MODULE CrawlOrchestrator_gwt0017 ----
+(*
+ * PlusCal specification for gwt-0017
+ *
+ * Given:  crawl.db downloaded with skeleton FnRecord entries (SKELETON_ONLY DO)
+ * When:   CrawlOrchestrator.run() executes the DFS extraction loop
+ * Then:   each skeleton record receives exactly one Claude Agent SDK call
+ *         (claude-sonnet-4-6) via extract_one() to fill IN:DO:OUT data;
+ *         on full completion the populated crawl.db is uploaded to object
+ *         storage and the Postgres job record is updated to PASSED.
+ *)
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Records   \* finite non-empty set of skeleton FnRecord IDs in crawl.db
+
+ASSUME Records # {}
+ASSUME IsFiniteSet(Records)
+
+MaxSteps == Cardinality(Records) * 2 + 4
+
+(* --algorithm CrawlOrchestratorDFS
+
+variables
+    dfs_stack   = Records,
+    extracted   = {},
+    sdk_calls   = [r \in Records |-> 0],
+    current_rec = "none",
+    db_uploaded = FALSE,
+    job_status  = "RUNNING",
+    phase       = "DFS_LOOP",
+    step_count  = 0;
+
+define
+
+    AllExtracted == extracted = Records
+
+    AtMostOneSDKCallPerRecord == \A r \in Records : sdk_calls[r] <= 1
+
+    ExactlyOneCallForExtractedRecords ==
+        \A r \in extracted : sdk_calls[r] = 1
+
+    UploadOnlyAfterAllExtracted == db_uploaded => AllExtracted
+
+    PassedOnlyAfterUpload == job_status = "PASSED" => db_uploaded
+
+    BoundedExecution == step_count <= MaxSteps
+
+    CompletionCorrectness ==
+        phase = "COMPLETE" =>
+            ( AllExtracted
+              /\ db_uploaded
+              /\ job_status = "PASSED" )
+
+    ExactlyOneCallAtCompletion ==
+        phase = "COMPLETE" => (\A r \in Records : sdk_calls[r] = 1)
+
+    NoSkeletonRecordLeftBehind ==
+        phase = "COMPLETE" => (dfs_stack = {} /\ extracted = Records)
+
+    Liveness == <>(phase = "COMPLETE")
+
+end define;
+
+fair process Orchestrator = "orchestrator"
+begin
+    DfsLoop:
+        while dfs_stack # {} do
+            PickRecord:
+                with r \in dfs_stack do
+                    current_rec := r;
+                    dfs_stack   := dfs_stack \ {r};
+                end with;
+                step_count := step_count + 1;
+            ExtractOne:
+                sdk_calls[current_rec] := sdk_calls[current_rec] + 1;
+                extracted              := extracted \union {current_rec};
+                current_rec            := "none";
+                step_count             := step_count + 1;
+        end while;
+    UploadDb:
+        db_uploaded := TRUE;
+        phase       := "UPLOADING";
+        step_count  := step_count + 1;
+    UpdateJob:
+        job_status := "PASSED";
+        phase      := "COMPLETE";
+        step_count := step_count + 1;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE CrawlOrchestrator_gwt0017 ----
+(*
+ * PlusCal specification for gwt-0017
+ *
+ * Given:  crawl.db downloaded with skeleton FnRecord entries (SKELETON_ONLY DO)
+ * When:   CrawlOrchestrator.run() executes the DFS extraction loop
+ * Then:   each skeleton record receives exactly one Claude Agent SDK call
+ *         (claude-sonnet-4-6) via extract_one() to fill IN:DO:OUT data;
+ *         on full completion the populated crawl.db is uploaded to object
+ *         storage and the Postgres job record is updated to PASSED.
+ *)
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Records   \* finite non-empty set of skeleton FnRecord IDs in crawl.db
+
+ASSUME Records # {}
+ASSUME IsFiniteSet(Records)
+
+MaxSteps == Cardinality(Records) * 2 + 4
+
+(* --algorithm CrawlOrchestratorDFS
+
+variables
+    dfs_stack   = Records,
+    extracted   = {},
+    sdk_calls   = [r \in Records |-> 0],
+    current_rec = "none",
+    db_uploaded = FALSE,
+    job_status  = "RUNNING",
+    phase       = "DFS_LOOP",
+    step_count  = 0;
+
+define
+
+    AllExtracted == extracted = Records
+
+    AtMostOneSDKCallPerRecord == \A r \in Records : sdk_calls[r] <= 1
+
+    ExactlyOneCallForExtractedRecords ==
+        \A r \in extracted : sdk_calls[r] = 1
+
+    UploadOnlyAfterAllExtracted == db_uploaded => AllExtracted
+
+    PassedOnlyAfterUpload == job_status = "PASSED" => db_uploaded
+
+    BoundedExecution == step_count <= MaxSteps
+
+    CompletionCorrectness ==
+        phase = "COMPLETE" =>
+            ( AllExtracted
+              /\ db_uploaded
+              /\ job_status = "PASSED" )
+
+    ExactlyOneCallAtCompletion ==
+        phase = "COMPLETE" => (\A r \in Records : sdk_calls[r] = 1)
+
+    NoSkeletonRecordLeftBehind ==
+        phase = "COMPLETE" => (dfs_stack = {} /\ extracted = Records)
+
+    Liveness == <>(phase = "COMPLETE")
+
+end define;
+
+fair process Orchestrator = "orchestrator"
+begin
+    DfsLoop:
+        while dfs_stack # {} do
+            PickRecord:
+                with r \in dfs_stack do
+                    current_rec := r;
+                    dfs_stack   := dfs_stack \ {r};
+                end with;
+                step_count := step_count + 1;
+            ExtractOne:
+                sdk_calls[current_rec] := sdk_calls[current_rec] + 1;
+                extracted              := extracted \union {current_rec};
+                current_rec            := "none";
+                step_count             := step_count + 1;
+        end while;
+    UploadDb:
+        db_uploaded := TRUE;
+        phase       := "UPLOADING";
+        step_count  := step_count + 1;
+    UpdateJob:
+        job_status := "PASSED";
+        phase      := "COMPLETE";
+        step_count := step_count + 1;
+
+end process;
+
+end algorithm; *)
+
+====

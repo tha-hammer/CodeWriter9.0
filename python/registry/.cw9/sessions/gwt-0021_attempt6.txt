@@ -1,0 +1,224 @@
+---- MODULE CrawlStoreHosted ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS MaxOps
+
+ASSUME MaxOps \in Nat /\ MaxOps > 0
+
+(* --algorithm CrawlStoreHosted
+
+variables
+    mode \in {"hosted", "local"},
+    backend = "none",
+    conn_state = "closed",
+    context_entered = FALSE,
+    context_exited = FALSE,
+    current_op = "idle",
+    op_result = "none",
+    step_count = 0,
+    isolation_mode = "none",
+    ops_performed = 0,
+    do_exit = FALSE;
+
+define
+    BackendValid ==
+        backend \in {"none", "postgres", "sqlite"}
+
+    HostedUsesPostgres ==
+        (mode = "hosted" /\ context_entered) => backend = "postgres"
+
+    LocalUsesSQLite ==
+        (mode = "local" /\ context_entered) => backend = "sqlite"
+
+    BackendDeterminedByMode ==
+        context_entered =>
+            (((mode = "hosted") => (backend = "postgres")) /\
+             ((backend = "postgres") => (mode = "hosted")))
+
+    ConnNeverOpenBeforeEnter ==
+        ~context_entered => conn_state = "closed"
+
+    ConnOpenDuringContext ==
+        (context_entered /\ ~context_exited) => conn_state = "open"
+
+    ConnClosedAfterExit ==
+        context_exited => conn_state = "closed"
+
+    IsolationSetOnEnter ==
+        (context_entered /\ ~context_exited) => isolation_mode = "wal_equivalent"
+
+    OperationsOnlyWhileConnected ==
+        ops_performed > 0 => context_entered
+
+    CallerNeedsNoModification ==
+        current_op \in { "get_record", "upsert_record", "insert_record",
+                         "get_all_uuids", "get_pending_uuids",
+                         "get_stale_records", "get_card_text", "idle" }
+
+    BoundedExecution ==
+        step_count <= MaxOps
+
+end define;
+
+fair process crawlstore = "worker"
+begin
+    Init:
+        if mode = "hosted" then
+            backend := "postgres";
+        else
+            backend := "sqlite";
+        end if;
+        step_count := step_count + 1;
+    Enter:
+        conn_state      := "open";
+        isolation_mode  := "wal_equivalent";
+        context_entered := TRUE;
+        step_count      := step_count + 1;
+    Operate:
+        while step_count < MaxOps /\ ~do_exit do
+            with op \in { "get_record", "upsert_record", "insert_record",
+                          "get_all_uuids", "get_pending_uuids",
+                          "get_stale_records", "get_card_text", "__exit__" } do
+                do_exit       := op = "__exit__";
+                current_op    := IF op = "__exit__" THEN "idle"       ELSE op;
+                op_result     := IF op = "__exit__" THEN op_result     ELSE "result";
+                ops_performed := IF op = "__exit__" THEN ops_performed ELSE ops_performed + 1;
+                step_count    := IF op = "__exit__" THEN step_count    ELSE step_count + 1;
+            end with;
+        end while;
+    ExitCtx:
+        conn_state     := "closed";
+        context_exited := TRUE;
+        step_count     := step_count + 1;
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+AllInvariants ==
+    /\ BackendValid
+    /\ HostedUsesPostgres
+    /\ LocalUsesSQLite
+    /\ BackendDeterminedByMode
+    /\ ConnNeverOpenBeforeEnter
+    /\ ConnOpenDuringContext
+    /\ ConnClosedAfterExit
+    /\ IsolationSetOnEnter
+    /\ OperationsOnlyWhileConnected
+    /\ CallerNeedsNoModification
+    /\ BoundedExecution
+
+====
+---- MODULE CrawlStoreHosted ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS MaxOps
+
+ASSUME MaxOps \in Nat /\ MaxOps > 0
+
+(* --algorithm CrawlStoreHosted
+
+variables
+    mode \in {"hosted", "local"},
+    backend = "none",
+    conn_state = "closed",
+    context_entered = FALSE,
+    context_exited = FALSE,
+    current_op = "idle",
+    op_result = "none",
+    step_count = 0,
+    isolation_mode = "none",
+    ops_performed = 0,
+    do_exit = FALSE;
+
+define
+    BackendValid ==
+        backend \in {"none", "postgres", "sqlite"}
+
+    HostedUsesPostgres ==
+        (mode = "hosted" /\ context_entered) => backend = "postgres"
+
+    LocalUsesSQLite ==
+        (mode = "local" /\ context_entered) => backend = "sqlite"
+
+    BackendDeterminedByMode ==
+        context_entered =>
+            (((mode = "hosted") => (backend = "postgres")) /\
+             ((backend = "postgres") => (mode = "hosted")))
+
+    ConnNeverOpenBeforeEnter ==
+        ~context_entered => conn_state = "closed"
+
+    ConnOpenDuringContext ==
+        (context_entered /\ ~context_exited) => conn_state = "open"
+
+    ConnClosedAfterExit ==
+        context_exited => conn_state = "closed"
+
+    IsolationSetOnEnter ==
+        (context_entered /\ ~context_exited) => isolation_mode = "wal_equivalent"
+
+    OperationsOnlyWhileConnected ==
+        ops_performed > 0 => context_entered
+
+    CallerNeedsNoModification ==
+        current_op \in { "get_record", "upsert_record", "insert_record",
+                         "get_all_uuids", "get_pending_uuids",
+                         "get_stale_records", "get_card_text", "idle" }
+
+    BoundedExecution ==
+        step_count <= MaxOps
+
+end define;
+
+fair process crawlstore = "worker"
+begin
+    Init:
+        if mode = "hosted" then
+            backend := "postgres";
+        else
+            backend := "sqlite";
+        end if;
+        step_count := step_count + 1;
+    Enter:
+        conn_state      := "open";
+        isolation_mode  := "wal_equivalent";
+        context_entered := TRUE;
+        step_count      := step_count + 1;
+    Operate:
+        while step_count < MaxOps /\ ~do_exit do
+            with op \in { "get_record", "upsert_record", "insert_record",
+                          "get_all_uuids", "get_pending_uuids",
+                          "get_stale_records", "get_card_text", "__exit__" } do
+                do_exit       := op = "__exit__";
+                current_op    := IF op = "__exit__" THEN "idle"       ELSE op;
+                op_result     := IF op = "__exit__" THEN op_result     ELSE "result";
+                ops_performed := IF op = "__exit__" THEN ops_performed ELSE ops_performed + 1;
+                step_count    := IF op = "__exit__" THEN step_count    ELSE step_count + 1;
+            end with;
+        end while;
+    ExitCtx:
+        conn_state     := "closed";
+        context_exited := TRUE;
+        step_count     := step_count + 1;
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+AllInvariants ==
+    /\ BackendValid
+    /\ HostedUsesPostgres
+    /\ LocalUsesSQLite
+    /\ BackendDeterminedByMode
+    /\ ConnNeverOpenBeforeEnter
+    /\ ConnOpenDuringContext
+    /\ ConnClosedAfterExit
+    /\ IsolationSetOnEnter
+    /\ OperationsOnlyWhileConnected
+    /\ CallerNeedsNoModification
+    /\ BoundedExecution
+
+====

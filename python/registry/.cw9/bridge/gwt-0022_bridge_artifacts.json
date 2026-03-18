@@ -1,0 +1,2066 @@
+{
+  "gwt_id": "gwt-0022",
+  "module_name": "GWTPipelineDAG",
+  "data_structures": {
+    "GWTPipelineDAGState": {
+      "function_id": "fn-GWTPipelineDAG-state",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "job_status": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in AllJobs |-> PENDING]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "dag_persisted": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "api_triggered": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from GWTPipelineDAG TLA+ spec"
+    }
+  },
+  "operations": {
+    "SubmitRequest": {
+      "function_id": "fn-GWTPipelineDAG-SubmitRequest",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-SubmitRequest",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SubmitRequest from GWTPipelineDAG spec"
+    },
+    "BuildDAG": {
+      "function_id": "fn-GWTPipelineDAG-BuildDAG",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-BuildDAG",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action BuildDAG from GWTPipelineDAG spec"
+    },
+    "WaitForDAG": {
+      "function_id": "fn-GWTPipelineDAG-WaitForDAG",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-WaitForDAG",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action WaitForDAG from GWTPipelineDAG spec"
+    },
+    "ScheduleStep": {
+      "function_id": "fn-GWTPipelineDAG-ScheduleStep",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-ScheduleStep",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ScheduleStep from GWTPipelineDAG spec"
+    },
+    "Terminate": {
+      "function_id": "fn-GWTPipelineDAG-Terminate",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from GWTPipelineDAG spec"
+    }
+  },
+  "verifiers": {
+    "ReadyJobs": {
+      "function_id": "fn-GWTPipelineDAG-verify-ReadyJobs",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-ReadyJobs",
+      "conditions": [
+        "{j \\in AllJobs : job_status[j] = PENDING",
+        "DepsCompleted(j)}"
+      ],
+      "message": "ReadyJobs violation: {j \\in AllJobs : job_status[j] = PENDING /\\ DepsCompleted(j)}",
+      "applies_to": [
+        "job_status"
+      ],
+      "description": "Verifier for invariant ReadyJobs from GWTPipelineDAG spec"
+    },
+    "OrderingInvariant": {
+      "function_id": "fn-GWTPipelineDAG-verify-OrderingInvariant",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-OrderingInvariant",
+      "conditions": [
+        "\\A j \\in AllJobs :\n        job_status[j] = COMPLETED =>\n        \\A dep \\in JobDependencies(j) : job_status[dep] = COMPLETED"
+      ],
+      "message": "OrderingInvariant violation: \\A j \\in AllJobs :\n        job_status[j] = COMPLETED =>\n        \\A dep \\in JobDependencies(j) : job_status[dep] = COM...",
+      "applies_to": [
+        "job_status"
+      ],
+      "description": "Verifier for invariant OrderingInvariant from GWTPipelineDAG spec"
+    },
+    "DAGPersistedFirst": {
+      "function_id": "fn-GWTPipelineDAG-verify-DAGPersistedFirst",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-DAGPersistedFirst",
+      "conditions": [
+        "\\A j \\in AllJobs : job_status[j] = COMPLETED => dag_persisted"
+      ],
+      "message": "DAGPersistedFirst violation: \\A j \\in AllJobs : job_status[j] = COMPLETED => dag_persisted",
+      "applies_to": [
+        "dag_persisted",
+        "job_status"
+      ],
+      "description": "Verifier for invariant DAGPersistedFirst from GWTPipelineDAG spec"
+    },
+    "APITriggeredFirst": {
+      "function_id": "fn-GWTPipelineDAG-verify-APITriggeredFirst",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-APITriggeredFirst",
+      "conditions": [
+        "dag_persisted => api_triggered"
+      ],
+      "message": "APITriggeredFirst violation: dag_persisted => api_triggered",
+      "applies_to": [
+        "api_triggered",
+        "dag_persisted"
+      ],
+      "description": "Verifier for invariant APITriggeredFirst from GWTPipelineDAG spec"
+    },
+    "LoopJobsIndependent": {
+      "function_id": "fn-GWTPipelineDAG-verify-LoopJobsIndependent",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-LoopJobsIndependent",
+      "conditions": [
+        "\\A g1, g2 \\in GwtIds :\n        g1 # g2 =>\n        [type |-> LOOP_T, gwt |-> g1] \\notin JobDependencies([type |-> LOOP_T, gwt |-> g2]"
+      ],
+      "message": "LoopJobsIndependent violation: \\A g1, g2 \\in GwtIds :\n        g1 # g2 =>\n        [type |-> LOOP_T, gwt |-> g1] \\notin JobDependencies([type |-> LOOP...",
+      "applies_to": [
+        "GWTPipelineDAG"
+      ],
+      "description": "Verifier for invariant LoopJobsIndependent from GWTPipelineDAG spec"
+    },
+    "ExtractBeforeRegister": {
+      "function_id": "fn-GWTPipelineDAG-verify-ExtractBeforeRegister",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-ExtractBeforeRegister",
+      "conditions": [
+        "job_status[[type |-> REGISTER]] = COMPLETED =>\n    job_status[[type |-> EXTRACT]]  = COMPLETED"
+      ],
+      "message": "ExtractBeforeRegister violation: job_status[[type |-> REGISTER]] = COMPLETED =>\n    job_status[[type |-> EXTRACT]]  = COMPLETED",
+      "applies_to": [
+        "job_status"
+      ],
+      "description": "Verifier for invariant ExtractBeforeRegister from GWTPipelineDAG spec"
+    },
+    "RegisterBeforeAllLoop": {
+      "function_id": "fn-GWTPipelineDAG-verify-RegisterBeforeAllLoop",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-RegisterBeforeAllLoop",
+      "conditions": [
+        "\\A g \\in GwtIds :\n        job_status[[type |-> LOOP_T, gwt |-> g]] = COMPLETED =>\n        job_status[[type |-> REGISTER]] = COMPLETED"
+      ],
+      "message": "RegisterBeforeAllLoop violation: \\A g \\in GwtIds :\n        job_status[[type |-> LOOP_T, gwt |-> g]] = COMPLETED =>\n        job_status[[type |-> REGIST...",
+      "applies_to": [
+        "job_status"
+      ],
+      "description": "Verifier for invariant RegisterBeforeAllLoop from GWTPipelineDAG spec"
+    },
+    "LoopBeforeBridge": {
+      "function_id": "fn-GWTPipelineDAG-verify-LoopBeforeBridge",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-LoopBeforeBridge",
+      "conditions": [
+        "\\A g \\in VerifiedIds :\n        job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED =>\n        job_status[[type |-> LOOP_T,   gwt |-> g]] = COMPLETED"
+      ],
+      "message": "LoopBeforeBridge violation: \\A g \\in VerifiedIds :\n        job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED =>\n        job_status[[type |->...",
+      "applies_to": [
+        "job_status"
+      ],
+      "description": "Verifier for invariant LoopBeforeBridge from GWTPipelineDAG spec"
+    },
+    "BridgeBeforeGenTests": {
+      "function_id": "fn-GWTPipelineDAG-verify-BridgeBeforeGenTests",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-BridgeBeforeGenTests",
+      "conditions": [
+        "\\A g \\in VerifiedIds :\n        job_status[[type |-> GENTESTS, gwt |-> g]] = COMPLETED =>\n        job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED"
+      ],
+      "message": "BridgeBeforeGenTests violation: \\A g \\in VerifiedIds :\n        job_status[[type |-> GENTESTS, gwt |-> g]] = COMPLETED =>\n        job_status[[type |->...",
+      "applies_to": [
+        "job_status"
+      ],
+      "description": "Verifier for invariant BridgeBeforeGenTests from GWTPipelineDAG spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-GWTPipelineDAG-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-GWTPipelineDAG-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from GWTPipelineDAG spec"
+    }
+  },
+  "assertions": {
+    "assert_ReadyJobs": {
+      "condition": "{j in AllJobs : job_status[j] = PENDING and DepsCompleted(j)}",
+      "message": "Assertion failed: ReadyJobs \u2014 {j \\in AllJobs : job_status[j] = PENDING /\\ DepsCompleted(j)}",
+      "description": "Test assertion for ReadyJobs from GWTPipelineDAG spec"
+    },
+    "assert_OrderingInvariant": {
+      "condition": "\\A j in AllJobs :\n        job_status[j] = COMPLETED implies\n        \\A dep in JobDependencies(j) : job_status[dep] = COMPLETED",
+      "message": "Assertion failed: OrderingInvariant \u2014 \\A j \\in AllJobs :\n        job_status[j] = COMPLETED =>\n        \\A dep \\in JobDependencies(j) : job_status[dep] = COM...",
+      "description": "Test assertion for OrderingInvariant from GWTPipelineDAG spec"
+    },
+    "assert_DAGPersistedFirst": {
+      "condition": "\\A j in AllJobs : job_status[j] = COMPLETED implies dag_persisted",
+      "message": "Assertion failed: DAGPersistedFirst \u2014 \\A j \\in AllJobs : job_status[j] = COMPLETED => dag_persisted",
+      "description": "Test assertion for DAGPersistedFirst from GWTPipelineDAG spec"
+    },
+    "assert_APITriggeredFirst": {
+      "condition": "dag_persisted implies api_triggered",
+      "message": "Assertion failed: APITriggeredFirst \u2014 dag_persisted => api_triggered",
+      "description": "Test assertion for APITriggeredFirst from GWTPipelineDAG spec"
+    },
+    "assert_LoopJobsIndependent": {
+      "condition": "\\A g1, g2 in GwtIds :\n        g1 # g2 implies\n        [type |-> LOOP_T, gwt |-> g1] not in JobDependencies([type |-> LOOP_T, gwt |-> g2])",
+      "message": "Assertion failed: LoopJobsIndependent \u2014 \\A g1, g2 \\in GwtIds :\n        g1 # g2 =>\n        [type |-> LOOP_T, gwt |-> g1] \\notin JobDependencies([type |-> LOOP...",
+      "description": "Test assertion for LoopJobsIndependent from GWTPipelineDAG spec"
+    },
+    "assert_ExtractBeforeRegister": {
+      "condition": "job_status[[type |-> REGISTER]] = COMPLETED implies\n    job_status[[type |-> EXTRACT]]  = COMPLETED",
+      "message": "Assertion failed: ExtractBeforeRegister \u2014 job_status[[type |-> REGISTER]] = COMPLETED =>\n    job_status[[type |-> EXTRACT]]  = COMPLETED",
+      "description": "Test assertion for ExtractBeforeRegister from GWTPipelineDAG spec"
+    },
+    "assert_RegisterBeforeAllLoop": {
+      "condition": "\\A g in GwtIds :\n        job_status[[type |-> LOOP_T, gwt |-> g]] = COMPLETED implies\n        job_status[[type |-> REGISTER]] = COMPLETED",
+      "message": "Assertion failed: RegisterBeforeAllLoop \u2014 \\A g \\in GwtIds :\n        job_status[[type |-> LOOP_T, gwt |-> g]] = COMPLETED =>\n        job_status[[type |-> REGIST...",
+      "description": "Test assertion for RegisterBeforeAllLoop from GWTPipelineDAG spec"
+    },
+    "assert_LoopBeforeBridge": {
+      "condition": "\\A g in VerifiedIds :\n        job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED implies\n        job_status[[type |-> LOOP_T,   gwt |-> g]] = COMPLETED",
+      "message": "Assertion failed: LoopBeforeBridge \u2014 \\A g \\in VerifiedIds :\n        job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED =>\n        job_status[[type |->...",
+      "description": "Test assertion for LoopBeforeBridge from GWTPipelineDAG spec"
+    },
+    "assert_BridgeBeforeGenTests": {
+      "condition": "\\A g in VerifiedIds :\n        job_status[[type |-> GENTESTS, gwt |-> g]] = COMPLETED implies\n        job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED",
+      "message": "Assertion failed: BridgeBeforeGenTests \u2014 \\A g \\in VerifiedIds :\n        job_status[[type |-> GENTESTS, gwt |-> g]] = COMPLETED =>\n        job_status[[type |->...",
+      "description": "Test assertion for BridgeBeforeGenTests from GWTPipelineDAG spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from GWTPipelineDAG spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"SubmitRequest\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "FALSE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SubmitRequest",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"BuildDAG\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"WaitForDAG\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForDAG",
+        "vars": {
+          "step_count": "0",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"pending\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "1",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "2",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "3",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "4",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "5",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "6",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "7",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "8",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "9",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"ScheduleStep\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ScheduleStep",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Terminate\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Terminate",
+        "vars": {
+          "step_count": "10",
+          "pc": "[user |-> \"Done\", cp |-> \"Done\", sched |-> \"Done\"]",
+          "api_triggered": "TRUE",
+          "job_status": "( [type |-> \"extract\"] :> \"completed\" @@",
+          "dag_persisted": "TRUE"
+        }
+      }
+    ]
+  ]
+}

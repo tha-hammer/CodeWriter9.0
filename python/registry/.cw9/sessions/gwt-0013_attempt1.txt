@@ -1,0 +1,346 @@
+---- MODULE BridgeJob ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS GwtId
+
+ASSUME GwtId \in STRING \/ GwtId = "gwt-0013"
+
+PhaseSet == {
+    "dequeued",
+    "parsing",
+    "translating_state_vars",
+    "translating_actions",
+    "translating_inv_verifiers",
+    "translating_inv_assertions",
+    "translating_traces",
+    "writing_artifact",
+    "uploading_artifact",
+    "complete",
+    "failed"
+}
+
+TerminalPhases == {"complete", "failed"}
+
+(* --algorithm BridgeJob
+
+variables
+    phase = "dequeued",
+    spec_file_present       = TRUE,
+    traces_file_present     = TRUE,
+    sim_traces_file_present = TRUE,
+    spec_parsed             = FALSE,
+    state_vars_done         = FALSE,
+    actions_done            = FALSE,
+    inv_verifiers_done      = FALSE,
+    inv_assertions_done     = FALSE,
+    traces_done             = FALSE,
+    artifact_written        = FALSE,
+    artifact_uploaded       = FALSE,
+    llm_invoked             = FALSE,
+    subprocess_invoked      = FALSE,
+    parse_error             = FALSE,
+    translate_error         = FALSE;
+
+define
+
+    ValidPhase == phase \in PhaseSet
+
+    NoLLMInvoked == llm_invoked = FALSE
+
+    NoSubprocessInvoked == subprocess_invoked = FALSE
+
+    ParsePrecedesTranslations ==
+        (state_vars_done \/ actions_done \/ inv_verifiers_done \/
+         inv_assertions_done \/ traces_done) => spec_parsed
+
+    AllTranslationsPrecedeWrite ==
+        artifact_written =>
+            (state_vars_done /\ actions_done /\ inv_verifiers_done /\
+             inv_assertions_done /\ traces_done)
+
+    WritePrecedesUpload == artifact_uploaded => artifact_written
+
+    CompletionRequiresUpload == (phase = "complete") => artifact_uploaded
+
+    PipelineIntegrity ==
+        artifact_uploaded =>
+            (artifact_written /\ traces_done /\ inv_assertions_done /\
+             inv_verifiers_done /\ actions_done /\ state_vars_done /\ spec_parsed)
+
+    InputFilesRequiredForParse ==
+        (phase \notin {"dequeued"}) =>
+            (spec_file_present /\ traces_file_present /\ sim_traces_file_present)
+
+    NoPurelyTerminalWithoutArtifact ==
+        (phase = "complete") =>
+            (artifact_written /\ artifact_uploaded)
+
+    SafeTermination ==
+        (phase = "complete") =>
+            (NoLLMInvoked /\ NoSubprocessInvoked /\ PipelineIntegrity)
+
+end define;
+
+fair process runner = "run_bridge"
+begin
+
+    AwaitDequeue:
+        await phase = "dequeued"
+            /\ spec_file_present
+            /\ traces_file_present
+            /\ sim_traces_file_present;
+        phase := "parsing";
+
+    RunParseSpec:
+        if spec_file_present then
+            spec_parsed      := TRUE;
+            parse_error      := FALSE;
+            phase            := "translating_state_vars";
+        else
+            parse_error      := TRUE;
+            phase            := "failed";
+        end if;
+
+    CheckParsed:
+        if parse_error then
+            goto Terminate;
+        end if;
+
+    RunTranslateStateVars:
+        await spec_parsed;
+        state_vars_done := TRUE;
+        phase           := "translating_actions";
+
+    RunTranslateActions:
+        await state_vars_done;
+        actions_done := TRUE;
+        phase        := "translating_inv_verifiers";
+
+    RunTranslateInvVerifiers:
+        await actions_done;
+        inv_verifiers_done := TRUE;
+        phase              := "translating_inv_assertions";
+
+    RunTranslateInvAssertions:
+        await inv_verifiers_done;
+        inv_assertions_done := TRUE;
+        phase               := "translating_traces";
+
+    RunTranslateTraces:
+        await inv_assertions_done;
+        traces_done := TRUE;
+        phase       := "writing_artifact";
+
+    CheckAllTranslations:
+        if ~(state_vars_done /\ actions_done /\ inv_verifiers_done /\
+             inv_assertions_done /\ traces_done) then
+            translate_error := TRUE;
+            phase           := "failed";
+            goto Terminate;
+        end if;
+
+    WriteArtifactFile:
+        await state_vars_done /\ actions_done /\ inv_verifiers_done /\
+              inv_assertions_done /\ traces_done;
+        artifact_written := TRUE;
+        phase            := "uploading_artifact";
+
+    UploadArtifactFile:
+        await artifact_written;
+        artifact_uploaded := TRUE;
+        phase             := "complete";
+
+    Terminate:
+        assert llm_invoked       = FALSE;
+        assert subprocess_invoked = FALSE;
+        if phase = "complete" then
+            assert artifact_written;
+            assert artifact_uploaded;
+            assert spec_parsed;
+            assert state_vars_done;
+            assert actions_done;
+            assert inv_verifiers_done;
+            assert inv_assertions_done;
+            assert traces_done;
+        end if;
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE BridgeJob ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS GwtId
+
+ASSUME GwtId \in STRING \/ GwtId = "gwt-0013"
+
+PhaseSet == {
+    "dequeued",
+    "parsing",
+    "translating_state_vars",
+    "translating_actions",
+    "translating_inv_verifiers",
+    "translating_inv_assertions",
+    "translating_traces",
+    "writing_artifact",
+    "uploading_artifact",
+    "complete",
+    "failed"
+}
+
+TerminalPhases == {"complete", "failed"}
+
+(* --algorithm BridgeJob
+
+variables
+    phase = "dequeued",
+    spec_file_present       = TRUE,
+    traces_file_present     = TRUE,
+    sim_traces_file_present = TRUE,
+    spec_parsed             = FALSE,
+    state_vars_done         = FALSE,
+    actions_done            = FALSE,
+    inv_verifiers_done      = FALSE,
+    inv_assertions_done     = FALSE,
+    traces_done             = FALSE,
+    artifact_written        = FALSE,
+    artifact_uploaded       = FALSE,
+    llm_invoked             = FALSE,
+    subprocess_invoked      = FALSE,
+    parse_error             = FALSE,
+    translate_error         = FALSE;
+
+define
+
+    ValidPhase == phase \in PhaseSet
+
+    NoLLMInvoked == llm_invoked = FALSE
+
+    NoSubprocessInvoked == subprocess_invoked = FALSE
+
+    ParsePrecedesTranslations ==
+        (state_vars_done \/ actions_done \/ inv_verifiers_done \/
+         inv_assertions_done \/ traces_done) => spec_parsed
+
+    AllTranslationsPrecedeWrite ==
+        artifact_written =>
+            (state_vars_done /\ actions_done /\ inv_verifiers_done /\
+             inv_assertions_done /\ traces_done)
+
+    WritePrecedesUpload == artifact_uploaded => artifact_written
+
+    CompletionRequiresUpload == (phase = "complete") => artifact_uploaded
+
+    PipelineIntegrity ==
+        artifact_uploaded =>
+            (artifact_written /\ traces_done /\ inv_assertions_done /\
+             inv_verifiers_done /\ actions_done /\ state_vars_done /\ spec_parsed)
+
+    InputFilesRequiredForParse ==
+        (phase \notin {"dequeued"}) =>
+            (spec_file_present /\ traces_file_present /\ sim_traces_file_present)
+
+    NoPurelyTerminalWithoutArtifact ==
+        (phase = "complete") =>
+            (artifact_written /\ artifact_uploaded)
+
+    SafeTermination ==
+        (phase = "complete") =>
+            (NoLLMInvoked /\ NoSubprocessInvoked /\ PipelineIntegrity)
+
+end define;
+
+fair process runner = "run_bridge"
+begin
+
+    AwaitDequeue:
+        await phase = "dequeued"
+            /\ spec_file_present
+            /\ traces_file_present
+            /\ sim_traces_file_present;
+        phase := "parsing";
+
+    RunParseSpec:
+        if spec_file_present then
+            spec_parsed      := TRUE;
+            parse_error      := FALSE;
+            phase            := "translating_state_vars";
+        else
+            parse_error      := TRUE;
+            phase            := "failed";
+        end if;
+
+    CheckParsed:
+        if parse_error then
+            goto Terminate;
+        end if;
+
+    RunTranslateStateVars:
+        await spec_parsed;
+        state_vars_done := TRUE;
+        phase           := "translating_actions";
+
+    RunTranslateActions:
+        await state_vars_done;
+        actions_done := TRUE;
+        phase        := "translating_inv_verifiers";
+
+    RunTranslateInvVerifiers:
+        await actions_done;
+        inv_verifiers_done := TRUE;
+        phase              := "translating_inv_assertions";
+
+    RunTranslateInvAssertions:
+        await inv_verifiers_done;
+        inv_assertions_done := TRUE;
+        phase               := "translating_traces";
+
+    RunTranslateTraces:
+        await inv_assertions_done;
+        traces_done := TRUE;
+        phase       := "writing_artifact";
+
+    CheckAllTranslations:
+        if ~(state_vars_done /\ actions_done /\ inv_verifiers_done /\
+             inv_assertions_done /\ traces_done) then
+            translate_error := TRUE;
+            phase           := "failed";
+            goto Terminate;
+        end if;
+
+    WriteArtifactFile:
+        await state_vars_done /\ actions_done /\ inv_verifiers_done /\
+              inv_assertions_done /\ traces_done;
+        artifact_written := TRUE;
+        phase            := "uploading_artifact";
+
+    UploadArtifactFile:
+        await artifact_written;
+        artifact_uploaded := TRUE;
+        phase             := "complete";
+
+    Terminate:
+        assert llm_invoked       = FALSE;
+        assert subprocess_invoked = FALSE;
+        if phase = "complete" then
+            assert artifact_written;
+            assert artifact_uploaded;
+            assert spec_parsed;
+            assert state_vars_done;
+            assert actions_done;
+            assert inv_verifiers_done;
+            assert inv_assertions_done;
+            assert traces_done;
+        end if;
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

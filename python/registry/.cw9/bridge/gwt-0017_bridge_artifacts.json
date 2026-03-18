@@ -1,0 +1,2282 @@
+{
+  "gwt_id": "gwt-0017",
+  "module_name": "CrawlOrchestrator_gwt0017",
+  "data_structures": {
+    "CrawlOrchestrator_gwt0017State": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-state",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"DfsLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "dfs_stack": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Records",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "extracted": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "sdk_calls": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[r \\in Records |-> 0]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "current_rec": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "db_uploaded": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "job_status": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "RUNNING",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "DFS_LOOP",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CrawlOrchestrator_gwt0017 TLA+ spec"
+    }
+  },
+  "operations": {
+    "DfsLoop": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-DfsLoop",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-DfsLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action DfsLoop from CrawlOrchestrator_gwt0017 spec"
+    },
+    "PickRecord": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-PickRecord",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-PickRecord",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action PickRecord from CrawlOrchestrator_gwt0017 spec"
+    },
+    "ExtractOne": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-ExtractOne",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-ExtractOne",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ExtractOne from CrawlOrchestrator_gwt0017 spec"
+    },
+    "UploadDb": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-UploadDb",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-UploadDb",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action UploadDb from CrawlOrchestrator_gwt0017 spec"
+    },
+    "UpdateJob": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-UpdateJob",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-UpdateJob",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action UpdateJob from CrawlOrchestrator_gwt0017 spec"
+    }
+  },
+  "verifiers": {
+    "AllExtracted": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-verify-AllExtracted",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-AllExtracted",
+      "conditions": [
+        "extracted = Records"
+      ],
+      "message": "AllExtracted violation: extracted = Records",
+      "applies_to": [
+        "extracted"
+      ],
+      "description": "Verifier for invariant AllExtracted from CrawlOrchestrator_gwt0017 spec"
+    },
+    "AtMostOneSDKCallPerRecord": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-verify-AtMostOneSDKCallPerRecord",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-AtMostOneSDKCallPerRecord",
+      "conditions": [
+        "\\A r \\in Records : sdk_calls[r] <= 1"
+      ],
+      "message": "AtMostOneSDKCallPerRecord violation: \\A r \\in Records : sdk_calls[r] <= 1",
+      "applies_to": [
+        "sdk_calls"
+      ],
+      "description": "Verifier for invariant AtMostOneSDKCallPerRecord from CrawlOrchestrator_gwt0017 spec"
+    },
+    "ExactlyOneCallForExtractedRecords": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-verify-ExactlyOneCallForExtractedRecords",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-ExactlyOneCallForExtractedRecords",
+      "conditions": [
+        "\\A r \\in extracted : sdk_calls[r] = 1"
+      ],
+      "message": "ExactlyOneCallForExtractedRecords violation: \\A r \\in extracted : sdk_calls[r] = 1",
+      "applies_to": [
+        "extracted",
+        "sdk_calls"
+      ],
+      "description": "Verifier for invariant ExactlyOneCallForExtractedRecords from CrawlOrchestrator_gwt0017 spec"
+    },
+    "UploadOnlyAfterAllExtracted": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-verify-UploadOnlyAfterAllExtracted",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-UploadOnlyAfterAllExtracted",
+      "conditions": [
+        "db_uploaded => AllExtracted"
+      ],
+      "message": "UploadOnlyAfterAllExtracted violation: db_uploaded => AllExtracted",
+      "applies_to": [
+        "db_uploaded"
+      ],
+      "description": "Verifier for invariant UploadOnlyAfterAllExtracted from CrawlOrchestrator_gwt0017 spec"
+    },
+    "PassedOnlyAfterUpload": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-verify-PassedOnlyAfterUpload",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-PassedOnlyAfterUpload",
+      "conditions": [
+        "job_status = \"PASSED\" => db_uploaded"
+      ],
+      "message": "PassedOnlyAfterUpload violation: job_status = \"PASSED\" => db_uploaded",
+      "applies_to": [
+        "db_uploaded",
+        "job_status"
+      ],
+      "description": "Verifier for invariant PassedOnlyAfterUpload from CrawlOrchestrator_gwt0017 spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from CrawlOrchestrator_gwt0017 spec"
+    },
+    "CompletionCorrectness": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-verify-CompletionCorrectness",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-CompletionCorrectness",
+      "conditions": [
+        "phase = \"COMPLETE\" =>\n        ( AllExtracted",
+        "db_uploaded",
+        "job_status = \"PASSED\" "
+      ],
+      "message": "CompletionCorrectness violation: phase = \"COMPLETE\" =>\n        ( AllExtracted\n          /\\ db_uploaded\n          /\\ job_status = \"PASSED\" )",
+      "applies_to": [
+        "db_uploaded",
+        "job_status",
+        "phase"
+      ],
+      "description": "Verifier for invariant CompletionCorrectness from CrawlOrchestrator_gwt0017 spec"
+    },
+    "ExactlyOneCallAtCompletion": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-verify-ExactlyOneCallAtCompletion",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-ExactlyOneCallAtCompletion",
+      "conditions": [
+        "phase = \"COMPLETE\" => (\\A r \\in Records : sdk_calls[r] = 1"
+      ],
+      "message": "ExactlyOneCallAtCompletion violation: phase = \"COMPLETE\" => (\\A r \\in Records : sdk_calls[r] = 1)",
+      "applies_to": [
+        "phase",
+        "sdk_calls"
+      ],
+      "description": "Verifier for invariant ExactlyOneCallAtCompletion from CrawlOrchestrator_gwt0017 spec"
+    },
+    "NoSkeletonRecordLeftBehind": {
+      "function_id": "fn-CrawlOrchestrator_gwt0017-verify-NoSkeletonRecordLeftBehind",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator_gwt0017-NoSkeletonRecordLeftBehind",
+      "conditions": [
+        "phase = \"COMPLETE\" => (dfs_stack = {}",
+        "extracted = Records"
+      ],
+      "message": "NoSkeletonRecordLeftBehind violation: phase = \"COMPLETE\" => (dfs_stack = {} /\\ extracted = Records)",
+      "applies_to": [
+        "dfs_stack",
+        "extracted",
+        "phase"
+      ],
+      "description": "Verifier for invariant NoSkeletonRecordLeftBehind from CrawlOrchestrator_gwt0017 spec"
+    }
+  },
+  "assertions": {
+    "assert_AllExtracted": {
+      "condition": "extracted = Records",
+      "message": "Assertion failed: AllExtracted \u2014 extracted = Records",
+      "description": "Test assertion for AllExtracted from CrawlOrchestrator_gwt0017 spec"
+    },
+    "assert_AtMostOneSDKCallPerRecord": {
+      "condition": "\\A r in Records : sdk_calls[r] <= 1",
+      "message": "Assertion failed: AtMostOneSDKCallPerRecord \u2014 \\A r \\in Records : sdk_calls[r] <= 1",
+      "description": "Test assertion for AtMostOneSDKCallPerRecord from CrawlOrchestrator_gwt0017 spec"
+    },
+    "assert_ExactlyOneCallForExtractedRecords": {
+      "condition": "\\A r in extracted : sdk_calls[r] = 1",
+      "message": "Assertion failed: ExactlyOneCallForExtractedRecords \u2014 \\A r \\in extracted : sdk_calls[r] = 1",
+      "description": "Test assertion for ExactlyOneCallForExtractedRecords from CrawlOrchestrator_gwt0017 spec"
+    },
+    "assert_UploadOnlyAfterAllExtracted": {
+      "condition": "db_uploaded implies AllExtracted",
+      "message": "Assertion failed: UploadOnlyAfterAllExtracted \u2014 db_uploaded => AllExtracted",
+      "description": "Test assertion for UploadOnlyAfterAllExtracted from CrawlOrchestrator_gwt0017 spec"
+    },
+    "assert_PassedOnlyAfterUpload": {
+      "condition": "job_status = \"PASSED\" implies db_uploaded",
+      "message": "Assertion failed: PassedOnlyAfterUpload \u2014 job_status = \"PASSED\" => db_uploaded",
+      "description": "Test assertion for PassedOnlyAfterUpload from CrawlOrchestrator_gwt0017 spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from CrawlOrchestrator_gwt0017 spec"
+    },
+    "assert_CompletionCorrectness": {
+      "condition": "phase = \"COMPLETE\" implies\n        ( AllExtracted\n          and db_uploaded\n          and job_status = \"PASSED\" )",
+      "message": "Assertion failed: CompletionCorrectness \u2014 phase = \"COMPLETE\" =>\n        ( AllExtracted\n          /\\ db_uploaded\n          /\\ job_status = \"PASSED\" )",
+      "description": "Test assertion for CompletionCorrectness from CrawlOrchestrator_gwt0017 spec"
+    },
+    "assert_ExactlyOneCallAtCompletion": {
+      "condition": "phase = \"COMPLETE\" implies (\\A r in Records : sdk_calls[r] = 1)",
+      "message": "Assertion failed: ExactlyOneCallAtCompletion \u2014 phase = \"COMPLETE\" => (\\A r \\in Records : sdk_calls[r] = 1)",
+      "description": "Test assertion for ExactlyOneCallAtCompletion from CrawlOrchestrator_gwt0017 spec"
+    },
+    "assert_NoSkeletonRecordLeftBehind": {
+      "condition": "phase = \"COMPLETE\" implies (dfs_stack = {} and extracted = Records)",
+      "message": "Assertion failed: NoSkeletonRecordLeftBehind \u2014 phase = \"COMPLETE\" => (dfs_stack = {} /\\ extracted = Records)",
+      "description": "Test assertion for NoSkeletonRecordLeftBehind from CrawlOrchestrator_gwt0017 spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 1]",
+          "dfs_stack": "{\"rec1\", \"rec2\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 1]",
+          "dfs_stack": "{\"rec1\", \"rec2\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 1]",
+          "dfs_stack": "{\"rec1\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{\"rec1\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{\"rec1\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{\"rec1\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{\"rec1\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 1]",
+          "dfs_stack": "{\"rec2\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 1]",
+          "dfs_stack": "{\"rec2\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec1\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{\"rec1\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{\"rec1\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{\"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 0]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec1\", \"rec2\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "0",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec1\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 0, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "1",
+          "extracted": "{}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\", \"rec3\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "2",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec3\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 0]",
+          "dfs_stack": "{\"rec2\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "3",
+          "extracted": "{\"rec1\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 1]",
+          "dfs_stack": "{\"rec2\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 1]",
+          "dfs_stack": "{\"rec2\"}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"PickRecord\"]",
+          "step_count": "4",
+          "extracted": "{\"rec1\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PickRecord",
+        "vars": {
+          "current_rec": "\"rec2\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 0, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"ExtractOne\"]",
+          "step_count": "5",
+          "extracted": "{\"rec1\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ExtractOne",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"DfsLoop\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "DfsLoop",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "FALSE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"DFS_LOOP\"",
+          "pc": "[orchestrator |-> \"UploadDb\"]",
+          "step_count": "6",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "UploadDb",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"UPLOADING\"",
+          "pc": "[orchestrator |-> \"UpdateJob\"]",
+          "step_count": "7",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"RUNNING\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "UpdateJob",
+        "vars": {
+          "current_rec": "\"none\"",
+          "db_uploaded": "TRUE",
+          "sdk_calls": "[rec1 |-> 1, rec2 |-> 1, rec3 |-> 1]",
+          "dfs_stack": "{}",
+          "phase": "\"COMPLETE\"",
+          "pc": "[orchestrator |-> \"Done\"]",
+          "step_count": "8",
+          "extracted": "{\"rec1\", \"rec2\", \"rec3\"}",
+          "job_status": "\"PASSED\""
+        }
+      }
+    ]
+  ]
+}

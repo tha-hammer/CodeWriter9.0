@@ -1,0 +1,1077 @@
+{
+  "gwt_id": "gwt-0004",
+  "module_name": "ProjectContextHosted",
+  "data_structures": {
+    "ProjectContextHostedState": {
+      "function_id": "fn-ProjectContextHosted-state",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"SelectMode\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "chosen_mode": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "ctx": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "init",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "verified": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from ProjectContextHosted TLA+ spec"
+    }
+  },
+  "operations": {
+    "SelectMode": {
+      "function_id": "fn-ProjectContextHosted-SelectMode",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-SelectMode",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SelectMode from ProjectContextHosted spec"
+    },
+    "Dispatch": {
+      "function_id": "fn-ProjectContextHosted-Dispatch",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-Dispatch",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Dispatch from ProjectContextHosted spec"
+    },
+    "AfterDispatch": {
+      "function_id": "fn-ProjectContextHosted-AfterDispatch",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-AfterDispatch",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AfterDispatch from ProjectContextHosted spec"
+    },
+    "CheckHosted": {
+      "function_id": "fn-ProjectContextHosted-CheckHosted",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-CheckHosted",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckHosted from ProjectContextHosted spec"
+    },
+    "AfterCheck": {
+      "function_id": "fn-ProjectContextHosted-AfterCheck",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-AfterCheck",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AfterCheck from ProjectContextHosted spec"
+    },
+    "Finish": {
+      "function_id": "fn-ProjectContextHosted-Finish",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from ProjectContextHosted spec"
+    }
+  },
+  "verifiers": {
+    "HostedStateRoot": {
+      "function_id": "fn-ProjectContextHosted-verify-HostedStateRoot",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-HostedStateRoot",
+      "conditions": [
+        "PathJoin(WORKSPACE, \".cw9/\""
+      ],
+      "message": "HostedStateRoot violation: PathJoin(WORKSPACE, \".cw9/\")",
+      "applies_to": [
+        "ProjectContextHosted"
+      ],
+      "description": "Verifier for invariant HostedStateRoot from ProjectContextHosted spec"
+    },
+    "TypeOK": {
+      "function_id": "fn-ProjectContextHosted-verify-TypeOK",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-TypeOK",
+      "conditions": [
+        "chosen_mode \\in (FactoryModes \\union {\"none\"}",
+        "phase \\in {\"init\", \"dispatched\", \"complete\", \"verified\"}",
+        "ctx.frozen \\in BOOLEAN",
+        "verified \\in BOOLEAN"
+      ],
+      "message": "TypeOK violation: /\\ chosen_mode \\in (FactoryModes \\union {\"none\"})\n    /\\ phase \\in {\"init\", \"dispatched\", \"complete\", \"verified\"}\n   ...",
+      "applies_to": [
+        "chosen_mode",
+        "ctx",
+        "phase",
+        "verified"
+      ],
+      "description": "Verifier for invariant TypeOK from ProjectContextHosted spec"
+    },
+    "HostedContextCorrect": {
+      "function_id": "fn-ProjectContextHosted-verify-HostedContextCorrect",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-HostedContextCorrect",
+      "conditions": [
+        " phase \\in {\"complete\", \"verified\"}",
+        "chosen_mode = \"hosted\" ) =>",
+        "ctx.state_root     = HostedStateRoot",
+        "ctx.template_dir   = CONTAINER_TEMPLATE_DIR",
+        "ctx.tools_dir      = CONTAINER_TOOLS_DIR",
+        "ctx.storage_client = STORAGE_CLIENT",
+        "ctx.frozen         = TRUE"
+      ],
+      "message": "HostedContextCorrect violation: ( phase \\in {\"complete\", \"verified\"} /\\ chosen_mode = \"hosted\" ) =>\n        /\\ ctx.state_root     = HostedStateRoot\n ...",
+      "applies_to": [
+        "chosen_mode",
+        "ctx",
+        "phase",
+        "verified"
+      ],
+      "description": "Verifier for invariant HostedContextCorrect from ProjectContextHosted spec"
+    },
+    "NonHostedLackStorage": {
+      "function_id": "fn-ProjectContextHosted-verify-NonHostedLackStorage",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-NonHostedLackStorage",
+      "conditions": [
+        " phase \\in {\"complete\", \"verified\"}",
+        "chosen_mode \\in {\"self_hosting\", \"external\", \"installed\"} ) =>\n        ctx.storage_client = NULL_STORAGE"
+      ],
+      "message": "NonHostedLackStorage violation: ( phase \\in {\"complete\", \"verified\"} /\\\n      chosen_mode \\in {\"self_hosting\", \"external\", \"installed\"} ) =>\n        ...",
+      "applies_to": [
+        "chosen_mode",
+        "ctx",
+        "phase",
+        "verified"
+      ],
+      "description": "Verifier for invariant NonHostedLackStorage from ProjectContextHosted spec"
+    },
+    "FrozenOnceComplete": {
+      "function_id": "fn-ProjectContextHosted-verify-FrozenOnceComplete",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-FrozenOnceComplete",
+      "conditions": [
+        "phase \\in {\"complete\", \"verified\"} => ctx.frozen = TRUE"
+      ],
+      "message": "FrozenOnceComplete violation: phase \\in {\"complete\", \"verified\"} => ctx.frozen = TRUE",
+      "applies_to": [
+        "ctx",
+        "phase",
+        "verified"
+      ],
+      "description": "Verifier for invariant FrozenOnceComplete from ProjectContextHosted spec"
+    },
+    "HostedPathDerivedFromWorkspace": {
+      "function_id": "fn-ProjectContextHosted-verify-HostedPathDerivedFromWorkspace",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-HostedPathDerivedFromWorkspace",
+      "conditions": [
+        " phase \\in {\"complete\", \"verified\"}",
+        "chosen_mode = \"hosted\" ) =>\n        ctx.state_root = PathJoin(WORKSPACE, \".cw9/\""
+      ],
+      "message": "HostedPathDerivedFromWorkspace violation: ( phase \\in {\"complete\", \"verified\"} /\\ chosen_mode = \"hosted\" ) =>\n        ctx.state_root = PathJoin(WORKSPACE, \".cw...",
+      "applies_to": [
+        "chosen_mode",
+        "ctx",
+        "phase",
+        "verified"
+      ],
+      "description": "Verifier for invariant HostedPathDerivedFromWorkspace from ProjectContextHosted spec"
+    },
+    "SafetyInvariant": {
+      "function_id": "fn-ProjectContextHosted-verify-SafetyInvariant",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-SafetyInvariant",
+      "conditions": [
+        "TypeOK",
+        "HostedContextCorrect",
+        "NonHostedLackStorage",
+        "FrozenOnceComplete",
+        "HostedPathDerivedFromWorkspace"
+      ],
+      "message": "SafetyInvariant violation: /\\ TypeOK\n    /\\ HostedContextCorrect\n    /\\ NonHostedLackStorage\n    /\\ FrozenOnceComplete\n    /\\ HostedPathDerivedF...",
+      "applies_to": [
+        "ProjectContextHosted"
+      ],
+      "description": "Verifier for invariant SafetyInvariant from ProjectContextHosted spec"
+    },
+    "EventuallyVerified": {
+      "function_id": "fn-ProjectContextHosted-verify-EventuallyVerified",
+      "acceptance_criteria_id": "ac-ProjectContextHosted-EventuallyVerified",
+      "conditions": [
+        "<>(verified = TRUE"
+      ],
+      "message": "EventuallyVerified violation: <>(verified = TRUE)",
+      "applies_to": [
+        "verified"
+      ],
+      "description": "Verifier for invariant EventuallyVerified from ProjectContextHosted spec"
+    }
+  },
+  "assertions": {
+    "assert_HostedStateRoot": {
+      "condition": "PathJoin(WORKSPACE, \".cw9/\")",
+      "message": "Assertion failed: HostedStateRoot \u2014 PathJoin(WORKSPACE, \".cw9/\")",
+      "description": "Test assertion for HostedStateRoot from ProjectContextHosted spec"
+    },
+    "assert_TypeOK": {
+      "condition": "and chosen_mode in (FactoryModes \\union {\"none\"})\n    and phase in {\"init\", \"dispatched\", \"complete\", \"verified\"}\n    and ctx.frozen in BOOLEAN\n    and verified in BOOLEAN",
+      "message": "Assertion failed: TypeOK \u2014 /\\ chosen_mode \\in (FactoryModes \\union {\"none\"})\n    /\\ phase \\in {\"init\", \"dispatched\", \"complete\", \"verified\"}\n   ...",
+      "description": "Test assertion for TypeOK from ProjectContextHosted spec"
+    },
+    "assert_HostedContextCorrect": {
+      "condition": "( phase in {\"complete\", \"verified\"} and chosen_mode = \"hosted\" ) implies\n        and ctx.state_root     = HostedStateRoot\n        and ctx.template_dir   = CONTAINER_TEMPLATE_DIR\n        and ctx.tools_dir      = CONTAINER_TOOLS_DIR\n        and ctx.storage_client = STORAGE_CLIENT\n        and ctx.frozen         = TRUE",
+      "message": "Assertion failed: HostedContextCorrect \u2014 ( phase \\in {\"complete\", \"verified\"} /\\ chosen_mode = \"hosted\" ) =>\n        /\\ ctx.state_root     = HostedStateRoot\n ...",
+      "description": "Test assertion for HostedContextCorrect from ProjectContextHosted spec"
+    },
+    "assert_NonHostedLackStorage": {
+      "condition": "( phase in {\"complete\", \"verified\"} and\n      chosen_mode in {\"self_hosting\", \"external\", \"installed\"} ) implies\n        ctx.storage_client = NULL_STORAGE",
+      "message": "Assertion failed: NonHostedLackStorage \u2014 ( phase \\in {\"complete\", \"verified\"} /\\\n      chosen_mode \\in {\"self_hosting\", \"external\", \"installed\"} ) =>\n        ...",
+      "description": "Test assertion for NonHostedLackStorage from ProjectContextHosted spec"
+    },
+    "assert_FrozenOnceComplete": {
+      "condition": "phase in {\"complete\", \"verified\"} implies ctx.frozen = TRUE",
+      "message": "Assertion failed: FrozenOnceComplete \u2014 phase \\in {\"complete\", \"verified\"} => ctx.frozen = TRUE",
+      "description": "Test assertion for FrozenOnceComplete from ProjectContextHosted spec"
+    },
+    "assert_HostedPathDerivedFromWorkspace": {
+      "condition": "( phase in {\"complete\", \"verified\"} and chosen_mode = \"hosted\" ) implies\n        ctx.state_root = PathJoin(WORKSPACE, \".cw9/\")",
+      "message": "Assertion failed: HostedPathDerivedFromWorkspace \u2014 ( phase \\in {\"complete\", \"verified\"} /\\ chosen_mode = \"hosted\" ) =>\n        ctx.state_root = PathJoin(WORKSPACE, \".cw...",
+      "description": "Test assertion for HostedPathDerivedFromWorkspace from ProjectContextHosted spec"
+    },
+    "assert_SafetyInvariant": {
+      "condition": "and TypeOK\n    and HostedContextCorrect\n    and NonHostedLackStorage\n    and FrozenOnceComplete\n    and HostedPathDerivedFromWorkspace",
+      "message": "Assertion failed: SafetyInvariant \u2014 /\\ TypeOK\n    /\\ HostedContextCorrect\n    /\\ NonHostedLackStorage\n    /\\ FrozenOnceComplete\n    /\\ HostedPathDerivedF...",
+      "description": "Test assertion for SafetyInvariant from ProjectContextHosted spec"
+    },
+    "assert_EventuallyVerified": {
+      "condition": "<>(verified = TRUE)",
+      "message": "Assertion failed: EventuallyVerified \u2014 <>(verified = TRUE)",
+      "description": "Test assertion for EventuallyVerified from ProjectContextHosted spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> <<10, \".cw9/\">>, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"hosted\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"installed\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"external\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"init\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"none\"",
+          "pc": "[factory |-> \"SelectMode\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectMode",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> FALSE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"Dispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "phase": "\"dispatched\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"AfterDispatch\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AfterDispatch",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"CheckHosted\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckHosted",
+        "vars": {
+          "phase": "\"complete\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"AfterCheck\"]",
+          "verified": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AfterCheck",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"Finish\"]",
+          "verified": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"verified\"",
+          "ctx": "[frozen |-> TRUE, state_root |-> 10, template_dir |-> 10, tools_dir |-> 10, storage_client |-> 10]",
+          "chosen_mode": "\"self_hosting\"",
+          "pc": "[factory |-> \"Done\"]",
+          "verified": "TRUE"
+        }
+      }
+    ]
+  ]
+}

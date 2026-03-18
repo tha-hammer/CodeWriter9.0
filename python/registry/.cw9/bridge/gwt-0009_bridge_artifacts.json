@@ -1,0 +1,2905 @@
+{
+  "gwt_id": "gwt-0009",
+  "module_name": "GWT0009_CompileComposeVerify",
+  "data_structures": {
+    "GWT0009_CompileComposeVerifyState": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-state",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"CreateTempDir\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "job_state": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in Jobs |-> \"idle\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "temp_dir": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in Jobs |-> \"none\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "verified_tla": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in Jobs |-> FALSE]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "verified_cfg": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in Jobs |-> FALSE]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "files_uploaded": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in Jobs |-> FALSE]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "container_exited": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in Jobs |-> FALSE]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "pcal_ok": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in Jobs |-> FALSE]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "tlc_ok": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in Jobs |-> FALSE]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[j \\in Jobs |-> 0]",
+          "validation": [
+            "NotNull"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from GWT0009_CompileComposeVerify TLA+ spec"
+    }
+  },
+  "operations": {},
+  "verifiers": {
+    "AllStates": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-verify-AllStates",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-AllStates",
+      "conditions": [
+        "{\"idle\", \"tempdir_created\", \"pcal_running\",\n              \"tlc_running\", \"pass\", \"fail\",\n              \"files_read\", \"uploaded\", \"exited\"}"
+      ],
+      "message": "AllStates violation: {\"idle\", \"tempdir_created\", \"pcal_running\",\n              \"tlc_running\", \"pass\", \"fail\",\n              \"files_read\", ...",
+      "applies_to": [
+        "GWT0009_CompileComposeVerify"
+      ],
+      "description": "Verifier for invariant AllStates from GWT0009_CompileComposeVerify spec"
+    },
+    "ValidStates": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-verify-ValidStates",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-ValidStates",
+      "conditions": [
+        "\\A j \\in Jobs : job_state[j] \\in AllStates"
+      ],
+      "message": "ValidStates violation: \\A j \\in Jobs : job_state[j] \\in AllStates",
+      "applies_to": [
+        "job_state"
+      ],
+      "description": "Verifier for invariant ValidStates from GWT0009_CompileComposeVerify spec"
+    },
+    "TempDirIsolation": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-verify-TempDirIsolation",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-TempDirIsolation",
+      "conditions": [
+        "\\A j1, j2 \\in Jobs :\n        (j1 # j2",
+        "temp_dir[j1] # \"none\"",
+        "temp_dir[j2] # \"none\")\n        => temp_dir[j1] # temp_dir[j2]"
+      ],
+      "message": "TempDirIsolation violation: \\A j1, j2 \\in Jobs :\n        (j1 # j2 /\\ temp_dir[j1] # \"none\" /\\ temp_dir[j2] # \"none\")\n        => temp_dir[j1] # te...",
+      "applies_to": [
+        "temp_dir"
+      ],
+      "description": "Verifier for invariant TempDirIsolation from GWT0009_CompileComposeVerify spec"
+    },
+    "UploadBeforeExit": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-verify-UploadBeforeExit",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-UploadBeforeExit",
+      "conditions": [
+        "\\A j \\in Jobs :\n        (container_exited[j]",
+        "pcal_ok[j]",
+        "tlc_ok[j])\n        => files_uploaded[j]"
+      ],
+      "message": "UploadBeforeExit violation: \\A j \\in Jobs :\n        (container_exited[j] /\\ pcal_ok[j] /\\ tlc_ok[j])\n        => files_uploaded[j]",
+      "applies_to": [
+        "container_exited",
+        "files_uploaded",
+        "pcal_ok",
+        "tlc_ok"
+      ],
+      "description": "Verifier for invariant UploadBeforeExit from GWT0009_CompileComposeVerify spec"
+    },
+    "FilesReadBeforeUpload": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-verify-FilesReadBeforeUpload",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-FilesReadBeforeUpload",
+      "conditions": [
+        "\\A j \\in Jobs :\n        files_uploaded[j] => (verified_tla[j]",
+        "verified_cfg[j]"
+      ],
+      "message": "FilesReadBeforeUpload violation: \\A j \\in Jobs :\n        files_uploaded[j] => (verified_tla[j] /\\ verified_cfg[j])",
+      "applies_to": [
+        "files_uploaded",
+        "verified_cfg",
+        "verified_tla"
+      ],
+      "description": "Verifier for invariant FilesReadBeforeUpload from GWT0009_CompileComposeVerify spec"
+    },
+    "UploadRequiresTempDir": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-verify-UploadRequiresTempDir",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-UploadRequiresTempDir",
+      "conditions": [
+        "\\A j \\in Jobs :\n        files_uploaded[j] => temp_dir[j] # \"none\""
+      ],
+      "message": "UploadRequiresTempDir violation: \\A j \\in Jobs :\n        files_uploaded[j] => temp_dir[j] # \"none\"",
+      "applies_to": [
+        "files_uploaded",
+        "temp_dir"
+      ],
+      "description": "Verifier for invariant UploadRequiresTempDir from GWT0009_CompileComposeVerify spec"
+    },
+    "NoUploadOnFail": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-verify-NoUploadOnFail",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-NoUploadOnFail",
+      "conditions": [
+        "\\A j \\in Jobs :\n        (job_state[j] = \"fail\") => ~files_uploaded[j]"
+      ],
+      "message": "NoUploadOnFail violation: \\A j \\in Jobs :\n        (job_state[j] = \"fail\") => ~files_uploaded[j]",
+      "applies_to": [
+        "files_uploaded",
+        "job_state"
+      ],
+      "description": "Verifier for invariant NoUploadOnFail from GWT0009_CompileComposeVerify spec"
+    },
+    "TempDirOwnedByJob": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-verify-TempDirOwnedByJob",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-TempDirOwnedByJob",
+      "conditions": [
+        "\\A j \\in Jobs :\n        temp_dir[j] # \"none\" => temp_dir[j] = j"
+      ],
+      "message": "TempDirOwnedByJob violation: \\A j \\in Jobs :\n        temp_dir[j] # \"none\" => temp_dir[j] = j",
+      "applies_to": [
+        "temp_dir"
+      ],
+      "description": "Verifier for invariant TempDirOwnedByJob from GWT0009_CompileComposeVerify spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-GWT0009_CompileComposeVerify-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-GWT0009_CompileComposeVerify-BoundedExecution",
+      "conditions": [
+        "\\A j \\in Jobs : step_count[j] <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: \\A j \\in Jobs : step_count[j] <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from GWT0009_CompileComposeVerify spec"
+    }
+  },
+  "assertions": {
+    "assert_AllStates": {
+      "condition": "{\"idle\", \"tempdir_created\", \"pcal_running\",\n              \"tlc_running\", \"pass\", \"fail\",\n              \"files_read\", \"uploaded\", \"exited\"}",
+      "message": "Assertion failed: AllStates \u2014 {\"idle\", \"tempdir_created\", \"pcal_running\",\n              \"tlc_running\", \"pass\", \"fail\",\n              \"files_read\", ...",
+      "description": "Test assertion for AllStates from GWT0009_CompileComposeVerify spec"
+    },
+    "assert_ValidStates": {
+      "condition": "\\A j in Jobs : job_state[j] in AllStates",
+      "message": "Assertion failed: ValidStates \u2014 \\A j \\in Jobs : job_state[j] \\in AllStates",
+      "description": "Test assertion for ValidStates from GWT0009_CompileComposeVerify spec"
+    },
+    "assert_TempDirIsolation": {
+      "condition": "\\A j1, j2 in Jobs :\n        (j1 # j2 and temp_dir[j1] # \"none\" and temp_dir[j2] # \"none\")\n        implies temp_dir[j1] # temp_dir[j2]",
+      "message": "Assertion failed: TempDirIsolation \u2014 \\A j1, j2 \\in Jobs :\n        (j1 # j2 /\\ temp_dir[j1] # \"none\" /\\ temp_dir[j2] # \"none\")\n        => temp_dir[j1] # te...",
+      "description": "Test assertion for TempDirIsolation from GWT0009_CompileComposeVerify spec"
+    },
+    "assert_UploadBeforeExit": {
+      "condition": "\\A j in Jobs :\n        (container_exited[j] and pcal_ok[j] and tlc_ok[j])\n        implies files_uploaded[j]",
+      "message": "Assertion failed: UploadBeforeExit \u2014 \\A j \\in Jobs :\n        (container_exited[j] /\\ pcal_ok[j] /\\ tlc_ok[j])\n        => files_uploaded[j]",
+      "description": "Test assertion for UploadBeforeExit from GWT0009_CompileComposeVerify spec"
+    },
+    "assert_FilesReadBeforeUpload": {
+      "condition": "\\A j in Jobs :\n        files_uploaded[j] implies (verified_tla[j] and verified_cfg[j])",
+      "message": "Assertion failed: FilesReadBeforeUpload \u2014 \\A j \\in Jobs :\n        files_uploaded[j] => (verified_tla[j] /\\ verified_cfg[j])",
+      "description": "Test assertion for FilesReadBeforeUpload from GWT0009_CompileComposeVerify spec"
+    },
+    "assert_UploadRequiresTempDir": {
+      "condition": "\\A j in Jobs :\n        files_uploaded[j] implies temp_dir[j] # \"none\"",
+      "message": "Assertion failed: UploadRequiresTempDir \u2014 \\A j \\in Jobs :\n        files_uploaded[j] => temp_dir[j] # \"none\"",
+      "description": "Test assertion for UploadRequiresTempDir from GWT0009_CompileComposeVerify spec"
+    },
+    "assert_NoUploadOnFail": {
+      "condition": "\\A j in Jobs :\n        (job_state[j] = \"fail\") implies ~files_uploaded[j]",
+      "message": "Assertion failed: NoUploadOnFail \u2014 \\A j \\in Jobs :\n        (job_state[j] = \"fail\") => ~files_uploaded[j]",
+      "description": "Test assertion for NoUploadOnFail from GWT0009_CompileComposeVerify spec"
+    },
+    "assert_TempDirOwnedByJob": {
+      "condition": "\\A j in Jobs :\n        temp_dir[j] # \"none\" implies temp_dir[j] = j",
+      "message": "Assertion failed: TempDirOwnedByJob \u2014 \\A j \\in Jobs :\n        temp_dir[j] # \"none\" => temp_dir[j] = j",
+      "description": "Test assertion for TempDirOwnedByJob from GWT0009_CompileComposeVerify spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "\\A j in Jobs : step_count[j] <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 \\A j \\in Jobs : step_count[j] <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from GWT0009_CompileComposeVerify spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CleanupFail\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"RunTLC\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"TLCChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"AfterTLC\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CleanupFail\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CleanupFail\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"TLCChoice\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterTLC\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"MarkPass\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 4 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pass\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"ReadVerifiedFiles\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 5 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"files_read\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"UploadToStorage\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 6 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"uploaded\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"ExitContainer\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 7 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"exited\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 7 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"exited\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"TLCChoice\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"TLCChoice\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterTLC\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CleanupFail\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 4 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 4 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"TLCChoice\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"TLCChoice\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterTLC\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterTLC\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CleanupFail\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 4 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 4 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CleanupFail\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CleanupFail\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"RunTLC\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"RunTLC\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"TLCChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CleanupFail\" @@ Jobs_2 :> \"TLCChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"TLCChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"TLCChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"AfterTLC\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CleanupFail\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"RunTLC\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"TLCChoice\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"AfterTLC\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"MarkPass\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"pass\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"ReadVerifiedFiles\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 5)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"files_read\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"UploadToStorage\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 6)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"uploaded\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"ExitContainer\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 7)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"exited\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 7)",
+          "job_state": "(Jobs_1 :> \"fail\" @@ Jobs_2 :> \"exited\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> \"none\" @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 0 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"idle\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"CreateTempDir\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 1 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"tempdir_created\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunPCal\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"PCAlChoice\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> \"none\")",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 0)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"idle\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"CreateTempDir\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 1)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tempdir_created\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"RunPCal\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterPCal\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"PCAlChoice\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"AfterPCal\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 2)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"pcal_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"RunTLC\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"TLCChoice\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"tlc_running\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"AfterTLC\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 3)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"CleanupFail\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"Finish\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 2 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"pcal_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"RunTLC\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"TLCChoice\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"AfterTLC\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 3 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"tlc_running\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"MarkPass\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 4 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"pass\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"ReadVerifiedFiles\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 5 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"files_read\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> FALSE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"UploadToStorage\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 6 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"uploaded\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"ExitContainer\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> FALSE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 7 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"exited\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Finish\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "temp_dir": "(Jobs_1 :> Jobs_1 @@ Jobs_2 :> Jobs_2)",
+          "verified_cfg": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "step_count": "(Jobs_1 :> 7 @@ Jobs_2 :> 4)",
+          "job_state": "(Jobs_1 :> \"exited\" @@ Jobs_2 :> \"fail\")",
+          "verified_tla": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "files_uploaded": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)",
+          "pc": "(Jobs_1 :> \"Done\" @@ Jobs_2 :> \"Done\")",
+          "pcal_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "container_exited": "(Jobs_1 :> TRUE @@ Jobs_2 :> TRUE)",
+          "tlc_ok": "(Jobs_1 :> TRUE @@ Jobs_2 :> FALSE)"
+        }
+      }
+    ]
+  ]
+}

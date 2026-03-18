@@ -1,0 +1,266 @@
+The violated invariant `AllCompleted` is `FALSE` in the initial state — all jobs start `PENDING`. The TLC runner treats every boolean operator in the `define` block as a `[]`-safety invariant. `AllCompleted` is a liveness predicate (`<>`), not a safety invariant, so it must live outside the `define` block. The fix: remove `AllCompleted` from `define`, inline its negation directly in the `while` guard, and redeclare it as a plain TLA+ operator after `end algorithm; *)`.
+
+---- MODULE GWTPipelineDAG ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    N_GWTS,
+    N_VERIFIED,
+    MaxSteps
+
+ASSUME N_GWTS >= 1
+ASSUME N_VERIFIED >= 0 /\ N_VERIFIED <= N_GWTS
+ASSUME MaxSteps >= 1
+
+EXTRACT  == "extract"
+REGISTER == "register"
+LOOP_T   == "loop"
+BRIDGE_T == "bridge"
+GENTESTS == "gen_tests"
+
+PENDING   == "pending"
+COMPLETED == "completed"
+
+GwtIds      == 1..N_GWTS
+VerifiedIds == 1..N_VERIFIED
+
+ExtractJob   == {[type |-> EXTRACT]}
+RegisterJob  == {[type |-> REGISTER]}
+LoopJobs     == {[type |-> LOOP_T,   gwt |-> g] : g \in GwtIds}
+BridgeJobs   == {[type |-> BRIDGE_T, gwt |-> g] : g \in VerifiedIds}
+GenTestsJobs == {[type |-> GENTESTS, gwt |-> g] : g \in VerifiedIds}
+
+AllJobs ==
+    ExtractJob \union RegisterJob \union LoopJobs \union BridgeJobs \union GenTestsJobs
+
+(* --algorithm GWTPipelineDAG
+
+variables
+    job_status    = [j \in AllJobs |-> PENDING],
+    dag_persisted = FALSE,
+    api_triggered = FALSE,
+    step_count    = 0;
+
+define
+
+    JobDependencies(j) ==
+        IF      j.type = EXTRACT  THEN {}
+        ELSE IF j.type = REGISTER THEN ExtractJob
+        ELSE IF j.type = LOOP_T   THEN RegisterJob
+        ELSE IF j.type = BRIDGE_T THEN {[type |-> LOOP_T,   gwt |-> j.gwt]}
+        ELSE                           {[type |-> BRIDGE_T, gwt |-> j.gwt]}
+
+    DepsCompleted(j) ==
+        \A dep \in JobDependencies(j) : job_status[dep] = COMPLETED
+
+    ReadyJobs ==
+        {j \in AllJobs : job_status[j] = PENDING /\ DepsCompleted(j)}
+
+    OrderingInvariant ==
+        \A j \in AllJobs :
+            job_status[j] = COMPLETED =>
+            \A dep \in JobDependencies(j) : job_status[dep] = COMPLETED
+
+    DAGPersistedFirst ==
+        \A j \in AllJobs : job_status[j] = COMPLETED => dag_persisted
+
+    APITriggeredFirst ==
+        dag_persisted => api_triggered
+
+    LoopJobsIndependent ==
+        \A g1, g2 \in GwtIds :
+            g1 # g2 =>
+            [type |-> LOOP_T, gwt |-> g1] \notin JobDependencies([type |-> LOOP_T, gwt |-> g2])
+
+    ExtractBeforeRegister ==
+        job_status[[type |-> REGISTER]] = COMPLETED =>
+        job_status[[type |-> EXTRACT]]  = COMPLETED
+
+    RegisterBeforeAllLoop ==
+        \A g \in GwtIds :
+            job_status[[type |-> LOOP_T, gwt |-> g]] = COMPLETED =>
+            job_status[[type |-> REGISTER]] = COMPLETED
+
+    LoopBeforeBridge ==
+        \A g \in VerifiedIds :
+            job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED =>
+            job_status[[type |-> LOOP_T,   gwt |-> g]] = COMPLETED
+
+    BridgeBeforeGenTests ==
+        \A g \in VerifiedIds :
+            job_status[[type |-> GENTESTS, gwt |-> g]] = COMPLETED =>
+            job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED
+
+    BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process UserAPI = "user"
+begin
+    SubmitRequest:
+        api_triggered := TRUE;
+end process;
+
+fair process ControlPlane = "cp"
+begin
+    BuildDAG:
+        await api_triggered;
+        dag_persisted := TRUE;
+end process;
+
+fair process Scheduler = "sched"
+begin
+    WaitForDAG:
+        await dag_persisted;
+    ScheduleStep:
+        while (\E j \in AllJobs : job_status[j] = PENDING) /\ step_count < MaxSteps do
+            with j \in ReadyJobs do
+                job_status[j] := COMPLETED;
+            end with;
+            step_count := step_count + 1;
+        end while;
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+AllCompleted == \A j \in AllJobs : job_status[j] = COMPLETED
+
+Liveness == <>AllCompleted
+
+====
+The violated invariant `AllCompleted` is `FALSE` in the initial state — all jobs start `PENDING`. The TLC runner treats every boolean operator in the `define` block as a `[]`-safety invariant. `AllCompleted` is a liveness predicate (`<>`), not a safety invariant, so it must live outside the `define` block. The fix: remove `AllCompleted` from `define`, inline its negation directly in the `while` guard, and redeclare it as a plain TLA+ operator after `end algorithm; *)`.
+
+---- MODULE GWTPipelineDAG ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    N_GWTS,
+    N_VERIFIED,
+    MaxSteps
+
+ASSUME N_GWTS >= 1
+ASSUME N_VERIFIED >= 0 /\ N_VERIFIED <= N_GWTS
+ASSUME MaxSteps >= 1
+
+EXTRACT  == "extract"
+REGISTER == "register"
+LOOP_T   == "loop"
+BRIDGE_T == "bridge"
+GENTESTS == "gen_tests"
+
+PENDING   == "pending"
+COMPLETED == "completed"
+
+GwtIds      == 1..N_GWTS
+VerifiedIds == 1..N_VERIFIED
+
+ExtractJob   == {[type |-> EXTRACT]}
+RegisterJob  == {[type |-> REGISTER]}
+LoopJobs     == {[type |-> LOOP_T,   gwt |-> g] : g \in GwtIds}
+BridgeJobs   == {[type |-> BRIDGE_T, gwt |-> g] : g \in VerifiedIds}
+GenTestsJobs == {[type |-> GENTESTS, gwt |-> g] : g \in VerifiedIds}
+
+AllJobs ==
+    ExtractJob \union RegisterJob \union LoopJobs \union BridgeJobs \union GenTestsJobs
+
+(* --algorithm GWTPipelineDAG
+
+variables
+    job_status    = [j \in AllJobs |-> PENDING],
+    dag_persisted = FALSE,
+    api_triggered = FALSE,
+    step_count    = 0;
+
+define
+
+    JobDependencies(j) ==
+        IF      j.type = EXTRACT  THEN {}
+        ELSE IF j.type = REGISTER THEN ExtractJob
+        ELSE IF j.type = LOOP_T   THEN RegisterJob
+        ELSE IF j.type = BRIDGE_T THEN {[type |-> LOOP_T,   gwt |-> j.gwt]}
+        ELSE                           {[type |-> BRIDGE_T, gwt |-> j.gwt]}
+
+    DepsCompleted(j) ==
+        \A dep \in JobDependencies(j) : job_status[dep] = COMPLETED
+
+    ReadyJobs ==
+        {j \in AllJobs : job_status[j] = PENDING /\ DepsCompleted(j)}
+
+    OrderingInvariant ==
+        \A j \in AllJobs :
+            job_status[j] = COMPLETED =>
+            \A dep \in JobDependencies(j) : job_status[dep] = COMPLETED
+
+    DAGPersistedFirst ==
+        \A j \in AllJobs : job_status[j] = COMPLETED => dag_persisted
+
+    APITriggeredFirst ==
+        dag_persisted => api_triggered
+
+    LoopJobsIndependent ==
+        \A g1, g2 \in GwtIds :
+            g1 # g2 =>
+            [type |-> LOOP_T, gwt |-> g1] \notin JobDependencies([type |-> LOOP_T, gwt |-> g2])
+
+    ExtractBeforeRegister ==
+        job_status[[type |-> REGISTER]] = COMPLETED =>
+        job_status[[type |-> EXTRACT]]  = COMPLETED
+
+    RegisterBeforeAllLoop ==
+        \A g \in GwtIds :
+            job_status[[type |-> LOOP_T, gwt |-> g]] = COMPLETED =>
+            job_status[[type |-> REGISTER]] = COMPLETED
+
+    LoopBeforeBridge ==
+        \A g \in VerifiedIds :
+            job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED =>
+            job_status[[type |-> LOOP_T,   gwt |-> g]] = COMPLETED
+
+    BridgeBeforeGenTests ==
+        \A g \in VerifiedIds :
+            job_status[[type |-> GENTESTS, gwt |-> g]] = COMPLETED =>
+            job_status[[type |-> BRIDGE_T, gwt |-> g]] = COMPLETED
+
+    BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process UserAPI = "user"
+begin
+    SubmitRequest:
+        api_triggered := TRUE;
+end process;
+
+fair process ControlPlane = "cp"
+begin
+    BuildDAG:
+        await api_triggered;
+        dag_persisted := TRUE;
+end process;
+
+fair process Scheduler = "sched"
+begin
+    WaitForDAG:
+        await dag_persisted;
+    ScheduleStep:
+        while (\E j \in AllJobs : job_status[j] = PENDING) /\ step_count < MaxSteps do
+            with j \in ReadyJobs do
+                job_status[j] := COMPLETED;
+            end with;
+            step_count := step_count + 1;
+        end while;
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+AllCompleted == \A j \in AllJobs : job_status[j] = COMPLETED
+
+Liveness == <>AllCompleted
+
+====

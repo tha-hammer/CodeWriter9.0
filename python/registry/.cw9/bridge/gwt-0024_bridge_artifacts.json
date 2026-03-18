@@ -1,0 +1,1460 @@
+{
+  "gwt_id": "gwt-0024",
+  "module_name": "GWT0024WriteResult",
+  "data_structures": {
+    "GWT0024WriteResultState": {
+      "function_id": "fn-GWT0024WriteResult-state",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"CompleteJob\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "current_state": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "JobRunning",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "job_outcome": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "NONE",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "attempts": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "error_msg": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "db_written": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "storage_uploaded": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "local_written": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "write_result_called": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from GWT0024WriteResult TLA+ spec"
+    }
+  },
+  "operations": {
+    "CompleteJob": {
+      "function_id": "fn-GWT0024WriteResult-CompleteJob",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-CompleteJob",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/CompleteJobFailure",
+        "shared/error_definitions/CompleteJobError"
+      ],
+      "error_handling": "raise",
+      "description": "Action CompleteJob from GWT0024WriteResult spec"
+    },
+    "CallWriteResult": {
+      "function_id": "fn-GWT0024WriteResult-CallWriteResult",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-CallWriteResult",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CallWriteResult from GWT0024WriteResult spec"
+    },
+    "WriteDB": {
+      "function_id": "fn-GWT0024WriteResult-WriteDB",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-WriteDB",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/WriteDBError",
+        "shared/error_definitions/WriteDBFailure",
+        "shared/error_definitions/WriteDBError"
+      ],
+      "error_handling": "raise",
+      "description": "Action WriteDB from GWT0024WriteResult spec"
+    },
+    "CheckDB": {
+      "function_id": "fn-GWT0024WriteResult-CheckDB",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-CheckDB",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckDB from GWT0024WriteResult spec"
+    },
+    "UploadLogs": {
+      "function_id": "fn-GWT0024WriteResult-UploadLogs",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-UploadLogs",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/UploadLogsError",
+        "shared/error_definitions/UploadLogsFailure",
+        "shared/error_definitions/UploadLogsError"
+      ],
+      "error_handling": "raise",
+      "description": "Action UploadLogs from GWT0024WriteResult spec"
+    },
+    "Finish": {
+      "function_id": "fn-GWT0024WriteResult-Finish",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from GWT0024WriteResult spec"
+    }
+  },
+  "verifiers": {
+    "TypeInvariant": {
+      "function_id": "fn-GWT0024WriteResult-verify-TypeInvariant",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-TypeInvariant",
+      "conditions": [
+        "current_state       \\in States",
+        "job_outcome         \\in (JobOutcomes \\union {\"NONE\"}",
+        "attempts            \\in Nat",
+        "db_written          \\in BOOLEAN",
+        "storage_uploaded    \\in BOOLEAN",
+        "local_written       \\in BOOLEAN",
+        "write_result_called \\in BOOLEAN"
+      ],
+      "message": "TypeInvariant violation: /\\ current_state       \\in States\n    /\\ job_outcome         \\in (JobOutcomes \\union {\"NONE\"})\n    /\\ attempts       ...",
+      "applies_to": [
+        "attempts",
+        "current_state",
+        "db_written",
+        "job_outcome",
+        "local_written",
+        "storage_uploaded",
+        "write_result_called"
+      ],
+      "description": "Verifier for invariant TypeInvariant from GWT0024WriteResult spec"
+    },
+    "ValidState": {
+      "function_id": "fn-GWT0024WriteResult-verify-ValidState",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-ValidState",
+      "conditions": [
+        "current_state \\in States"
+      ],
+      "message": "ValidState violation: current_state \\in States",
+      "applies_to": [
+        "current_state"
+      ],
+      "description": "Verifier for invariant ValidState from GWT0024WriteResult spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-GWT0024WriteResult-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from GWT0024WriteResult spec"
+    },
+    "NoLocalWrite": {
+      "function_id": "fn-GWT0024WriteResult-verify-NoLocalWrite",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-NoLocalWrite",
+      "conditions": [
+        "local_written = FALSE"
+      ],
+      "message": "NoLocalWrite violation: local_written = FALSE",
+      "applies_to": [
+        "local_written"
+      ],
+      "description": "Verifier for invariant NoLocalWrite from GWT0024WriteResult spec"
+    },
+    "PersistenceConsistency": {
+      "function_id": "fn-GWT0024WriteResult-verify-PersistenceConsistency",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-PersistenceConsistency",
+      "conditions": [
+        "current_state = \"Persisted\" =>\n        (db_written = TRUE",
+        "storage_uploaded = TRUE"
+      ],
+      "message": "PersistenceConsistency violation: current_state = \"Persisted\" =>\n        (db_written = TRUE /\\ storage_uploaded = TRUE)",
+      "applies_to": [
+        "current_state",
+        "db_written",
+        "storage_uploaded"
+      ],
+      "description": "Verifier for invariant PersistenceConsistency from GWT0024WriteResult spec"
+    },
+    "DBWriteRequiresOutcome": {
+      "function_id": "fn-GWT0024WriteResult-verify-DBWriteRequiresOutcome",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-DBWriteRequiresOutcome",
+      "conditions": [
+        "db_written = TRUE => job_outcome \\in JobOutcomes"
+      ],
+      "message": "DBWriteRequiresOutcome violation: db_written = TRUE => job_outcome \\in JobOutcomes",
+      "applies_to": [
+        "db_written",
+        "job_outcome"
+      ],
+      "description": "Verifier for invariant DBWriteRequiresOutcome from GWT0024WriteResult spec"
+    },
+    "StorageRequiresDB": {
+      "function_id": "fn-GWT0024WriteResult-verify-StorageRequiresDB",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-StorageRequiresDB",
+      "conditions": [
+        "storage_uploaded = TRUE => db_written = TRUE"
+      ],
+      "message": "StorageRequiresDB violation: storage_uploaded = TRUE => db_written = TRUE",
+      "applies_to": [
+        "db_written",
+        "storage_uploaded"
+      ],
+      "description": "Verifier for invariant StorageRequiresDB from GWT0024WriteResult spec"
+    },
+    "WriteCalledRequiresOutcome": {
+      "function_id": "fn-GWT0024WriteResult-verify-WriteCalledRequiresOutcome",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-WriteCalledRequiresOutcome",
+      "conditions": [
+        "write_result_called = TRUE => job_outcome \\in JobOutcomes"
+      ],
+      "message": "WriteCalledRequiresOutcome violation: write_result_called = TRUE => job_outcome \\in JobOutcomes",
+      "applies_to": [
+        "job_outcome",
+        "write_result_called"
+      ],
+      "description": "Verifier for invariant WriteCalledRequiresOutcome from GWT0024WriteResult spec"
+    },
+    "HostedReplacement": {
+      "function_id": "fn-GWT0024WriteResult-verify-HostedReplacement",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-HostedReplacement",
+      "conditions": [
+        "write_result_called = TRUE => local_written = FALSE"
+      ],
+      "message": "HostedReplacement violation: write_result_called = TRUE => local_written = FALSE",
+      "applies_to": [
+        "local_written",
+        "write_result_called"
+      ],
+      "description": "Verifier for invariant HostedReplacement from GWT0024WriteResult spec"
+    },
+    "OrderingConsistency": {
+      "function_id": "fn-GWT0024WriteResult-verify-OrderingConsistency",
+      "acceptance_criteria_id": "ac-GWT0024WriteResult-OrderingConsistency",
+      "conditions": [
+        "storage_uploaded = TRUE => write_result_called = TRUE"
+      ],
+      "message": "OrderingConsistency violation: storage_uploaded = TRUE => write_result_called = TRUE",
+      "applies_to": [
+        "storage_uploaded",
+        "write_result_called"
+      ],
+      "description": "Verifier for invariant OrderingConsistency from GWT0024WriteResult spec"
+    }
+  },
+  "assertions": {
+    "assert_TypeInvariant": {
+      "condition": "and current_state       in States\n    and job_outcome         in (JobOutcomes \\union {\"NONE\"})\n    and attempts            in Nat\n    and db_written          in BOOLEAN\n    and storage_uploaded    in BOOLEAN\n    and local_written       in BOOLEAN\n    and write_result_called in BOOLEAN",
+      "message": "Assertion failed: TypeInvariant \u2014 /\\ current_state       \\in States\n    /\\ job_outcome         \\in (JobOutcomes \\union {\"NONE\"})\n    /\\ attempts       ...",
+      "description": "Test assertion for TypeInvariant from GWT0024WriteResult spec"
+    },
+    "assert_ValidState": {
+      "condition": "current_state in States",
+      "message": "Assertion failed: ValidState \u2014 current_state \\in States",
+      "description": "Test assertion for ValidState from GWT0024WriteResult spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from GWT0024WriteResult spec"
+    },
+    "assert_NoLocalWrite": {
+      "condition": "local_written = FALSE",
+      "message": "Assertion failed: NoLocalWrite \u2014 local_written = FALSE",
+      "description": "Test assertion for NoLocalWrite from GWT0024WriteResult spec"
+    },
+    "assert_PersistenceConsistency": {
+      "condition": "current_state = \"Persisted\" implies\n        (db_written = TRUE and storage_uploaded = TRUE)",
+      "message": "Assertion failed: PersistenceConsistency \u2014 current_state = \"Persisted\" =>\n        (db_written = TRUE /\\ storage_uploaded = TRUE)",
+      "description": "Test assertion for PersistenceConsistency from GWT0024WriteResult spec"
+    },
+    "assert_DBWriteRequiresOutcome": {
+      "condition": "db_written = TRUE implies job_outcome in JobOutcomes",
+      "message": "Assertion failed: DBWriteRequiresOutcome \u2014 db_written = TRUE => job_outcome \\in JobOutcomes",
+      "description": "Test assertion for DBWriteRequiresOutcome from GWT0024WriteResult spec"
+    },
+    "assert_StorageRequiresDB": {
+      "condition": "storage_uploaded = TRUE implies db_written = TRUE",
+      "message": "Assertion failed: StorageRequiresDB \u2014 storage_uploaded = TRUE => db_written = TRUE",
+      "description": "Test assertion for StorageRequiresDB from GWT0024WriteResult spec"
+    },
+    "assert_WriteCalledRequiresOutcome": {
+      "condition": "write_result_called = TRUE implies job_outcome in JobOutcomes",
+      "message": "Assertion failed: WriteCalledRequiresOutcome \u2014 write_result_called = TRUE => job_outcome \\in JobOutcomes",
+      "description": "Test assertion for WriteCalledRequiresOutcome from GWT0024WriteResult spec"
+    },
+    "assert_HostedReplacement": {
+      "condition": "write_result_called = TRUE implies local_written = FALSE",
+      "message": "Assertion failed: HostedReplacement \u2014 write_result_called = TRUE => local_written = FALSE",
+      "description": "Test assertion for HostedReplacement from GWT0024WriteResult spec"
+    },
+    "assert_OrderingConsistency": {
+      "condition": "storage_uploaded = TRUE implies write_result_called = TRUE",
+      "message": "Assertion failed: OrderingConsistency \u2014 storage_uploaded = TRUE => write_result_called = TRUE",
+      "description": "Test assertion for OrderingConsistency from GWT0024WriteResult spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"UploadLogs\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadLogs",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"UploadLogs\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadLogs",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"UploadLogs\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadLogs",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"db_write_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"DBError\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"db_write_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"DBError\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"db_write_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"DBError\"",
+          "db_written": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"UploadLogs\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadLogs",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"UploadLogs\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadLogs",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"max_retries_exhausted\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"MAX_RETRIES\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"db_write_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"DBError\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"db_write_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"DBError\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"db_write_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"DBError\"",
+          "db_written": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"PASS\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"PASS\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"db_write_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"PASS\"",
+          "current_state": "\"DBError\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"db_write_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"PASS\"",
+          "current_state": "\"DBError\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"db_write_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"PASS\"",
+          "current_state": "\"DBError\"",
+          "db_written": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"UploadLogs\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadLogs",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "TRUE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"Persisted\"",
+          "db_written": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "0",
+          "attempts": "0",
+          "pc": "[worker |-> \"CompleteJob\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"none\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"NONE\"",
+          "current_state": "\"JobRunning\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompleteJob",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "1",
+          "attempts": "10",
+          "pc": "[worker |-> \"CallWriteResult\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "FALSE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"JobComplete\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CallWriteResult",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "2",
+          "attempts": "10",
+          "pc": "[worker |-> \"WriteDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"WritingDB\"",
+          "db_written": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WriteDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"CheckDB\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckDB",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "3",
+          "attempts": "10",
+          "pc": "[worker |-> \"UploadLogs\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"test_failure\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"UploadingLogs\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "UploadLogs",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Finish\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"storage_upload_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"StorageError\"",
+          "db_written": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "storage_uploaded": "FALSE",
+          "step_count": "4",
+          "attempts": "10",
+          "pc": "[worker |-> \"Done\"]",
+          "local_written": "FALSE",
+          "error_msg": "\"storage_upload_failed\"",
+          "write_result_called": "TRUE",
+          "job_outcome": "\"FAIL\"",
+          "current_state": "\"StorageError\"",
+          "db_written": "TRUE"
+        }
+      }
+    ]
+  ]
+}

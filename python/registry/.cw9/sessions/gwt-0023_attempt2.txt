@@ -1,0 +1,270 @@
+---- MODULE RegisterPayload ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    GWTItems,
+    REQItems
+
+(* --algorithm RegisterPayload
+
+variables
+    phase = "Init",
+    dag_loaded = FALSE,
+    bindings_loaded = FALSE,
+    dag_nodes = {},
+    gwt_registered = {},
+    req_registered = {},
+    gwt_pending = GWTItems,
+    req_pending = REQItems,
+    closure_valid = FALSE,
+    bindings_saved = FALSE,
+    dag_uploaded = FALSE,
+    bindings_uploaded = FALSE,
+    llm_called = FALSE;
+
+define
+
+    AllItemsRegistered ==
+        gwt_registered = GWTItems /\ req_registered = REQItems
+
+    NeverCallsLLM == ~llm_called
+
+    BindingsSavedBeforeUpload ==
+        bindings_uploaded => bindings_saved
+
+    DagUploadedOnlyAfterMutation ==
+        dag_uploaded => (AllItemsRegistered /\ closure_valid)
+
+    DagUploadedOnlyAfterBindingsSaved ==
+        dag_uploaded => bindings_saved
+
+    CompletionImpliesFullProtocol ==
+        (phase = "Complete") =>
+            (dag_loaded
+             /\ bindings_loaded
+             /\ AllItemsRegistered
+             /\ closure_valid
+             /\ bindings_saved
+             /\ dag_uploaded
+             /\ bindings_uploaded
+             /\ ~llm_called)
+
+    GWTREQDisjoint ==
+        gwt_registered \intersect req_registered = {}
+
+    PendingAndRegisteredPartition ==
+        /\ gwt_registered \union gwt_pending = GWTItems
+        /\ gwt_registered \intersect gwt_pending = {}
+        /\ req_registered \union req_pending = REQItems
+        /\ req_registered \intersect req_pending = {}
+
+    TypeOK ==
+        /\ phase \in {"Init", "LoadDag", "LoadBindings",
+                      "RegisterGWT", "RegisterREQ",
+                      "ClosureRecomputed",
+                      "SaveBindings", "UploadDag", "UploadBindings",
+                      "Complete"}
+        /\ dag_loaded \in BOOLEAN
+        /\ bindings_loaded \in BOOLEAN
+        /\ gwt_registered \subseteq GWTItems
+        /\ req_registered \subseteq REQItems
+        /\ gwt_pending \subseteq GWTItems
+        /\ req_pending \subseteq REQItems
+        /\ closure_valid \in BOOLEAN
+        /\ bindings_saved \in BOOLEAN
+        /\ dag_uploaded \in BOOLEAN
+        /\ bindings_uploaded \in BOOLEAN
+        /\ llm_called \in BOOLEAN
+
+end define;
+
+fair process register = "register_payload"
+begin
+    LoadDag:
+        dag_loaded := TRUE;
+        phase := "LoadDag";
+
+    LoadBindings:
+        bindings_loaded := TRUE;
+        phase := "LoadBindings";
+
+    RegisterGWTs:
+        while gwt_pending /= {} do
+            with item \in gwt_pending do
+                dag_nodes      := dag_nodes \union {item};
+                gwt_registered := gwt_registered \union {item};
+                gwt_pending    := gwt_pending \ {item};
+                phase          := "RegisterGWT";
+            end with;
+        end while;
+
+    RegisterREQs:
+        while req_pending /= {} do
+            with item \in req_pending do
+                dag_nodes      := dag_nodes \union {item};
+                req_registered := req_registered \union {item};
+                req_pending    := req_pending \ {item};
+                phase          := "RegisterREQ";
+            end with;
+        end while;
+
+    MarkClosure:
+        closure_valid := TRUE;
+        phase         := "ClosureRecomputed";
+
+    SaveBindings:
+        bindings_saved := TRUE;
+        phase          := "SaveBindings";
+
+    UploadDag:
+        dag_uploaded := TRUE;
+        phase        := "UploadDag";
+
+    UploadBindings:
+        bindings_uploaded := TRUE;
+        phase             := "UploadBindings";
+
+    Complete:
+        phase := "Complete";
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE RegisterPayload ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    GWTItems,
+    REQItems
+
+(* --algorithm RegisterPayload
+
+variables
+    phase = "Init",
+    dag_loaded = FALSE,
+    bindings_loaded = FALSE,
+    dag_nodes = {},
+    gwt_registered = {},
+    req_registered = {},
+    gwt_pending = GWTItems,
+    req_pending = REQItems,
+    closure_valid = FALSE,
+    bindings_saved = FALSE,
+    dag_uploaded = FALSE,
+    bindings_uploaded = FALSE,
+    llm_called = FALSE;
+
+define
+
+    AllItemsRegistered ==
+        gwt_registered = GWTItems /\ req_registered = REQItems
+
+    NeverCallsLLM == ~llm_called
+
+    BindingsSavedBeforeUpload ==
+        bindings_uploaded => bindings_saved
+
+    DagUploadedOnlyAfterMutation ==
+        dag_uploaded => (AllItemsRegistered /\ closure_valid)
+
+    DagUploadedOnlyAfterBindingsSaved ==
+        dag_uploaded => bindings_saved
+
+    CompletionImpliesFullProtocol ==
+        (phase = "Complete") =>
+            (dag_loaded
+             /\ bindings_loaded
+             /\ AllItemsRegistered
+             /\ closure_valid
+             /\ bindings_saved
+             /\ dag_uploaded
+             /\ bindings_uploaded
+             /\ ~llm_called)
+
+    GWTREQDisjoint ==
+        gwt_registered \intersect req_registered = {}
+
+    PendingAndRegisteredPartition ==
+        /\ gwt_registered \union gwt_pending = GWTItems
+        /\ gwt_registered \intersect gwt_pending = {}
+        /\ req_registered \union req_pending = REQItems
+        /\ req_registered \intersect req_pending = {}
+
+    TypeOK ==
+        /\ phase \in {"Init", "LoadDag", "LoadBindings",
+                      "RegisterGWT", "RegisterREQ",
+                      "ClosureRecomputed",
+                      "SaveBindings", "UploadDag", "UploadBindings",
+                      "Complete"}
+        /\ dag_loaded \in BOOLEAN
+        /\ bindings_loaded \in BOOLEAN
+        /\ gwt_registered \subseteq GWTItems
+        /\ req_registered \subseteq REQItems
+        /\ gwt_pending \subseteq GWTItems
+        /\ req_pending \subseteq REQItems
+        /\ closure_valid \in BOOLEAN
+        /\ bindings_saved \in BOOLEAN
+        /\ dag_uploaded \in BOOLEAN
+        /\ bindings_uploaded \in BOOLEAN
+        /\ llm_called \in BOOLEAN
+
+end define;
+
+fair process register = "register_payload"
+begin
+    LoadDag:
+        dag_loaded := TRUE;
+        phase := "LoadDag";
+
+    LoadBindings:
+        bindings_loaded := TRUE;
+        phase := "LoadBindings";
+
+    RegisterGWTs:
+        while gwt_pending /= {} do
+            with item \in gwt_pending do
+                dag_nodes      := dag_nodes \union {item};
+                gwt_registered := gwt_registered \union {item};
+                gwt_pending    := gwt_pending \ {item};
+                phase          := "RegisterGWT";
+            end with;
+        end while;
+
+    RegisterREQs:
+        while req_pending /= {} do
+            with item \in req_pending do
+                dag_nodes      := dag_nodes \union {item};
+                req_registered := req_registered \union {item};
+                req_pending    := req_pending \ {item};
+                phase          := "RegisterREQ";
+            end with;
+        end while;
+
+    MarkClosure:
+        closure_valid := TRUE;
+        phase         := "ClosureRecomputed";
+
+    SaveBindings:
+        bindings_saved := TRUE;
+        phase          := "SaveBindings";
+
+    UploadDag:
+        dag_uploaded := TRUE;
+        phase        := "UploadDag";
+
+    UploadBindings:
+        bindings_uploaded := TRUE;
+        phase             := "UploadBindings";
+
+    Complete:
+        phase := "Complete";
+
+end process;
+
+end algorithm; *)
+
+====
