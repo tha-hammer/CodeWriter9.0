@@ -3,11 +3,23 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
 from registry.types import Edge, EdgeType, ImpactResult, Node, NodeKind, QueryResult, SubgraphResult, ValidationResult
+
+
+def _slugify_name(text: str, max_len: int = 40) -> str:
+    """Derive a safe snake_case name from free text.
+
+    Strips all characters except alphanumerics, replacing runs with underscores.
+    """
+    s = text.lower().strip()
+    s = re.sub(r"[^a-z0-9]+", "_", s)
+    s = s.strip("_")
+    return s[:max_len].rstrip("_")
 
 
 class CycleError(Exception):
@@ -339,7 +351,7 @@ class RegistryDag:
         gwt_id = self._next_gwt_id()
 
         if name is None:
-            name = when.lower().replace(" ", "_")[:40]
+            name = _slugify_name(when)
 
         node = Node.behavior(gwt_id, name, given, when, then)
         self.add_node(node)

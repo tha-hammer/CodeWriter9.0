@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -266,7 +267,9 @@ async def run_loop(
     client = _make_client()
 
     # Derive module_name from GWT name (e.g., "validation_runs" -> "ValidationRuns")
-    module_name = "".join(w.capitalize() for w in gwt_node.name.split("_"))
+    # Sanitize first: strip non-alphanumeric chars to prevent path traversal in filenames
+    safe_name = re.sub(r"[^a-z0-9_]", "_", gwt_node.name.lower()).strip("_")
+    module_name = "".join(w.capitalize() for w in safe_name.split("_"))
     if not module_name:
         module_name = gwt_id.replace("-", "_")
 

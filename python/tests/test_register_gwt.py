@@ -50,6 +50,17 @@ class TestRegisterGwt:
         gwt_id = dag.register_gwt("given", "validation runs on submit", "errors shown")
         assert dag.nodes[gwt_id].name == "validation_runs_on_submit"
 
+    def test_api_path_in_when_clause_sanitized(self):
+        """Regression: '/' and ':' in API paths must not create directory separators."""
+        dag = RegistryDag()
+        gwt_id = dag.register_gwt(
+            "given", "GET /api/v1/requisitions/:id is called", "then"
+        )
+        name = dag.nodes[gwt_id].name
+        assert "/" not in name
+        assert ":" not in name
+        assert name == "get_api_v1_requisitions_id_is_called"
+
     def test_explicit_name(self):
         dag = RegistryDag()
         gwt_id = dag.register_gwt("g", "w", "t", name="custom_name")
