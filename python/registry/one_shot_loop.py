@@ -853,7 +853,8 @@ class OneShotLoop:
     def query(self, behavior_id: str) -> ContextBundle:
         """Step 1: Query registry context for a behavior."""
         self.status.state = LoopState.QUERYING_CONTEXT
-        self._context = query_context(self.dag, behavior_id)
+        state_root = self.ctx.state_root if self.ctx else None
+        self._context = query_context(self.dag, behavior_id, state_root=state_root)
         self.status.state = LoopState.PROMPTING_LLM
         return self._context
 

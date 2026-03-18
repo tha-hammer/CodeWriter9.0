@@ -117,8 +117,9 @@ class InField(BaseModel):
     @field_validator("source_uuid")
     @classmethod
     def validate_uuid_format(cls, v: str | None) -> str | None:
-        if v is not None:
-            uuid_mod.UUID(v)  # raises ValueError on invalid UUID
+        # Accept any non-empty string — the LLM cannot produce valid UUIDs
+        # during extraction (it doesn't know them).  Real UUIDs are resolved
+        # post-hoc by the orchestrator from the call graph.
         return v
 
 

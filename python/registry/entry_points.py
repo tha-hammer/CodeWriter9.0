@@ -12,12 +12,22 @@ from pathlib import Path
 from registry.crawl_types import EntryPoint, EntryType
 
 
-def detect_codebase_type(root: Path) -> str | None:
+def detect_codebase_type(root: Path, *, lang: str | None = None) -> str | None:
     """Detect the codebase type from dependency manifests and imports.
 
     Returns one of: 'web_app', 'cli', 'event_driven', 'library', or None.
     """
-    # Check pyproject.toml
+    if lang in ("javascript", "typescript"):
+        return _detect_codebase_type_js(root)
+    if lang == "go":
+        return _detect_codebase_type_go(root)
+    if lang == "rust":
+        return _detect_codebase_type_rust(root)
+    return _detect_codebase_type_python(root)
+
+
+def _detect_codebase_type_python(root: Path) -> str:
+    """Detect codebase type for Python projects."""
     pyproject = root / "pyproject.toml"
     requirements = root / "requirements.txt"
     setup_py = root / "setup.py"
@@ -55,11 +65,96 @@ def detect_codebase_type(root: Path) -> str | None:
     return "library"
 
 
-def discover_entry_points(root: Path, codebase_type: str | None = None) -> list[EntryPoint]:
-    """Discover entry points for a Python codebase.
+def _detect_codebase_type_js(root: Path) -> str:
+    """Detect codebase type for JavaScript/TypeScript projects."""
+    pkg_json = root / "package.json"
+    if not pkg_json.exists():
+        return "library"
+
+    try:
+        text = pkg_json.read_text(encoding="utf-8", errors="replace").lower()
+    except (OSError, PermissionError):
+        return "library"
+
+    # Web frameworks
+    web_frameworks = [
+        "express", "next", "nuxt", "fastify", "koa", "hapi", "nestjs",
+        "@nestjs/core", "react", "vue", "angular", "svelte", "gatsby",
+        "remix", "astro",
+    ]
+    if any(fw in text for fw in web_frameworks):
+        return "web_app"
+
+    # Event-driven
+    event_libs = ["bull", "bullmq", "kafka", "amqplib", "rabbitmq", "socket.io"]
+    if any(lib in text for lib in event_libs):
+        return "event_driven"
+
+    # CLI
+    cli_libs = ["commander", "yargs", "inquirer", "oclif", "meow", "cac"]
+    if any(lib in text for lib in cli_libs):
+        return "cli"
+
+    # Check for bin field
+    if '"bin"' in text:
+        return "cli"
+
+    return "library"
+
+
+def _detect_codebase_type_go(root: Path) -> str:
+    """Detect codebase type for Go projects."""
+    # Check for main package with main.go
+    main_go = root / "main.go"
+    cmd_dir = root / "cmd"
+    if main_go.exists() or cmd_dir.exists():
+        return "cli"
+
+    go_mod = root / "go.mod"
+    if go_mod.exists():
+        try:
+            text = go_mod.read_text(encoding="utf-8", errors="replace").lower()
+        except (OSError, PermissionError):
+            return "library"
+        web_frameworks = ["gin-gonic", "gorilla/mux", "echo", "fiber", "chi"]
+        if any(fw in text for fw in web_frameworks):
+            return "web_app"
+
+    return "library"
+
+
+def _detect_codebase_type_rust(root: Path) -> str:
+    """Detect codebase type for Rust projects."""
+    cargo_toml = root / "Cargo.toml"
+    if not cargo_toml.exists():
+        return "library"
+
+    try:
+        text = cargo_toml.read_text(encoding="utf-8", errors="replace").lower()
+    except (OSError, PermissionError):
+        return "library"
+
+    # Check for [[bin]] section
+    if "[[bin]]" in text:
+        return "cli"
+
+    web_frameworks = ["actix-web", "axum", "rocket", "warp", "tide"]
+    if any(fw in text for fw in web_frameworks):
+        return "web_app"
+
+    return "library"
+
+
+def discover_entry_points(
+    root: Path, codebase_type: str | None = None, *, lang: str | None = None,
+) -> list[EntryPoint]:
+    """Discover entry points for a codebase.
 
     If codebase_type is None, auto-detects it.
+    Non-Python languages return empty for now (scanners find all symbols).
     """
+    if lang and lang != "python":
+        return []
     if codebase_type is None:
         codebase_type = detect_codebase_type(root)
 

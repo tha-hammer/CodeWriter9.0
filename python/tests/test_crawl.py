@@ -133,12 +133,14 @@ class TestInField:
         )
         assert f.dispatch == DispatchKind.DIRECT
 
-    def test_invalid_source_uuid_rejected(self):
-        with pytest.raises(Exception):
-            InField(
-                name="x", type_str="int", source=InSource.PARAMETER,
-                source_uuid="not-a-uuid",
-            )
+    def test_invalid_source_uuid_accepted_for_extraction(self):
+        """source_uuid accepts any string — LLM can't produce valid UUIDs
+        during extraction. Real UUIDs are resolved post-hoc."""
+        f = InField(
+            name="x", type_str="int", source=InSource.PARAMETER,
+            source_uuid="not-a-uuid",
+        )
+        assert f.source_uuid == "not-a-uuid"
 
     def test_valid_source_uuid_accepted(self):
         uid = str(uuid.uuid4())
@@ -639,3 +641,60 @@ class TestRegistryDagMergeWithCrawlUuids:
         assert new_dag.edge_count == 1
         assert new_dag.edges[0].from_id == u1
         assert new_dag.edges[0].to_id == u2
+
+
+# ── JSON parser tests ────────────────────────────────────────────
+
+class TestExtractJsonObject:
+    """Tests for _extract_json_object brace-depth parser."""
+
+    @pytest.fixture(autouse=True)
+    def _import(self):
+        from registry.cli import _extract_json_object
+        self.parse = _extract_json_object
+
+    def test_clean_json(self):
+        assert self.parse('{"a": 1}') == {"a": 1}
+
+    def test_json_with_prose_after(self):
+        """The original bug: LLM outputs valid JSON then explanation text."""
+        text = '{"do_description": "loads data"}\n\nHere is the explanation of the above JSON.'
+        assert self.parse(text) == {"do_description": "loads data"}
+
+    def test_json_with_prose_containing_braces(self):
+        """Prose after JSON contains braces — must not confuse the parser."""
+        text = '{"a": 1}\nNote: use format {"key": "val"} for config.'
+        assert self.parse(text) == {"a": 1}
+
+    def test_json_with_prose_before(self):
+        text = 'Here is the result:\n{"a": 1}'
+        assert self.parse(text) == {"a": 1}
+
+    def test_nested_json(self):
+        text = '{"ins": [{"name": "x", "type": "int"}], "do": "add"}'
+        result = self.parse(text)
+        assert result["ins"][0]["name"] == "x"
+
+    def test_invalid_block_then_valid(self):
+        """First balanced {} isn't valid JSON, second one is."""
+        text = '{not json} {"a": 1}'
+        assert self.parse(text) == {"a": 1}
+
+    def test_no_json_raises(self):
+        with pytest.raises(ValueError, match="No JSON"):
+            self.parse("no braces here")
+
+    def test_no_valid_json_raises(self):
+        with pytest.raises(ValueError, match="Could not parse"):
+            self.parse("{not json at all}")
+
+    def test_strings_with_braces(self):
+        """Braces inside JSON strings must not confuse depth tracking."""
+        text = '{"code": "if (x) { return }", "n": 1}'
+        result = self.parse(text)
+        assert result["n"] == 1
+
+    def test_escaped_quotes(self):
+        text = '{"s": "he said \\"hello\\"", "n": 2}'
+        result = self.parse(text)
+        assert result["n"] == 2

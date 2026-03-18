@@ -61,6 +61,14 @@ You are tasked with generating a comprehensive pull request description followin
    - Confirm the update was successful
    - If any verification steps remain unchecked, remind the user to complete them before merging
 
+## Beads Integration
+
+When generating PR descriptions:
+1. **Check for related beads issues**: Run `bd list --status=in_progress` to find tracked work
+2. **Include issue references**: Add beads issue IDs to the PR description if applicable
+3. **After PR is merged**: Run `bd close <id>` to close completed issues
+4. **Sync beads**: Run `bd dolt push and bd dolt pull` to commit any beads changes
+
 ## Important notes:
 - This command works across different repositories - always read the local template
 - Be thorough but concise - descriptions should be scannable

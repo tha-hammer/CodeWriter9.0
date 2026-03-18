@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS ins (
     name            TEXT NOT NULL,
     type_str        TEXT NOT NULL,
     source          TEXT NOT NULL CHECK(source IN ('parameter','state','literal','internal_call','external')),
-    source_uuid     TEXT REFERENCES records(uuid),
+    source_uuid     TEXT REFERENCES records(uuid) ON DELETE SET NULL,
     source_file     TEXT,
     source_function TEXT,
     source_description TEXT,
@@ -282,7 +282,12 @@ class CrawlStore:
         self.conn.commit()
 
     def upsert_record(self, record: FnRecord | AxRecord) -> None:
-        # Delete existing (cascades to ins/outs) then insert
+        # Null out any source_uuid references to this record before deleting,
+        # in case the existing DB lacks ON DELETE SET NULL on ins.source_uuid.
+        self.conn.execute(
+            "UPDATE ins SET source_uuid = NULL WHERE source_uuid = ?",
+            (record.uuid,),
+        )
         self.conn.execute("DELETE FROM records WHERE uuid = ?", (record.uuid,))
         self.insert_record(record)
 
@@ -372,6 +377,28 @@ class CrawlStore:
         ).fetchall()
         return [self._row_to_fn_record(r) for r in rows]
 
+    def get_records_by_directory(self, dir_prefix: str) -> list[FnRecord]:
+        """Return all records whose file_path contains *dir_prefix* as a
+        directory segment.
+
+        The prefix is normalised to be bounded by ``/`` so that
+        ``get_records_by_directory("backend")`` matches
+        ``/home/user/project/backend/server.js`` but not
+        ``/home/user/project/backend_utils/foo.js``.
+
+        Works with both relative and absolute stored paths.
+        """
+        if not dir_prefix.endswith("/"):
+            dir_prefix += "/"
+        # Match either: path starts with the prefix, or contains /prefix
+        rows = self.conn.execute(
+            "SELECT * FROM records WHERE"
+            " (file_path LIKE ? OR file_path LIKE ?)"
+            " AND is_external = FALSE",
+            (dir_prefix + "%", "%/" + dir_prefix + "%"),
+        ).fetchall()
+        return [self._row_to_fn_record(r) for r in rows]
+
     def get_all_records(self) -> list[FnRecord]:
         rows = self.conn.execute(
             "SELECT * FROM records WHERE is_external = FALSE"
@@ -381,6 +408,16 @@ class CrawlStore:
     def get_all_uuids(self) -> set[str]:
         rows = self.conn.execute("SELECT uuid FROM records").fetchall()
         return {r["uuid"] for r in rows}
+
+    def get_pending_uuids(self) -> list[str]:
+        """Return UUIDs of records that still need extraction."""
+        rows = self.conn.execute(
+            "SELECT uuid FROM records "
+            "WHERE is_external = FALSE "
+            "AND do_description IN ('SKELETON_ONLY', 'EXTRACTION_FAILED') "
+            "ORDER BY file_path, line_number"
+        ).fetchall()
+        return [r["uuid"] for r in rows]
 
     # ── Staleness ─────────────────────────────────────────────────
 

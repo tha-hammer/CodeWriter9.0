@@ -252,7 +252,7 @@ async def run_loop(
     gwt_node = dag.nodes[gwt_id]
 
     # Build initial prompt from GWT's given/when/then + registry context
-    bundle = query_context(dag, gwt_id)
+    bundle = query_context(dag, gwt_id, state_root=ctx.state_root)
     prompt_ctx = format_prompt_context(bundle)
 
     # Read PlusCal template

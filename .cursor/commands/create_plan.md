@@ -2,6 +2,12 @@
 
 You are tasked with creating detailed implementation plans through an interactive, iterative process. You should be skeptical, thorough, and work collaboratively with the user to produce high-quality technical specifications.
 
+Use Haiku subagents for file searches, grep, ripgrep and other file tasks.
+Use up to 10 Sonnet subagents for researching files, codepaths, and getting line numbers.
+Strive to keep the main context for the actual plan, we don't want to run out of context window before it is time to write the file or be at the last 10% at the time of writing.
+Use beads and agent mail with subagents to track progress and store paths, filenames:line numbers
+Have subagents write to file to save the main context window.
+
 ## Initial Response
 
 When this command is invoked:
@@ -40,10 +46,6 @@ Then wait for the user's input.
    - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files
    - **CRITICAL**: DO NOT spawn sub-tasks before reading these files yourself in the main context
    - **NEVER** read files partially - if a file is mentioned, read it completely
-   - **ALWAYS USE TDD** Write tests - RED GREEN REFACTOR
-   - **USE ACTUAL DATA** When available, use actual data
-   - **USE ACTAL LLMs** When testing LLM calls ALWAYS use actual LLM calls unless explicitly told otherwise
-   - **USE BAML** If any structured or deterministic output is needed YOU MUST USE BAML
 
 2. **Spawn initial research tasks to gather context**:
    Before asking the user any questions, use specialized agents to research in parallel:
@@ -96,9 +98,6 @@ After getting initial clarifications:
    - Spawn new research tasks to verify the correct information
    - Read the specific files/directories they mention
    - Only proceed once you've verified the facts yourself
-   - **USE ACTUAL DATA** When available, use actual data
-   - **USE ACTAL LLMs** When testing LLM calls ALWAYS use actual LLM calls unless explicitly told otherwise
-   - **USE BAML** If any structured or deterministic output is needed YOU MUST USE BAML
 
 2. **Create a research todo list** using TodoWrite to track exploration tasks
 
@@ -296,6 +295,40 @@ After writing the plan file:
    - If this work depends on other issues: `bd dep add <this-issue> <depends-on>`
    - If other work depends on this: `bd dep add <other-issue> <this-issue>`
 
+### Step 4.6: GitHub Issue Creation (Optional)
+
+After writing the plan file:
+
+1. **Extract issue number from plan filename**:
+   - If plan filename contains `ENG-XXXX` pattern, extract the issue number
+   - Example: `2025-11-25-ENG-1234-description.md` → issue number `1234`
+   - Use the GitHub utility function: `silmari_oracle::github::utils::extract_issue_from_filename()`
+
+2. **Create or link GitHub issue** (only if `gh` CLI is available):
+   - Check if GitHub CLI is available: Use `silmari_oracle::github::is_gh_available()`
+   - If issue number extracted:
+     - Try to get existing issue: Use `silmari_oracle::github::issues::get_issue()` with the extracted number
+     - If issue exists, add plan link as comment using `silmari_oracle::github::issues::add_comment()`
+     - If issue doesn't exist (returns error), create new issue with plan summary using `silmari_oracle::github::issues::create_issue()`
+   - Add issue URL to plan References section:
+     ```markdown
+     ## References
+     
+     - GitHub Issue: #{number} - {issue_url}
+     - Original ticket: `thoughts/maceo/tickets/eng_{number}.md`
+     - Related research: `thoughts/searchable/shared/research/[relevant].md`
+     ```
+
+3. **Error Handling**:
+   - If `gh` CLI is not available, skip GitHub operations silently
+   - If GitHub operations fail, log warning but don't fail plan creation
+   - Plan creation should succeed even if GitHub integration fails
+
+**Note**: Since create_plan is executed by AI agents reading markdown instructions, the actual GitHub operations will be performed by the agent using the GitHub module we created. The agent will need to:
+- Import/use the GitHub module functions from `silmari_oracle::github`
+- Extract issue numbers using the utility functions
+- Handle errors gracefully
+
 ### Step 5: Sync and Review
 
 1. **Sync the thoughts directory**:
@@ -342,9 +375,7 @@ After writing the plan file:
    - Research actual code patterns using parallel sub-tasks
    - Include specific file paths and line numbers
    - Write measurable success criteria with clear automated vs manual distinction
-   - **USE ACTUAL DATA** When available, use actual data
-   - **USE ACTAL LLMs** When testing LLM calls ALWAYS use actual LLM calls unless explicitly told otherwise
-   - **USE BAML** If any structured or deterministic output is needed YOU MUST USE BAML
+   - automated steps should use `make` whenever possible - for example `make -C silmari-oracle-wui check` instead of `cd silmari-oracle-wui && bun run fmt`
 
 4. **Be Practical**:
    - Focus on incremental, testable changes
@@ -431,8 +462,8 @@ When spawning research sub-tasks:
    - What information to extract
    - Expected output format
 4. **Be EXTREMELY specific about directories**:
-   - If the user mentions "gates", specify `src2/gates` directory
-   - If they mention "JSON", specify `baml/` or `baml_src` directory
+   - If the ticket mentions "WUI", specify `silmari-oracle-wui/` directory
+   - If it mentions "daemon", specify `hld/` directory
    - Never use generic terms like "UI" when you mean "WUI"
    - Include the full path context in your prompts
 5. **Specify read-only tools** to use
@@ -469,6 +500,7 @@ Based on the ticket, I understand we need to track parent-child relationships fo
 
 [Interactive process continues...]
 ```
+
 
 
 ## ✨ Enhanced Formatting 

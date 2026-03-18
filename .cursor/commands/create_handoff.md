@@ -1,7 +1,12 @@
 # Create Handoff
 
-You are tasked with writing a handoff document to hand off your work to another agent in a new session. You will create a handoff document that is thorough, but also **concise**. The goal is to compact and summarize your context without losing any of the key details of what you're working on.
+You are tasked with writing a handoff document to hand off your work to another agent in a new session. You will create a handoff document that is thorough, but also **concise**. The goal is to compact and summarize your context without losing any of the key details of what you're working on.  If you are registered with agent mail, note your registered name, instructions, workgroup and other details for the resume_handoff document.
 
+Use Haiku subagents for file searches, grep, ripgrep and other file tasks.
+Use up to 10 Sonnet subagents for researching files, codepaths, and getting line numbers.
+Strive to keep the main context for the actual plan, we don't want to run out of context window before it is time to write the file or be at the last 10% at the time of writing.
+Use beads and agent mail with subagents to track progress and store paths, filenames:line numbers
+Have subagents write to file to save the main context window.
 
 ## Process
 ### 1. Filepath & Metadata

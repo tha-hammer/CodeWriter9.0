@@ -2,6 +2,12 @@
 
 Create detailed Test-Driven Development implementation plans through an interactive, iterative process. Follow TDD principles: Red-Green-Refactor cycles, behavior-first thinking, and incremental development.
 
+Use Haiku subagents for file searches, grep, ripgrep and other file tasks.
+Use up to 10 Sonnet subagents for researching files, codepaths, and getting line numbers.
+Strive to keep the main context for the actual plan, we don't want to run out of context window before it is time to write the file or be at the last 10% at the time of writing.
+Use beads and agent mail with subagents to track progress and store paths, filenames:line numbers
+Have subagents write to file to save the main context window.
+
 ## Initial Response
 
 **If parameters provided:**
@@ -86,6 +92,56 @@ Tip: You can also invoke this command with a ticket file directly: `/create_tdd_
    Does this breakdown make sense?
    ```
 
+### Step 2.5: Resource Registry Binding (MANDATORY)
+
+1. **Read the resource registry** from `specs/schemas/resource_registry.json`
+   - This is the source of truth for resource identity
+   - Use UUID as canonical identity (`resource_id` / `uuid`)
+   - Use alias metadata (`address_alias`) when present for human/LLM search
+
+2. **Bind every Given/When/Then behavior** to registry entries
+   - For each behavior, produce:
+     - `resource_id` (UUID)
+     - `address_alias` (branch.leaf, if present)
+     - `predicate_refs` (Given bindings)
+     - `codepath_ref` (When/Then binding)
+   - If a resource is missing, mark `[PROPOSED]` and continue
+
+3. **Require function-level contract tags in the plan**
+   - Every planned function must include a documentation contract block
+   - For Python targets, this contract is a docstring tag block
+   - Required tags:
+     - `@rr.id <uuid>`
+     - `@rr.alias <branch.leaf>`
+     - `@path.id <kebab-path-name>`
+     - `@gwt.given ...`
+     - `@gwt.when ...`
+     - `@gwt.then ...`
+     - `@reads <uuid[,uuid]>`
+     - `@writes <uuid[,uuid]>`
+     - `@raises <error_uuid:error_name>`
+
+### Step 2.6: Schema→Registry Loop (MANDATORY when context cost is low)
+
+1. **Read schema sources** in this order:
+   - `schema/`
+   - `schemas/`
+   - `specs/schemas/`
+
+2. **Execute the loop for verified TLA+ model/path X**:
+   - Iterate schema interfaces/contracts
+   - Map interfaces/contracts to resource registry entries
+   - Update registry metadata with `schema_refs` for mapped resources
+   - Add schema mapping into the TDD plan
+
+3. **Context-cost policy**:
+   - If schema context is small, include full mapping detail
+   - If schema context is large, include concise mapping summary and per-step refs only
+
+4. **Per-behavior schema requirement**:
+   - Every behavior includes `schema_contract_refs` (or `N/A`)
+   - If no resource match exists, mark `[PROPOSED]` and continue
+
 ### Step 3: Plan Structure
 
 Get feedback on structure before writing details:
@@ -138,6 +194,18 @@ Get feedback on structure before writing details:
 
 ## Behavior 1: [Name]
 
+### Resource Registry Binding
+- `resource_id`: [uuid or [PROPOSED]]
+- `address_alias`: [branch.leaf or N/A]
+- `predicate_refs`: [Given clause predicate bindings]
+- `codepath_ref`: [When/Then execution binding]
+- `schema_contract_refs`: [schema/file::ContractName[, ...] or N/A]
+
+### Schema Interface Mapping
+- `loop_mode`: [low_context_detail|summary]
+- `mapped_contracts`: [contract -> resource_id]
+- `registry_updates`: [schema_refs attached or [PROPOSED]]
+
 ### Test Specification
 **Given**: [Initial state]
 **When**: [Action]
@@ -161,6 +229,22 @@ describe('[Behavior]', () => {
 **File**: `path/to/impl/file.ts`
 ```[language]
 // Minimal code to pass
+```
+
+**Documentation Contract (required for planned functions):**
+```python
+"""
+@rr.id <uuid>
+@rr.alias <branch.leaf>
+@path.id <kebab-path-name>
+@gwt.given <given clause>
+@gwt.when <when clause>
+@gwt.then <then clause>
+@reads <uuid[,uuid]>
+@writes <uuid[,uuid]>
+@raises <error_uuid:error_name>
+@schema.contract <schema/file::ContractName[, ...] or N/A>
+"""
 ```
 
 #### 🔵 Refactor: Improve Code
@@ -265,6 +349,8 @@ After writing the plan file:
 
 ### Important Rules
 - Read all context files COMPLETELY before planning
+- Read `specs/schemas/resource_registry.json` and bind every behavior to registry entries
+- Do not emit a function plan without contract tags (`@rr.*`, `@path.id`, `@gwt.*`, `@reads`, `@writes`, `@raises`)
 - Use `make` commands when possible: `make -C silmari-oracle-wui check`
 - No open questions in final plan - resolve before finalizing
 - Be interactive: get buy-in at each step, don't write full plan in one shot

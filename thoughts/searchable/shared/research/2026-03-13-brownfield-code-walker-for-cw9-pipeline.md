@@ -2,9 +2,12 @@
 title: "Brownfield Code Walker for CW9 Pipeline"
 date: 2026-03-13
 tags: [brownfield, code-walker, in-do-out, resource-registry, pipeline, plan]
-status: reviewed
+status: revised
 review: thoughts/searchable/shared/research/2026-03-13-brownfield-code-walker-for-cw9-pipeline-REVIEW.md
 review_date: 2026-03-13
+review_type: post-phase3-validation
+revision_date: 2026-03-13
+revision_notes: All review findings incorporated — see REVIEW.md for details
 ---
 
 # Brownfield Code Walker for CW9 Pipeline
@@ -231,7 +234,7 @@ Phase 1: Depth-First IN:DO:OUT Crawl (LLM-assisted)
   - DFS with visited set (cycle-safe)
   - External calls become AX boundary nodes (never traversed)
   - Post-crawl: source_uuid back-fill pass resolves source_function → source_uuid
-  - Post-crawl: dag.json bridge creates RESOURCE nodes + CALLS/DEPENDS_ON/IMPORTS edges
+  - Post-crawl: dag.json bridge creates RESOURCE nodes + CALLS/DEPENDS_ON edges
   - Output: populated crawl.db + dag.json graph structure
 
 Phase 2: Workflow MAP Generation (deterministic or LLM-assisted)
@@ -260,7 +263,7 @@ Phase 2: Workflow MAP Generation (deterministic or LLM-assisted)
 During DFS, when function A calls function B, function B may not have been visited yet. The `InField` for A's call to B will have `source_function = "B"` but `source_uuid = None`. After the full DFS completes:
 
 1. Query all `ins` rows where `source_uuid IS NULL AND source IN ('internal_call')`
-2. For each, look up `source_function` in the `records` table
+2. For each, look up `source_function` in the `records` table. **When multiple records share a `function_name`, disambiguate by `file_path` match — use `source_file` from the `InField` when available** (e.g., `WHERE function_name = ? AND file_path = ?`). Fall back to `ORDER BY file_path LIMIT 1` for deterministic results when `source_file` is unavailable.
 3. If found, update `source_uuid` to the matching record's UUID
 4. If not found (function was never reached by DFS), leave as NULL and log a warning
 
@@ -373,6 +376,8 @@ def scan_directory(root: Path, excludes: list[str] | None = None) -> list[Skelet
 
 Each language scanner implements `scan_file`. `scan_directory` is shared infrastructure that dispatches to the appropriate `scan_file` based on file extension.
 
+> **Note (review finding):** `scan_directory()` is currently Python-only (`root.rglob("*.py")`). Before adding TS/Go scanners, design the polyglot dispatch interface so all scanners coexist under a single `scan_directory` entry point. Exclude sets must also be unified — `scanner_python.py` uses `DEFAULT_EXCLUDES` (14 patterns) while `entry_points.py` uses a narrower inline check (`part.startswith(".") or part == "__pycache__"`). Extract `DEFAULT_EXCLUDES` to a shared constant so entry point discovery doesn't traverse directories the scanner skips (e.g., vendored code).
+
 ### IN:DO:OUT Data Model
 
 **The IN:DO:OUT detail lives exclusively in `crawl.db`.** dag.json RESOURCE nodes carry only: `id`, `kind=RESOURCE`, `name="function_name @ file_path"`, `description=operational_claim`. The `Node` dataclass (types.py) has no `metadata` field and does not need one — full behavioral data is retrieved from `crawl.db` by UUID when needed.
@@ -422,7 +427,8 @@ FnRecord(
 Edges created during ingestion (stored in dag.json via the post-crawl bridge):
 - `CALLS` — function A calls function B (from `internal_call` sources in IN)
 - `DEPENDS_ON` — function A depends on the output of function B
-- `IMPORTS` — module-level import relationships
+
+> **Note (review finding):** `IMPORTS` edges (module-level import relationships) were originally specified but are not implemented. The scanner doesn't track imports and the bridge doesn't create IMPORTS edges. This is acceptable for the current phase — CALLS edges capture the functional dependency graph. IMPORTS edges can be added later if module-level relationship tracking proves necessary.
 
 ### Storage Decision
 
@@ -614,7 +620,7 @@ Phase 1: 289/347 functions extracted, 3 failed, 55 skipped (external)
 Phase 2: 4 workflow MAPs generated
 Bridge: 289 RESOURCE nodes + 1,204 edges written to dag.json
 
-Summary: 289 created, 0 updated, 55 skipped, 3 failed
+Summary: 289 nodes synced, 55 skipped, 3 failed
 ```
 
 For machine consumption: `cw9 ingest --json` outputs a JSON object to stdout with all counters.
@@ -624,6 +630,8 @@ For machine consumption: `cw9 ingest --json` outputs a JSON object to stdout wit
 **Surviving `cw9 extract`:** `cmd_extract` creates a fresh DAG and calls `merge_registered_nodes()` which must preserve crawl-originated RESOURCE nodes (see "Surviving cw9 extract" section above). The extended `merge_registered_nodes(old_dag, crawl_uuids=...)` parameter makes this work. Without this fix, `cw9 pipeline` Phase 0 would destroy all ingested nodes.
 
 **`query_context()` auto-detection:** When `.cw9/crawl.db` exists, `query_context()` opens a `CrawlStore` and looks up each RESOURCE UUID found in `transitive_deps`. If a matching `FnRecord` exists, it's appended to `bundle.cards`. This is the **only** code path that crosses the crawl.db ↔ dag.json boundary at query time. If `crawl.db` doesn't exist (greenfield project), no cards are loaded and behavior is unchanged.
+
+> **CRITICAL (review finding):** `OneShotLoop.query()` must pass `state_root` from `self.ctx` to `query_context()` for cards to load through the pipeline path. Without this, `bundle.cards` will be empty and the LLM sees GWT specs but no behavioral data from the ingested codebase — defeating the core purpose of the brownfield walker. Also verify that `loop_runner.py`'s `run_loop()` threads `state_root` through.
 
 ### Modified Pipeline Flow
 
@@ -811,6 +819,7 @@ class TestReference:
     test_function: str
     target_function: str         # the function under test
     target_file: str
+    target_uuid: str | None = None  # UUID of the target record (matches SQL schema)
     inputs_observed: list[str]   # values/fixtures passed to the target
     outputs_asserted: list[str]  # assertion descriptions
     covers_error_path: bool      # does it test an error case?
@@ -1211,7 +1220,7 @@ The bridge between `crawl.db` and `dag.json` is the `cw9 ingest` command's post-
 
 1. For each `records` row, call `dag.add_node(Node(kind=RESOURCE, id=<uuid>, name="<function_name> @ <file_path>", description=<operational_claim>))` — `add_node()` already works as upsert (silently overwrites on duplicate ID), so incremental re-ingest works without errors
 2. For each `deps` view row, create an `Edge(from_id=dependent_uuid, to_id=dependency_uuid, edge_type=CALLS)` in dag.json (duplicate edges are silently skipped by `add_edge`)
-3. For each `entry_points` row, create an `Edge(from_id=entry_uuid, to_id=record_uuid, edge_type=HANDLES)` if HTTP, `IMPORTS` if CLI, etc.
+3. For each `entry_points` row, create an `Edge(from_id=entry_uuid, to_id=record_uuid, edge_type=CALLS)`. *(Original plan specified `HANDLES` for HTTP and `IMPORTS` for CLI, but the implementation deliberately uses uniform `CALLS` edges — entry point relationships are already captured through CALLS edges from the DFS crawl, and distinguishing route handling from function calls adds complexity without current value.)*
 4. Orphan cleanup: remove dag.json RESOURCE nodes whose UUIDs no longer appear in `crawl.db` (via `remove_node`)
 
 The IN:DO:OUT detail stays in SQLite. dag.json carries only the graph structure needed for `extract_subgraph()` and `query_context()`. When the pipeline needs the full card for a node, it queries `crawl.db` by UUID.
@@ -1563,26 +1572,26 @@ class CrawlStore:
 ## Next Steps
 
 ### Phase 1: Core Infrastructure
-1. **Add `pydantic>=2.0` optional dependency** (`crawl` extras in pyproject.toml)
-2. **Implement data models** (enums, Skeleton dataclass, InField/OutField/FnRecord Pydantic models, EntryPoint/MapNote/TestReference dataclasses, ~200 lines)
-3. **Implement CrawlStore** (SQLite schema creation, all CRUD/query methods, ~300 lines)
-4. **Add `remove_node()` to RegistryDag** (~10 lines in dag.py — `add_node` already upserts, no change needed)
-5. **Extend `merge_registered_nodes()`** to accept `crawl_uuids` parameter (~15 lines in dag.py)
-6. **Extend `cmd_register`/`_register_payload`** to accept `depends_on` edges on GWT entries (~20 lines in cli.py)
+1. - [x] **Add `pydantic>=2.0` optional dependency** (`crawl` extras in pyproject.toml)
+2. - [x] **Implement data models** (enums, Skeleton dataclass, InField/OutField/FnRecord Pydantic models, EntryPoint/MapNote/TestReference dataclasses, ~200 lines)
+3. - [x] **Implement CrawlStore** (SQLite schema creation, all CRUD/query methods, ~300 lines)
+4. - [x] **Add `remove_node()` to RegistryDag** (~10 lines in dag.py — `add_node` already upserts, no change needed)
+5. - [x] **Extend `merge_registered_nodes()`** to accept `crawl_uuids` parameter (~15 lines in dag.py)
+6. - [x] **Extend `cmd_register`/`_register_payload`** to accept `depends_on` edges on GWT entries (~20 lines in cli.py)
 
 ### Phase 2: Python Ingestion
-7. **Implement the Python skeleton scanner** (`scan_file` + `scan_directory`, ~150 lines, pattern matching + indent tracking + class_name extraction)
-8. **Implement entry point discovery for Python** (detect Flask/Django/FastAPI/Click/argparse/main, ~100 lines)
-9. **Implement the DFS crawl orchestrator** (queue + visited set + LLM query loop + retry policy + source_uuid back-fill, ~400 lines)
-10. **Implement the dag.json bridge** (crawl.db records → dag.json RESOURCE nodes + edges via `add_node`, ~100 lines)
+7. - [x] **Implement the Python skeleton scanner** (`scan_file` + `scan_directory`, ~150 lines, pattern matching + indent tracking + class_name extraction)
+8. - [x] **Implement entry point discovery for Python** (detect Flask/Django/FastAPI/Click/argparse/main, ~100 lines)
+9. - [x] **Implement the DFS crawl orchestrator** — skeleton-only records stored; actual LLM extraction deferred (Phase 4)
+10. - [x] **Implement the dag.json bridge** (crawl.db records → dag.json RESOURCE nodes + edges via `add_node`, ~100 lines)
 
 ### Phase 3: CLI + Pipeline Integration
-11. **Wire `cw9 ingest` CLI command** (argparse subcommand, calls scanner → crawl → bridge, ~100 lines)
-12. **Wire `cw9 stale` CLI command** (~30 lines)
-13. **Wire `cw9 show --card` CLI command** (~30 lines)
-14. **Extend `query_context()`** to load FnRecord cards from crawl.db for RESOURCE nodes in transitive_deps (~30 lines)
-15. **Extend `format_prompt_context()`** to render `## Existing Code Behavior` section from `bundle.cards` (~40 lines)
-16. **Update `cmd_extract`** to pass `crawl_uuids` to `merge_registered_nodes()` (~10 lines)
+11. - [x] **Wire `cw9 ingest` CLI command** (argparse subcommand, calls scanner → crawl → bridge, ~100 lines)
+12. - [x] **Wire `cw9 stale` CLI command** (~30 lines)
+13. - [x] **Wire `cw9 show --card` CLI command** (~30 lines)
+14. - [x] **Extend `query_context()`** to load FnRecord cards from crawl.db for RESOURCE nodes in transitive_deps (~30 lines)
+15. - [x] **Extend `format_prompt_context()`** to render `## Existing Code Behavior` section from `bundle.cards` (~40 lines)
+16. - [x] **Update `cmd_extract`** to pass `crawl_uuids` to `merge_registered_nodes()` (~10 lines)
 
 ### Phase 4: Validation & GWT Authoring
 17. **Prototype on a small target repo** (validate the full ingest → gwt-author → register → pipeline flow end-to-end)

@@ -11,6 +11,20 @@ You are tasked with conducting comprehensive research across the codebase to ans
 - ONLY describe what exists, where it exists, how it works, and how components interact
 - You are creating a technical map/documentation of the existing system
 
+## Beads Integration
+
+Before starting research:
+1. **Check for related issues**: Run `bd list --status=open` to see if there's already a tracked issue for this topic
+2. **Review existing research**: If a beads issue exists, run `bd show <id>` for context - it may reference prior research
+
+After completing research:
+1. **Link to existing issues**: If the research relates to tracked work, note the beads issue IDs in your research document
+2. **Create issues for discovered work**: If research reveals actionable items (bugs, features, tech debt), optionally create beads issues:
+   ```bash
+   bd create --title="[Discovered item]" --type=task|bug|feature --priority=2
+   ```
+3. **Sync beads**: Run `bd dolt push and bd dolt pull` if any issues were created or updated
+
 ## Initial Setup:
 
 When this command is invoked, respond with:

@@ -757,6 +757,57 @@ def cmd_test(args: argparse.Namespace) -> int:
     return result.returncode
 
 
+def _detect_language(root: Path) -> str:
+    """Auto-detect the primary language of a codebase from manifest files."""
+    # Check for JS/TS (package.json is the strongest signal)
+    if (root / "package.json").exists():
+        # Distinguish TS from JS by looking for tsconfig
+        if (root / "tsconfig.json").exists():
+            return "typescript"
+        return "javascript"
+    # Go
+    if (root / "go.mod").exists():
+        return "go"
+    # Rust
+    if (root / "Cargo.toml").exists():
+        return "rust"
+    # Python (pyproject.toml, setup.py, requirements.txt)
+    if any((root / f).exists() for f in ("pyproject.toml", "setup.py", "requirements.txt")):
+        return "python"
+    # Fallback: count file extensions
+    ext_counts: dict[str, int] = {}
+    for p in root.rglob("*"):
+        if p.is_file() and not any(part.startswith(".") for part in p.parts):
+            ext_counts[p.suffix] = ext_counts.get(p.suffix, 0) + 1
+    ext_to_lang = {
+        ".py": "python", ".js": "javascript", ".jsx": "javascript",
+        ".ts": "typescript", ".tsx": "typescript",
+        ".go": "go", ".rs": "rust",
+    }
+    best_lang = "python"
+    best_count = 0
+    for ext, lang in ext_to_lang.items():
+        if ext_counts.get(ext, 0) > best_count:
+            best_count = ext_counts[ext]
+            best_lang = lang
+    return best_lang
+
+
+def _get_scanner(lang: str):
+    """Return the scan_directory function for the given language."""
+    if lang == "javascript":
+        from registry.scanner_javascript import scan_directory
+    elif lang == "typescript":
+        from registry.scanner_typescript import scan_directory
+    elif lang == "go":
+        from registry.scanner_go import scan_directory
+    elif lang == "rust":
+        from registry.scanner_rust import scan_directory
+    else:
+        from registry.scanner_python import scan_directory
+    return scan_directory
+
+
 def cmd_ingest(args: argparse.Namespace) -> int:
     """Ingest an external codebase into the crawl store and DAG."""
     target = Path(args.target_dir).resolve()
@@ -775,7 +826,6 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     from registry.crawl_types import make_record_uuid
     from registry.dag import RegistryDag
     from registry.entry_points import detect_codebase_type, discover_entry_points
-    from registry.scanner_python import scan_directory
 
     ctx = ProjectContext.from_target(target)
     state_root = ctx.state_root
@@ -783,8 +833,11 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     dag_path = state_root / "dag.json"
 
     # Detect language and codebase type
-    lang = getattr(args, "lang", None) or "python"
-    codebase_type = detect_codebase_type(ingest_path)
+    lang = getattr(args, "lang", None) or _detect_language(ingest_path)
+    codebase_type = detect_codebase_type(ingest_path, lang=lang)
+
+    # Import the correct scanner for the detected language
+    scan_directory = _get_scanner(lang)
     is_incremental = getattr(args, "incremental", False)
     max_functions = getattr(args, "max_functions", None)
 
@@ -797,7 +850,7 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     print(f"Phase 0: {len(skeletons)} skeletons extracted", file=sys.stderr)
 
     # Phase 0b: Entry point discovery
-    entry_points = discover_entry_points(ingest_path, codebase_type)
+    entry_points = discover_entry_points(ingest_path, codebase_type, lang=lang)
     print(f"Entry points: {len(entry_points)}", file=sys.stderr)
 
     # Store skeletons as records in crawl.db
@@ -877,6 +930,372 @@ def cmd_ingest(args: argparse.Namespace) -> int:
             "bridge": counters,
         }))
     return 0
+
+
+def _short_path(file_path: str, root: Path) -> str:
+    """Make a file path relative to root for display."""
+    try:
+        return str(Path(file_path).relative_to(root))
+    except ValueError:
+        return file_path
+
+
+def _format_elapsed(seconds: float) -> str:
+    """Format seconds into a human-readable duration."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes = int(seconds) // 60
+    secs = seconds - minutes * 60
+    if minutes < 60:
+        return f"{minutes}m{secs:04.1f}s"
+    hours = minutes // 60
+    minutes = minutes % 60
+    return f"{hours}h{minutes:02d}m"
+
+
+def cmd_crawl(args: argparse.Namespace) -> int:
+    """Run DFS crawl with LLM extraction over ingested skeleton records."""
+    import asyncio
+    import time
+
+    target = Path(args.target_dir).resolve()
+    state_root = target / ".cw9"
+    err = sys.stderr
+
+    if not state_root.exists():
+        print(f"No .cw9/ found in {target}. Run: cw9 init", file=err)
+        return 1
+
+    crawl_db_path = state_root / "crawl.db"
+    if not crawl_db_path.exists():
+        print(f"No crawl.db found. Run: cw9 ingest <path> first", file=err)
+        return 1
+
+    from registry.crawl_orchestrator import CrawlOrchestrator
+    from registry.crawl_store import CrawlStore
+
+    # Resolve entry points — from --entry flag or from stored entry_points table
+    entry_names = getattr(args, "entry", None) or []
+
+    with CrawlStore(crawl_db_path) as store:
+        if not entry_names:
+            stored_eps = store.get_entry_points() if hasattr(store, "get_entry_points") else []
+            entry_names = [ep.function_name for ep in stored_eps]
+
+        if not entry_names:
+            all_recs = store.get_all_records()
+            entry_names = [
+                r.function_name for r in all_recs
+                if r.do_description == "SKELETON_ONLY"
+            ]
+
+        if not entry_names:
+            print("No entry points found. Specify with --entry or run cw9 ingest first.", file=err)
+            return 1
+
+        total = len(entry_names)
+        max_fns = getattr(args, "max_functions", None)
+        max_retries = getattr(args, "max_retries", None) or 5
+        model_name = getattr(args, "model", None) or "claude-sonnet-4-6"
+        incremental = getattr(args, "incremental", False)
+
+        # Header
+        print(f"\n{'='*60}", file=err)
+        print(f"  DFS Crawl: {target.name}", file=err)
+        print(f"  {total} entry points | model: {model_name} | retries: {max_retries}", file=err)
+        if max_fns:
+            print(f"  limit: {max_fns} functions", file=err)
+        if incremental:
+            print(f"  mode: incremental (skip unchanged)", file=err)
+        print(f"{'='*60}\n", file=err)
+
+        # Progress tracking
+        _progress = {
+            "ok": 0, "fail": 0, "skip": 0, "retries": 0,
+            "t_start": time.monotonic(), "t_last": time.monotonic(),
+        }
+
+        def _on_progress(event, **kw):
+            now = time.monotonic()
+            elapsed = now - _progress["t_start"]
+            fn_name = kw.get("function_name", "?")
+            fpath = _short_path(kw.get("file_path", ""), target)
+
+            if event == "extracted":
+                _progress["ok"] += 1
+                dt = now - _progress["t_last"]
+                _progress["t_last"] = now
+                n = _progress["ok"] + _progress["fail"] + _progress["skip"]
+                attempt = kw.get("attempt", 1)
+                retry_tag = f" \033[33m(attempt {attempt})\033[0m" if attempt > 1 else ""
+                print(
+                    f"  \033[32m+\033[0m [{n}] {fn_name}{retry_tag}  "
+                    f"{kw.get('ins', 0)} in / {kw.get('outs', 0)} out  "
+                    f"\033[2m{fpath}  {dt:.1f}s  [{_format_elapsed(elapsed)}]\033[0m",
+                    file=err,
+                )
+
+            elif event == "retry":
+                _progress["retries"] += 1
+                attempt = kw.get("attempt", 1)
+                max_r = kw.get("max_retries", max_retries)
+                error_msg = kw.get("error", "")[:60]
+                print(
+                    f"  \033[33m~\033[0m {fn_name} retry {attempt}/{max_r}: "
+                    f"\033[2m{error_msg}\033[0m",
+                    file=err,
+                )
+
+            elif event == "failed":
+                _progress["fail"] += 1
+                n = _progress["ok"] + _progress["fail"] + _progress["skip"]
+                error_msg = kw.get("error", "")[:80]
+                print(
+                    f"  \033[31mx\033[0m [{n}] FAILED {fn_name}  "
+                    f"\033[2m{fpath}\033[0m\n"
+                    f"    \033[31m{error_msg}\033[0m",
+                    file=err,
+                )
+
+            elif event == "skipped":
+                _progress["skip"] += 1
+                n = _progress["ok"] + _progress["fail"] + _progress["skip"]
+                if _progress["skip"] <= 3 or _progress["skip"] % 50 == 0:
+                    print(
+                        f"  \033[2m- [{n}] skipped {fn_name}  {fpath}\033[0m",
+                        file=err,
+                    )
+
+        # Build the LLM extract function
+        extract_fn = _build_extract_fn(model=model_name)
+
+        t0 = time.monotonic()
+        orch = CrawlOrchestrator(
+            store=store,
+            entry_points=entry_names,
+            extract_fn=extract_fn,
+            max_functions=max_fns,
+            incremental=incremental,
+            max_retries=max_retries,
+            on_progress=_on_progress,
+        )
+        result = orch.run()
+        elapsed = time.monotonic() - t0
+
+    # Summary
+    ok = result["extracted"]
+    fail = result["failed"]
+    skip = result["skipped"]
+    ax = result["ax_records"]
+    retries = _progress["retries"]
+
+    print(f"\n{'─'*60}", file=err)
+    parts = []
+    if ok:
+        parts.append(f"\033[32m{ok} extracted\033[0m")
+    if fail:
+        parts.append(f"\033[31m{fail} failed\033[0m")
+    if skip:
+        parts.append(f"\033[2m{skip} skipped\033[0m")
+    if ax:
+        parts.append(f"{ax} AX boundaries")
+    if retries:
+        parts.append(f"\033[33m{retries} retries\033[0m")
+    print(f"  {' | '.join(parts)}", file=err)
+    if ok:
+        avg = elapsed / ok
+        print(f"  {_format_elapsed(elapsed)} elapsed ({avg:.1f}s avg per function)", file=err)
+    print(f"{'─'*60}\n", file=err)
+
+    if getattr(args, "output_json", False):
+        print(json.dumps(result))
+    return 0
+
+
+_EXTRACT_SYSTEM_PROMPT = """\
+You are a code analysis expert. Given a function's skeleton (signature) and body, \
+extract its behavioral IN:DO:OUT card as JSON.
+
+Return ONLY a JSON object with these fields:
+- "ins": list of {"name": str, "type_str": str, "source": "parameter"|"state"|"literal"|"internal_call"|"external", \
+"source_function": str|null, "source_file": str|null, "description": str}
+- "do_description": str (one-line summary of what the function does)
+- "do_steps": list[str] (numbered steps of the function's logic)
+- "outs": list of {"name": "ok"|"err"|"side_effect"|"mutation", "type_str": str, "description": str}
+- "failure_modes": list[str] (ways the function can fail)
+- "operational_claim": str (one-sentence behavioral claim)
+
+For "source" field on inputs:
+- "parameter": comes from function arguments
+- "state": reads from instance/global state
+- "literal": hardcoded constant
+- "internal_call": return value of another function in this codebase (set source_function and source_file)
+- "external": return value from an external library/service (set source_function to the call expression)\
+"""
+
+
+def _extract_json_object(text: str) -> dict:
+    """Extract the first valid JSON object from text that may contain surrounding prose."""
+    start = text.find("{")
+    if start == -1:
+        raise ValueError(f"No JSON object found in response: {text[:200]}")
+
+    # Use a brace-depth counter to find matching close braces.
+    # Re-anchor `start` each time depth transitions 0→1 so that after a
+    # failed balanced block we try the NEXT top-level object, not the slice
+    # from the original `{`.
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            if in_string:
+                escape = True
+            continue
+        if ch == '"' and not escape:
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            if depth == 0:
+                start = i  # anchor to this top-level brace
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[start:i + 1])
+                except json.JSONDecodeError:
+                    # This balanced block wasn't valid JSON; keep scanning
+                    # depth is already 0, so the next '{' will re-anchor start
+                    continue
+
+    raise ValueError(f"Could not parse JSON from response: {text[:200]}")
+
+
+def _build_extract_fn(model: str = "claude-sonnet-4-6"):
+    """Build an extract_fn that calls the Claude Agent SDK."""
+    import asyncio
+    import os
+
+    os.environ.pop("CLAUDECODE", None)
+    import claude_agent_sdk
+    from claude_agent_sdk import (
+        ClaudeSDKClient, ClaudeAgentOptions,
+        AssistantMessage, ResultMessage, TextBlock,
+    )
+
+    def extract_fn(skeleton, body, error_feedback=None):
+        from registry.crawl_types import (
+            FnRecord, InField, InSource, OutField, OutKind,
+        )
+
+        prompt_parts = [
+            f"## Function: {skeleton.function_name}",
+            f"File: {skeleton.file_path}:{skeleton.line_number}",
+        ]
+        if skeleton.class_name:
+            prompt_parts.append(f"Class: {skeleton.class_name}")
+        if skeleton.params:
+            param_strs = [f"{p.name}: {p.type or 'Any'}" for p in skeleton.params]
+            prompt_parts.append(f"Params: {', '.join(param_strs)}")
+        if skeleton.return_type:
+            prompt_parts.append(f"Returns: {skeleton.return_type}")
+        prompt_parts.append(f"\n## Body\n```\n{body}\n```")
+        if error_feedback:
+            prompt_parts.append(f"\n## Previous Error\n{error_feedback}\nPlease fix the JSON output.")
+
+        prompt = "\n".join(prompt_parts)
+
+        # Synchronous wrapper around async SDK
+        async def _call():
+            options = ClaudeAgentOptions(
+                allowed_tools=[],
+                system_prompt=_EXTRACT_SYSTEM_PROMPT,
+                max_turns=1,
+                model=model,
+            )
+            client = ClaudeSDKClient(options)
+            await client.connect()
+            try:
+                await client.query(prompt)
+                result_text = []
+                async for message in client.receive_response():
+                    if isinstance(message, AssistantMessage):
+                        for block in message.content:
+                            if isinstance(block, TextBlock):
+                                result_text.append(block.text)
+                    elif isinstance(message, ResultMessage):
+                        if message.result:
+                            result_text.append(message.result)
+                return "".join(result_text)
+            finally:
+                try:
+                    await asyncio.wait_for(client.disconnect(), timeout=10.0)
+                except Exception:
+                    pass
+
+        raw = asyncio.run(_call())
+
+        # Extract the first balanced JSON object from the response
+        data = _extract_json_object(raw)
+
+        # Map source strings to InSource enum
+        source_map = {
+            "parameter": InSource.PARAMETER,
+            "state": InSource.STATE,
+            "literal": InSource.LITERAL,
+            "internal_call": InSource.INTERNAL_CALL,
+            "external": InSource.EXTERNAL,
+        }
+        kind_map = {
+            "ok": OutKind.OK,
+            "err": OutKind.ERR,
+            "side_effect": OutKind.SIDE_EFFECT,
+            "mutation": OutKind.MUTATION,
+        }
+
+        ins = []
+        for i in data.get("ins", []):
+            ins.append(InField(
+                name=i["name"],
+                type_str=i.get("type_str", "Any"),
+                source=source_map.get(i.get("source", "parameter"), InSource.PARAMETER),
+                source_function=i.get("source_function"),
+                source_file=i.get("source_file"),
+                description=i.get("description", ""),
+            ))
+
+        outs = []
+        for o in data.get("outs", []):
+            outs.append(OutField(
+                name=kind_map.get(o.get("name", "ok"), OutKind.OK),
+                type_str=o.get("type_str", "Any"),
+                description=o.get("description", ""),
+            ))
+
+        return FnRecord(
+            uuid="00000000-0000-0000-0000-000000000000",  # placeholder; orchestrator overwrites with store UUID
+            function_name=skeleton.function_name,
+            class_name=skeleton.class_name,
+            file_path=skeleton.file_path,
+            line_number=skeleton.line_number,
+            src_hash=skeleton.file_hash,
+            ins=ins,
+            do_description=data.get("do_description", ""),
+            do_steps=data.get("do_steps", []),
+            outs=outs,
+            failure_modes=data.get("failure_modes", []),
+            operational_claim=data.get("operational_claim", ""),
+            skeleton=skeleton,
+        )
+
+    return extract_fn
 
 
 def cmd_stale(args: argparse.Namespace) -> int:
@@ -979,6 +1398,36 @@ def cmd_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_gwt_author(args: argparse.Namespace) -> int:
+    """Generate GWT specifications from research notes and crawl.db cards."""
+    target = Path(args.target_dir).resolve()
+    state_root = target / ".cw9"
+    research_path = Path(args.research).resolve()
+
+    if not state_root.exists():
+        print(f"No .cw9/ found in {target}", file=sys.stderr)
+        return 1
+
+    if not research_path.exists():
+        print(f"Research file not found: {research_path}", file=sys.stderr)
+        return 1
+
+    from registry.gwt_author import run_gwt_author
+
+    try:
+        payload = run_gwt_author(target, research_path)
+    except FileNotFoundError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+    except NotImplementedError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+
+    import json
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="cw9",
@@ -1040,7 +1489,7 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest.add_argument("ingest_path", help="Path to the codebase to ingest")
     p_ingest.add_argument("target_dir", nargs="?", default=".")
     p_ingest.add_argument("--lang", default=None,
-                          choices=["python", "typescript", "go", "rust"],
+                          choices=["python", "javascript", "typescript", "go", "rust"],
                           help="Source language (default: auto-detect)")
     p_ingest.add_argument("--incremental", action="store_true",
                           help="Only re-ingest stale records")
@@ -1048,6 +1497,27 @@ def main(argv: list[str] | None = None) -> int:
                           help="Limit DFS to N functions")
     p_ingest.add_argument("--json", action="store_true", dest="output_json",
                           help="Output machine-readable JSON")
+
+    # gwt-author
+    p_gwt_author = sub.add_parser("gwt-author", help="Generate GWT specs from research notes + crawl.db")
+    p_gwt_author.add_argument("target_dir", nargs="?", default=".", help="Target project directory (default: .)")
+    p_gwt_author.add_argument("--research", required=True, help="Path to research notes file")
+
+    # crawl
+    p_crawl = sub.add_parser("crawl", help="Run DFS LLM extraction over ingested skeletons")
+    p_crawl.add_argument("target_dir", nargs="?", default=".")
+    p_crawl.add_argument("--entry", action="append", default=None,
+                         help="Entry point function name(s) to start from (repeatable)")
+    p_crawl.add_argument("--incremental", action="store_true",
+                         help="Skip already-extracted records whose files haven't changed")
+    p_crawl.add_argument("--max-functions", type=int, default=None,
+                         help="Limit extraction to N functions")
+    p_crawl.add_argument("--max-retries", type=int, default=5,
+                         help="Max LLM retries per function (default: 5)")
+    p_crawl.add_argument("--model", default=None,
+                         help="Claude model to use (default: claude-sonnet-4-6)")
+    p_crawl.add_argument("--json", action="store_true", dest="output_json",
+                         help="Output machine-readable JSON")
 
     # stale
     p_stale = sub.add_parser("stale", help="Check which ingested nodes are stale")
@@ -1094,10 +1564,14 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_pipeline(args)
     elif args.command == "ingest":
         return cmd_ingest(args)
+    elif args.command == "crawl":
+        return cmd_crawl(args)
     elif args.command == "stale":
         return cmd_stale(args)
     elif args.command == "show":
         return cmd_show(args)
+    elif args.command == "gwt-author":
+        return cmd_gwt_author(args)
     else:
         parser.print_help()
         return 0

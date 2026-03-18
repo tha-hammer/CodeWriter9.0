@@ -1,6 +1,6 @@
-# Implement Plan
+# Implement Plan with Checkpoint Worktree
 
-You are tasked with implementing an approved technical plan from `thoughts/searchable/shared/plans/`. These plans contain phases with specific changes and success criteria.
+You are tasked with implementing an approved technical plan from `thoughts/searchable/shared/plans/` in a dedicated worktree. These plans contain phases with specific changes and success criteria.
 
 Use Haiku subagents for file searches, grep, ripgrep and other file tasks.
 Use up to 10 Sonnet subagents for researching files, codepaths, and getting line numbers.
@@ -21,19 +21,9 @@ When given a plan path:
 
 If no plan path provided, ask for one.
 
-## Implementation Philosophy
-
-Plans are carefully designed, but reality can be messy. Your job is to:
-- Follow the plan's intent while adapting to what you find
-- Implement each phase fully before moving to the next
-- Verify your work makes sense in the broader codebase context
-- Update checkboxes in the plan as you complete sections
-
-When things don't match the plan exactly, think about why and communicate clearly. The plan is your guide, but your judgment matters too.
-
 ## Deterministic Resource Registry Gate (MANDATORY)
 
-Treat implementation as a single-piece deterministic loop per function behavior unit (not a free-form phase pass).
+Treat implementation as a single-piece deterministic loop per function behavior unit.
 
 ### Unit Identity (fail-closed parsing contract)
 For the generated TDD plan markdown:
@@ -58,15 +48,19 @@ Execution order for each unit:
 2. Run `verify-rr-contract`
 3. Run smallest relevant test target
 4. Mark unit complete in plan
+5. Create and push checkpoint commit after each successful unit loop.
 
-If step 2 fails, stop and fix contract/registry binding before tests.
+If step 2 fails, checkpoint the failure context and fix contract/registry binding before retrying.
 
-Required contract tags per unit:
-- `@rr.id`, `@rr.alias`, `@path.id`, `@gwt.given`, `@gwt.when`, `@gwt.then`, `@reads`, `@writes`, `@raises`
+## Implementation Philosophy
 
-Identity rule:
-- UUID (`@rr.id`) is canonical identity.
-- Alias is supplemental navigation metadata only.
+Plans are carefully designed, but reality can be messy. Your job is to:
+- Follow the plan's intent while adapting to what you find
+- Implement each phase fully before moving to the next
+- Verify your work makes sense in the broader codebase context
+- Update checkboxes in the plan as you complete sections
+
+When things don't match the plan exactly, think about why and communicate clearly. The plan is your guide, but your judgment matters too.
 
 If you encounter a mismatch:
 - STOP and think deeply about why the plan can't be followed
@@ -80,6 +74,33 @@ If you encounter a mismatch:
   How should I proceed?
   ```
 
+## Checkpoint Strategy (CRITICAL)
+
+This is a worktree environment designed for safe experimentation. Use git checkpoints frequently:
+
+**Checkpoint After:**
+- Completing each phase or major section
+- Before attempting risky refactors
+- After fixing a complex bug
+- When tests pass for a logical unit of work
+- Before context window resets
+- After each RR gate verdict (`rr-gate-pass` / `rr-gate-fail`)
+
+**Checkpoint Commands:**
+```bash
+git add -A
+git commit -m "checkpoint: [brief description of what was done]"
+git push
+```
+
+**Why Checkpoints Matter:**
+- Worktrees allow safe exploration without affecting main branch
+- Git push ensures work survives context resets
+- Checkpoints create resume points if something breaks
+- They document your progress through the implementation
+
+**Do NOT wait until everything is perfect** - checkpoint working progress frequently!
+
 ## Verification Approach
 
 After implementing a phase:
@@ -87,6 +108,7 @@ After implementing a phase:
 - Fix any issues before proceeding
 - Update your progress in both the plan and your todos
 - Check off completed items in the plan file itself using Edit
+- **Create a checkpoint commit** after successful verification
 
 Don't let verification interrupt your flow - batch it at natural stopping points.
 
@@ -96,6 +118,7 @@ When something isn't working as expected:
 - First, make sure you've read and understood all the relevant code
 - Consider if the codebase has evolved since the plan was written
 - Present the mismatch clearly and ask for guidance
+- **Create a checkpoint** before attempting alternative approaches
 
 Use sub-tasks sparingly - mainly for targeted debugging or exploring unfamiliar territory.
 
@@ -106,7 +129,28 @@ If the plan has existing checkmarks:
 - Pick up from the first unchecked item
 - Verify previous work only if something seems off
 
-Remember: You're implementing a solution, not just checking boxes. Keep the end goal in mind and maintain forward momentum.
+Check git log to see what checkpoints exist:
+```bash
+git log --oneline -10
+```
+
+## Virtual Environment
+
+The worktree should have a virtual environment set up. If you need to run Python commands:
+- Check for venv activation instructions from the setup output
+- Usually: `source venv/bin/activate` (in worktree) or `source ../venv/bin/activate` (parent dir)
+- The setup script should have handled this, but verify if you encounter import errors
+
+## Final Steps
+
+When implementation is complete and all tests pass:
+1. Create a final checkpoint: `git commit -m "feat: [descriptive summary]"`
+2. Read `.claude/commands/commit.md` (or `.cursor/commands/commit.md`) and create a proper commit
+3. Push your changes: `git push`
+4. Read `.claude/commands/describe_pr.md` and create a PR
+5. Link the PR in the Linear ticket
+
+Remember: You're implementing a solution in a safe worktree environment. Checkpoint often, maintain forward momentum, and keep the end goal in mind.
 
 ## Beads Integration
 
