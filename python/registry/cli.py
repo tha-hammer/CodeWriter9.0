@@ -1112,6 +1112,57 @@ def cmd_crawl(args: argparse.Namespace) -> int:
     return 0
 
 
+def _build_llm_fn(
+    model: str = "claude-sonnet-4-6",
+    system_prompt: str | None = None,
+):
+    """Build a synchronous LLM call function using the Claude Agent SDK.
+
+    Returns a callable: (prompt: str) -> str
+    """
+    import asyncio
+    import os
+
+    os.environ.pop("CLAUDECODE", None)
+    import claude_agent_sdk
+    from claude_agent_sdk import (
+        ClaudeSDKClient, ClaudeAgentOptions,
+        AssistantMessage, ResultMessage, TextBlock,
+    )
+
+    def llm_fn(prompt: str) -> str:
+        async def _call():
+            options = ClaudeAgentOptions(
+                allowed_tools=[],
+                system_prompt=system_prompt or "You are a helpful assistant.",
+                max_turns=1,
+                model=model,
+            )
+            client = ClaudeSDKClient(options)
+            await client.connect()
+            try:
+                await client.query(prompt)
+                result_text = []
+                async for message in client.receive_response():
+                    if isinstance(message, AssistantMessage):
+                        for block in message.content:
+                            if isinstance(block, TextBlock):
+                                result_text.append(block.text)
+                    elif isinstance(message, ResultMessage):
+                        if message.result:
+                            result_text.append(message.result)
+                return "".join(result_text)
+            finally:
+                try:
+                    await asyncio.wait_for(client.disconnect(), timeout=10.0)
+                except Exception:
+                    pass
+
+        return asyncio.run(_call())
+
+    return llm_fn
+
+
 _EXTRACT_SYSTEM_PROMPT = """\
 You are a code analysis expert. Given a function's skeleton (signature) and body, \
 extract its behavioral IN:DO:OUT card as JSON.
@@ -1180,15 +1231,7 @@ def _extract_json_object(text: str) -> dict:
 
 def _build_extract_fn(model: str = "claude-sonnet-4-6"):
     """Build an extract_fn that calls the Claude Agent SDK."""
-    import asyncio
-    import os
-
-    os.environ.pop("CLAUDECODE", None)
-    import claude_agent_sdk
-    from claude_agent_sdk import (
-        ClaudeSDKClient, ClaudeAgentOptions,
-        AssistantMessage, ResultMessage, TextBlock,
-    )
+    llm_fn = _build_llm_fn(model=model, system_prompt=_EXTRACT_SYSTEM_PROMPT)
 
     def extract_fn(skeleton, body, error_feedback=None):
         from registry.crawl_types import (
@@ -1210,37 +1253,7 @@ def _build_extract_fn(model: str = "claude-sonnet-4-6"):
         if error_feedback:
             prompt_parts.append(f"\n## Previous Error\n{error_feedback}\nPlease fix the JSON output.")
 
-        prompt = "\n".join(prompt_parts)
-
-        # Synchronous wrapper around async SDK
-        async def _call():
-            options = ClaudeAgentOptions(
-                allowed_tools=[],
-                system_prompt=_EXTRACT_SYSTEM_PROMPT,
-                max_turns=1,
-                model=model,
-            )
-            client = ClaudeSDKClient(options)
-            await client.connect()
-            try:
-                await client.query(prompt)
-                result_text = []
-                async for message in client.receive_response():
-                    if isinstance(message, AssistantMessage):
-                        for block in message.content:
-                            if isinstance(block, TextBlock):
-                                result_text.append(block.text)
-                    elif isinstance(message, ResultMessage):
-                        if message.result:
-                            result_text.append(message.result)
-                return "".join(result_text)
-            finally:
-                try:
-                    await asyncio.wait_for(client.disconnect(), timeout=10.0)
-                except Exception:
-                    pass
-
-        raw = asyncio.run(_call())
+        raw = llm_fn("\n".join(prompt_parts))
 
         # Extract the first balanced JSON object from the response
         data = _extract_json_object(raw)
@@ -1414,12 +1427,12 @@ def cmd_gwt_author(args: argparse.Namespace) -> int:
 
     from registry.gwt_author import run_gwt_author
 
+    # Build Agent SDK LLM function
+    llm_fn = _build_llm_fn()
+
     try:
-        payload = run_gwt_author(target, research_path)
+        payload = run_gwt_author(target, research_path, llm_fn=llm_fn)
     except FileNotFoundError as e:
-        print(str(e), file=sys.stderr)
-        return 1
-    except NotImplementedError as e:
         print(str(e), file=sys.stderr)
         return 1
 
