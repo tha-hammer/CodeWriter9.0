@@ -1,6 +1,227 @@
 #!Notes
 
-The script produces two things:                                                         
+#  CW9 brownfield testing Three distinct problems, one root cause
+
+  1. Simulation traces are 100% failure paths
+
+  All 10 gwt-0004 traces fail at TryLoadEnrichments (9 traces) or TryBuildPrompt (1 trace).
+  Zero traces reach the happy path. Zero traces exercise streaming partials. Zero traces call
+  onDone.
+
+  This is not "normal." This is a probability problem in the model.
+
+  The spec has 4 sequential either/or nondeterministic choice points before StreamNext, plus
+  MaxPartials iterations of another either/or inside the loop. TLC's -simulate does a random
+  walk — at each either, it picks a branch uniformly at random.
+
+  The probability of reaching the happy path requires picking the success branch at every
+  choice point:
+  - TryLoadEnrichments: 1/2
+  - TryBuildPrompt: 1/2
+  - TryInvokeBAML: 1/2
+  - StreamNext (×MaxPartials iterations): (1/2)^MaxPartials each
+
+  If MaxPartials = 3, happy path probability = (1/2)^6 = 1.6%. With 10 traces, the expected
+  number of happy-path traces is ~0.16. The model is structurally biased toward failure.
+
+  This means gen-tests — which uses simulation traces as "PRIMARY context" — will generate
+  tests that only cover error paths. The very thing the pipeline was designed to produce
+  (concrete execution paths for test generation) is systematically missing the most important
+  path.
+
+  2. Crawl produced 363 skeletons, 161 failures, ~10 extracted
+
+  The review found all 10 depends_on UUIDs are skeletons, with getEnrichmentsBySession
+  actually EXTRACTION_FAILED. The crawl barely worked. That means:
+
+  - The cards-in-prompt fix we made is inert for this run — the cards exist but contain no
+  behavioral data (just signatures)
+  - The LLM writing PlusCal got function names and GWT Given/When/Then, but NOT the actual
+  IN:DO:OUT contracts
+  - The spec it produced is structurally correct (invariants hold, verified by TLC) but
+  semantically disconnected from the real code behavior
+
+  The spec models runStreamingChatAgent as a generic sequential-fail-at-any-point pipeline. It
+   doesn't reflect the actual error types, the actual enrichment data shape, or the actual
+  streaming protocol — because it never saw those details in the cards.
+
+  3. The deviation is NOT in the formal proof — it's in what feeds the proof
+
+  The formal proof is solid. TLC exhaustively checked every reachable state. All 11 invariants
+   hold. That part is deterministic and complete.
+
+  The deviation enters at three points:
+
+  ┌───────────────┬──────────────────────────────────┬────────────────────────────────────┐
+  │     Stage     │              Issue               │           Deterministic?           │
+  ├───────────────┼──────────────────────────────────┼────────────────────────────────────┤
+  │ Crawl         │ 161 failures, most records       │ No — LLM extraction can fail       │
+  │ extraction    │ skeleton-only                    │                                    │
+  ├───────────────┼──────────────────────────────────┼────────────────────────────────────┤
+  │ PlusCal       │ Spec models generic failure, not │ No — depends on prompt quality     │
+  │ generation    │  actual code behavior            │ (cards vs skeletons)               │
+  ├───────────────┼──────────────────────────────────┼────────────────────────────────────┤
+  │ Simulation    │ Biased toward failure paths by   │ No — random sampling, model has    │
+  │ traces        │ model structure                  │ exponential failure bias           │
+  ├───────────────┼──────────────────────────────────┼────────────────────────────────────┤
+  │ Bridge        │ Correct for the spec, but spec   │ Deterministic given the spec       │
+  │ artifacts     │ is generic                       │                                    │
+  └───────────────┴──────────────────────────────────┴────────────────────────────────────┘
+
+  Pipeline implications
+
+  Problem 1: Trace sampling is broken for models with nondeterministic error branches. Any
+  spec that uses either { succeed } or { fail } at multiple sequential points will
+  exponentially bias traces toward failure. This is fundamental to how TLC -simulate works —
+  it's a uniform random walk.
+
+  Fix options:
+  - Weight simulation toward longer traces (success paths are longer)
+  - Run separate simulations: one with failures disabled (to get happy-path traces), one with
+  failures enabled
+  - Post-process: if all N traces end in failure, re-run with higher N or modified model
+  - Add a --simulate-happy-path flag that temporarily removes error branches for trace
+  generation
+
+  Problem 2: Skeleton-only cards make the cards-in-prompt fix useless. The pipeline needs to
+  gate on extraction quality — if depends_on functions are all skeletons, warn the user to run
+   cw9 crawl first.
+
+  Fix options:
+  - cw9 pipeline checks extraction status of depends_on UUIDs before running the loop
+  - Warn (or error) if >50% of depends_on records are SKELETON_ONLY or EXTRACTION_FAILED
+  - Add this check to /cw9_plan_review
+
+  Problem 3: gen-tests inherits trace bias. Since traces are PRIMARY context, biased traces →
+  biased tests. The review found this: the plan's human-written tests cover the happy path,
+  but the pipeline's automated path wouldn't.
+
+  This is the biggest systemic issue. The pipeline is: verified model → traces → tests → code.
+   If traces are biased, the whole downstream chain is biased. The formal verification is
+  exhaustive, but the test generation is not — it's sampled.
+
+
+
+# Now I have a clear picture of the gap. Let me organize your thinking.            
+                                                                                              
+  The Problem, Clearly Stated                                                                 
+                                                                                              
+  Your current brownfield workflow is:                                                        
+                                                                                              
+  research_codebase skill (~65% context consumed by MCP + skill overhead)                     
+      → manual TDD plan (with remaining ~35% context)                                         
+      → code generation (debugging surprises from missed dependencies)
+
+  The bottleneck is that research_codebase tries to discover and hold the entire relevant
+  slice of a foreign codebase in a single LLM context window. Complex codebases exceed what
+  fits.
+
+  What Already Exists in CW9
+
+  The registry DAG already has the right primitives for this:
+
+  - extract_subgraph(node_id) — minimal ancestor+descendant subgraph (designed explicitly for
+  context-scoping LLM prompts, per your Phase 6 handoff)
+  - query_impact(target_id) — reverse dependency analysis (what depends on X)
+  - query_relevant(resource_id) — forward transitive closure
+  - 21 typed edge kinds — CALLS, IMPORTS, DEPENDS_ON, HANDLES, CHAINS, TRANSFORMS_FROM/TO,
+  etc.
+
+  But the registry is only populated from JSON schema files via extractor.py — greenfield
+  only. There's no cw9 ingest for existing codebases yet (noted as "Stage 2 FUTURE" in your
+  roadmap).
+
+  What's Missing: The Code Walker
+
+  The gap is a brownfield ingestion layer that:
+
+  1. Walks the target codebase — AST-level analysis of an existing repo (not schema files)
+  2. Extracts call chains — function A calls B calls C, with argument/return shapes
+  3. Records in-do-out patterns — for each function: what comes in (params, reads), what it
+  does (mutations, side effects), what goes out (returns, writes)
+  4. Maps dependency loops — circular references, event chains, middleware pipelines
+  5. Populates the existing DAG — as RESOURCE, MODULE, and edge nodes with CALLS, IMPORTS,
+  DEPENDS_ON, HANDLES relationships
+
+  Once the DAG is populated from real code, the existing pipeline machinery works:
+
+  cw9 ingest <target-repo>        ← NEW: code walker populates DAG
+      → DAG now has call chains, in-do-out, dependency edges
+      → extract_subgraph() gives precisely-scoped context per GWT
+      → LLM sees only the relevant slice, not the whole codebase
+      → GWT generators produce specs
+      → CW9 pipeline: proofs → traces → code
+
+  Your Insight, Reframed
+
+  Instead of the LLM doing the research (expensive, context-limited, hallucination-prone), a
+  deterministic code walker does it once and stores the results in the registry. The LLM then
+  consumes pre-computed, precisely-scoped subgraphs — trading one bloated research pass for
+  many small, focused generation passes.
+
+  This is the same insight as the-insight.md (registry-as-CSP eliminates nested loops),
+  extended to the brownfield case.
+
+  Concrete Architecture Sketch
+
+  ┌─────────────────────────────────────────┐
+  │  cw9 ingest <path> [--lang=python|ts|go]│
+  │                                          │
+  │  1. AST parse → module/function/class    │
+  │     nodes (RESOURCE, MODULE kind)        │
+  │                                          │
+  │  2. Call-chain extraction → CALLS edges  │
+  │                                          │
+  │  3. Import resolution → IMPORTS edges    │
+  │                                          │
+  │  4. In-Do-Out annotation per function:   │
+  │     - inputs: params, globals read       │
+  │     - effects: mutations, I/O, calls     │
+  │     - outputs: returns, side effects     │
+  │     (stored as node metadata)            │
+  │                                          │
+  │  5. Dependency cycle detection           │
+  │     (already have validate_edge)         │
+  │                                          │
+  │  6. Closure recomputation (existing BFS) │
+  └─────────────┬───────────────────────────┘
+                │
+                ▼
+          dag.json (now populated from real code)
+                │
+                ▼
+  ┌─────────────────────────────────────────┐
+  │  GWT authoring (manual or LLM-assisted) │
+  │  - User provides behavioral specs       │
+  │  - register_gwt() wires to resources    │
+  │  - query_context() pulls minimal slice  │
+  └─────────────┬───────────────────────────┘
+                │
+                ▼
+          Existing CW9 pipeline
+          (loop → bridge → gen-tests)
+
+  Key Design Decisions to Make
+
+  1. AST parsing approach — Use language-native tools (ast for Python, ts-morph/tree-sitter
+  for TS, go/ast for Go) or a polyglot tool like tree-sitter for all?
+  2. Granularity — Module-level? Function-level? Statement-level? (Function-level seems right
+  for the in-do-out pattern)
+  3. In-do-out schema — What exactly gets stored per node? I'd suggest:
+  {
+    "inputs": ["param:name:type", "reads:global_var", "reads:config.key"],
+    "effects": ["calls:other_func", "mutates:self.state", "writes:db.table"],
+    "outputs": ["returns:type", "raises:ErrorType"]
+  }
+  4. Incremental updates — Full re-ingest or diff-based? (Start with full, optimize later)
+  5. GWT authoring bridge — How do the research findings get converted to GWTs? LLM-assisted
+  with the DAG as context? Or do you already have that research in another format?
+
+
+
+
+
+# The script produces two things:                                                         
                                                                                           
   1. Verified TLA+ specs (one per GWT, in .cw9/specs/)                                    
    

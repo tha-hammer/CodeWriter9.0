@@ -1,6 +1,11 @@
 # Research Codebase
 
 You are tasked with conducting comprehensive research across the codebase to answer user questions by spawning parallel sub-agents and synthesizing their findings.
+Use Haiku subagents for file searches, grep, ripgrep and other file tasks.
+Use up to 10 Sonnet subagents for researching files, codepaths, and getting line numbers.
+Strive to keep the main context for the actual plan, we don't want to run out of context window before it is time to write the file or be at the last 10% at the time of writing.
+Use beads and agent mail with subagents to track progress and store paths, filenames:line numbers
+Have subagents write to file to save the main context window.
 
 ## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND EXPLAIN THE CODEBASE AS IT EXISTS TODAY
 - DO NOT suggest improvements or changes unless the user explicitly asks for them
