@@ -1,0 +1,150 @@
+---- MODULE SweepRemainingAsync ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    N,
+    M
+
+(* --algorithm SweepRemainingAsync
+
+variables
+    sem       = N,
+    active    = 0,
+    processed = 0,
+    task_acq  = [i \in 1..M |-> 0],
+    task_rel  = [i \in 1..M |-> 0];
+
+define
+
+    ConcurrencyBound ==
+        active <= N
+
+    SemNonNegative ==
+        sem >= 0
+
+    SemaphoreConservation ==
+        sem + active = N
+
+    PerTaskAtMostOnce ==
+        \A i \in 1..M : task_acq[i] <= 1 /\ task_rel[i] <= 1
+
+    AcqBeforeRel ==
+        \A i \in 1..M : task_rel[i] <= task_acq[i]
+
+    WhenCompleteSymmetric ==
+        processed = M =>
+            \A i \in 1..M : task_acq[i] = 1 /\ task_rel[i] = 1
+
+    AllInvariants ==
+        /\ ConcurrencyBound
+        /\ SemNonNegative
+        /\ SemaphoreConservation
+        /\ PerTaskAtMostOnce
+        /\ AcqBeforeRel
+        /\ WhenCompleteSymmetric
+
+end define;
+
+fair process Task \in 1..M
+begin
+    Acquire:
+        await sem > 0;
+        sem            := sem - 1;
+        active         := active + 1;
+        task_acq[self] := task_acq[self] + 1;
+    Execute:
+        skip;
+    Release:
+        sem            := sem + 1;
+        active         := active - 1;
+        task_rel[self] := task_rel[self] + 1;
+        processed      := processed + 1;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+Invariant == AllInvariants
+
+Liveness == <>(processed = M)
+
+THEOREM Spec => []Invariant /\ Liveness
+
+====
+---- MODULE SweepRemainingAsync ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    N,
+    M
+
+(* --algorithm SweepRemainingAsync
+
+variables
+    sem       = N,
+    active    = 0,
+    processed = 0,
+    task_acq  = [i \in 1..M |-> 0],
+    task_rel  = [i \in 1..M |-> 0];
+
+define
+
+    ConcurrencyBound ==
+        active <= N
+
+    SemNonNegative ==
+        sem >= 0
+
+    SemaphoreConservation ==
+        sem + active = N
+
+    PerTaskAtMostOnce ==
+        \A i \in 1..M : task_acq[i] <= 1 /\ task_rel[i] <= 1
+
+    AcqBeforeRel ==
+        \A i \in 1..M : task_rel[i] <= task_acq[i]
+
+    WhenCompleteSymmetric ==
+        processed = M =>
+            \A i \in 1..M : task_acq[i] = 1 /\ task_rel[i] = 1
+
+    AllInvariants ==
+        /\ ConcurrencyBound
+        /\ SemNonNegative
+        /\ SemaphoreConservation
+        /\ PerTaskAtMostOnce
+        /\ AcqBeforeRel
+        /\ WhenCompleteSymmetric
+
+end define;
+
+fair process Task \in 1..M
+begin
+    Acquire:
+        await sem > 0;
+        sem            := sem - 1;
+        active         := active + 1;
+        task_acq[self] := task_acq[self] + 1;
+    Execute:
+        skip;
+    Release:
+        sem            := sem + 1;
+        active         := active - 1;
+        task_rel[self] := task_rel[self] + 1;
+        processed      := processed + 1;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+Invariant == AllInvariants
+
+Liveness == <>(processed = M)
+
+THEOREM Spec => []Invariant /\ Liveness
+
+====

@@ -1,0 +1,969 @@
+{
+  "gwt_id": "gwt-0016",
+  "module_name": "CrawlOrchestratorUpsert",
+  "data_structures": {
+    "CrawlOrchestratorUpsertState": {
+      "function_id": "fn-CrawlOrchestratorUpsert-state",
+      "acceptance_criteria_id": "ac-CrawlOrchestratorUpsert-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"StartExtract\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[c \\in Coroutines |-> \"IDLE\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "upsert_log": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "empty_sequence",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "upsert_started": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "upsert_finished": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CrawlOrchestratorUpsert TLA+ spec"
+    }
+  },
+  "operations": {},
+  "verifiers": {
+    "Phases": {
+      "function_id": "fn-CrawlOrchestratorUpsert-verify-Phases",
+      "acceptance_criteria_id": "ac-CrawlOrchestratorUpsert-Phases",
+      "conditions": [
+        "{\"IDLE\", \"EXTRACTING\", \"EXTRACTED\", \"COMPLETE\"}"
+      ],
+      "message": "Phases violation: {\"IDLE\", \"EXTRACTING\", \"EXTRACTED\", \"COMPLETE\"}",
+      "applies_to": [
+        "CrawlOrchestratorUpsert"
+      ],
+      "description": "Verifier for invariant Phases from CrawlOrchestratorUpsert spec"
+    },
+    "TypeInvariant": {
+      "function_id": "fn-CrawlOrchestratorUpsert-verify-TypeInvariant",
+      "acceptance_criteria_id": "ac-CrawlOrchestratorUpsert-TypeInvariant",
+      "conditions": [
+        "\\A c \\in Coroutines : phase[c] \\in Phases",
+        "upsert_started  \\in 0..Cardinality(Coroutines",
+        "upsert_finished \\in 0..Cardinality(Coroutines",
+        "Len(upsert_log) \\in 0..Cardinality(Coroutines",
+        "\\A i \\in 1..Len(upsert_log) : upsert_log[i] \\in Coroutines"
+      ],
+      "message": "TypeInvariant violation: /\\ \\A c \\in Coroutines : phase[c] \\in Phases\n    /\\ upsert_started  \\in 0..Cardinality(Coroutines)\n    /\\ upsert_fini...",
+      "applies_to": [
+        "phase",
+        "upsert_finished",
+        "upsert_log",
+        "upsert_started"
+      ],
+      "description": "Verifier for invariant TypeInvariant from CrawlOrchestratorUpsert spec"
+    },
+    "NoSimultaneousUpserts": {
+      "function_id": "fn-CrawlOrchestratorUpsert-verify-NoSimultaneousUpserts",
+      "acceptance_criteria_id": "ac-CrawlOrchestratorUpsert-NoSimultaneousUpserts",
+      "conditions": [
+        "upsert_started - upsert_finished <= 1"
+      ],
+      "message": "NoSimultaneousUpserts violation: upsert_started - upsert_finished <= 1",
+      "applies_to": [
+        "upsert_finished",
+        "upsert_started"
+      ],
+      "description": "Verifier for invariant NoSimultaneousUpserts from CrawlOrchestratorUpsert spec"
+    },
+    "UpsertLogNoDuplicates": {
+      "function_id": "fn-CrawlOrchestratorUpsert-verify-UpsertLogNoDuplicates",
+      "acceptance_criteria_id": "ac-CrawlOrchestratorUpsert-UpsertLogNoDuplicates",
+      "conditions": [
+        "\\A i, j \\in 1..Len(upsert_log) :\n        i /= j => upsert_log[i] /= upsert_log[j]"
+      ],
+      "message": "UpsertLogNoDuplicates violation: \\A i, j \\in 1..Len(upsert_log) :\n        i /= j => upsert_log[i] /= upsert_log[j]",
+      "applies_to": [
+        "upsert_log"
+      ],
+      "description": "Verifier for invariant UpsertLogNoDuplicates from CrawlOrchestratorUpsert spec"
+    },
+    "CompletionImpliesUpserted": {
+      "function_id": "fn-CrawlOrchestratorUpsert-verify-CompletionImpliesUpserted",
+      "acceptance_criteria_id": "ac-CrawlOrchestratorUpsert-CompletionImpliesUpserted",
+      "conditions": [
+        "\\A c \\in Coroutines :\n        phase[c] = \"COMPLETE\" =>\n            \\E i \\in 1..Len(upsert_log) : upsert_log[i] = c"
+      ],
+      "message": "CompletionImpliesUpserted violation: \\A c \\in Coroutines :\n        phase[c] = \"COMPLETE\" =>\n            \\E i \\in 1..Len(upsert_log) : upsert_log[i] = c",
+      "applies_to": [
+        "phase",
+        "upsert_log"
+      ],
+      "description": "Verifier for invariant CompletionImpliesUpserted from CrawlOrchestratorUpsert spec"
+    },
+    "UpsertLogLengthMatchesCompletions": {
+      "function_id": "fn-CrawlOrchestratorUpsert-verify-UpsertLogLengthMatchesCompletions",
+      "acceptance_criteria_id": "ac-CrawlOrchestratorUpsert-UpsertLogLengthMatchesCompletions",
+      "conditions": [
+        "Len(upsert_log) = Cardinality({c \\in Coroutines : phase[c] = \"COMPLETE\"}"
+      ],
+      "message": "UpsertLogLengthMatchesCompletions violation: Len(upsert_log) = Cardinality({c \\in Coroutines : phase[c] = \"COMPLETE\"})",
+      "applies_to": [
+        "phase",
+        "upsert_log"
+      ],
+      "description": "Verifier for invariant UpsertLogLengthMatchesCompletions from CrawlOrchestratorUpsert spec"
+    }
+  },
+  "assertions": {
+    "assert_Phases": {
+      "condition": "{\"IDLE\", \"EXTRACTING\", \"EXTRACTED\", \"COMPLETE\"}",
+      "message": "Assertion failed: Phases \u2014 {\"IDLE\", \"EXTRACTING\", \"EXTRACTED\", \"COMPLETE\"}",
+      "description": "Test assertion for Phases from CrawlOrchestratorUpsert spec"
+    },
+    "assert_TypeInvariant": {
+      "condition": "and \\A c in Coroutines : phase[c] in Phases\n    and upsert_started  in 0..Cardinality(Coroutines)\n    and upsert_finished in 0..Cardinality(Coroutines)\n    and Len(upsert_log) in 0..Cardinality(Coroutines)\n    and \\A i in 1..Len(upsert_log) : upsert_log[i] in Coroutines",
+      "message": "Assertion failed: TypeInvariant \u2014 /\\ \\A c \\in Coroutines : phase[c] \\in Phases\n    /\\ upsert_started  \\in 0..Cardinality(Coroutines)\n    /\\ upsert_fini...",
+      "description": "Test assertion for TypeInvariant from CrawlOrchestratorUpsert spec"
+    },
+    "assert_NoSimultaneousUpserts": {
+      "condition": "upsert_started - upsert_finished <= 1",
+      "message": "Assertion failed: NoSimultaneousUpserts \u2014 upsert_started - upsert_finished <= 1",
+      "description": "Test assertion for NoSimultaneousUpserts from CrawlOrchestratorUpsert spec"
+    },
+    "assert_UpsertLogNoDuplicates": {
+      "condition": "\\A i, j in 1..Len(upsert_log) :\n        i /= j implies upsert_log[i] /= upsert_log[j]",
+      "message": "Assertion failed: UpsertLogNoDuplicates \u2014 \\A i, j \\in 1..Len(upsert_log) :\n        i /= j => upsert_log[i] /= upsert_log[j]",
+      "description": "Test assertion for UpsertLogNoDuplicates from CrawlOrchestratorUpsert spec"
+    },
+    "assert_CompletionImpliesUpserted": {
+      "condition": "\\A c in Coroutines :\n        phase[c] = \"COMPLETE\" implies\n            \\E i in 1..Len(upsert_log) : upsert_log[i] = c",
+      "message": "Assertion failed: CompletionImpliesUpserted \u2014 \\A c \\in Coroutines :\n        phase[c] = \"COMPLETE\" =>\n            \\E i \\in 1..Len(upsert_log) : upsert_log[i] = c",
+      "description": "Test assertion for CompletionImpliesUpserted from CrawlOrchestratorUpsert spec"
+    },
+    "assert_UpsertLogLengthMatchesCompletions": {
+      "condition": "Len(upsert_log) = Cardinality({c in Coroutines : phase[c] = \"COMPLETE\"})",
+      "message": "Assertion failed: UpsertLogLengthMatchesCompletions \u2014 Len(upsert_log) = Cardinality({c \\in Coroutines : phase[c] = \"COMPLETE\"})",
+      "description": "Test assertion for UpsertLogLengthMatchesCompletions from CrawlOrchestratorUpsert spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_1, Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_1, Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_1, Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_2, Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_1, Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_1, Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_1, Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_2, Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_2, Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"IDLE\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"StartExtract\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"IDLE\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"StartExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTING\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"AwaitExtract\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"EXTRACTING\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"AwaitExtract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "0",
+          "upsert_finished": "0",
+          "upsert_log": "<<>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"EXTRACTED\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"SyncUpsert\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "1",
+          "upsert_finished": "1",
+          "upsert_log": "<<Coroutines_2>>",
+          "phase": "(Coroutines_1 :> \"EXTRACTED\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"SyncUpsert\" @@ Coroutines_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "upsert_started": "2",
+          "upsert_finished": "2",
+          "upsert_log": "<<Coroutines_2, Coroutines_1>>",
+          "phase": "(Coroutines_1 :> \"COMPLETE\" @@ Coroutines_2 :> \"COMPLETE\")",
+          "pc": "(Coroutines_1 :> \"Done\" @@ Coroutines_2 :> \"Done\")"
+        }
+      }
+    ]
+  ]
+}

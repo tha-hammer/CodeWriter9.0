@@ -793,6 +793,190 @@ class TestGenerateCfg:
         assert "INVARIANT TypeInvariant" in cfg
         assert "INVARIANT AllProcessed" not in cfg
 
+    # -- Suggested TLC model constants --
+
+    SPEC_WITH_SUGGESTED = textwrap.dedent("""\
+        ---- MODULE Suggested ----
+        EXTENDS Integers
+
+        CONSTANTS
+            MIN_CONCURRENCY,
+            MAX_CONCURRENCY,
+            DEFAULT_CONCURRENCY,
+            MaxSteps
+
+        ASSUME DEFAULT_CONCURRENCY = 10
+        ASSUME MIN_CONCURRENCY >= 1
+        ASSUME MIN_CONCURRENCY <= DEFAULT_CONCURRENCY
+        ASSUME MAX_CONCURRENCY >= DEFAULT_CONCURRENCY
+        ASSUME MaxSteps >= 8
+
+        (*
+         * Suggested TLC model constants:
+         *   MIN_CONCURRENCY     <- 1
+         *   MAX_CONCURRENCY     <- 100
+         *   DEFAULT_CONCURRENCY <- 10
+         *   MaxSteps            <- 10
+         *)
+
+        (* --algorithm Pipeline
+
+        variables x = 0;
+
+        define
+            TypeInvariant == x >= 0
+        end define;
+
+        fair process P = "p"
+        begin L: skip;
+        end process;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    def test_suggested_constants_override_default(self):
+        """Suggested TLC model constants from spec comments override the default."""
+        cfg = generate_cfg(self.SPEC_WITH_SUGGESTED)
+        assert "CONSTANT MIN_CONCURRENCY = 1" in cfg
+        assert "CONSTANT MAX_CONCURRENCY = 100" in cfg
+        assert "CONSTANT DEFAULT_CONCURRENCY = 10" in cfg
+        assert "CONSTANT MaxSteps = 10" in cfg
+
+    def test_suggested_constants_override_custom_default(self):
+        """Suggested values take precedence even over a custom default_constant_value."""
+        cfg = generate_cfg(self.SPEC_WITH_SUGGESTED, default_constant_value=5)
+        assert "CONSTANT MIN_CONCURRENCY = 1" in cfg
+        assert "CONSTANT MAX_CONCURRENCY = 100" in cfg
+
+    SPEC_WITH_PARTIAL_SUGGESTED = textwrap.dedent("""\
+        ---- MODULE Partial ----
+        EXTENDS Integers
+
+        CONSTANTS
+            MinVal,
+            MaxVal,
+            BufferSize
+
+        (*
+         * Suggested TLC model constants:
+         *   MinVal  <- 1
+         *   MaxVal  <- 50
+         *)
+
+        (* --algorithm Partial
+
+        variables x = 0;
+
+        define
+            TypeInvariant == x >= 0
+        end define;
+
+        fair process P = "p"
+        begin L: skip;
+        end process;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    def test_partial_suggested_falls_back_to_default(self):
+        """Constants without suggested values still get the default."""
+        cfg = generate_cfg(self.SPEC_WITH_PARTIAL_SUGGESTED)
+        assert "CONSTANT MinVal = 1" in cfg
+        assert "CONSTANT MaxVal = 50" in cfg
+        assert "CONSTANT BufferSize = 10" in cfg
+
+    def test_no_suggested_block_uses_default(self):
+        """Specs without a suggested block behave exactly as before."""
+        cfg = generate_cfg(self.FULL_SPEC)
+        assert "CONSTANT MaxSteps = 10" in cfg
+        assert "CONSTANT MaxAttempts = 10" in cfg
+
+    SPEC_SUGGESTED_WITH_SETS = textwrap.dedent("""\
+        ---- MODULE SuggestedSets ----
+        EXTENDS Integers, FiniteSets
+
+        CONSTANTS
+            Workers,
+            MinBatch,
+            MaxBatch
+
+        ASSUME Workers /= {}
+
+        (*
+         * Suggested TLC model constants:
+         *   MinBatch <- 1
+         *   MaxBatch <- 20
+         *)
+
+        (* --algorithm SuggestedSets
+
+        variables x = 0;
+
+        define
+            TypeInvariant == x >= 0
+        end define;
+
+        fair process w \\in Workers
+        begin L: skip;
+        end process;
+
+        end algorithm; *)
+
+        ====
+    """)
+
+    def test_suggested_constants_coexist_with_set_classification(self):
+        """Set-typed constants still get model values; suggested numerics get their values."""
+        cfg = generate_cfg(self.SPEC_SUGGESTED_WITH_SETS)
+        assert "CONSTANT Workers = {Workers_1, Workers_2}" in cfg
+        assert "CONSTANT MinBatch = 1" in cfg
+        assert "CONSTANT MaxBatch = 20" in cfg
+
+
+# ---------------------------------------------------------------------------
+# _parse_suggested_constants unit tests
+# ---------------------------------------------------------------------------
+
+class TestParseSuggestedConstants:
+    """Tests for _parse_suggested_constants() helper."""
+
+    def test_parses_standard_block(self):
+        from registry.one_shot_loop import _parse_suggested_constants
+        text = textwrap.dedent("""\
+            (*
+             * Suggested TLC model constants:
+             *   MIN_CONCURRENCY     <- 1
+             *   MAX_CONCURRENCY     <- 100
+             *   DEFAULT_CONCURRENCY <- 10
+             *)
+        """)
+        result = _parse_suggested_constants(text)
+        assert result == {
+            "MIN_CONCURRENCY": "1",
+            "MAX_CONCURRENCY": "100",
+            "DEFAULT_CONCURRENCY": "10",
+        }
+
+    def test_returns_empty_when_no_block(self):
+        from registry.one_shot_loop import _parse_suggested_constants
+        text = "---- MODULE Foo ----\nEXTENDS Integers\n===="
+        assert _parse_suggested_constants(text) == {}
+
+    def test_handles_no_star_prefix(self):
+        from registry.one_shot_loop import _parse_suggested_constants
+        text = textwrap.dedent("""\
+            (* Suggested TLC model constants:
+               N <- 5
+               M <- 3
+            *)
+        """)
+        result = _parse_suggested_constants(text)
+        assert result == {"N": "5", "M": "3"}
+
 
 # ---------------------------------------------------------------------------
 # run_tlc_simulate filename-mismatch bug tests

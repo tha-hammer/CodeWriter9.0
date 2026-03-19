@@ -497,12 +497,41 @@ def _classify_constants(
     return result
 
 
+def _parse_suggested_constants(tla_text: str) -> dict[str, str]:
+    """Parse 'Suggested TLC model constants' comment block for explicit values.
+
+    Looks for a comment block like::
+
+        * Suggested TLC model constants:
+        *   MIN_CONCURRENCY     <- 1
+        *   MAX_CONCURRENCY     <- 100
+
+    Returns a dict mapping constant name → raw value string (e.g. ``{"MIN_CONCURRENCY": "1"}``).
+    """
+    result: dict[str, str] = {}
+    match = re.search(
+        r'Suggested TLC model constants:\s*\n(.*?)(?:\n\s*\*\s*\n|\n\s*\*\)|\n\s*$)',
+        tla_text,
+        re.DOTALL,
+    )
+    if not match:
+        return result
+    block = match.group(1)
+    for line in block.splitlines():
+        m = re.match(r'\s*\*?\s*(\w+)\s*<-\s*(.+)', line)
+        if m:
+            result[m.group(1).strip()] = m.group(2).strip()
+    return result
+
+
 def generate_cfg(tla_text: str, default_constant_value: int = 10) -> str:
     """Generate a TLC .cfg from CONSTANTS and define-block invariants.
 
     Parses the module text to find:
     - CONSTANTS declarations → classifies each as numeric or set-valued,
       assigns integer defaults or small model-value sets accordingly
+    - A ``Suggested TLC model constants`` comment block → uses explicit values
+      from the spec author instead of the default, when present
     - Operator definitions in the PlusCal ``define`` block → adds state-predicate
       operators as INVARIANT lines, filtering out data definitions and standard
       TLA+ names (Init, Next, Spec, etc.)
@@ -517,9 +546,16 @@ def generate_cfg(tla_text: str, default_constant_value: int = 10) -> str:
         Assigned a small model-value set ``{X_1, X_2}`` for tractable
         state-space exploration.
 
+    Suggested constants take precedence over both classification heuristics
+    and the default value, allowing spec authors to encode domain-semantic
+    values (e.g. range boundaries) that differ from the generic default.
+
     Returns a complete cfg string suitable for TLC.
     """
     lines = ["SPECIFICATION Spec"]
+
+    # ── Extract suggested constants from spec comments ─────────────────
+    suggested = _parse_suggested_constants(tla_text)
 
     # ── Extract CONSTANTS ──────────────────────────────────────────────
     const_match = re.search(
@@ -535,7 +571,9 @@ def generate_cfg(tla_text: str, default_constant_value: int = 10) -> str:
         ]
         classifications = _classify_constants(const_names, tla_text)
         for name in const_names:
-            if classifications.get(name) == "set":
+            if name in suggested:
+                lines.append(f"CONSTANT {name} = {suggested[name]}")
+            elif classifications.get(name) == "set":
                 vals = ", ".join(f"{name}_{i}" for i in range(1, _DEFAULT_SET_SIZE + 1))
                 lines.append(f"CONSTANT {name} = {{{vals}}}")
             else:

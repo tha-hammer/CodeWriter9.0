@@ -1,0 +1,200 @@
+---- MODULE SweepRemainingAsync ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    NumTasks,
+    MaxConcurrency,
+    FailingTask
+
+ASSUME NumTasks >= 1
+ASSUME MaxConcurrency >= 1 /\ MaxConcurrency <= NumTasks
+ASSUME FailingTask \in 1..NumTasks
+
+(* --algorithm SweepRemainingAsync
+
+variables
+    task_state      = [t \in 1..NumTasks |-> "pending"],
+    sem_count       = MaxConcurrency,
+    sem_held        = [t \in 1..NumTasks |-> FALSE],
+    results         = [t \in 1..NumTasks |-> "none"],
+    gather_complete = FALSE;
+
+define
+
+    Tasks == 1..NumTasks
+
+    NumHeld == Cardinality({t \in Tasks : sem_held[t]})
+
+    SemaphoreValid ==
+        sem_count >= 0 /\ sem_count <= MaxConcurrency
+
+    SemaphoreConsistent ==
+        sem_count + NumHeld = MaxConcurrency
+
+    NoCancellation ==
+        \A t \in Tasks : task_state[t] # "cancelled"
+
+    ExceptionCapturedAsResult ==
+        gather_complete => results[FailingTask] = "exception"
+
+    AllOthersSucceedWhenGatherDone ==
+        gather_complete =>
+            \A t \in Tasks \ {FailingTask} : results[t] = "ok"
+
+    GatherRequiresAllTasksDone ==
+        gather_complete =>
+            \A t \in Tasks : task_state[t] \in {"completed", "failed"}
+
+    FailedTaskSlotReleased ==
+        task_state[FailingTask] = "failed" => ~sem_held[FailingTask]
+
+    ResultsAreValidValues ==
+        \A t \in Tasks :
+            results[t] \in {"none", "ok", "exception"}
+
+    RunningTasksHoldSemaphore ==
+        \A t \in Tasks :
+            task_state[t] = "running" => sem_held[t]
+
+    CompletedOrFailedTasksReleasedSemaphore ==
+        \A t \in Tasks :
+            task_state[t] \in {"completed", "failed"} => ~sem_held[t]
+
+end define;
+
+fair process Task \in 1..NumTasks
+begin
+    Acquire:
+        await sem_count > 0;
+        sem_count        := sem_count - 1;
+        sem_held[self]   := TRUE;
+        task_state[self] := "running";
+    Execute:
+        if self = FailingTask then
+            results[self] := "exception";
+        else
+            results[self] := "ok";
+        end if;
+    Release:
+        sem_count        := sem_count + 1;
+        sem_held[self]   := FALSE;
+        if results[self] = "exception" then
+            task_state[self] := "failed";
+        else
+            task_state[self] := "completed";
+        end if;
+end process;
+
+fair process Gatherer = 0
+begin
+    WaitAll:
+        await \A t \in 1..NumTasks :
+            task_state[t] \in {"completed", "failed"};
+    Finish:
+        gather_complete := TRUE;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE SweepRemainingAsync ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    NumTasks,
+    MaxConcurrency,
+    FailingTask
+
+ASSUME NumTasks >= 1
+ASSUME MaxConcurrency >= 1 /\ MaxConcurrency <= NumTasks
+ASSUME FailingTask \in 1..NumTasks
+
+(* --algorithm SweepRemainingAsync
+
+variables
+    task_state      = [t \in 1..NumTasks |-> "pending"],
+    sem_count       = MaxConcurrency,
+    sem_held        = [t \in 1..NumTasks |-> FALSE],
+    results         = [t \in 1..NumTasks |-> "none"],
+    gather_complete = FALSE;
+
+define
+
+    Tasks == 1..NumTasks
+
+    NumHeld == Cardinality({t \in Tasks : sem_held[t]})
+
+    SemaphoreValid ==
+        sem_count >= 0 /\ sem_count <= MaxConcurrency
+
+    SemaphoreConsistent ==
+        sem_count + NumHeld = MaxConcurrency
+
+    NoCancellation ==
+        \A t \in Tasks : task_state[t] # "cancelled"
+
+    ExceptionCapturedAsResult ==
+        gather_complete => results[FailingTask] = "exception"
+
+    AllOthersSucceedWhenGatherDone ==
+        gather_complete =>
+            \A t \in Tasks \ {FailingTask} : results[t] = "ok"
+
+    GatherRequiresAllTasksDone ==
+        gather_complete =>
+            \A t \in Tasks : task_state[t] \in {"completed", "failed"}
+
+    FailedTaskSlotReleased ==
+        task_state[FailingTask] = "failed" => ~sem_held[FailingTask]
+
+    ResultsAreValidValues ==
+        \A t \in Tasks :
+            results[t] \in {"none", "ok", "exception"}
+
+    RunningTasksHoldSemaphore ==
+        \A t \in Tasks :
+            task_state[t] = "running" => sem_held[t]
+
+    CompletedOrFailedTasksReleasedSemaphore ==
+        \A t \in Tasks :
+            task_state[t] \in {"completed", "failed"} => ~sem_held[t]
+
+end define;
+
+fair process Task \in 1..NumTasks
+begin
+    Acquire:
+        await sem_count > 0;
+        sem_count        := sem_count - 1;
+        sem_held[self]   := TRUE;
+        task_state[self] := "running";
+    Execute:
+        if self = FailingTask then
+            results[self] := "exception";
+        else
+            results[self] := "ok";
+        end if;
+    Release:
+        sem_count        := sem_count + 1;
+        sem_held[self]   := FALSE;
+        if results[self] = "exception" then
+            task_state[self] := "failed";
+        else
+            task_state[self] := "completed";
+        end if;
+end process;
+
+fair process Gatherer = 0
+begin
+    WaitAll:
+        await \A t \in 1..NumTasks :
+            task_state[t] \in {"completed", "failed"};
+    Finish:
+        gather_complete := TRUE;
+end process;
+
+end algorithm; *)
+
+====

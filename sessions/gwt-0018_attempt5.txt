@@ -1,0 +1,206 @@
+The root cause is now clear: the module header has been missing the required `---- MODULE Name ----` dashes that SANY's lexer uses as the literal start-of-module token. Every previous attempt used bare `MODULE CrawlOrchestrator` which SANY cannot parse. Here is the corrected, single-instance module:
+
+---- MODULE CrawlOrchestrator ----
+
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    DFSOrder,
+    PendingNodes,
+    SemMax
+
+ASSUME SemMax >= 1
+
+(* --algorithm CrawlOrchestrator
+
+variables
+    phase       = "idle",
+    dfs_idx     = 1,
+    p1_done     = {},
+    p2_done     = {},
+    semaphore   = SemMax,
+    p1_complete = FALSE;
+
+define
+
+    DFSNodeSet == {DFSOrder[i] : i \in 1..Len(DFSOrder)}
+
+    TypeOK ==
+        /\ phase \in {"idle", "phase1", "phase2", "complete"}
+        /\ dfs_idx \in 1..(Len(DFSOrder) + 1)
+        /\ p1_done \subseteq DFSNodeSet
+        /\ p2_done \subseteq PendingNodes
+        /\ semaphore \in 0..SemMax
+
+    Phase1BeforePhase2 ==
+        (p2_done /= {}) => p1_complete
+
+    Phase1FlagAccurate ==
+        p1_complete => (p1_done = DFSNodeSet)
+
+    SemaphoreNonNeg ==
+        semaphore >= 0
+
+    ConcurrencyBound ==
+        SemMax - semaphore >= 0
+
+    DFSSequentialOrder ==
+        \A i \in 1..Len(DFSOrder) :
+            DFSOrder[i] \in p1_done =>
+            (\A j \in 1..(i-1) : DFSOrder[j] \in p1_done)
+
+    NoPhase2BeforeSignal ==
+        ~p1_complete => p2_done = {}
+
+end define;
+
+fair process orchestrator = "orch"
+begin
+    OStart:
+        phase := "phase1";
+
+    P1Loop:
+        while dfs_idx <= Len(DFSOrder) do
+            P1Process:
+                p1_done := p1_done \cup {DFSOrder[dfs_idx]};
+                dfs_idx := dfs_idx + 1;
+        end while;
+
+    P1Signal:
+        p1_complete := TRUE;
+        phase := "phase2";
+
+    OGather:
+        await p2_done = PendingNodes;
+
+    OComplete:
+        phase := "complete";
+
+end process;
+
+fair process p2worker \in PendingNodes
+begin
+    WaitPhase2:
+        await p1_complete;
+
+    Acquire:
+        await semaphore > 0;
+        semaphore := semaphore - 1;
+
+    Process:
+        p2_done := p2_done \cup {self};
+
+    Release:
+        semaphore := semaphore + 1;
+
+    WFinish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+The root cause is now clear: the module header has been missing the required `---- MODULE Name ----` dashes that SANY's lexer uses as the literal start-of-module token. Every previous attempt used bare `MODULE CrawlOrchestrator` which SANY cannot parse. Here is the corrected, single-instance module:
+
+---- MODULE CrawlOrchestrator ----
+
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    DFSOrder,
+    PendingNodes,
+    SemMax
+
+ASSUME SemMax >= 1
+
+(* --algorithm CrawlOrchestrator
+
+variables
+    phase       = "idle",
+    dfs_idx     = 1,
+    p1_done     = {},
+    p2_done     = {},
+    semaphore   = SemMax,
+    p1_complete = FALSE;
+
+define
+
+    DFSNodeSet == {DFSOrder[i] : i \in 1..Len(DFSOrder)}
+
+    TypeOK ==
+        /\ phase \in {"idle", "phase1", "phase2", "complete"}
+        /\ dfs_idx \in 1..(Len(DFSOrder) + 1)
+        /\ p1_done \subseteq DFSNodeSet
+        /\ p2_done \subseteq PendingNodes
+        /\ semaphore \in 0..SemMax
+
+    Phase1BeforePhase2 ==
+        (p2_done /= {}) => p1_complete
+
+    Phase1FlagAccurate ==
+        p1_complete => (p1_done = DFSNodeSet)
+
+    SemaphoreNonNeg ==
+        semaphore >= 0
+
+    ConcurrencyBound ==
+        SemMax - semaphore >= 0
+
+    DFSSequentialOrder ==
+        \A i \in 1..Len(DFSOrder) :
+            DFSOrder[i] \in p1_done =>
+            (\A j \in 1..(i-1) : DFSOrder[j] \in p1_done)
+
+    NoPhase2BeforeSignal ==
+        ~p1_complete => p2_done = {}
+
+end define;
+
+fair process orchestrator = "orch"
+begin
+    OStart:
+        phase := "phase1";
+
+    P1Loop:
+        while dfs_idx <= Len(DFSOrder) do
+            P1Process:
+                p1_done := p1_done \cup {DFSOrder[dfs_idx]};
+                dfs_idx := dfs_idx + 1;
+        end while;
+
+    P1Signal:
+        p1_complete := TRUE;
+        phase := "phase2";
+
+    OGather:
+        await p2_done = PendingNodes;
+
+    OComplete:
+        phase := "complete";
+
+end process;
+
+fair process p2worker \in PendingNodes
+begin
+    WaitPhase2:
+        await p1_complete;
+
+    Acquire:
+        await semaphore > 0;
+        semaphore := semaphore - 1;
+
+    Process:
+        p2_done := p2_done \cup {self};
+
+    Release:
+        semaphore := semaphore + 1;
+
+    WFinish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

@@ -1,0 +1,296 @@
+---- MODULE AsyncExtractFn ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+CONSTANTS
+    MaxMessages
+
+ASSUME MaxMessages \in Nat /\ MaxMessages >= 1
+
+(* --algorithm AsyncExtractFn
+
+variables
+  state                = "Idle",
+  client_constructed   = FALSE,
+  allowed_tools_param  = "UNSET",
+  system_prompt_param  = "UNSET",
+  max_turns_param      = 0,
+  prompt_param         = "UNSET",
+  msgs_remaining       = MaxMessages,
+  collected_texts      = <<>>,
+  last_msg_type        = "none",
+  raw_output           = "",
+  parse_success        = FALSE,
+  fn_record            = "none";
+
+define
+
+  AllStates == {
+    "Idle", "QueryDispatched", "Streaming",
+    "Joined", "Parsed", "Returned", "ParseError"
+  }
+
+  TerminalStates == {"Returned", "ParseError"}
+
+  ValidState == state \in AllStates
+
+  ClientNeverConstructed ==
+    client_constructed = FALSE
+
+  OnlySDKQueryUsed ==
+    \* No ClaudeSDKClient is ever directly constructed or connected;
+    \* the standalone claude_agent_sdk.query() call is the only channel.
+    client_constructed = FALSE
+
+  QueryParamsValid ==
+    state /= "Idle" =>
+      /\ allowed_tools_param  = "empty_list"
+      /\ system_prompt_param  = "EXTRACT_SYSTEM_PROMPT"
+      /\ max_turns_param      = 1
+      /\ prompt_param        /= "UNSET"
+
+  CollectionTypeIntegrity ==
+    last_msg_type \in {"AssistantMessage", "ResultMessage", "OtherMessage", "none"}
+
+  ParseImpliesNonEmpty ==
+    parse_success = TRUE => raw_output /= ""
+
+  FnRecordReturnedOnSuccess ==
+    state = "Returned" => fn_record = "FnRecord"
+
+  ParseErrorMeansNoRecord ==
+    state = "ParseError" => fn_record = "none"
+
+  ReturnImpliesParseSuccess ==
+    state = "Returned" => parse_success = TRUE
+
+  ReturnImpliesCollected ==
+    state = "Returned" => Len(collected_texts) > 0
+
+end define;
+
+fair process extractor = "main"
+begin
+  DispatchQuery:
+    \* Call standalone claude_agent_sdk.query() — never touch ClaudeSDKClient
+    allowed_tools_param := "empty_list";
+    system_prompt_param := "EXTRACT_SYSTEM_PROMPT";
+    max_turns_param     := 1;
+    prompt_param        := "constructed_prompt";
+    state               := "QueryDispatched";
+
+  BeginStream:
+    \* Start iterating the async event stream returned by query()
+    state := "Streaming";
+
+  CollectLoop:
+    while msgs_remaining > 0 do
+      CollectMsg:
+        either
+          \* AssistantMessage event: harvest every TextBlock's content
+          collected_texts := Append(collected_texts, "text_block_content");
+          last_msg_type   := "AssistantMessage";
+          msgs_remaining  := msgs_remaining - 1;
+        or
+          \* ResultMessage event: harvest the result field
+          collected_texts := Append(collected_texts, "result_field_content");
+          last_msg_type   := "ResultMessage";
+          msgs_remaining  := msgs_remaining - 1;
+        or
+          \* Any other event type: silently ignored, not collected
+          last_msg_type  := "OtherMessage";
+          msgs_remaining := msgs_remaining - 1;
+        end either;
+    end while;
+
+  JoinText:
+    \* Concatenate (join) all collected strings into a single raw output
+    if Len(collected_texts) > 0 then
+      raw_output := "nonempty_joined_output";
+      state      := "Joined";
+    else
+      raw_output := "";
+      state      := "Joined";
+    end if;
+
+  ParseJSON:
+    \* Attempt to parse a JSON object from the raw output
+    if raw_output /= "" then
+      parse_success := TRUE;
+      state         := "Parsed";
+    else
+      parse_success := FALSE;
+      state         := "ParseError";
+    end if;
+
+  BuildRecord:
+    \* On success, construct and return a FnRecord from the parsed JSON
+    if state = "Parsed" then
+      fn_record := "FnRecord";
+      state     := "Returned";
+    end if;
+
+  Finish:
+    skip;
+end process;
+
+end algorithm; *)
+
+THEOREM Spec => []ClientNeverConstructed
+THEOREM Spec => []QueryParamsValid
+THEOREM Spec => []CollectionTypeIntegrity
+THEOREM Spec => []ParseImpliesNonEmpty
+THEOREM Spec => []FnRecordReturnedOnSuccess
+THEOREM Spec => []ParseErrorMeansNoRecord
+THEOREM Spec => []ReturnImpliesParseSuccess
+THEOREM Spec => []ReturnImpliesCollected
+
+====
+---- MODULE AsyncExtractFn ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+CONSTANTS
+    MaxMessages
+
+ASSUME MaxMessages \in Nat /\ MaxMessages >= 1
+
+(* --algorithm AsyncExtractFn
+
+variables
+  state                = "Idle",
+  client_constructed   = FALSE,
+  allowed_tools_param  = "UNSET",
+  system_prompt_param  = "UNSET",
+  max_turns_param      = 0,
+  prompt_param         = "UNSET",
+  msgs_remaining       = MaxMessages,
+  collected_texts      = <<>>,
+  last_msg_type        = "none",
+  raw_output           = "",
+  parse_success        = FALSE,
+  fn_record            = "none";
+
+define
+
+  AllStates == {
+    "Idle", "QueryDispatched", "Streaming",
+    "Joined", "Parsed", "Returned", "ParseError"
+  }
+
+  TerminalStates == {"Returned", "ParseError"}
+
+  ValidState == state \in AllStates
+
+  ClientNeverConstructed ==
+    client_constructed = FALSE
+
+  OnlySDKQueryUsed ==
+    \* No ClaudeSDKClient is ever directly constructed or connected;
+    \* the standalone claude_agent_sdk.query() call is the only channel.
+    client_constructed = FALSE
+
+  QueryParamsValid ==
+    state /= "Idle" =>
+      /\ allowed_tools_param  = "empty_list"
+      /\ system_prompt_param  = "EXTRACT_SYSTEM_PROMPT"
+      /\ max_turns_param      = 1
+      /\ prompt_param        /= "UNSET"
+
+  CollectionTypeIntegrity ==
+    last_msg_type \in {"AssistantMessage", "ResultMessage", "OtherMessage", "none"}
+
+  ParseImpliesNonEmpty ==
+    parse_success = TRUE => raw_output /= ""
+
+  FnRecordReturnedOnSuccess ==
+    state = "Returned" => fn_record = "FnRecord"
+
+  ParseErrorMeansNoRecord ==
+    state = "ParseError" => fn_record = "none"
+
+  ReturnImpliesParseSuccess ==
+    state = "Returned" => parse_success = TRUE
+
+  ReturnImpliesCollected ==
+    state = "Returned" => Len(collected_texts) > 0
+
+end define;
+
+fair process extractor = "main"
+begin
+  DispatchQuery:
+    \* Call standalone claude_agent_sdk.query() — never touch ClaudeSDKClient
+    allowed_tools_param := "empty_list";
+    system_prompt_param := "EXTRACT_SYSTEM_PROMPT";
+    max_turns_param     := 1;
+    prompt_param        := "constructed_prompt";
+    state               := "QueryDispatched";
+
+  BeginStream:
+    \* Start iterating the async event stream returned by query()
+    state := "Streaming";
+
+  CollectLoop:
+    while msgs_remaining > 0 do
+      CollectMsg:
+        either
+          \* AssistantMessage event: harvest every TextBlock's content
+          collected_texts := Append(collected_texts, "text_block_content");
+          last_msg_type   := "AssistantMessage";
+          msgs_remaining  := msgs_remaining - 1;
+        or
+          \* ResultMessage event: harvest the result field
+          collected_texts := Append(collected_texts, "result_field_content");
+          last_msg_type   := "ResultMessage";
+          msgs_remaining  := msgs_remaining - 1;
+        or
+          \* Any other event type: silently ignored, not collected
+          last_msg_type  := "OtherMessage";
+          msgs_remaining := msgs_remaining - 1;
+        end either;
+    end while;
+
+  JoinText:
+    \* Concatenate (join) all collected strings into a single raw output
+    if Len(collected_texts) > 0 then
+      raw_output := "nonempty_joined_output";
+      state      := "Joined";
+    else
+      raw_output := "";
+      state      := "Joined";
+    end if;
+
+  ParseJSON:
+    \* Attempt to parse a JSON object from the raw output
+    if raw_output /= "" then
+      parse_success := TRUE;
+      state         := "Parsed";
+    else
+      parse_success := FALSE;
+      state         := "ParseError";
+    end if;
+
+  BuildRecord:
+    \* On success, construct and return a FnRecord from the parsed JSON
+    if state = "Parsed" then
+      fn_record := "FnRecord";
+      state     := "Returned";
+    end if;
+
+  Finish:
+    skip;
+end process;
+
+end algorithm; *)
+
+THEOREM Spec => []ClientNeverConstructed
+THEOREM Spec => []QueryParamsValid
+THEOREM Spec => []CollectionTypeIntegrity
+THEOREM Spec => []ParseImpliesNonEmpty
+THEOREM Spec => []FnRecordReturnedOnSuccess
+THEOREM Spec => []ParseErrorMeansNoRecord
+THEOREM Spec => []ReturnImpliesParseSuccess
+THEOREM Spec => []ReturnImpliesCollected
+
+====

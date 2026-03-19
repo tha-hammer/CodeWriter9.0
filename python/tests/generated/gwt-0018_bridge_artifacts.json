@@ -1,0 +1,4979 @@
+{
+  "gwt_id": "gwt-0018",
+  "module_name": "CrawlOrchestrator",
+  "data_structures": {
+    "CrawlOrchestratorState": {
+      "function_id": "fn-CrawlOrchestrator-state",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "dfs_idx": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "p1_done": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "p2_done": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "semaphore": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "SemMax",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "p1_complete": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CrawlOrchestrator TLA+ spec"
+    }
+  },
+  "operations": {
+    "OStart": {
+      "function_id": "fn-CrawlOrchestrator-OStart",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-OStart",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action OStart from CrawlOrchestrator spec"
+    },
+    "P1Loop": {
+      "function_id": "fn-CrawlOrchestrator-P1Loop",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-P1Loop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action P1Loop from CrawlOrchestrator spec"
+    },
+    "P1Process": {
+      "function_id": "fn-CrawlOrchestrator-P1Process",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-P1Process",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action P1Process from CrawlOrchestrator spec"
+    },
+    "P1Signal": {
+      "function_id": "fn-CrawlOrchestrator-P1Signal",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-P1Signal",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action P1Signal from CrawlOrchestrator spec"
+    },
+    "OGather": {
+      "function_id": "fn-CrawlOrchestrator-OGather",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-OGather",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action OGather from CrawlOrchestrator spec"
+    },
+    "OComplete": {
+      "function_id": "fn-CrawlOrchestrator-OComplete",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-OComplete",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action OComplete from CrawlOrchestrator spec"
+    },
+    "orchestrator": {
+      "function_id": "fn-CrawlOrchestrator-orchestrator",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-orchestrator",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action orchestrator from CrawlOrchestrator spec"
+    }
+  },
+  "verifiers": {
+    "TypeOK": {
+      "function_id": "fn-CrawlOrchestrator-verify-TypeOK",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-TypeOK",
+      "conditions": [
+        "phase \\in {\"idle\", \"phase1\", \"phase2\", \"complete\"}",
+        "dfs_idx \\in 1..(DFSLen + 1",
+        "p1_done \\subseteq 1..DFSLen",
+        "p2_done \\subseteq PendingNodes",
+        "semaphore \\in 0..SemMax"
+      ],
+      "message": "TypeOK violation: /\\ phase \\in {\"idle\", \"phase1\", \"phase2\", \"complete\"}\n    /\\ dfs_idx \\in 1..(DFSLen + 1)\n    /\\ p1_done \\subseteq 1.....",
+      "applies_to": [
+        "dfs_idx",
+        "p1_done",
+        "p2_done",
+        "phase",
+        "semaphore"
+      ],
+      "description": "Verifier for invariant TypeOK from CrawlOrchestrator spec"
+    },
+    "Phase1BeforePhase2": {
+      "function_id": "fn-CrawlOrchestrator-verify-Phase1BeforePhase2",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-Phase1BeforePhase2",
+      "conditions": [
+        "p2_done /= {}) => p1_complete"
+      ],
+      "message": "Phase1BeforePhase2 violation: (p2_done /= {}) => p1_complete",
+      "applies_to": [
+        "p1_complete",
+        "p2_done"
+      ],
+      "description": "Verifier for invariant Phase1BeforePhase2 from CrawlOrchestrator spec"
+    },
+    "Phase1FlagAccurate": {
+      "function_id": "fn-CrawlOrchestrator-verify-Phase1FlagAccurate",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-Phase1FlagAccurate",
+      "conditions": [
+        "p1_complete => (p1_done = 1..DFSLen"
+      ],
+      "message": "Phase1FlagAccurate violation: p1_complete => (p1_done = 1..DFSLen)",
+      "applies_to": [
+        "p1_complete",
+        "p1_done"
+      ],
+      "description": "Verifier for invariant Phase1FlagAccurate from CrawlOrchestrator spec"
+    },
+    "SemaphoreNonNeg": {
+      "function_id": "fn-CrawlOrchestrator-verify-SemaphoreNonNeg",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-SemaphoreNonNeg",
+      "conditions": [
+        "semaphore >= 0"
+      ],
+      "message": "SemaphoreNonNeg violation: semaphore >= 0",
+      "applies_to": [
+        "semaphore"
+      ],
+      "description": "Verifier for invariant SemaphoreNonNeg from CrawlOrchestrator spec"
+    },
+    "ConcurrencyBound": {
+      "function_id": "fn-CrawlOrchestrator-verify-ConcurrencyBound",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-ConcurrencyBound",
+      "conditions": [
+        "SemMax - semaphore >= 0"
+      ],
+      "message": "ConcurrencyBound violation: SemMax - semaphore >= 0",
+      "applies_to": [
+        "semaphore"
+      ],
+      "description": "Verifier for invariant ConcurrencyBound from CrawlOrchestrator spec"
+    },
+    "DFSSequentialOrder": {
+      "function_id": "fn-CrawlOrchestrator-verify-DFSSequentialOrder",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-DFSSequentialOrder",
+      "conditions": [
+        "\\A i \\in 1..DFSLen :\n        i \\in p1_done =>\n        (\\A j \\in 1..(i-1) : j \\in p1_done"
+      ],
+      "message": "DFSSequentialOrder violation: \\A i \\in 1..DFSLen :\n        i \\in p1_done =>\n        (\\A j \\in 1..(i-1) : j \\in p1_done)",
+      "applies_to": [
+        "p1_done"
+      ],
+      "description": "Verifier for invariant DFSSequentialOrder from CrawlOrchestrator spec"
+    },
+    "NoPhase2BeforeSignal": {
+      "function_id": "fn-CrawlOrchestrator-verify-NoPhase2BeforeSignal",
+      "acceptance_criteria_id": "ac-CrawlOrchestrator-NoPhase2BeforeSignal",
+      "conditions": [
+        "~p1_complete => p2_done = {}"
+      ],
+      "message": "NoPhase2BeforeSignal violation: ~p1_complete => p2_done = {}",
+      "applies_to": [
+        "p1_complete",
+        "p2_done"
+      ],
+      "description": "Verifier for invariant NoPhase2BeforeSignal from CrawlOrchestrator spec"
+    }
+  },
+  "assertions": {
+    "assert_TypeOK": {
+      "condition": "and phase in {\"idle\", \"phase1\", \"phase2\", \"complete\"}\n    and dfs_idx in 1..(DFSLen + 1)\n    and p1_done \\subseteq 1..DFSLen\n    and p2_done \\subseteq PendingNodes\n    and semaphore in 0..SemMax",
+      "message": "Assertion failed: TypeOK \u2014 /\\ phase \\in {\"idle\", \"phase1\", \"phase2\", \"complete\"}\n    /\\ dfs_idx \\in 1..(DFSLen + 1)\n    /\\ p1_done \\subseteq 1.....",
+      "description": "Test assertion for TypeOK from CrawlOrchestrator spec"
+    },
+    "assert_Phase1BeforePhase2": {
+      "condition": "(p2_done /= {}) implies p1_complete",
+      "message": "Assertion failed: Phase1BeforePhase2 \u2014 (p2_done /= {}) => p1_complete",
+      "description": "Test assertion for Phase1BeforePhase2 from CrawlOrchestrator spec"
+    },
+    "assert_Phase1FlagAccurate": {
+      "condition": "p1_complete implies (p1_done = 1..DFSLen)",
+      "message": "Assertion failed: Phase1FlagAccurate \u2014 p1_complete => (p1_done = 1..DFSLen)",
+      "description": "Test assertion for Phase1FlagAccurate from CrawlOrchestrator spec"
+    },
+    "assert_SemaphoreNonNeg": {
+      "condition": "semaphore >= 0",
+      "message": "Assertion failed: SemaphoreNonNeg \u2014 semaphore >= 0",
+      "description": "Test assertion for SemaphoreNonNeg from CrawlOrchestrator spec"
+    },
+    "assert_ConcurrencyBound": {
+      "condition": "SemMax - semaphore >= 0",
+      "message": "Assertion failed: ConcurrencyBound \u2014 SemMax - semaphore >= 0",
+      "description": "Test assertion for ConcurrencyBound from CrawlOrchestrator spec"
+    },
+    "assert_DFSSequentialOrder": {
+      "condition": "\\A i in 1..DFSLen :\n        i in p1_done implies\n        (\\A j in 1..(i-1) : j in p1_done)",
+      "message": "Assertion failed: DFSSequentialOrder \u2014 \\A i \\in 1..DFSLen :\n        i \\in p1_done =>\n        (\\A j \\in 1..(i-1) : j \\in p1_done)",
+      "description": "Test assertion for DFSSequentialOrder from CrawlOrchestrator spec"
+    },
+    "assert_NoPhase2BeforeSignal": {
+      "condition": "~p1_complete implies p2_done = {}",
+      "message": "Assertion failed: NoPhase2BeforeSignal \u2014 ~p1_complete => p2_done = {}",
+      "description": "Test assertion for NoPhase2BeforeSignal from CrawlOrchestrator spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"idle\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OStart\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OStart",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "1",
+          "p2_done": "{}",
+          "p1_done": "{}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "2",
+          "p2_done": "{}",
+          "p1_done": "{1}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "3",
+          "p2_done": "{}",
+          "p1_done": "{1, 2}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "4",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "5",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "6",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "7",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "8",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "9",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "10",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Process\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "P1Process",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Loop\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "P1Loop",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase1\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"P1Signal\")",
+          "p1_complete": "FALSE"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "P1Signal",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"WaitPhase2\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"Acquire\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WaitPhase2\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Acquire\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Process\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "8",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Release\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"WFinish\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Process\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OGather\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "OGather",
+        "vars": {
+          "semaphore": "9",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"Release\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"phase2\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"OComplete\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "OComplete",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"WFinish\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "unknown",
+        "vars": {
+          "semaphore": "10",
+          "dfs_idx": "11",
+          "p2_done": "{PendingNodes_1, PendingNodes_2}",
+          "p1_done": "{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}",
+          "phase": "\"complete\"",
+          "pc": "(PendingNodes_1 :> \"Done\" @@ PendingNodes_2 :> \"Done\" @@ \"orch\" :> \"Done\")",
+          "p1_complete": "TRUE"
+        }
+      }
+    ]
+  ]
+}

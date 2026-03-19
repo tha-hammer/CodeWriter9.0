@@ -1,0 +1,308 @@
+---- MODULE CrawlConcurrencyPipeline ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    MIN_CONCURRENCY,
+    MAX_CONCURRENCY,
+    DEFAULT_CONCURRENCY,
+    MaxSteps
+
+ASSUME DEFAULT_CONCURRENCY = 10
+ASSUME MIN_CONCURRENCY >= 1
+ASSUME MIN_CONCURRENCY <= DEFAULT_CONCURRENCY
+ASSUME MAX_CONCURRENCY >= DEFAULT_CONCURRENCY
+ASSUME MaxSteps >= 8
+
+(*
+ * Behavior: gwt-0022
+ * Models the --concurrency flag flowing from argparse through
+ * cmd_crawl() -> CrawlOrchestrator.__init__() -> _sweep_remaining_async()
+ *
+ * Suggested TLC model constants:
+ *   MIN_CONCURRENCY     <- 1
+ *   MAX_CONCURRENCY     <- 100
+ *   DEFAULT_CONCURRENCY <- 10
+ *   MaxSteps            <- 10
+ *
+ * raw_concurrency covers: below-min (0), at-min (1), mid-range (5),
+ * at-default (10), above-max (101).
+ *)
+
+(* --algorithm CrawlConcurrencyPipeline
+
+variables
+    user_provided   \in {TRUE, FALSE},
+    raw_concurrency \in {0, 1, 5, 10, 101},
+    stage           = "Idle",
+    parsed_value    = 0,
+    validation_ok   = FALSE,
+    cmd_crawl_value = 0,
+    orchestrator_value = 0,
+    sweep_value     = 0,
+    pipeline_error  = FALSE,
+    step_count      = 0;
+
+define
+
+    ValidStages ==
+        {"Idle", "Parsing", "Validating", "CmdCrawl",
+         "OrchestratorInit", "SweepAsync", "Complete", "Error"}
+
+    TypeInvariant ==
+        /\ stage \in ValidStages
+        /\ step_count >= 0
+
+    BoundedExecution == step_count <= MaxSteps
+
+    \* When no flag supplied, argparse fills in the default of 10
+    DefaultApplied ==
+        (~user_provided /\ stage \notin {"Idle", "Parsing"}) =>
+            parsed_value = DEFAULT_CONCURRENCY
+
+    \* Validation only passes for integers in the accepted range
+    ValidationCorrect ==
+        validation_ok =>
+            (parsed_value >= MIN_CONCURRENCY /\ parsed_value <= MAX_CONCURRENCY)
+
+    \* cmd_crawl() must forward the exact validated value to the orchestrator
+    ValuePreservedToCmdCrawl ==
+        stage \in {"OrchestratorInit", "SweepAsync", "Complete"} =>
+            cmd_crawl_value = parsed_value
+
+    \* CrawlOrchestrator.__init__() must forward the value to _sweep_remaining_async()
+    OrchestratorPreservesValue ==
+        stage \in {"SweepAsync", "Complete"} =>
+            orchestrator_value = cmd_crawl_value
+
+    \* The sweep call receives the same integer that was parsed
+    SweepReceivesCorrectValue ==
+        stage = "Complete" => sweep_value = parsed_value
+
+    \* Valid user-supplied input must never reach the Error stage
+    NoErrorOnValidUserInput ==
+        (user_provided
+            /\ raw_concurrency >= MIN_CONCURRENCY
+            /\ raw_concurrency <= MAX_CONCURRENCY) =>
+            stage /= "Error"
+
+    \* Default value (10) is always valid; default path must never error
+    NoErrorOnDefault ==
+        ~user_provided => stage /= "Error"
+
+end define;
+
+fair process pipeline = "main"
+begin
+    StartParsing:
+        stage      := "Parsing";
+        step_count := step_count + 1;
+
+    ParseArg:
+        \* argparse assigns user value or falls back to default=10
+        if user_provided then
+            parsed_value := raw_concurrency;
+        else
+            parsed_value := DEFAULT_CONCURRENCY;
+        end if;
+        stage      := "Validating";
+        step_count := step_count + 1;
+
+    ValidateArg:
+        \* Validation: must be a positive integer within the accepted range
+        if parsed_value >= MIN_CONCURRENCY /\ parsed_value <= MAX_CONCURRENCY then
+            validation_ok := TRUE;
+        else
+            validation_ok  := FALSE;
+            pipeline_error := TRUE;
+        end if;
+
+    RouteAfterValidation:
+        step_count := step_count + 1;
+        if pipeline_error then
+            stage := "Error";
+            goto Terminate;
+        else
+            stage := "CmdCrawl";
+        end if;
+
+    InvokeCmdCrawl:
+        \* cmd_crawl() receives the validated concurrency and passes it forward
+        cmd_crawl_value := parsed_value;
+        stage           := "OrchestratorInit";
+        step_count      := step_count + 1;
+
+    InitOrchestrator:
+        \* CrawlOrchestrator.__init__(concurrency=cmd_crawl_value)
+        orchestrator_value := cmd_crawl_value;
+        stage              := "SweepAsync";
+        step_count         := step_count + 1;
+
+    ForwardToSweep:
+        \* _sweep_remaining_async(concurrency=orchestrator_value)
+        sweep_value := orchestrator_value;
+        stage       := "Complete";
+        step_count  := step_count + 1;
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE CrawlConcurrencyPipeline ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    MIN_CONCURRENCY,
+    MAX_CONCURRENCY,
+    DEFAULT_CONCURRENCY,
+    MaxSteps
+
+ASSUME DEFAULT_CONCURRENCY = 10
+ASSUME MIN_CONCURRENCY >= 1
+ASSUME MIN_CONCURRENCY <= DEFAULT_CONCURRENCY
+ASSUME MAX_CONCURRENCY >= DEFAULT_CONCURRENCY
+ASSUME MaxSteps >= 8
+
+(*
+ * Behavior: gwt-0022
+ * Models the --concurrency flag flowing from argparse through
+ * cmd_crawl() -> CrawlOrchestrator.__init__() -> _sweep_remaining_async()
+ *
+ * Suggested TLC model constants:
+ *   MIN_CONCURRENCY     <- 1
+ *   MAX_CONCURRENCY     <- 100
+ *   DEFAULT_CONCURRENCY <- 10
+ *   MaxSteps            <- 10
+ *
+ * raw_concurrency covers: below-min (0), at-min (1), mid-range (5),
+ * at-default (10), above-max (101).
+ *)
+
+(* --algorithm CrawlConcurrencyPipeline
+
+variables
+    user_provided   \in {TRUE, FALSE},
+    raw_concurrency \in {0, 1, 5, 10, 101},
+    stage           = "Idle",
+    parsed_value    = 0,
+    validation_ok   = FALSE,
+    cmd_crawl_value = 0,
+    orchestrator_value = 0,
+    sweep_value     = 0,
+    pipeline_error  = FALSE,
+    step_count      = 0;
+
+define
+
+    ValidStages ==
+        {"Idle", "Parsing", "Validating", "CmdCrawl",
+         "OrchestratorInit", "SweepAsync", "Complete", "Error"}
+
+    TypeInvariant ==
+        /\ stage \in ValidStages
+        /\ step_count >= 0
+
+    BoundedExecution == step_count <= MaxSteps
+
+    \* When no flag supplied, argparse fills in the default of 10
+    DefaultApplied ==
+        (~user_provided /\ stage \notin {"Idle", "Parsing"}) =>
+            parsed_value = DEFAULT_CONCURRENCY
+
+    \* Validation only passes for integers in the accepted range
+    ValidationCorrect ==
+        validation_ok =>
+            (parsed_value >= MIN_CONCURRENCY /\ parsed_value <= MAX_CONCURRENCY)
+
+    \* cmd_crawl() must forward the exact validated value to the orchestrator
+    ValuePreservedToCmdCrawl ==
+        stage \in {"OrchestratorInit", "SweepAsync", "Complete"} =>
+            cmd_crawl_value = parsed_value
+
+    \* CrawlOrchestrator.__init__() must forward the value to _sweep_remaining_async()
+    OrchestratorPreservesValue ==
+        stage \in {"SweepAsync", "Complete"} =>
+            orchestrator_value = cmd_crawl_value
+
+    \* The sweep call receives the same integer that was parsed
+    SweepReceivesCorrectValue ==
+        stage = "Complete" => sweep_value = parsed_value
+
+    \* Valid user-supplied input must never reach the Error stage
+    NoErrorOnValidUserInput ==
+        (user_provided
+            /\ raw_concurrency >= MIN_CONCURRENCY
+            /\ raw_concurrency <= MAX_CONCURRENCY) =>
+            stage /= "Error"
+
+    \* Default value (10) is always valid; default path must never error
+    NoErrorOnDefault ==
+        ~user_provided => stage /= "Error"
+
+end define;
+
+fair process pipeline = "main"
+begin
+    StartParsing:
+        stage      := "Parsing";
+        step_count := step_count + 1;
+
+    ParseArg:
+        \* argparse assigns user value or falls back to default=10
+        if user_provided then
+            parsed_value := raw_concurrency;
+        else
+            parsed_value := DEFAULT_CONCURRENCY;
+        end if;
+        stage      := "Validating";
+        step_count := step_count + 1;
+
+    ValidateArg:
+        \* Validation: must be a positive integer within the accepted range
+        if parsed_value >= MIN_CONCURRENCY /\ parsed_value <= MAX_CONCURRENCY then
+            validation_ok := TRUE;
+        else
+            validation_ok  := FALSE;
+            pipeline_error := TRUE;
+        end if;
+
+    RouteAfterValidation:
+        step_count := step_count + 1;
+        if pipeline_error then
+            stage := "Error";
+            goto Terminate;
+        else
+            stage := "CmdCrawl";
+        end if;
+
+    InvokeCmdCrawl:
+        \* cmd_crawl() receives the validated concurrency and passes it forward
+        cmd_crawl_value := parsed_value;
+        stage           := "OrchestratorInit";
+        step_count      := step_count + 1;
+
+    InitOrchestrator:
+        \* CrawlOrchestrator.__init__(concurrency=cmd_crawl_value)
+        orchestrator_value := cmd_crawl_value;
+        stage              := "SweepAsync";
+        step_count         := step_count + 1;
+
+    ForwardToSweep:
+        \* _sweep_remaining_async(concurrency=orchestrator_value)
+        sweep_value := orchestrator_value;
+        stage       := "Complete";
+        step_count  := step_count + 1;
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

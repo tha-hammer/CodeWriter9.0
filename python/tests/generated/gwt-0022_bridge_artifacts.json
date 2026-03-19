@@ -1,0 +1,1672 @@
+{
+  "gwt_id": "gwt-0022",
+  "module_name": "CrawlConcurrencyPipeline",
+  "data_structures": {
+    "CrawlConcurrencyPipelineState": {
+      "function_id": "fn-CrawlConcurrencyPipeline-state",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"StartParsing\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "user_provided": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "raw_concurrency": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "stage": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "parsed_value": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "validation_ok": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "cmd_crawl_value": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "orchestrator_value": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "sweep_value": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "pipeline_error": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CrawlConcurrencyPipeline TLA+ spec"
+    }
+  },
+  "operations": {
+    "StartParsing": {
+      "function_id": "fn-CrawlConcurrencyPipeline-StartParsing",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-StartParsing",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartParsing from CrawlConcurrencyPipeline spec"
+    },
+    "ParseArg": {
+      "function_id": "fn-CrawlConcurrencyPipeline-ParseArg",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-ParseArg",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ParseArg from CrawlConcurrencyPipeline spec"
+    },
+    "ValidateArg": {
+      "function_id": "fn-CrawlConcurrencyPipeline-ValidateArg",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-ValidateArg",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/ValidateArgError"
+      ],
+      "error_handling": "raise",
+      "description": "Action ValidateArg from CrawlConcurrencyPipeline spec"
+    },
+    "RouteAfterValidation": {
+      "function_id": "fn-CrawlConcurrencyPipeline-RouteAfterValidation",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-RouteAfterValidation",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/RouteAfterValidationError"
+      ],
+      "error_handling": "raise",
+      "description": "Action RouteAfterValidation from CrawlConcurrencyPipeline spec"
+    },
+    "InitOrchestrator": {
+      "function_id": "fn-CrawlConcurrencyPipeline-InitOrchestrator",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-InitOrchestrator",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action InitOrchestrator from CrawlConcurrencyPipeline spec"
+    },
+    "ForwardToSweep": {
+      "function_id": "fn-CrawlConcurrencyPipeline-ForwardToSweep",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-ForwardToSweep",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ForwardToSweep from CrawlConcurrencyPipeline spec"
+    },
+    "Terminate": {
+      "function_id": "fn-CrawlConcurrencyPipeline-Terminate",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from CrawlConcurrencyPipeline spec"
+    }
+  },
+  "verifiers": {
+    "ValidStages": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-ValidStages",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-ValidStages",
+      "conditions": [
+        "{\"Idle\", \"Parsing\", \"Validating\", \"CmdCrawl\",\n     \"OrchestratorInit\", \"SweepAsync\", \"Complete\", \"Error\"}"
+      ],
+      "message": "ValidStages violation: {\"Idle\", \"Parsing\", \"Validating\", \"CmdCrawl\",\n     \"OrchestratorInit\", \"SweepAsync\", \"Complete\", \"Error\"}",
+      "applies_to": [
+        "CrawlConcurrencyPipeline"
+      ],
+      "description": "Verifier for invariant ValidStages from CrawlConcurrencyPipeline spec"
+    },
+    "TypeInvariant": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-TypeInvariant",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-TypeInvariant",
+      "conditions": [
+        "stage \\in ValidStages",
+        "step_count >= 0"
+      ],
+      "message": "TypeInvariant violation: /\\ stage \\in ValidStages\n    /\\ step_count >= 0",
+      "applies_to": [
+        "stage",
+        "step_count"
+      ],
+      "description": "Verifier for invariant TypeInvariant from CrawlConcurrencyPipeline spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from CrawlConcurrencyPipeline spec"
+    },
+    "DefaultApplied": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-DefaultApplied",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-DefaultApplied",
+      "conditions": [
+        "~user_provided",
+        "stage \\notin {\"Idle\", \"Parsing\"}) =>\n        parsed_value = DEFAULT_CONCURRENCY"
+      ],
+      "message": "DefaultApplied violation: (~user_provided /\\ stage \\notin {\"Idle\", \"Parsing\"}) =>\n        parsed_value = DEFAULT_CONCURRENCY",
+      "applies_to": [
+        "parsed_value",
+        "stage",
+        "user_provided"
+      ],
+      "description": "Verifier for invariant DefaultApplied from CrawlConcurrencyPipeline spec"
+    },
+    "ValidationCorrect": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-ValidationCorrect",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-ValidationCorrect",
+      "conditions": [
+        "validation_ok =>\n        (parsed_value >= MIN_CONCURRENCY",
+        "parsed_value <= MAX_CONCURRENCY"
+      ],
+      "message": "ValidationCorrect violation: validation_ok =>\n        (parsed_value >= MIN_CONCURRENCY /\\ parsed_value <= MAX_CONCURRENCY)",
+      "applies_to": [
+        "parsed_value",
+        "validation_ok"
+      ],
+      "description": "Verifier for invariant ValidationCorrect from CrawlConcurrencyPipeline spec"
+    },
+    "ValuePreservedToCmdCrawl": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-ValuePreservedToCmdCrawl",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-ValuePreservedToCmdCrawl",
+      "conditions": [
+        "stage \\in {\"OrchestratorInit\", \"SweepAsync\", \"Complete\"} =>\n        cmd_crawl_value = parsed_value"
+      ],
+      "message": "ValuePreservedToCmdCrawl violation: stage \\in {\"OrchestratorInit\", \"SweepAsync\", \"Complete\"} =>\n        cmd_crawl_value = parsed_value",
+      "applies_to": [
+        "cmd_crawl_value",
+        "parsed_value",
+        "stage"
+      ],
+      "description": "Verifier for invariant ValuePreservedToCmdCrawl from CrawlConcurrencyPipeline spec"
+    },
+    "OrchestratorPreservesValue": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-OrchestratorPreservesValue",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-OrchestratorPreservesValue",
+      "conditions": [
+        "stage \\in {\"SweepAsync\", \"Complete\"} =>\n        orchestrator_value = cmd_crawl_value"
+      ],
+      "message": "OrchestratorPreservesValue violation: stage \\in {\"SweepAsync\", \"Complete\"} =>\n        orchestrator_value = cmd_crawl_value",
+      "applies_to": [
+        "cmd_crawl_value",
+        "orchestrator_value",
+        "stage"
+      ],
+      "description": "Verifier for invariant OrchestratorPreservesValue from CrawlConcurrencyPipeline spec"
+    },
+    "SweepReceivesCorrectValue": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-SweepReceivesCorrectValue",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-SweepReceivesCorrectValue",
+      "conditions": [
+        "stage = \"Complete\" => sweep_value = parsed_value"
+      ],
+      "message": "SweepReceivesCorrectValue violation: stage = \"Complete\" => sweep_value = parsed_value",
+      "applies_to": [
+        "parsed_value",
+        "stage",
+        "sweep_value"
+      ],
+      "description": "Verifier for invariant SweepReceivesCorrectValue from CrawlConcurrencyPipeline spec"
+    },
+    "NoErrorOnValidUserInput": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-NoErrorOnValidUserInput",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-NoErrorOnValidUserInput",
+      "conditions": [
+        "user_provided",
+        "raw_concurrency >= MIN_CONCURRENCY",
+        "raw_concurrency <= MAX_CONCURRENCY) =>\n        stage /= \"Error\""
+      ],
+      "message": "NoErrorOnValidUserInput violation: (user_provided\n        /\\ raw_concurrency >= MIN_CONCURRENCY\n        /\\ raw_concurrency <= MAX_CONCURRENCY) =>\n      ...",
+      "applies_to": [
+        "raw_concurrency",
+        "stage",
+        "user_provided"
+      ],
+      "description": "Verifier for invariant NoErrorOnValidUserInput from CrawlConcurrencyPipeline spec"
+    },
+    "NoErrorOnDefault": {
+      "function_id": "fn-CrawlConcurrencyPipeline-verify-NoErrorOnDefault",
+      "acceptance_criteria_id": "ac-CrawlConcurrencyPipeline-NoErrorOnDefault",
+      "conditions": [
+        "~user_provided => stage /= \"Error\""
+      ],
+      "message": "NoErrorOnDefault violation: ~user_provided => stage /= \"Error\"",
+      "applies_to": [
+        "stage",
+        "user_provided"
+      ],
+      "description": "Verifier for invariant NoErrorOnDefault from CrawlConcurrencyPipeline spec"
+    }
+  },
+  "assertions": {
+    "assert_ValidStages": {
+      "condition": "{\"Idle\", \"Parsing\", \"Validating\", \"CmdCrawl\",\n     \"OrchestratorInit\", \"SweepAsync\", \"Complete\", \"Error\"}",
+      "message": "Assertion failed: ValidStages \u2014 {\"Idle\", \"Parsing\", \"Validating\", \"CmdCrawl\",\n     \"OrchestratorInit\", \"SweepAsync\", \"Complete\", \"Error\"}",
+      "description": "Test assertion for ValidStages from CrawlConcurrencyPipeline spec"
+    },
+    "assert_TypeInvariant": {
+      "condition": "and stage in ValidStages\n    and step_count >= 0",
+      "message": "Assertion failed: TypeInvariant \u2014 /\\ stage \\in ValidStages\n    /\\ step_count >= 0",
+      "description": "Test assertion for TypeInvariant from CrawlConcurrencyPipeline spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from CrawlConcurrencyPipeline spec"
+    },
+    "assert_DefaultApplied": {
+      "condition": "(~user_provided and stage not in {\"Idle\", \"Parsing\"}) implies\n        parsed_value = DEFAULT_CONCURRENCY",
+      "message": "Assertion failed: DefaultApplied \u2014 (~user_provided /\\ stage \\notin {\"Idle\", \"Parsing\"}) =>\n        parsed_value = DEFAULT_CONCURRENCY",
+      "description": "Test assertion for DefaultApplied from CrawlConcurrencyPipeline spec"
+    },
+    "assert_ValidationCorrect": {
+      "condition": "validation_ok implies\n        (parsed_value >= MIN_CONCURRENCY and parsed_value <= MAX_CONCURRENCY)",
+      "message": "Assertion failed: ValidationCorrect \u2014 validation_ok =>\n        (parsed_value >= MIN_CONCURRENCY /\\ parsed_value <= MAX_CONCURRENCY)",
+      "description": "Test assertion for ValidationCorrect from CrawlConcurrencyPipeline spec"
+    },
+    "assert_ValuePreservedToCmdCrawl": {
+      "condition": "stage in {\"OrchestratorInit\", \"SweepAsync\", \"Complete\"} implies\n        cmd_crawl_value = parsed_value",
+      "message": "Assertion failed: ValuePreservedToCmdCrawl \u2014 stage \\in {\"OrchestratorInit\", \"SweepAsync\", \"Complete\"} =>\n        cmd_crawl_value = parsed_value",
+      "description": "Test assertion for ValuePreservedToCmdCrawl from CrawlConcurrencyPipeline spec"
+    },
+    "assert_OrchestratorPreservesValue": {
+      "condition": "stage in {\"SweepAsync\", \"Complete\"} implies\n        orchestrator_value = cmd_crawl_value",
+      "message": "Assertion failed: OrchestratorPreservesValue \u2014 stage \\in {\"SweepAsync\", \"Complete\"} =>\n        orchestrator_value = cmd_crawl_value",
+      "description": "Test assertion for OrchestratorPreservesValue from CrawlConcurrencyPipeline spec"
+    },
+    "assert_SweepReceivesCorrectValue": {
+      "condition": "stage = \"Complete\" implies sweep_value = parsed_value",
+      "message": "Assertion failed: SweepReceivesCorrectValue \u2014 stage = \"Complete\" => sweep_value = parsed_value",
+      "description": "Test assertion for SweepReceivesCorrectValue from CrawlConcurrencyPipeline spec"
+    },
+    "assert_NoErrorOnValidUserInput": {
+      "condition": "(user_provided\n        and raw_concurrency >= MIN_CONCURRENCY\n        and raw_concurrency <= MAX_CONCURRENCY) implies\n        stage /= \"Error\"",
+      "message": "Assertion failed: NoErrorOnValidUserInput \u2014 (user_provided\n        /\\ raw_concurrency >= MIN_CONCURRENCY\n        /\\ raw_concurrency <= MAX_CONCURRENCY) =>\n      ...",
+      "description": "Test assertion for NoErrorOnValidUserInput from CrawlConcurrencyPipeline spec"
+    },
+    "assert_NoErrorOnDefault": {
+      "condition": "~user_provided implies stage /= \"Error\"",
+      "message": "Assertion failed: NoErrorOnDefault \u2014 ~user_provided => stage /= \"Error\"",
+      "description": "Test assertion for NoErrorOnDefault from CrawlConcurrencyPipeline spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "TRUE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "TRUE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "0",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "TRUE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "0",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "0",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "0",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "0",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "0",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "TRUE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InvokeCmdCrawl\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"CmdCrawl\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "InvokeCmdCrawl",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InitOrchestrator\"]",
+          "user_provided": "TRUE",
+          "step_count": "4",
+          "stage": "\"OrchestratorInit\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "InitOrchestrator",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"ForwardToSweep\"]",
+          "user_provided": "TRUE",
+          "step_count": "5",
+          "stage": "\"SweepAsync\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ForwardToSweep",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "TRUE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "TRUE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "TRUE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "FALSE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "FALSE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "FALSE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "FALSE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InvokeCmdCrawl\"]",
+          "user_provided": "FALSE",
+          "step_count": "3",
+          "stage": "\"CmdCrawl\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "InvokeCmdCrawl",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InitOrchestrator\"]",
+          "user_provided": "FALSE",
+          "step_count": "4",
+          "stage": "\"OrchestratorInit\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "InitOrchestrator",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"ForwardToSweep\"]",
+          "user_provided": "FALSE",
+          "step_count": "5",
+          "stage": "\"SweepAsync\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ForwardToSweep",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "FALSE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "FALSE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "FALSE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "FALSE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "FALSE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "FALSE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InvokeCmdCrawl\"]",
+          "user_provided": "FALSE",
+          "step_count": "3",
+          "stage": "\"CmdCrawl\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "InvokeCmdCrawl",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InitOrchestrator\"]",
+          "user_provided": "FALSE",
+          "step_count": "4",
+          "stage": "\"OrchestratorInit\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "InitOrchestrator",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"ForwardToSweep\"]",
+          "user_provided": "FALSE",
+          "step_count": "5",
+          "stage": "\"SweepAsync\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ForwardToSweep",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "FALSE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "FALSE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "TRUE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "5",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "TRUE",
+          "raw_concurrency": "5",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"Error\"",
+          "sweep_value": "0"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "TRUE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "TRUE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InvokeCmdCrawl\"]",
+          "user_provided": "TRUE",
+          "step_count": "3",
+          "stage": "\"CmdCrawl\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "InvokeCmdCrawl",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InitOrchestrator\"]",
+          "user_provided": "TRUE",
+          "step_count": "4",
+          "stage": "\"OrchestratorInit\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "InitOrchestrator",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"ForwardToSweep\"]",
+          "user_provided": "TRUE",
+          "step_count": "5",
+          "stage": "\"SweepAsync\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ForwardToSweep",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "TRUE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "10",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "TRUE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "1",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"StartParsing\"]",
+          "user_provided": "FALSE",
+          "step_count": "0",
+          "stage": "\"Idle\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartParsing",
+        "vars": {
+          "parsed_value": "0",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "1",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ParseArg\"]",
+          "user_provided": "FALSE",
+          "step_count": "1",
+          "stage": "\"Parsing\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ParseArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "1",
+          "validation_ok": "FALSE",
+          "pc": "[main |-> \"ValidateArg\"]",
+          "user_provided": "FALSE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ValidateArg",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "1",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"RouteAfterValidation\"]",
+          "user_provided": "FALSE",
+          "step_count": "2",
+          "stage": "\"Validating\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RouteAfterValidation",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "0",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "1",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InvokeCmdCrawl\"]",
+          "user_provided": "FALSE",
+          "step_count": "3",
+          "stage": "\"CmdCrawl\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "InvokeCmdCrawl",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "0",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "1",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"InitOrchestrator\"]",
+          "user_provided": "FALSE",
+          "step_count": "4",
+          "stage": "\"OrchestratorInit\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "InitOrchestrator",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "1",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"ForwardToSweep\"]",
+          "user_provided": "FALSE",
+          "step_count": "5",
+          "stage": "\"SweepAsync\"",
+          "sweep_value": "0"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ForwardToSweep",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "1",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Terminate\"]",
+          "user_provided": "FALSE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "parsed_value": "10",
+          "cmd_crawl_value": "10",
+          "orchestrator_value": "10",
+          "pipeline_error": "FALSE",
+          "raw_concurrency": "1",
+          "validation_ok": "TRUE",
+          "pc": "[main |-> \"Done\"]",
+          "user_provided": "FALSE",
+          "step_count": "6",
+          "stage": "\"Complete\"",
+          "sweep_value": "10"
+        }
+      }
+    ]
+  ]
+}

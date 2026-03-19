@@ -1,0 +1,4236 @@
+{
+  "gwt_id": "gwt-0015",
+  "module_name": "SweepRemainingAsync",
+  "data_structures": {
+    "SweepRemainingAsyncState": {
+      "function_id": "fn-SweepRemainingAsync-state",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "task_state": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[t \\in 1..NumTasks |-> \"pending\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "sem_count": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "MaxConcurrency",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "sem_held": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[t \\in 1..NumTasks |-> FALSE]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "results": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[t \\in 1..NumTasks |-> \"none\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "gather_complete": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from SweepRemainingAsync TLA+ spec"
+    }
+  },
+  "operations": {
+    "WaitAll": {
+      "function_id": "fn-SweepRemainingAsync-WaitAll",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-WaitAll",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action WaitAll from SweepRemainingAsync spec"
+    },
+    "Finish": {
+      "function_id": "fn-SweepRemainingAsync-Finish",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from SweepRemainingAsync spec"
+    }
+  },
+  "verifiers": {
+    "SemaphoreValid": {
+      "function_id": "fn-SweepRemainingAsync-verify-SemaphoreValid",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-SemaphoreValid",
+      "conditions": [
+        "sem_count >= 0",
+        "sem_count <= MaxConcurrency"
+      ],
+      "message": "SemaphoreValid violation: sem_count >= 0 /\\ sem_count <= MaxConcurrency",
+      "applies_to": [
+        "sem_count"
+      ],
+      "description": "Verifier for invariant SemaphoreValid from SweepRemainingAsync spec"
+    },
+    "SemaphoreConsistent": {
+      "function_id": "fn-SweepRemainingAsync-verify-SemaphoreConsistent",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-SemaphoreConsistent",
+      "conditions": [
+        "sem_count + Cardinality({t \\in 1..NumTasks : sem_held[t]}) = MaxConcurrency"
+      ],
+      "message": "SemaphoreConsistent violation: sem_count + Cardinality({t \\in 1..NumTasks : sem_held[t]}) = MaxConcurrency",
+      "applies_to": [
+        "sem_count",
+        "sem_held"
+      ],
+      "description": "Verifier for invariant SemaphoreConsistent from SweepRemainingAsync spec"
+    },
+    "NoCancellation": {
+      "function_id": "fn-SweepRemainingAsync-verify-NoCancellation",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-NoCancellation",
+      "conditions": [
+        "\\A t \\in 1..NumTasks : task_state[t] # \"cancelled\""
+      ],
+      "message": "NoCancellation violation: \\A t \\in 1..NumTasks : task_state[t] # \"cancelled\"",
+      "applies_to": [
+        "task_state"
+      ],
+      "description": "Verifier for invariant NoCancellation from SweepRemainingAsync spec"
+    },
+    "ExceptionCapturedAsResult": {
+      "function_id": "fn-SweepRemainingAsync-verify-ExceptionCapturedAsResult",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-ExceptionCapturedAsResult",
+      "conditions": [
+        "gather_complete => results[FailingTask] = \"exception\""
+      ],
+      "message": "ExceptionCapturedAsResult violation: gather_complete => results[FailingTask] = \"exception\"",
+      "applies_to": [
+        "gather_complete",
+        "results"
+      ],
+      "description": "Verifier for invariant ExceptionCapturedAsResult from SweepRemainingAsync spec"
+    },
+    "AllOthersSucceedWhenGatherDone": {
+      "function_id": "fn-SweepRemainingAsync-verify-AllOthersSucceedWhenGatherDone",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-AllOthersSucceedWhenGatherDone",
+      "conditions": [
+        "gather_complete =>\n        \\A t \\in (1..NumTasks) \\ {FailingTask} : results[t] = \"ok\""
+      ],
+      "message": "AllOthersSucceedWhenGatherDone violation: gather_complete =>\n        \\A t \\in (1..NumTasks) \\ {FailingTask} : results[t] = \"ok\"",
+      "applies_to": [
+        "gather_complete",
+        "results"
+      ],
+      "description": "Verifier for invariant AllOthersSucceedWhenGatherDone from SweepRemainingAsync spec"
+    },
+    "GatherRequiresAllTasksDone": {
+      "function_id": "fn-SweepRemainingAsync-verify-GatherRequiresAllTasksDone",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-GatherRequiresAllTasksDone",
+      "conditions": [
+        "gather_complete =>\n        \\A t \\in 1..NumTasks :\n            task_state[t] = \"completed\" \\/ task_state[t] = \"failed\""
+      ],
+      "message": "GatherRequiresAllTasksDone violation: gather_complete =>\n        \\A t \\in 1..NumTasks :\n            task_state[t] = \"completed\" \\/ task_state[t] = \"failed\"",
+      "applies_to": [
+        "gather_complete",
+        "task_state"
+      ],
+      "description": "Verifier for invariant GatherRequiresAllTasksDone from SweepRemainingAsync spec"
+    },
+    "FailedTaskSlotReleased": {
+      "function_id": "fn-SweepRemainingAsync-verify-FailedTaskSlotReleased",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-FailedTaskSlotReleased",
+      "conditions": [
+        "task_state[FailingTask] = \"failed\" => ~sem_held[FailingTask]"
+      ],
+      "message": "FailedTaskSlotReleased violation: task_state[FailingTask] = \"failed\" => ~sem_held[FailingTask]",
+      "applies_to": [
+        "sem_held",
+        "task_state"
+      ],
+      "description": "Verifier for invariant FailedTaskSlotReleased from SweepRemainingAsync spec"
+    },
+    "CompletedOrFailedReleaseSemaphore": {
+      "function_id": "fn-SweepRemainingAsync-verify-CompletedOrFailedReleaseSemaphore",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-CompletedOrFailedReleaseSemaphore",
+      "conditions": [
+        "\\A t \\in 1..NumTasks :\n        (task_state[t] = \"completed\" \\/ task_state[t] = \"failed\") =>\n            ~sem_held[t]"
+      ],
+      "message": "CompletedOrFailedReleaseSemaphore violation: \\A t \\in 1..NumTasks :\n        (task_state[t] = \"completed\" \\/ task_state[t] = \"failed\") =>\n            ~sem_held[t]",
+      "applies_to": [
+        "sem_held",
+        "task_state"
+      ],
+      "description": "Verifier for invariant CompletedOrFailedReleaseSemaphore from SweepRemainingAsync spec"
+    },
+    "RunningTasksHoldSemaphore": {
+      "function_id": "fn-SweepRemainingAsync-verify-RunningTasksHoldSemaphore",
+      "acceptance_criteria_id": "ac-SweepRemainingAsync-RunningTasksHoldSemaphore",
+      "conditions": [
+        "\\A t \\in 1..NumTasks :\n        task_state[t] = \"running\" => sem_held[t]"
+      ],
+      "message": "RunningTasksHoldSemaphore violation: \\A t \\in 1..NumTasks :\n        task_state[t] = \"running\" => sem_held[t]",
+      "applies_to": [
+        "sem_held",
+        "task_state"
+      ],
+      "description": "Verifier for invariant RunningTasksHoldSemaphore from SweepRemainingAsync spec"
+    }
+  },
+  "assertions": {
+    "assert_SemaphoreValid": {
+      "condition": "sem_count >= 0 and sem_count <= MaxConcurrency",
+      "message": "Assertion failed: SemaphoreValid \u2014 sem_count >= 0 /\\ sem_count <= MaxConcurrency",
+      "description": "Test assertion for SemaphoreValid from SweepRemainingAsync spec"
+    },
+    "assert_SemaphoreConsistent": {
+      "condition": "sem_count + Cardinality({t in 1..NumTasks : sem_held[t]}) = MaxConcurrency",
+      "message": "Assertion failed: SemaphoreConsistent \u2014 sem_count + Cardinality({t \\in 1..NumTasks : sem_held[t]}) = MaxConcurrency",
+      "description": "Test assertion for SemaphoreConsistent from SweepRemainingAsync spec"
+    },
+    "assert_NoCancellation": {
+      "condition": "\\A t in 1..NumTasks : task_state[t] # \"cancelled\"",
+      "message": "Assertion failed: NoCancellation \u2014 \\A t \\in 1..NumTasks : task_state[t] # \"cancelled\"",
+      "description": "Test assertion for NoCancellation from SweepRemainingAsync spec"
+    },
+    "assert_ExceptionCapturedAsResult": {
+      "condition": "gather_complete implies results[FailingTask] = \"exception\"",
+      "message": "Assertion failed: ExceptionCapturedAsResult \u2014 gather_complete => results[FailingTask] = \"exception\"",
+      "description": "Test assertion for ExceptionCapturedAsResult from SweepRemainingAsync spec"
+    },
+    "assert_AllOthersSucceedWhenGatherDone": {
+      "condition": "gather_complete implies\n        \\A t in (1..NumTasks) \\ {FailingTask} : results[t] = \"ok\"",
+      "message": "Assertion failed: AllOthersSucceedWhenGatherDone \u2014 gather_complete =>\n        \\A t \\in (1..NumTasks) \\ {FailingTask} : results[t] = \"ok\"",
+      "description": "Test assertion for AllOthersSucceedWhenGatherDone from SweepRemainingAsync spec"
+    },
+    "assert_GatherRequiresAllTasksDone": {
+      "condition": "gather_complete implies\n        \\A t in 1..NumTasks :\n            task_state[t] = \"completed\" or task_state[t] = \"failed\"",
+      "message": "Assertion failed: GatherRequiresAllTasksDone \u2014 gather_complete =>\n        \\A t \\in 1..NumTasks :\n            task_state[t] = \"completed\" \\/ task_state[t] = \"failed\"",
+      "description": "Test assertion for GatherRequiresAllTasksDone from SweepRemainingAsync spec"
+    },
+    "assert_FailedTaskSlotReleased": {
+      "condition": "task_state[FailingTask] = \"failed\" implies ~sem_held[FailingTask]",
+      "message": "Assertion failed: FailedTaskSlotReleased \u2014 task_state[FailingTask] = \"failed\" => ~sem_held[FailingTask]",
+      "description": "Test assertion for FailedTaskSlotReleased from SweepRemainingAsync spec"
+    },
+    "assert_CompletedOrFailedReleaseSemaphore": {
+      "condition": "\\A t in 1..NumTasks :\n        (task_state[t] = \"completed\" or task_state[t] = \"failed\") implies\n            ~sem_held[t]",
+      "message": "Assertion failed: CompletedOrFailedReleaseSemaphore \u2014 \\A t \\in 1..NumTasks :\n        (task_state[t] = \"completed\" \\/ task_state[t] = \"failed\") =>\n            ~sem_held[t]",
+      "description": "Test assertion for CompletedOrFailedReleaseSemaphore from SweepRemainingAsync spec"
+    },
+    "assert_RunningTasksHoldSemaphore": {
+      "condition": "\\A t in 1..NumTasks :\n        task_state[t] = \"running\" implies sem_held[t]",
+      "message": "Assertion failed: RunningTasksHoldSemaphore \u2014 \\A t \\in 1..NumTasks :\n        task_state[t] = \"running\" => sem_held[t]",
+      "description": "Test assertion for RunningTasksHoldSemaphore from SweepRemainingAsync spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"ok\",",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"ok\",",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"ok\",",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"ok\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"ok\",",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"ok\",",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"ok\",",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"ok\",",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"none\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"pending\","
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "results": "<< \"none\",",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"none\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"none\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"none\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"none\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "2",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"none\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "3",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"none\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "4",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "5",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "6",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"none\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "7",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "8",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"running\","
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "9",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "unknown",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"WaitAll\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "WaitAll",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "FALSE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Finish\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "Finish",
+        "vars": {
+          "results": "<<\"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"ok\", \"exception\">>",
+          "gather_complete": "TRUE",
+          "sem_count": "10",
+          "pc": "( 0 :> \"Done\" @@",
+          "sem_held": "<<FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE>>",
+          "task_state": "<< \"completed\","
+        }
+      }
+    ]
+  ]
+}

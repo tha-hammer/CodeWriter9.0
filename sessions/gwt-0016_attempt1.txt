@@ -1,0 +1,152 @@
+---- MODULE CrawlOrchestratorUpsert ----
+
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    Coroutines,
+    MaxSteps
+
+ASSUME Cardinality(Coroutines) >= 1
+ASSUME MaxSteps \in Nat /\ MaxSteps >= 1
+
+(* --algorithm CrawlOrchestratorUpsert
+
+variables
+    phase          = [c \in Coroutines |-> "IDLE"],
+    upsert_log     = <<>>,
+    active_upserts = 0,
+    step_count     = 0;
+
+define
+
+    Phases == {"IDLE", "EXTRACTING", "EXTRACTED", "COMPLETE"}
+
+    TypeInvariant ==
+        /\ \A c \in Coroutines : phase[c] \in Phases
+        /\ active_upserts \in 0..Cardinality(Coroutines)
+        /\ Len(upsert_log) \in 0..Cardinality(Coroutines)
+        /\ \A i \in 1..Len(upsert_log) : upsert_log[i] \in Coroutines
+
+    NoSimultaneousUpserts ==
+        active_upserts <= 1
+
+    UpsertLogNoDuplicates ==
+        \A i, j \in 1..Len(upsert_log) :
+            i /= j => upsert_log[i] /= upsert_log[j]
+
+    CompletionImpliesUpserted ==
+        \A c \in Coroutines :
+            phase[c] = "COMPLETE" =>
+                \E i \in 1..Len(upsert_log) : upsert_log[i] = c
+
+    UpsertLogLengthMatchesCompletions ==
+        Len(upsert_log) = Cardinality({c \in Coroutines : phase[c] = "COMPLETE"})
+
+    BoundedExecution == step_count <= MaxSteps
+
+    ExtractionCanInterleave ==
+        \A c \in Coroutines :
+            phase[c] \in {"EXTRACTING", "EXTRACTED"} =>
+                \E c2 \in Coroutines :
+                    c2 /= c /\ phase[c2] \in {"IDLE", "EXTRACTING", "EXTRACTED", "COMPLETE"}
+
+end define;
+
+fair process coroutine \in Coroutines
+begin
+    StartExtract:
+        phase[self] := "EXTRACTING";
+        step_count  := step_count + 1;
+
+    AwaitExtract:
+        phase[self] := "EXTRACTED";
+        step_count  := step_count + 1;
+
+    SyncUpsert:
+        active_upserts := active_upserts + 1;
+        upsert_log     := Append(upsert_log, self);
+        phase[self]    := "COMPLETE";
+        active_upserts := active_upserts - 1;
+        step_count     := step_count + 1;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE CrawlOrchestratorUpsert ----
+
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    Coroutines,
+    MaxSteps
+
+ASSUME Cardinality(Coroutines) >= 1
+ASSUME MaxSteps \in Nat /\ MaxSteps >= 1
+
+(* --algorithm CrawlOrchestratorUpsert
+
+variables
+    phase          = [c \in Coroutines |-> "IDLE"],
+    upsert_log     = <<>>,
+    active_upserts = 0,
+    step_count     = 0;
+
+define
+
+    Phases == {"IDLE", "EXTRACTING", "EXTRACTED", "COMPLETE"}
+
+    TypeInvariant ==
+        /\ \A c \in Coroutines : phase[c] \in Phases
+        /\ active_upserts \in 0..Cardinality(Coroutines)
+        /\ Len(upsert_log) \in 0..Cardinality(Coroutines)
+        /\ \A i \in 1..Len(upsert_log) : upsert_log[i] \in Coroutines
+
+    NoSimultaneousUpserts ==
+        active_upserts <= 1
+
+    UpsertLogNoDuplicates ==
+        \A i, j \in 1..Len(upsert_log) :
+            i /= j => upsert_log[i] /= upsert_log[j]
+
+    CompletionImpliesUpserted ==
+        \A c \in Coroutines :
+            phase[c] = "COMPLETE" =>
+                \E i \in 1..Len(upsert_log) : upsert_log[i] = c
+
+    UpsertLogLengthMatchesCompletions ==
+        Len(upsert_log) = Cardinality({c \in Coroutines : phase[c] = "COMPLETE"})
+
+    BoundedExecution == step_count <= MaxSteps
+
+    ExtractionCanInterleave ==
+        \A c \in Coroutines :
+            phase[c] \in {"EXTRACTING", "EXTRACTED"} =>
+                \E c2 \in Coroutines :
+                    c2 /= c /\ phase[c2] \in {"IDLE", "EXTRACTING", "EXTRACTED", "COMPLETE"}
+
+end define;
+
+fair process coroutine \in Coroutines
+begin
+    StartExtract:
+        phase[self] := "EXTRACTING";
+        step_count  := step_count + 1;
+
+    AwaitExtract:
+        phase[self] := "EXTRACTED";
+        step_count  := step_count + 1;
+
+    SyncUpsert:
+        active_upserts := active_upserts + 1;
+        upsert_log     := Append(upsert_log, self);
+        phase[self]    := "COMPLETE";
+        active_upserts := active_upserts - 1;
+        step_count     := step_count + 1;
+
+end process;
+
+end algorithm; *)
+
+====
