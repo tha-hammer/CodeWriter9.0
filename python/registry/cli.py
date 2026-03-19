@@ -847,10 +847,21 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     skeletons = scan_directory(ingest_path)
     if max_functions and len(skeletons) > max_functions:
         skeletons = skeletons[:max_functions]
+
+    # Normalize file_path to relative (project-root-relative) so UUIDs
+    # are stable across worktrees / checkout locations.
+    ingest_str = str(ingest_path)
+    for skel in skeletons:
+        if os.path.isabs(skel.file_path):
+            skel.file_path = os.path.relpath(skel.file_path, ingest_path)
+
     print(f"Phase 0: {len(skeletons)} skeletons extracted", file=sys.stderr)
 
     # Phase 0b: Entry point discovery
     entry_points = discover_entry_points(ingest_path, codebase_type, lang=lang)
+    for ep in entry_points:
+        if os.path.isabs(ep.file_path):
+            ep.file_path = os.path.relpath(ep.file_path, ingest_path)
     print(f"Entry points: {len(entry_points)}", file=sys.stderr)
 
     # Store skeletons as records in crawl.db
@@ -859,6 +870,9 @@ def cmd_ingest(args: argparse.Namespace) -> int:
             str(ingest_path), lang, codebase_type, is_incremental,
         )
         created, updated, skipped, failed = 0, 0, 0, 0
+
+        from registry.crawl_types import FnRecord, InField, OutField
+        adopted = 0
 
         for skel in skeletons:
             uid = make_record_uuid(skel.file_path, skel.function_name, skel.class_name)
@@ -870,8 +884,50 @@ def cmd_ingest(args: argparse.Namespace) -> int:
                     skipped += 1
                     continue
 
+            # Check for an already-extracted record under a different path
+            # (e.g. absolute path from parent tree, or different worktree).
+            # Adopt its extraction data instead of creating a bare skeleton.
+            donor = store.find_extracted_by_identity(
+                skel.function_name, skel.class_name, skel.file_hash,
+            )
+            if donor and donor.uuid != uid:
+                record = FnRecord(
+                    uuid=uid,
+                    function_name=skel.function_name,
+                    class_name=skel.class_name,
+                    file_path=skel.file_path,
+                    line_number=skel.line_number,
+                    src_hash=skel.file_hash,
+                    is_external=False,
+                    ins=donor.ins,
+                    do_description=donor.do_description,
+                    do_steps=donor.do_steps,
+                    do_branches=donor.do_branches,
+                    do_loops=donor.do_loops,
+                    do_errors=donor.do_errors,
+                    outs=donor.outs,
+                    failure_modes=donor.failure_modes,
+                    operational_claim=donor.operational_claim,
+                    skeleton=skel,
+                )
+                # Remove the old-path donor record and all FK references
+                store.conn.execute("UPDATE ins SET source_uuid = NULL WHERE source_uuid = ?", (donor.uuid,))
+                store.conn.execute("UPDATE entry_points SET record_uuid = NULL WHERE record_uuid = ?", (donor.uuid,))
+                store.conn.execute("DELETE FROM test_refs WHERE target_uuid = ?", (donor.uuid,))
+                store.conn.execute("DELETE FROM maps WHERE entry_uuid = ?", (donor.uuid,))
+                store.conn.execute("DELETE FROM ins WHERE record_uuid = ?", (donor.uuid,))
+                store.conn.execute("DELETE FROM outs WHERE record_uuid = ?", (donor.uuid,))
+                store.conn.execute("DELETE FROM records WHERE uuid = ?", (donor.uuid,))
+                existing = store.get_record(uid)
+                if existing:
+                    store.upsert_record(record)
+                    updated += 1
+                else:
+                    store.insert_record(record)
+                    adopted += 1
+                continue
+
             # Create a skeleton-only record (Phase 1 LLM extraction is a future step)
-            from registry.crawl_types import FnRecord, InField, OutField
             record = FnRecord(
                 uuid=uid,
                 function_name=skel.function_name,
@@ -913,7 +969,8 @@ def cmd_ingest(args: argparse.Namespace) -> int:
 
     print(
         f"Phase 1: {created} created, {updated} updated, "
-        f"{skipped} skipped, {failed} failed",
+        f"{skipped} skipped, {failed} failed"
+        + (f", {adopted} adopted" if adopted else ""),
         file=sys.stderr,
     )
     print(
@@ -1088,6 +1145,7 @@ def cmd_crawl(args: argparse.Namespace) -> int:
             max_retries=max_retries,
             on_progress=_on_progress,
             concurrency=concurrency,
+            project_root=target,
         )
         result = asyncio.run(orch.run())
         elapsed = time.monotonic() - t0

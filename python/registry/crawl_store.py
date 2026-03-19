@@ -370,6 +370,40 @@ class CrawlStore:
             schema_version=row["schema_version"],
         )
 
+    def find_extracted_by_identity(
+        self,
+        function_name: str,
+        class_name: str | None,
+        src_hash: str,
+    ) -> FnRecord | None:
+        """Find an already-extracted record matching by content identity.
+
+        Used during ingest to adopt extraction data from records stored
+        with a different file_path (e.g. absolute vs relative, or from a
+        different worktree checkout).
+        """
+        if class_name:
+            rows = self.conn.execute(
+                "SELECT * FROM records "
+                "WHERE function_name = ? AND class_name = ? AND src_hash = ? "
+                "AND is_external = FALSE "
+                "AND do_description NOT IN ('SKELETON_ONLY', 'EXTRACTION_FAILED') "
+                "LIMIT 1",
+                (function_name, class_name, src_hash),
+            ).fetchall()
+        else:
+            rows = self.conn.execute(
+                "SELECT * FROM records "
+                "WHERE function_name = ? AND (class_name IS NULL OR class_name = '') AND src_hash = ? "
+                "AND is_external = FALSE "
+                "AND do_description NOT IN ('SKELETON_ONLY', 'EXTRACTION_FAILED') "
+                "LIMIT 1",
+                (function_name, src_hash),
+            ).fetchall()
+        if not rows:
+            return None
+        return self._row_to_fn_record(rows[0])
+
     def get_records_for_file(self, file_path: str) -> list[FnRecord]:
         rows = self.conn.execute(
             "SELECT * FROM records WHERE file_path = ? AND is_external = FALSE",

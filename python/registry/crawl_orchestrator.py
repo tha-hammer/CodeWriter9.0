@@ -32,7 +32,12 @@ ProgressFn = Callable  # (event: str, **kwargs) -> None
 MAX_RETRIES = 5
 
 
-def _read_function_body(file_path: str, function_name: str, line_number: int | None) -> str:
+def _read_function_body(
+    file_path: str,
+    function_name: str,
+    line_number: int | None,
+    project_root: Path | None = None,
+) -> str:
     """Read the source file and return a best-effort function body.
 
     If line_number is available, reads from that line onward looking for
@@ -41,6 +46,8 @@ def _read_function_body(file_path: str, function_name: str, line_number: int | N
     """
     try:
         path = Path(file_path)
+        if not path.is_absolute() and project_root is not None:
+            path = project_root / path
         text = path.read_text(encoding="utf-8", errors="replace")
     except (OSError, PermissionError):
         return ""
@@ -77,6 +84,7 @@ class CrawlOrchestrator:
         max_retries: int | None = None,
         on_progress: ProgressFn | None = None,
         concurrency: int = 10,
+        project_root: Path | None = None,
     ) -> None:
         self.store = store
         self.entry_points = entry_points
@@ -86,6 +94,7 @@ class CrawlOrchestrator:
         self.max_retries = max_retries if max_retries is not None else MAX_RETRIES
         self._on_progress = on_progress or (lambda event, **kw: None)
         self.concurrency = concurrency
+        self.project_root = project_root
 
         # Counters
         self._extracted = 0
@@ -121,6 +130,7 @@ class CrawlOrchestrator:
             record.file_path,
             record.function_name,
             record.line_number,
+            project_root=self.project_root,
         )
 
         error_feedback = None
@@ -197,6 +207,8 @@ class CrawlOrchestrator:
             # Also check if the file hash is still current
             try:
                 path = Path(record.file_path)
+                if not path.is_absolute() and self.project_root is not None:
+                    path = self.project_root / path
                 current_hash = hashlib.sha256(
                     path.read_text(encoding="utf-8", errors="replace").encode("utf-8")
                 ).hexdigest()
