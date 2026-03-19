@@ -2,11 +2,13 @@
 
 The orchestrator walks the CrawlStore's skeleton records depth-first from
 entry points, calling an injected extract_fn for each function to produce
-full IN:DO:OUT FnRecords.
+full IN:DO:OUT FnRecords. The sweep phase runs remaining extractions
+concurrently with semaphore-bounded asyncio.gather().
 """
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 from pathlib import Path
@@ -74,6 +76,7 @@ class CrawlOrchestrator:
         incremental: bool = False,
         max_retries: int | None = None,
         on_progress: ProgressFn | None = None,
+        concurrency: int = 10,
     ) -> None:
         self.store = store
         self.entry_points = entry_points
@@ -82,6 +85,7 @@ class CrawlOrchestrator:
         self.incremental = incremental
         self.max_retries = max_retries if max_retries is not None else MAX_RETRIES
         self._on_progress = on_progress or (lambda event, **kw: None)
+        self.concurrency = concurrency
 
         # Counters
         self._extracted = 0
@@ -92,7 +96,7 @@ class CrawlOrchestrator:
         # DFS visited set
         self._visited: set[str] = set()
 
-    def extract_one(self, uuid: str) -> FnRecord | None:
+    async def extract_one(self, uuid: str) -> FnRecord | None:
         """Extract a single function by UUID, with retries on failure.
 
         Returns the extracted FnRecord, or None if extraction failed
@@ -126,6 +130,9 @@ class CrawlOrchestrator:
                     result = self.extract_fn(skeleton, body, error_feedback=error_feedback)
                 else:
                     result = self.extract_fn(skeleton, body)
+                # Await if async
+                if asyncio.iscoroutine(result):
+                    result = await result
                 # Ensure UUID matches
                 result.uuid = uuid  # type: ignore[assignment]
                 self.store.upsert_record(result)
@@ -267,7 +274,7 @@ class CrawlOrchestrator:
 
         return next_uuids
 
-    def _dfs_extract(self, uuid: str) -> None:
+    async def _dfs_extract(self, uuid: str) -> None:
         """DFS extraction from a single starting UUID."""
         if uuid in self._visited:
             return
@@ -290,33 +297,32 @@ class CrawlOrchestrator:
             return
 
         # Extract the function
-        result = self.extract_one(uuid)
+        result = await self.extract_one(uuid)
         if result is not None:
             self._extracted += 1
             # Follow internal calls (DFS)
             next_uuids = self._process_extraction_result(result)
             for next_uuid in next_uuids:
-                self._dfs_extract(next_uuid)
+                await self._dfs_extract(next_uuid)
         else:
             self._failed += 1
 
-    def run(self) -> dict[str, int]:
+    async def run(self) -> dict[str, int]:
         """Run the full DFS crawl from all entry points, then sweep remaining.
 
         Returns a summary dict with counters.
         """
-        # Phase 1: DFS from entry points
+        # Phase 1: DFS from entry points (sequential)
         for ep_name in self.entry_points:
             uuid = self._resolve_uuid_by_name(ep_name)
             if uuid is not None:
-                self._dfs_extract(uuid)
+                await self._dfs_extract(uuid)
             else:
                 logger.warning("Entry point not found in store: %s", ep_name)
 
-        # Phase 2: Sweep any records the DFS didn't reach
-        # (SKELETON_ONLY or EXTRACTION_FAILED records with no inbound edges)
+        # Phase 2: Sweep any records the DFS didn't reach (concurrent)
         if self.max_functions is None or self._extracted < self.max_functions:
-            self._sweep_remaining()
+            await self._sweep_remaining()
 
         return {
             "extracted": self._extracted,
@@ -325,18 +331,27 @@ class CrawlOrchestrator:
             "ax_records": self._ax_records,
         }
 
-    def _sweep_remaining(self) -> None:
-        """Retry SKELETON_ONLY and EXTRACTION_FAILED records not reached by DFS."""
+    async def _sweep_remaining(self) -> None:
+        """Process remaining SKELETON_ONLY/EXTRACTION_FAILED records concurrently."""
         remaining = self.store.get_pending_uuids()
-        for uuid in remaining:
+
+        sem = asyncio.Semaphore(self.concurrency)
+
+        async def _extract_bounded(uuid: str) -> None:
             if uuid in self._visited:
-                continue
-            if self.max_functions is not None and self._extracted >= self.max_functions:
-                break
+                return
             self._visited.add(uuid)
+            if self.max_functions is not None and self._extracted >= self.max_functions:
+                return
             if self._should_skip(uuid):
                 self._skipped += 1
-                continue
-            result = self.extract_one(uuid)
-            if result is not None:
-                self._extracted += 1
+                return
+            async with sem:
+                result = await self.extract_one(uuid)
+                if result is not None:
+                    self._extracted += 1
+                else:
+                    self._failed += 1
+
+        tasks = [_extract_bounded(u) for u in remaining]
+        await asyncio.gather(*tasks, return_exceptions=True)

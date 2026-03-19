@@ -13,6 +13,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
+# Helper to run async orchestrator methods from sync test code
+def _run(coro):
+    return asyncio.run(coro)
+
 from registry.crawl_orchestrator import CrawlOrchestrator
 from registry.crawl_store import CrawlStore
 from registry.crawl_types import (
@@ -83,7 +87,7 @@ class TestSingleQueryPerCard:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["handler"], counting_extract)
-            result = orch.extract_one(uid)
+            result = _run(orch.extract_one(uid))
 
             assert result is not None
             assert call_count == 1, (
@@ -117,7 +121,7 @@ class TestSingleQueryPerCard:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["handler"], capturing_extract)
-            orch.extract_one(uid)
+            _run(orch.extract_one(uid))
 
             assert len(captured_args) == 1
             call = captured_args[0]
@@ -165,7 +169,7 @@ class TestRetryErrorFeedbackIsInPrompt:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["handler"], failing_then_ok)
-            result = orch.extract_one(uid)
+            result = _run(orch.extract_one(uid))
 
             assert result is not None
             assert len(captured_calls) == 2
@@ -207,7 +211,7 @@ class TestRetryErrorFeedbackIsInPrompt:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["process"], multi_fail)
-            orch.extract_one(uid)
+            _run(orch.extract_one(uid))
 
             # Every retry gets the identical skeleton and body
             assert all(s == "process" for s in captured_skeletons)
@@ -246,7 +250,7 @@ class TestRetryErrorFeedbackIsInPrompt:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["handler"], escalating_fail)
-            orch.extract_one(uid)
+            _run(orch.extract_one(uid))
 
             # Attempt 1: no error feedback
             assert errors_received[0] is None
@@ -305,7 +309,7 @@ class TestIndependentExtractions:
 
             # Use no entry points to force everything through sweep
             orch = CrawlOrchestrator(store, [], isolated_extract)
-            result = orch.run()
+            result = _run(orch.run())
 
             assert result["extracted"] == 5
 
@@ -358,7 +362,7 @@ class TestIndependentExtractions:
                 ))
 
             orch = CrawlOrchestrator(store, [], logging_extract)
-            orch.run()
+            _run(orch.run())
 
             assert len(extraction_log) == 3
             # No extraction received error_feedback (all first attempts succeed)
@@ -392,7 +396,7 @@ class TestIndependentExtractions:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["handler"], pure_extract)
-            result = orch.extract_one(uid)
+            result = _run(orch.extract_one(uid))
             assert result is not None
 
 
@@ -452,7 +456,7 @@ class TestSweepPhaseIndependence:
                 ))
 
             orch = CrawlOrchestrator(store, ["main"], phase_tracking_extract)
-            result = orch.run()
+            result = _run(orch.run())
 
             assert result["extracted"] == 5
             assert dfs_fns == ["main"]
@@ -488,7 +492,7 @@ class TestSweepPhaseIndependence:
                     ))
 
                 orch = CrawlOrchestrator(store, [], simple_extract)
-                result = orch.run()
+                result = _run(orch.run())
                 results.append(result)
 
                 # Collect all extracted records

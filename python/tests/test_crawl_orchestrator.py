@@ -1,9 +1,14 @@
 """Tests for the DFS crawl orchestrator (LLM extraction)."""
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import pytest
+
+# Helper to run async orchestrator methods from sync test code
+def _run(coro):
+    return asyncio.run(coro)
 
 from registry.crawl_orchestrator import CrawlOrchestrator
 from registry.crawl_store import CrawlStore
@@ -83,7 +88,7 @@ class TestExtractOne:
                 return rec
 
             orch = CrawlOrchestrator(store, ["handler"], tracking_extract)
-            orch.extract_one(uid)
+            _run(orch.extract_one(uid))
 
             # Verify the record is no longer skeleton-only
             rec = store.get_record(uid)
@@ -116,7 +121,7 @@ class TestRetry:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["handler"], failing_extract)
-            orch.extract_one(uid)
+            _run(orch.extract_one(uid))
 
             assert call_count == 3
             rec = store.get_record(uid)
@@ -140,7 +145,7 @@ class TestRetry:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["handler"], always_fail)
-            orch.extract_one(uid)
+            _run(orch.extract_one(uid))
 
             rec = store.get_record(uid)
             assert rec.do_description == "EXTRACTION_FAILED"
@@ -190,7 +195,7 @@ class TestDFSCrawl:
                 ))
 
             orch = CrawlOrchestrator(store, ["handler"], ordering_extract)
-            result = orch.run()
+            result = _run(orch.run())
 
             assert extraction_order == ["handler", "validate"]
             assert result["extracted"] == 2
@@ -225,7 +230,7 @@ class TestDFSCrawl:
                 ))
 
             orch = CrawlOrchestrator(store, ["a"], counting_extract)
-            orch.run()
+            _run(orch.run())
 
             assert call_counts == {"a": 1, "b": 1}
 
@@ -250,7 +255,7 @@ class TestDFSCrawl:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["handler"], ext_extract)
-            result = orch.run()
+            result = _run(orch.run())
 
             assert result["ax_records"] >= 1
             # External records should exist in the store
@@ -276,7 +281,7 @@ class TestDFSCrawl:
                 store, [f"func_{i}" for i in range(10)],
                 _fake_extract, max_functions=3,
             )
-            result = orch.run()
+            result = _run(orch.run())
             assert result["extracted"] == 3
 
     def test_run_returns_counters(self, tmp_path: Path):
@@ -292,7 +297,7 @@ class TestDFSCrawl:
                 outs=[], skeleton=skel,
             ))
             orch = CrawlOrchestrator(store, ["handler"], _fake_extract)
-            result = orch.run()
+            result = _run(orch.run())
 
             assert "extracted" in result
             assert "failed" in result
@@ -326,7 +331,7 @@ class TestDFSCrawl:
             ))
 
             orch = CrawlOrchestrator(store, ["handler"], counting_extract, incremental=True)
-            result = orch.run()
+            result = _run(orch.run())
 
             assert call_count == 0
             assert result["skipped"] == 1

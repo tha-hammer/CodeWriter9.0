@@ -940,6 +940,14 @@ def _short_path(file_path: str, root: Path) -> str:
         return file_path
 
 
+def _positive_int(value):
+    """Argparse type validator: positive integer only."""
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(f"must be positive, got {value}")
+    return ivalue
+
+
 def _format_elapsed(seconds: float) -> str:
     """Format seconds into a human-readable duration."""
     if seconds < 60:
@@ -1066,8 +1074,9 @@ def cmd_crawl(args: argparse.Namespace) -> int:
                         file=err,
                     )
 
-        # Build the LLM extract function
-        extract_fn = _build_extract_fn(model=model_name)
+        # Build the async LLM extract function
+        concurrency = getattr(args, "concurrency", 10)
+        extract_fn = _build_async_extract_fn(model=model_name)
 
         t0 = time.monotonic()
         orch = CrawlOrchestrator(
@@ -1078,8 +1087,9 @@ def cmd_crawl(args: argparse.Namespace) -> int:
             incremental=incremental,
             max_retries=max_retries,
             on_progress=_on_progress,
+            concurrency=concurrency,
         )
-        result = orch.run()
+        result = asyncio.run(orch.run())
         elapsed = time.monotonic() - t0
 
     # Summary
@@ -1294,6 +1304,117 @@ def _build_extract_fn(model: str = "claude-sonnet-4-6"):
 
         return FnRecord(
             uuid="00000000-0000-0000-0000-000000000000",  # placeholder; orchestrator overwrites with store UUID
+            function_name=skeleton.function_name,
+            class_name=skeleton.class_name,
+            file_path=skeleton.file_path,
+            line_number=skeleton.line_number,
+            src_hash=skeleton.file_hash,
+            ins=ins,
+            do_description=data.get("do_description", ""),
+            do_steps=data.get("do_steps", []),
+            outs=outs,
+            failure_modes=data.get("failure_modes", []),
+            operational_claim=data.get("operational_claim", ""),
+            skeleton=skeleton,
+        )
+
+    return extract_fn
+
+
+def _build_async_extract_fn(model: str = "claude-sonnet-4-6"):
+    """Build an async extract_fn using standalone query() — fresh context per call.
+
+    Each invocation of the returned coroutine creates a completely independent
+    session via the SDK's standalone query() function. No persistent client is
+    constructed — context isolation is guaranteed by design.
+    """
+    import os
+    import sys
+    os.environ.pop("CLAUDECODE", None)
+    from claude_agent_sdk import query as _query, ClaudeAgentOptions, AssistantMessage, ResultMessage, TextBlock
+    from registry.crawl_types import (
+        FnRecord, InField, InSource, OutField, OutKind, Skeleton,
+    )
+    # Store query at module level so it can be patched in tests
+    sys.modules[__name__].query = _query
+
+    async def extract_fn(skeleton: Skeleton, body: str, error_feedback: str | None = None) -> FnRecord:
+        prompt_parts = [
+            f"## Function: {skeleton.function_name}",
+            f"File: {skeleton.file_path}:{skeleton.line_number}",
+        ]
+        if skeleton.class_name:
+            prompt_parts.append(f"Class: {skeleton.class_name}")
+        if skeleton.params:
+            param_strs = [f"{p.name}: {p.type or 'Any'}" for p in skeleton.params]
+            prompt_parts.append(f"Params: {', '.join(param_strs)}")
+        if skeleton.return_type:
+            prompt_parts.append(f"Returns: {skeleton.return_type}")
+        prompt_parts.append(f"\n## Body\n```\n{body}\n```")
+        if error_feedback:
+            prompt_parts.append(f"\n## Previous Error\n{error_feedback}\nPlease fix the JSON output.")
+
+        prompt = "\n".join(prompt_parts)
+
+        options = ClaudeAgentOptions(
+            allowed_tools=[],
+            system_prompt=_EXTRACT_SYSTEM_PROMPT,
+            max_turns=1,
+            model=model,
+        )
+
+        result_text = []
+        # Use module-level query (supports test patching)
+        _cli_mod = sys.modules[__name__]
+        async for message in _cli_mod.query(prompt=prompt, options=options):
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        result_text.append(block.text)
+            elif isinstance(message, ResultMessage):
+                if message.result:
+                    result_text.append(message.result)
+
+        raw = "".join(result_text)
+        data = _extract_json_object(raw)
+
+        # Reuse same JSON→FnRecord mapping as _build_extract_fn
+        source_map = {
+            "parameter": InSource.PARAMETER,
+            "state": InSource.STATE,
+            "literal": InSource.LITERAL,
+            "internal_call": InSource.INTERNAL_CALL,
+            "external": InSource.EXTERNAL,
+        }
+        kind_map = {
+            "ok": OutKind.OK,
+            "err": OutKind.ERR,
+            "side_effect": OutKind.SIDE_EFFECT,
+            "mutation": OutKind.MUTATION,
+        }
+
+        ins = [
+            InField(
+                name=i["name"],
+                type_str=i.get("type_str", "Any"),
+                source=source_map.get(i.get("source", "parameter"), InSource.PARAMETER),
+                source_function=i.get("source_function"),
+                source_file=i.get("source_file"),
+                description=i.get("description", ""),
+            )
+            for i in data.get("ins", [])
+        ]
+        outs = [
+            OutField(
+                name=kind_map.get(o.get("name", "ok"), OutKind.OK),
+                type_str=o.get("type_str", "Any"),
+                description=o.get("description", ""),
+            )
+            for o in data.get("outs", [])
+        ]
+
+        return FnRecord(
+            uuid="00000000-0000-0000-0000-000000000000",
             function_name=skeleton.function_name,
             class_name=skeleton.class_name,
             file_path=skeleton.file_path,
@@ -1531,6 +1652,8 @@ def main(argv: list[str] | None = None) -> int:
                          help="Claude model to use (default: claude-sonnet-4-6)")
     p_crawl.add_argument("--json", action="store_true", dest="output_json",
                          help="Output machine-readable JSON")
+    p_crawl.add_argument("--concurrency", type=_positive_int, default=10,
+                         help="Max concurrent LLM extractions in sweep phase (default: 10)")
 
     # stale
     p_stale = sub.add_parser("stale", help="Check which ingested nodes are stale")

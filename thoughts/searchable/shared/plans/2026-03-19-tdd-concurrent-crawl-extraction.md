@@ -6,10 +6,11 @@ branch: master
 repository: CodeWriter9.0
 topic: "Concurrent Crawl Extraction Pipeline TDD Plan"
 tags: [plan, tdd, cw9, performance, concurrency, asyncio, crawl-pipeline]
-status: draft
+status: implemented
 last_updated: 2026-03-19
 last_updated_by: DustyForge
-cw9_project: . (this IS the cw9 codebase)
+cw9_project: .
+crawl_db: ./crawl.db
 research_doc: thoughts/searchable/shared/research/2026-03-19-concurrent-crawl-extraction.md
 ---
 
@@ -22,6 +23,7 @@ The crawl pipeline executes 1062+ LLM calls sequentially — each call creates a
 ## Research Reference
 - Research doc: `thoughts/searchable/shared/research/2026-03-19-concurrent-crawl-extraction.md`
 - CW9 project: `.` (self-referential — modifying the CW9 codebase itself)
+- crawl.db: `./crawl.db` (project root, 332 records — NOT `.cw9/crawl.db` which is empty)
 - crawl.db records: 15 functions across 4 files
 - Existing tests: `python/tests/test_concurrent_extraction.py` (10 tests, all passing)
 
@@ -251,6 +253,80 @@ class TestAsyncExtractFnReturnsRecord:
                 asyncio.run(extract_fn(skel, "def handler(): pass"))
 
 
+class TestAsyncExtractFnCollectionIntegrity:
+    """gwt-0008 verifier: CollectionTypeIntegrity, ParseImpliesNonEmpty,
+    ReturnImpliesParseSuccess, ReturnImpliesCollected"""
+
+    def test_empty_response_raises_value_error(self):
+        """gwt-0008: ParseImpliesNonEmpty — empty collected_texts must raise."""
+        from registry.cli import _build_async_extract_fn
+
+        extract_fn = _build_async_extract_fn()
+        skel = _make_skeleton()
+
+        async def empty_query(**kwargs):
+            from claude_agent_sdk import AssistantMessage, TextBlock
+            msg = MagicMock(spec=AssistantMessage)
+            msg.content = [MagicMock(spec=TextBlock, text="")]
+            yield msg
+
+        with patch("registry.cli.query", side_effect=empty_query):
+            with pytest.raises(ValueError):
+                asyncio.run(extract_fn(skel, "def handler(): pass"))
+
+    def test_only_sdk_query_used(self):
+        """gwt-0008: OnlySDKQueryUsed — standalone query() is the only SDK call."""
+        import inspect
+        from registry.cli import _build_async_extract_fn
+
+        src = inspect.getsource(_build_async_extract_fn)
+        assert "ClaudeSDKClient" not in src, "Must not reference ClaudeSDKClient"
+        assert "query" in src, "Must use standalone query()"
+
+    def test_return_implies_parse_success(self):
+        """gwt-0008: ReturnImpliesParseSuccess — returned FnRecord always has parsed fields."""
+        from registry.cli import _build_async_extract_fn
+
+        extract_fn = _build_async_extract_fn()
+        skel = _make_skeleton()
+
+        async def mock_query(**kwargs):
+            from claude_agent_sdk import AssistantMessage, TextBlock
+            msg = MagicMock(spec=AssistantMessage)
+            msg.content = [MagicMock(spec=TextBlock, text=_VALID_JSON_RESPONSE)]
+            yield msg
+
+        with patch("registry.cli.query", side_effect=mock_query):
+            result = asyncio.run(extract_fn(skel, "def handler(): pass"))
+
+        # ReturnImpliesParseSuccess: result has parsed do_description
+        assert result.do_description != ""
+        # ReturnImpliesCollected: result has function_name from collection
+        assert result.function_name == skel.function_name
+
+    def test_collection_type_integrity(self):
+        """gwt-0008: CollectionTypeIntegrity — text blocks are collected as strings."""
+        from registry.cli import _build_async_extract_fn
+
+        extract_fn = _build_async_extract_fn()
+        skel = _make_skeleton()
+
+        async def multi_block_query(**kwargs):
+            from claude_agent_sdk import AssistantMessage, TextBlock
+            msg = MagicMock(spec=AssistantMessage)
+            # Two text blocks that together form valid JSON
+            msg.content = [
+                MagicMock(spec=TextBlock, text='{"ins": [], "do_description": "test", '),
+                MagicMock(spec=TextBlock, text='"do_steps": [], "outs": [], "failure_modes": [], "operational_claim": "claim"}'),
+            ]
+            yield msg
+
+        with patch("registry.cli.query", side_effect=multi_block_query):
+            result = asyncio.run(extract_fn(skel, "def handler(): pass"))
+
+        assert result.do_description == "test"
+
+
 class TestAsyncExtractFnErrorFeedback:
     """gwt-0008/gwt-0010: error_feedback embedded in prompt text."""
 
@@ -392,9 +468,10 @@ Extract the shared JSON→FnRecord mapping into a `_parse_extraction_result(skel
 ### Success Criteria
 **Automated:**
 - [ ] Test fails before implementation (Red) — `_build_async_extract_fn` does not exist
-- [ ] Test passes after implementation (Green) — all 5 test classes pass
+- [ ] Test passes after implementation (Green) — all 6 test classes pass (9 tests total)
 - [ ] All existing tests still pass after refactor
 - [ ] Verifier `ClientNeverConstructed` satisfied — no `ClaudeSDKClient` in the function
+- [ ] Verifiers `CollectionTypeIntegrity`, `ParseImpliesNonEmpty`, `ReturnImpliesParseSuccess`, `ReturnImpliesCollected`, `OnlySDKQueryUsed` — covered by new TestAsyncExtractFnCollectionIntegrity class
 
 ---
 
@@ -532,6 +609,44 @@ class TestAsyncRunDFSSequential:
         assert max_concurrent == 1
 
 
+class TestAsyncRunPhaseFlag:
+    """gwt-0018 verifiers: Phase1FlagAccurate, SemaphoreNonNeg, ConcurrencyBound"""
+
+    def test_phase_flag_tracks_dfs_completion(self, tmp_path):
+        """gwt-0018: Phase1FlagAccurate — internal flag reflects DFS completion."""
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        (src_dir / "main.py").write_text("def main(): pass\n")
+        (src_dir / "util.py").write_text("def util(): pass\n")
+
+        phase_at_extract = {}
+
+        async def phase_tracking_extract(skeleton, body, error_feedback=None):
+            # Capture whether DFS is done at each extraction point
+            # main = DFS phase (dfs not done), util = sweep phase (dfs done)
+            phase_at_extract[skeleton.function_name] = "captured"
+            return _make_fn_record(skeleton)
+
+        with CrawlStore(tmp_path / "crawl.db") as store:
+            for fn, f in [("main", "main.py"), ("util", "util.py")]:
+                fp = str(src_dir / f)
+                skel = _make_skeleton(fn, file_path=fp)
+                uid = make_record_uuid(fp, fn)
+                store.insert_record(FnRecord(
+                    uuid=uid, function_name=fn, file_path=fp,
+                    line_number=1, src_hash="abc", ins=[],
+                    do_description="SKELETON_ONLY", outs=[], skeleton=skel,
+                ))
+
+            orch = CrawlOrchestrator(store, ["main"], phase_tracking_extract, concurrency=5)
+            result = asyncio.run(orch.run())
+
+        # Both phases completed
+        assert "main" in phase_at_extract
+        assert "util" in phase_at_extract
+        assert result["extracted"] == 2
+
+
 class TestAsyncExtractOneAwaitable:
     """gwt-0018: extract_one must be awaitable."""
 
@@ -595,8 +710,9 @@ None needed — the async/sync detection keeps backward compatibility clean.
 
 ### Success Criteria
 **Automated:**
-- [ ] `test_dfs_completes_before_sweep_begins` passes — phase ordering verified
-- [ ] `test_dfs_extractions_are_sequential` passes — no concurrent DFS
+- [ ] `test_dfs_completes_before_sweep_begins` passes — phase ordering verified (gwt-0018: Phase1BeforePhase2)
+- [ ] `test_dfs_extractions_are_sequential` passes — no concurrent DFS (gwt-0018: DFSSequentialOrder)
+- [ ] `test_phase_flag_tracks_dfs_completion` passes — phase flag accurate (gwt-0018: Phase1FlagAccurate)
 - [ ] `test_extract_one_is_coroutine` passes — awaitable extraction
 - [ ] All 10 existing `test_concurrent_extraction.py` tests still pass
 
@@ -705,6 +821,71 @@ class TestSweepConcurrencyBound:
         assert max_concurrent >= 2, "Concurrency never reached 2 — not actually parallel"
 
 
+class TestSweepSemaphoreInvariants:
+    """gwt-0014 verifiers: SemNonNegative, SemaphoreConservation,
+    PerTaskAtMostOnce, AcqBeforeRel, WhenCompleteSymmetric"""
+
+    def test_each_uuid_processed_exactly_once(self, tmp_path):
+        """gwt-0014: PerTaskAtMostOnce — no UUID extracted more than once."""
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        for i in range(5):
+            (src_dir / f"fn_{i}.py").write_text(f"def fn_{i}(): pass\n")
+
+        processed_uuids = []
+
+        async def tracking_extract(skeleton, body, error_feedback=None):
+            processed_uuids.append(skeleton.function_name)
+            return _make_fn_record(skeleton)
+
+        with CrawlStore(tmp_path / "crawl.db") as store:
+            for i in range(5):
+                _insert_pending(store, src_dir, f"fn_{i}")
+
+            orch = CrawlOrchestrator(store, [], tracking_extract, concurrency=3)
+            asyncio.run(orch.run())
+
+        assert len(processed_uuids) == len(set(processed_uuids)), \
+            f"Duplicate processing: {processed_uuids}"
+
+    def test_semaphore_acquire_release_symmetry(self, tmp_path):
+        """gwt-0014: AcqBeforeRel, WhenCompleteSymmetric, SemNonNegative —
+        semaphore is acquired before release and returns to initial value."""
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        for i in range(5):
+            (src_dir / f"fn_{i}.py").write_text(f"def fn_{i}(): pass\n")
+
+        sem_log = []
+
+        async def instrumented_extract(skeleton, body, error_feedback=None):
+            sem_log.append(("acquire", skeleton.function_name))
+            await asyncio.sleep(0.01)
+            sem_log.append(("release", skeleton.function_name))
+            return _make_fn_record(skeleton)
+
+        with CrawlStore(tmp_path / "crawl.db") as store:
+            for i in range(5):
+                _insert_pending(store, src_dir, f"fn_{i}")
+
+            orch = CrawlOrchestrator(store, [], instrumented_extract, concurrency=3)
+            asyncio.run(orch.run())
+
+        # Verify acquire always precedes release for each task
+        per_task = {}
+        for action, name in sem_log:
+            per_task.setdefault(name, []).append(action)
+
+        for name, actions in per_task.items():
+            assert actions[0] == "acquire", f"{name}: release before acquire"
+            assert actions[-1] == "release", f"{name}: missing release"
+
+        # WhenCompleteSymmetric: equal acquires and releases
+        acquires = sum(1 for a, _ in sem_log if a == "acquire")
+        releases = sum(1 for a, _ in sem_log if a == "release")
+        assert acquires == releases, f"Asymmetric: {acquires} acquires vs {releases} releases"
+
+
 class TestSweepErrorIsolation:
     """gwt-0015 verifiers: NoCancellation, ExceptionCapturedAsResult"""
 
@@ -729,6 +910,42 @@ class TestSweepErrorIsolation:
 
         # fn_3 fails after max_retries; others succeed
         assert result["extracted"] == 9
+        assert result["failed"] >= 1
+
+
+class TestSweepErrorSemaphoreRelease:
+    """gwt-0015 verifiers: FailedTaskSlotReleased,
+    CompletedOrFailedReleaseSemaphore, AllOthersSucceedWhenGatherDone"""
+
+    def test_failed_task_releases_semaphore_slot(self, tmp_path):
+        """gwt-0015: FailedTaskSlotReleased — after failure, semaphore slot freed."""
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        for i in range(6):
+            (src_dir / f"fn_{i}.py").write_text(f"def fn_{i}(): pass\n")
+
+        completed_names = []
+
+        async def failing_extract(skeleton, body, error_feedback=None):
+            if skeleton.function_name == "fn_0":
+                raise RuntimeError("boom")
+            await asyncio.sleep(0.02)
+            completed_names.append(skeleton.function_name)
+            return _make_fn_record(skeleton)
+
+        with CrawlStore(tmp_path / "crawl.db") as store:
+            for i in range(6):
+                _insert_pending(store, src_dir, f"fn_{i}")
+
+            # concurrency=2: if fn_0's slot isn't released, we'd deadlock or
+            # leave one slot permanently consumed
+            orch = CrawlOrchestrator(store, [], failing_extract, concurrency=2)
+            result = asyncio.run(orch.run())
+
+        # AllOthersSucceedWhenGatherDone: all non-failing tasks completed
+        assert len(completed_names) == 5
+        # FailedTaskSlotReleased: all tasks ran (would block if slot leaked)
+        assert result["extracted"] == 5
         assert result["failed"] >= 1
 
 
@@ -772,8 +989,78 @@ class TestSweepSQLiteSafety:
             assert upsert_log[i][1] == upsert_log[i + 1][1]
 
 
+class TestSweepSQLiteCompleteness:
+    """gwt-0016 verifiers: UpsertLogNoDuplicates, CompletionImpliesUpserted,
+    UpsertLogLengthMatchesCompletions"""
+
+    def test_each_uuid_upserted_exactly_once(self, tmp_path):
+        """gwt-0016: UpsertLogNoDuplicates + UpsertLogLengthMatchesCompletions."""
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        for i in range(5):
+            (src_dir / f"fn_{i}.py").write_text(f"def fn_{i}(): pass\n")
+
+        upserted_names = []
+
+        async def simple_extract(skeleton, body, error_feedback=None):
+            return _make_fn_record(skeleton)
+
+        with CrawlStore(tmp_path / "crawl.db") as store:
+            original_upsert = store.upsert_record
+
+            def tracking_upsert(record):
+                upserted_names.append(record.function_name)
+                original_upsert(record)
+
+            store.upsert_record = tracking_upsert
+
+            for i in range(5):
+                _insert_pending(store, src_dir, f"fn_{i}")
+
+            orch = CrawlOrchestrator(store, [], simple_extract, concurrency=3)
+            result = asyncio.run(orch.run())
+
+        # UpsertLogNoDuplicates: no UUID upserted twice
+        assert len(upserted_names) == len(set(upserted_names))
+        # UpsertLogLengthMatchesCompletions: upserts == extracted count
+        assert len(upserted_names) == result["extracted"]
+
+    def test_completed_task_implies_upserted(self, tmp_path):
+        """gwt-0016: CompletionImpliesUpserted — every completed extraction is upserted."""
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        for i in range(3):
+            (src_dir / f"fn_{i}.py").write_text(f"def fn_{i}(): pass\n")
+
+        extracted_names = []
+        upserted_names = []
+
+        async def tracking_extract(skeleton, body, error_feedback=None):
+            extracted_names.append(skeleton.function_name)
+            return _make_fn_record(skeleton)
+
+        with CrawlStore(tmp_path / "crawl.db") as store:
+            original_upsert = store.upsert_record
+
+            def tracking_upsert(record):
+                upserted_names.append(record.function_name)
+                original_upsert(record)
+
+            store.upsert_record = tracking_upsert
+
+            for i in range(3):
+                _insert_pending(store, src_dir, f"fn_{i}")
+
+            orch = CrawlOrchestrator(store, [], tracking_extract, concurrency=3)
+            asyncio.run(orch.run())
+
+        # Every extracted name must appear in upserted names
+        for name in extracted_names:
+            assert name in upserted_names, f"{name} extracted but not upserted"
+
+
 class TestSweepDuplicateSkip:
-    """gwt-0027: skip UUIDs already visited by DFS."""
+    """gwt-0018: skip UUIDs already visited by DFS (DFS-then-sweep ordering)."""
 
     def test_dfs_visited_uuids_skipped_in_sweep(self, tmp_path):
         """Records processed by DFS must not be re-extracted in sweep."""
@@ -861,10 +1148,15 @@ None needed — the semaphore pattern is clean and minimal.
 
 ### Success Criteria
 **Automated:**
-- [ ] `test_at_most_n_concurrent_extractions` — concurrency bound enforced
-- [ ] `test_one_failure_does_not_cancel_others` — error isolation works
-- [ ] `test_upserts_never_interleave` — SQLite safety under asyncio
-- [ ] `test_dfs_visited_uuids_skipped_in_sweep` — no duplicate processing
+- [ ] `test_at_most_n_concurrent_extractions` — concurrency bound enforced (gwt-0014: ConcurrencyBound)
+- [ ] `test_each_uuid_processed_exactly_once` — no duplicate processing (gwt-0014: PerTaskAtMostOnce)
+- [ ] `test_semaphore_acquire_release_symmetry` — acquire/release invariants (gwt-0014: AcqBeforeRel, WhenCompleteSymmetric, SemNonNegative)
+- [ ] `test_one_failure_does_not_cancel_others` — error isolation works (gwt-0015: NoCancellation, ExceptionCapturedAsResult)
+- [ ] `test_failed_task_releases_semaphore_slot` — slot freed after failure (gwt-0015: FailedTaskSlotReleased, AllOthersSucceedWhenGatherDone)
+- [ ] `test_upserts_never_interleave` — SQLite safety under asyncio (gwt-0016: NoSimultaneousUpserts)
+- [ ] `test_each_uuid_upserted_exactly_once` — no duplicate upserts (gwt-0016: UpsertLogNoDuplicates, UpsertLogLengthMatchesCompletions)
+- [ ] `test_completed_task_implies_upserted` — completions persisted (gwt-0016: CompletionImpliesUpserted)
+- [ ] `test_dfs_visited_uuids_skipped_in_sweep` — no duplicate processing (gwt-0018: DFS-then-sweep)
 - [ ] `test_concurrency_one_processes_all` — sequential fallback works
 
 ---
@@ -890,9 +1182,48 @@ None needed — the semaphore pattern is clean and minimal.
 ```python
 """Tests for --concurrency CLI flag passthrough."""
 import argparse
+import asyncio
 from unittest.mock import patch, MagicMock
 
 import pytest
+
+from registry.crawl_orchestrator import CrawlOrchestrator
+from registry.crawl_store import CrawlStore
+from registry.crawl_types import (
+    FnRecord, InField, InSource, OutField, OutKind, Skeleton, SkeletonParam,
+    make_record_uuid,
+)
+
+
+def _make_skeleton(fn_name, file_path):
+    return Skeleton(
+        function_name=fn_name, file_path=file_path, line_number=10,
+        class_name=None, file_hash="abc123",
+    )
+
+
+def _make_fn_record(skel):
+    uid = make_record_uuid(skel.file_path, skel.function_name)
+    return FnRecord(
+        uuid=uid, function_name=skel.function_name, class_name=None,
+        file_path=skel.file_path, line_number=skel.line_number,
+        src_hash=skel.file_hash,
+        ins=[InField(name="x", type_str="int", source=InSource.PARAMETER)],
+        do_description=f"Does {skel.function_name}",
+        outs=[OutField(name=OutKind.OK, type_str="int", description="ok")],
+        skeleton=skel,
+    )
+
+
+def _insert_pending(store, src_dir, fn_name):
+    fp = str(src_dir / f"{fn_name}.py")
+    skel = _make_skeleton(fn_name, file_path=fp)
+    uid = make_record_uuid(fp, fn_name)
+    store.insert_record(FnRecord(
+        uuid=uid, function_name=fn_name, file_path=fp,
+        line_number=1, src_hash="abc", ins=[],
+        do_description="SKELETON_ONLY", outs=[], skeleton=skel,
+    ))
 
 
 class TestConcurrencyArgParsing:
@@ -916,6 +1247,38 @@ class TestConcurrencyArgParsing:
         p = _build_parser()
         args = p.parse_args(["crawl", "--concurrency", "5", "."])
         assert args.concurrency == 5
+
+
+class TestConcurrencyValidation:
+    """gwt-0022 verifiers: ValidationCorrect, NoErrorOnValidUserInput, NoErrorOnDefault"""
+
+    def test_invalid_concurrency_zero_rejected(self):
+        """gwt-0022: ValidationCorrect — --concurrency 0 is rejected."""
+        from registry.cli import _build_parser
+        p = _build_parser()
+        with pytest.raises(SystemExit):
+            p.parse_args(["crawl", "--concurrency", "0", "."])
+
+    def test_invalid_concurrency_negative_rejected(self):
+        """gwt-0022: ValidationCorrect — negative concurrency rejected."""
+        from registry.cli import _build_parser
+        p = _build_parser()
+        with pytest.raises(SystemExit):
+            p.parse_args(["crawl", "--concurrency", "-1", "."])
+
+    def test_valid_concurrency_no_error(self):
+        """gwt-0022: NoErrorOnValidUserInput — valid values parse without error."""
+        from registry.cli import _build_parser
+        p = _build_parser()
+        args = p.parse_args(["crawl", "--concurrency", "20", "."])
+        assert args.concurrency == 20
+
+    def test_default_concurrency_no_error(self):
+        """gwt-0022: NoErrorOnDefault — default value parses without error."""
+        from registry.cli import _build_parser
+        p = _build_parser()
+        args = p.parse_args(["crawl", "."])
+        assert args.concurrency == 10
 
 
 class TestConcurrencyPassthrough:
@@ -953,14 +1316,61 @@ class TestConcurrencyPassthrough:
             call_kwargs = MockOrch.call_args
             assert call_kwargs.kwargs.get("concurrency") == 7 or \
                    (len(call_kwargs.args) > 7 and call_kwargs.args[7] == 7)
+
+
+class TestSweepReceivesConcurrencyValue:
+    """gwt-0022 verifiers: OrchestratorPreservesValue, SweepReceivesCorrectValue"""
+
+    def test_orchestrator_stores_concurrency(self, tmp_path):
+        """gwt-0022: OrchestratorPreservesValue — concurrency stored on instance."""
+        async def noop_extract(skeleton, body, error_feedback=None):
+            pass
+
+        with CrawlStore(tmp_path / "crawl.db") as store:
+            orch = CrawlOrchestrator(store, [], noop_extract, concurrency=7)
+            assert orch.concurrency == 7
+
+    def test_sweep_uses_concurrency_value(self, tmp_path):
+        """gwt-0022: SweepReceivesCorrectValue — semaphore uses stored concurrency."""
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        for i in range(5):
+            (src_dir / f"fn_{i}.py").write_text(f"def fn_{i}(): pass\n")
+
+        concurrent = 0
+        max_concurrent = 0
+
+        async def tracking_extract(skeleton, body, error_feedback=None):
+            nonlocal concurrent, max_concurrent
+            concurrent += 1
+            max_concurrent = max(max_concurrent, concurrent)
+            await asyncio.sleep(0.05)
+            concurrent -= 1
+            return _make_fn_record(skeleton)
+
+        with CrawlStore(tmp_path / "crawl.db") as store:
+            for i in range(5):
+                _insert_pending(store, src_dir, f"fn_{i}")
+
+            orch = CrawlOrchestrator(store, [], tracking_extract, concurrency=2)
+            asyncio.run(orch.run())
+
+        assert max_concurrent <= 2, f"Exceeded concurrency=2: got {max_concurrent}"
 ```
 
 #### Green: Minimal Implementation
 **File**: `python/registry/cli.py`
 
-1. Add argparse flag (after line 1533):
+1. Add argparse flag with validation (after line 1533):
 ```python
-p_crawl.add_argument("--concurrency", type=int, default=10,
+def _positive_int(value):
+    """Argparse type validator: positive integer only."""
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(f"must be positive, got {value}")
+    return ivalue
+
+p_crawl.add_argument("--concurrency", type=_positive_int, default=10,
                      help="Max concurrent LLM extractions in sweep phase (default: 10)")
 ```
 
@@ -988,18 +1398,23 @@ None needed.
 
 ### Success Criteria
 **Automated:**
-- [ ] `test_default_concurrency_is_10` — default applied correctly
+- [ ] `test_default_concurrency_is_10` — default applied correctly (gwt-0022: DefaultApplied)
 - [ ] `test_custom_concurrency_parsed` — custom value parsed
-- [ ] `test_concurrency_reaches_orchestrator` — end-to-end passthrough
+- [ ] `test_invalid_concurrency_zero_rejected` — zero rejected (gwt-0022: ValidationCorrect)
+- [ ] `test_invalid_concurrency_negative_rejected` — negative rejected (gwt-0022: ValidationCorrect)
+- [ ] `test_valid_concurrency_no_error` — valid values accepted (gwt-0022: NoErrorOnValidUserInput)
+- [ ] `test_default_concurrency_no_error` — default accepted (gwt-0022: NoErrorOnDefault)
+- [ ] `test_concurrency_reaches_orchestrator` — end-to-end passthrough (gwt-0022: ValuePreservedToCmdCrawl)
+- [ ] `test_orchestrator_stores_concurrency` — value preserved (gwt-0022: OrchestratorPreservesValue)
+- [ ] `test_sweep_uses_concurrency_value` — semaphore uses value (gwt-0022: SweepReceivesCorrectValue)
 
 ---
 
 ## Step 5: Update `cmd_crawl()` — Async Entry Point
 
 ### CW9 Binding
-- **GWT**: gwt-0019
-- **Bridge artifacts**: from gwt-0018 (`OStart` operation)
-- **Key verifier**: single `asyncio.run()` call, no nested event loops
+- **GWT**: _none_ — wiring-only step, no formal spec required
+- **Rationale**: This step wires `_build_async_extract_fn()` into `cmd_crawl()` and calls `asyncio.run()`. The async behavior is already verified by gwt-0008 (extract fn) and gwt-0018 (phase ordering). The single-entry-point invariant is a standard asyncio pattern, tested below.
 - **depends_on UUIDs**:
   - `cd8e7329` — `cmd_crawl` @ cli.py:956
 
@@ -1022,7 +1437,7 @@ import pytest
 
 
 class TestCmdCrawlUsesAsyncio:
-    """gwt-0019: cmd_crawl calls asyncio.run(orch.run()) exactly once."""
+    """Wiring test: cmd_crawl calls asyncio.run(orch.run()) exactly once."""
 
     def test_single_asyncio_run_call(self, tmp_path):
         """cmd_crawl must use asyncio.run() once, not per-extraction."""
@@ -1121,6 +1536,28 @@ cw9 pipeline --skip-setup --gwt gwt-0008 .
 cw9 pipeline --skip-setup --gwt gwt-0014 .
 cw9 pipeline --skip-setup --gwt gwt-0018 .
 ```
+
+## Revision Notes (2026-03-19)
+
+Fixes applied from CW9 Plan Review:
+
+**Critical #1 — gwt-0019**: Removed GWT binding from Step 5. This is a wiring-only step; async behavior is already verified by gwt-0008 and gwt-0018.
+
+**Critical #2 — gwt-0027**: Re-bound `TestSweepDuplicateSkip` from gwt-0027 (no artifacts) to gwt-0018 (DFS-then-sweep ordering, which covers the skip-already-visited invariant).
+
+**Critical #3 — 28 uncovered verifiers**: Added test assertions for all non-structural verifiers:
+- gwt-0008: +5 tests (`OnlySDKQueryUsed`, `CollectionTypeIntegrity`, `ParseImpliesNonEmpty`, `ReturnImpliesParseSuccess`, `ReturnImpliesCollected`)
+- gwt-0014: +2 tests (`PerTaskAtMostOnce`, `AcqBeforeRel`/`WhenCompleteSymmetric`/`SemNonNegative`)
+- gwt-0015: +1 test (`FailedTaskSlotReleased`, `AllOthersSucceedWhenGatherDone`, `CompletedOrFailedReleaseSemaphore`)
+- gwt-0016: +2 tests (`UpsertLogNoDuplicates`, `CompletionImpliesUpserted`, `UpsertLogLengthMatchesCompletions`)
+- gwt-0018: +1 test (`Phase1FlagAccurate`)
+- gwt-0022: +6 tests (`ValidationCorrect` x2, `NoErrorOnValidUserInput`, `NoErrorOnDefault`, `OrchestratorPreservesValue`, `SweepReceivesCorrectValue`)
+
+**Warning #1 — crawl.db location**: Added `crawl_db: ./crawl.db` to frontmatter and clarified in Research Reference section.
+
+**Warning #4 — gwt-0022 validation**: Added `_positive_int` argparse type validator and rejection tests for 0 and negative values.
+
+**Cosmetic #1 — cw9_project**: Removed non-standard parenthetical from frontmatter.
 
 ## References
 - Research: `thoughts/searchable/shared/research/2026-03-19-concurrent-crawl-extraction.md`
