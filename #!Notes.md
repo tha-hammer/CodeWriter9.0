@@ -1,5 +1,99 @@
 #!Notes
 
+# Database writes
+  Root Cause
+
+  The corruption happens because of how CrawlStore handles writes:
+
+  1. WAL mode is correctly set (crawl_store.py:29), which should make this resilient — WAL is
+  designed so readers never block writers and a crash leaves the DB intact. However...
+  2. upsert_record() is not atomic (crawl_store.py:284-292). It does:
+    - UPDATE ins SET source_uuid = NULL ...
+    - DELETE FROM records WHERE uuid = ?
+    - INSERT INTO records ... (inside insert_record)
+    - Multiple INSERT INTO ins ... (loop)
+    - Multiple INSERT INTO outs ... (loop)
+    - conn.commit()
+
+  All of these run inside Python's default implicit transaction, but if SIGKILL arrives between
+   the DELETE and the final commit(), the implicit transaction's rollback journal may not be
+  cleanly flushed. With WAL mode this should normally auto-recover on next open, unless the
+  -wal or -shm files get deleted or the process is killed during a WAL checkpoint.
+  3. No PRAGMA synchronous is set — SQLite defaults to FULL in WAL mode (which is safe), but
+  the real problem is likely:
+  4. The sweep phase fires up to 10 concurrent upsert_record() calls from async tasks
+  (crawl_orchestrator.py:338-357), all sharing a single sqlite3.Connection that is not
+  thread-safe and has no mutex. Python's sqlite3 module has a check_same_thread default of
+  True, but since this is async (single-threaded event loop), it doesn't error — yet the rapid
+  interleaving of execute()/commit() calls from concurrent coroutines can corrupt the WAL state
+   when a kill arrives mid-checkpoint.
+  5. No signal handling or graceful shutdown — SIGTERM/SIGINT kills the process immediately
+  with no chance to finish an in-flight transaction or checkpoint.
+
+  Mitigations (in order of impact)
+
+  1. Wrap upsert_record in an explicit transaction (quick fix)
+
+  def upsert_record(self, record: FnRecord | AxRecord) -> None:
+      self.conn.execute("BEGIN IMMEDIATE")
+      try:
+          self.conn.execute(
+              "UPDATE ins SET source_uuid = NULL WHERE source_uuid = ?",
+              (record.uuid,),
+          )
+          self.conn.execute("DELETE FROM records WHERE uuid = ?", (record.uuid,))
+          self.insert_record(record)  # this calls commit() — needs refactor
+      except:
+          self.conn.rollback()
+          raise
+
+  But insert_record calls commit() internally, so you'd need to refactor: extract a
+  _insert_record_no_commit() and have both methods call it.
+
+  2. Add graceful shutdown handling
+
+  import signal, asyncio
+
+  async def run(self):
+      loop = asyncio.get_event_loop()
+      self._shutdown = False
+      for sig in (signal.SIGINT, signal.SIGTERM):
+          loop.add_signal_handler(sig, self._handle_shutdown)
+      # ... existing crawl logic, checking self._shutdown between extractions
+
+  def _handle_shutdown(self):
+      self._shutdown = True
+      logger.info("Shutdown requested, finishing current extraction...")
+
+  This lets the current upsert_record + commit() finish before the process exits.
+
+  3. Serialize DB writes from async tasks
+
+  The semaphore bounds concurrency for the LLM calls, but the DB writes still interleave. Add
+  an asyncio.Lock around store writes:
+
+  self._db_lock = asyncio.Lock()
+
+  async def _extract_bounded(uuid):
+      async with sem:
+          result = await self.extract_one(uuid)  # LLM call (concurrent)
+      async with self._db_lock:
+          self.store.upsert_record(result)  # DB write (serialized)
+
+  4. Auto-backup before crawl
+
+  Cheapest safety net — copy crawl.db before starting:
+
+  import shutil
+  shutil.copy2(db_path, db_path.with_suffix('.db.bak'))
+
+  My recommendation
+
+  Do #4 immediately (one line, prevents data loss), then implement #2 + #3 (graceful shutdown +
+   serialized writes) as the real fix. #1 is good hygiene but less critical if #3 is in place.
+
+
+
 #  CW9 brownfield testing Three distinct problems, one root cause
 
   1. Simulation traces are 100% failure paths
