@@ -1023,13 +1023,12 @@ def cmd_crawl(args: argparse.Namespace) -> int:
     import asyncio
     import time
 
-    target = Path(args.target_dir).resolve()
-    state_root = target / ".cw9"
-    err = sys.stderr
+    from registry.context import ProjectContext
 
-    if not state_root.exists():
-        print(f"No .cw9/ found in {target}. Run: cw9 init", file=err)
-        return 1
+    target = Path(args.target_dir).resolve()
+    ctx = ProjectContext.from_target(target)
+    state_root = ctx.state_root
+    err = sys.stderr
 
     crawl_db_path = state_root / "crawl.db"
     if not crawl_db_path.exists():
