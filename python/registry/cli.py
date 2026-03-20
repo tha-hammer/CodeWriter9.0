@@ -1039,6 +1039,12 @@ def cmd_crawl(args: argparse.Namespace) -> int:
     from registry.crawl_orchestrator import CrawlOrchestrator
     from registry.crawl_store import CrawlStore
 
+    # Auto-backup before crawl — cheap insurance against corruption
+    import shutil
+    bak_path = crawl_db_path.with_suffix(".db.pre-crawl")
+    shutil.copy2(crawl_db_path, bak_path)
+    print(f"  Backup: {bak_path.name}", file=err)
+
     # Resolve entry points — from --entry flag or from stored entry_points table
     entry_names = getattr(args, "entry", None) or []
 

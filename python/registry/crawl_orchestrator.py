@@ -291,6 +291,9 @@ class CrawlOrchestrator:
         if uuid in self._visited:
             return
 
+        if getattr(self, "_shutdown_requested", False):
+            return
+
         if self.max_functions is not None and self._extracted >= self.max_functions:
             return
 
@@ -324,17 +327,38 @@ class CrawlOrchestrator:
 
         Returns a summary dict with counters.
         """
-        # Phase 1: DFS from entry points (sequential)
-        for ep_name in self.entry_points:
-            uuid = self._resolve_uuid_by_name(ep_name)
-            if uuid is not None:
-                await self._dfs_extract(uuid)
-            else:
-                logger.warning("Entry point not found in store: %s", ep_name)
+        import signal
 
-        # Phase 2: Sweep any records the DFS didn't reach (concurrent)
-        if self.max_functions is None or self._extracted < self.max_functions:
-            await self._sweep_remaining()
+        self._shutdown_requested = False
+
+        def _request_shutdown():
+            if not self._shutdown_requested:
+                self._shutdown_requested = True
+                logger.info("Shutdown requested — finishing current extraction(s)...")
+
+        loop = asyncio.get_event_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, _request_shutdown)
+
+        try:
+            # Phase 1: DFS from entry points (sequential)
+            for ep_name in self.entry_points:
+                if self._shutdown_requested:
+                    break
+                uuid = self._resolve_uuid_by_name(ep_name)
+                if uuid is not None:
+                    await self._dfs_extract(uuid)
+                else:
+                    logger.warning("Entry point not found in store: %s", ep_name)
+
+            # Phase 2: Sweep any records the DFS didn't reach (concurrent)
+            if not self._shutdown_requested and (
+                self.max_functions is None or self._extracted < self.max_functions
+            ):
+                await self._sweep_remaining()
+        finally:
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                loop.remove_signal_handler(sig)
 
         return {
             "extracted": self._extracted,
@@ -353,6 +377,8 @@ class CrawlOrchestrator:
             if uuid in self._visited:
                 return
             self._visited.add(uuid)
+            if self._shutdown_requested:
+                return
             if self.max_functions is not None and self._extracted >= self.max_functions:
                 return
             if self._should_skip(uuid):

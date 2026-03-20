@@ -247,7 +247,8 @@ class CrawlStore:
                 (record_uuid, out.name.value, out.type_str, out.description, i),
             )
 
-    def insert_record(self, record: FnRecord | AxRecord) -> None:
+    def _insert_record_no_commit(self, record: FnRecord | AxRecord) -> None:
+        """Insert a record without committing — caller manages the transaction."""
         skeleton_json = json.dumps(record.skeleton.to_dict()) if isinstance(record, FnRecord) and record.skeleton else None
         source_crate = record.source_crate if isinstance(record, AxRecord) else None
         boundary_contract = record.boundary_contract if isinstance(record, AxRecord) else None
@@ -279,17 +280,25 @@ class CrawlStore:
         )
         self._insert_ins(record.uuid, record.ins)
         self._insert_outs(record.uuid, record.outs)
+
+    def insert_record(self, record: FnRecord | AxRecord) -> None:
+        self._insert_record_no_commit(record)
         self.conn.commit()
 
     def upsert_record(self, record: FnRecord | AxRecord) -> None:
-        # Null out any source_uuid references to this record before deleting,
-        # in case the existing DB lacks ON DELETE SET NULL on ins.source_uuid.
-        self.conn.execute(
-            "UPDATE ins SET source_uuid = NULL WHERE source_uuid = ?",
-            (record.uuid,),
-        )
-        self.conn.execute("DELETE FROM records WHERE uuid = ?", (record.uuid,))
-        self.insert_record(record)
+        """Atomic delete-then-insert within a single transaction."""
+        self.conn.execute("BEGIN IMMEDIATE")
+        try:
+            self.conn.execute(
+                "UPDATE ins SET source_uuid = NULL WHERE source_uuid = ?",
+                (record.uuid,),
+            )
+            self.conn.execute("DELETE FROM records WHERE uuid = ?", (record.uuid,))
+            self._insert_record_no_commit(record)
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
 
     def get_record(self, uuid: str) -> FnRecord | None:
         row = self.conn.execute(
