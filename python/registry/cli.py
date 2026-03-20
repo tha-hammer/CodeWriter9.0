@@ -918,6 +918,7 @@ def cmd_ingest(args: argparse.Namespace) -> int:
                 store.conn.execute("DELETE FROM ins WHERE record_uuid = ?", (donor.uuid,))
                 store.conn.execute("DELETE FROM outs WHERE record_uuid = ?", (donor.uuid,))
                 store.conn.execute("DELETE FROM records WHERE uuid = ?", (donor.uuid,))
+                store.conn.commit()
                 existing = store.get_record(uid)
                 if existing:
                     store.upsert_record(record)
@@ -1188,10 +1189,12 @@ def cmd_crawl(args: argparse.Namespace) -> int:
 def _build_llm_fn(
     model: str = "claude-sonnet-4-6",
     system_prompt: str | None = None,
+    output_schema: dict | None = None,
 ):
     """Build a synchronous LLM call function using the Claude Agent SDK.
 
-    Returns a callable: (prompt: str) -> str
+    Returns a callable: (prompt: str) -> str | dict
+    When output_schema is provided, returns the parsed dict from structured_output.
     """
     import asyncio
     import os
@@ -1203,7 +1206,7 @@ def _build_llm_fn(
         AssistantMessage, ResultMessage, TextBlock,
     )
 
-    def llm_fn(prompt: str) -> str:
+    def llm_fn(prompt: str) -> str | dict:
         async def _call():
             options = ClaudeAgentOptions(
                 allowed_tools=[],
@@ -1211,6 +1214,8 @@ def _build_llm_fn(
                 max_turns=1,
                 model=model,
             )
+            if output_schema is not None:
+                options.output_format = {"type": "json_schema", "schema": output_schema}
             client = ClaudeSDKClient(options)
             await client.connect()
             try:
@@ -1222,6 +1227,8 @@ def _build_llm_fn(
                             if isinstance(block, TextBlock):
                                 result_text.append(block.text)
                     elif isinstance(message, ResultMessage):
+                        if output_schema is not None and message.structured_output:
+                            return message.structured_output
                         if message.result:
                             result_text.append(message.result)
                 return "".join(result_text)
@@ -1238,16 +1245,7 @@ def _build_llm_fn(
 
 _EXTRACT_SYSTEM_PROMPT = """\
 You are a code analysis expert. Given a function's skeleton (signature) and body, \
-extract its behavioral IN:DO:OUT card as JSON.
-
-Return ONLY a JSON object with these fields:
-- "ins": list of {"name": str, "type_str": str, "source": "parameter"|"state"|"literal"|"internal_call"|"external", \
-"source_function": str|null, "source_file": str|null, "description": str}
-- "do_description": str (one-line summary of what the function does)
-- "do_steps": list[str] (numbered steps of the function's logic)
-- "outs": list of {"name": "ok"|"err"|"side_effect"|"mutation", "type_str": str, "description": str}
-- "failure_modes": list[str] (ways the function can fail)
-- "operational_claim": str (one-sentence behavioral claim)
+extract its behavioral IN:DO:OUT card.
 
 For "source" field on inputs:
 - "parameter": comes from function arguments
@@ -1256,6 +1254,51 @@ For "source" field on inputs:
 - "internal_call": return value of another function in this codebase (set source_function and source_file)
 - "external": return value from an external library/service (set source_function to the call expression)\
 """
+
+# JSON Schema for structured output — enforced by the Agent SDK
+_EXTRACT_OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "ins": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "type_str": {"type": "string"},
+                    "source": {
+                        "type": "string",
+                        "enum": ["parameter", "state", "literal", "internal_call", "external"],
+                    },
+                    "source_function": {"type": ["string", "null"]},
+                    "source_file": {"type": ["string", "null"]},
+                    "description": {"type": "string"},
+                },
+                "required": ["name", "type_str", "source", "description"],
+            },
+        },
+        "do_description": {"type": "string"},
+        "do_steps": {"type": "array", "items": {"type": "string"}},
+        "outs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "enum": ["ok", "err", "side_effect", "mutation"],
+                    },
+                    "type_str": {"type": "string"},
+                    "description": {"type": "string"},
+                },
+                "required": ["name", "type_str", "description"],
+            },
+        },
+        "failure_modes": {"type": "array", "items": {"type": "string"}},
+        "operational_claim": {"type": "string"},
+    },
+    "required": ["ins", "do_description", "do_steps", "outs", "failure_modes", "operational_claim"],
+}
 
 
 def _extract_json_object(text: str) -> dict:
@@ -1304,7 +1347,11 @@ def _extract_json_object(text: str) -> dict:
 
 def _build_extract_fn(model: str = "claude-sonnet-4-6"):
     """Build an extract_fn that calls the Claude Agent SDK."""
-    llm_fn = _build_llm_fn(model=model, system_prompt=_EXTRACT_SYSTEM_PROMPT)
+    llm_fn = _build_llm_fn(
+        model=model,
+        system_prompt=_EXTRACT_SYSTEM_PROMPT,
+        output_schema=_EXTRACT_OUTPUT_SCHEMA,
+    )
 
     def extract_fn(skeleton, body, error_feedback=None):
         from registry.crawl_types import (
@@ -1326,10 +1373,13 @@ def _build_extract_fn(model: str = "claude-sonnet-4-6"):
         if error_feedback:
             prompt_parts.append(f"\n## Previous Error\n{error_feedback}\nPlease fix the JSON output.")
 
-        raw = llm_fn("\n".join(prompt_parts))
+        result = llm_fn("\n".join(prompt_parts))
 
-        # Extract the first balanced JSON object from the response
-        data = _extract_json_object(raw)
+        # structured_output returns a dict directly; fall back to text parsing
+        if isinstance(result, dict):
+            data = result
+        else:
+            data = _extract_json_object(result)
 
         # Map source strings to InSource enum
         source_map = {
@@ -1424,22 +1474,28 @@ def _build_async_extract_fn(model: str = "claude-sonnet-4-6"):
             system_prompt=_EXTRACT_SYSTEM_PROMPT,
             max_turns=1,
             model=model,
+            output_format={"type": "json_schema", "schema": _EXTRACT_OUTPUT_SCHEMA},
         )
 
+        data = None
         result_text = []
         # Use module-level query (supports test patching)
         _cli_mod = sys.modules[__name__]
         async for message in _cli_mod.query(prompt=prompt, options=options):
-            if isinstance(message, AssistantMessage):
+            if isinstance(message, ResultMessage):
+                if message.structured_output:
+                    data = message.structured_output
+                elif message.result:
+                    result_text.append(message.result)
+            elif isinstance(message, AssistantMessage):
                 for block in message.content:
                     if isinstance(block, TextBlock):
                         result_text.append(block.text)
-            elif isinstance(message, ResultMessage):
-                if message.result:
-                    result_text.append(message.result)
 
-        raw = "".join(result_text)
-        data = _extract_json_object(raw)
+        # structured_output returns a dict directly; fall back to text parsing
+        if data is None:
+            raw = "".join(result_text)
+            data = _extract_json_object(raw)
 
         # Reuse same JSON→FnRecord mapping as _build_extract_fn
         source_map = {
@@ -1493,6 +1549,87 @@ def _build_async_extract_fn(model: str = "claude-sonnet-4-6"):
         )
 
     return extract_fn
+
+
+def cmd_cleanup(args: argparse.Namespace) -> int:
+    """Remove stale cw9 temp directories from /tmp."""
+    import time
+
+    max_age_hours = getattr(args, "max_age", 24)
+    dry_run = getattr(args, "dry_run", False)
+    tmp = Path("/tmp")
+    prefixes = ("cw9_",)
+    cutoff = time.time() - (max_age_hours * 3600)
+
+    removed = 0
+    freed_bytes = 0
+    errors = 0
+
+    for entry in sorted(tmp.iterdir()):
+        if not entry.is_dir():
+            continue
+        if not any(entry.name.startswith(p) for p in prefixes):
+            continue
+        try:
+            mtime = entry.stat().st_mtime
+        except OSError:
+            continue
+        if mtime > cutoff:
+            continue
+
+        # Calculate size before removal
+        dir_size = 0
+        try:
+            for f in entry.rglob("*"):
+                try:
+                    dir_size += f.stat().st_size
+                except OSError:
+                    pass
+        except OSError:
+            pass
+
+        if dry_run:
+            age_h = (time.time() - mtime) / 3600
+            print(f"  [dry-run] {entry.name}  {_fmt_size(dir_size)}  {age_h:.0f}h old")
+            removed += 1
+            freed_bytes += dir_size
+            continue
+
+        try:
+            shutil.rmtree(entry)
+            removed += 1
+            freed_bytes += dir_size
+        except OSError as e:
+            print(f"  ! Failed to remove {entry.name}: {e}", file=sys.stderr)
+            errors += 1
+
+    # Also prune git worktrees if any were in /tmp
+    if not dry_run:
+        import subprocess
+        try:
+            subprocess.run(
+                ["git", "worktree", "prune"],
+                cwd=str(Path.cwd()),
+                capture_output=True,
+                timeout=10,
+            )
+        except Exception:
+            pass
+
+    action = "Would remove" if dry_run else "Removed"
+    print(f"\n{action} {removed} director{'y' if removed == 1 else 'ies'}, freeing {_fmt_size(freed_bytes)}")
+    if errors:
+        print(f"  ({errors} failed)")
+    return 0
+
+
+def _fmt_size(nbytes: int) -> str:
+    """Format byte count as human-readable size."""
+    for unit in ("B", "KB", "MB", "GB"):
+        if nbytes < 1024:
+            return f"{nbytes:.1f}{unit}"
+        nbytes /= 1024
+    return f"{nbytes:.1f}TB"
 
 
 def cmd_stale(args: argparse.Namespace) -> int:
@@ -1728,6 +1865,13 @@ def main(argv: list[str] | None = None) -> int:
     p_show.add_argument("target_dir", nargs="?", default=".")
     p_show.add_argument("--card", action="store_true", help="Show IN:DO:OUT card from crawl.db")
 
+    # cleanup
+    p_cleanup = sub.add_parser("cleanup", help="Remove stale cw9 temp directories from /tmp")
+    p_cleanup.add_argument("--max-age", type=int, default=24,
+                           help="Remove dirs older than N hours (default: 24, use 0 for all)")
+    p_cleanup.add_argument("--dry-run", action="store_true",
+                           help="Show what would be removed without deleting")
+
     # pipeline
     p_pipeline = sub.add_parser("pipeline", help="Run full CW9 pipeline: setup -> loop -> bridge")
     p_pipeline.add_argument("target_dir", nargs="?", default=".")
@@ -1771,6 +1915,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_show(args)
     elif args.command == "gwt-author":
         return cmd_gwt_author(args)
+    elif args.command == "cleanup":
+        return cmd_cleanup(args)
     else:
         parser.print_help()
         return 0
