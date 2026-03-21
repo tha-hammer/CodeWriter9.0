@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from registry.context import ProjectContext
@@ -52,6 +53,23 @@ _EMPTY_DAG = {
     "edges": [],
     "test_artifacts": {},
 }
+
+# ── Module-level constants ──────────────────────────────────────────────
+DEFAULT_MODEL = "claude-sonnet-4-6"
+SKELETON_SENTINEL = "SKELETON_ONLY"
+PLACEHOLDER_UUID = "00000000-0000-0000-0000-000000000000"
+DEFAULT_CONCURRENCY = 10
+DEFAULT_MAX_RETRIES = 5
+
+
+def _require_cw9(target: Path) -> Path | None:
+    """Return the .cw9 state_root under *target*, or print an error and return None."""
+    state_root = target / ".cw9"
+    if not state_root.exists():
+        print(f"No .cw9/ found in {target}", file=sys.stderr)
+        print("Run: cw9 init", file=sys.stderr)
+        return None
+    return state_root
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -137,11 +155,8 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     target = Path(args.target_dir).resolve()
-    state_root = target / ".cw9"
-
-    if not state_root.exists():
-        print(f"No .cw9/ found in {target}", file=sys.stderr)
-        print("Run: cw9 init", file=sys.stderr)
+    state_root = _require_cw9(target)
+    if state_root is None:
         return 1
 
     from registry.status import gather_status
@@ -196,11 +211,8 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 def cmd_extract(args: argparse.Namespace) -> int:
     target = Path(args.target_dir).resolve()
-    state_root = target / ".cw9"
-
-    if not state_root.exists():
-        print(f"No .cw9/ found in {target}", file=sys.stderr)
-        print("Run: cw9 init", file=sys.stderr)
+    state_root = _require_cw9(target)
+    if state_root is None:
         return 1
 
     ctx = ProjectContext.from_target(target)
@@ -253,8 +265,7 @@ def cmd_loop(args: argparse.Namespace) -> int:
     import asyncio
 
     target = Path(args.target_dir).resolve()
-    if not (target / ".cw9").exists():
-        print(f"No .cw9/ found in {target}", file=sys.stderr)
+    if _require_cw9(target) is None:
         return 1
 
     from registry.loop_runner import run_loop
@@ -281,8 +292,7 @@ def cmd_loop(args: argparse.Namespace) -> int:
 
 def cmd_bridge(args: argparse.Namespace) -> int:
     target = Path(args.target_dir).resolve()
-    if not (target / ".cw9").exists():
-        print(f"No .cw9/ found in {target}", file=sys.stderr)
+    if _require_cw9(target) is None:
         return 1
 
     ctx = ProjectContext.from_target(target)
@@ -344,8 +354,7 @@ def cmd_gen_tests(args: argparse.Namespace) -> int:
     import asyncio
 
     target = Path(args.target_dir).resolve()
-    if not (target / ".cw9").exists():
-        print(f"No .cw9/ found in {target}", file=sys.stderr)
+    if _require_cw9(target) is None:
         return 1
 
     ctx = ProjectContext.from_target(target)
@@ -525,8 +534,7 @@ def _register_payload(target: Path, payload: dict) -> dict:
 def cmd_register(args: argparse.Namespace) -> int:
     """Register requirements + GWT behaviors from JSON stdin. Emit JSON stdout."""
     target = Path(args.target_dir).resolve()
-    if not (target / ".cw9").exists():
-        print(json.dumps({"error": f"No .cw9/ found in {target}"}), file=sys.stderr)
+    if _require_cw9(target) is None:
         return 1
 
     # Read and parse stdin
@@ -710,8 +718,7 @@ def cmd_test(args: argparse.Namespace) -> int:
     import subprocess as sp
 
     target = Path(args.target_dir).resolve()
-    if not (target / ".cw9").exists():
-        print(f"No .cw9/ found in {target}", file=sys.stderr)
+    if _require_cw9(target) is None:
         return 1
 
     ctx = ProjectContext.from_target(target)
@@ -813,8 +820,7 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     target = Path(args.target_dir).resolve()
     ingest_path = Path(args.ingest_path).resolve()
 
-    if not (target / ".cw9").exists():
-        print(f"No .cw9/ found in {target}. Run: cw9 init", file=sys.stderr)
+    if _require_cw9(target) is None:
         return 1
     if not ingest_path.exists():
         print(f"Path not found: {ingest_path}", file=sys.stderr)
@@ -938,7 +944,7 @@ def cmd_ingest(args: argparse.Namespace) -> int:
                 src_hash=skel.file_hash,
                 is_external=False,
                 ins=[],
-                do_description="SKELETON_ONLY",
+                do_description=SKELETON_SENTINEL,
                 do_steps=[],
                 outs=[],
                 failure_modes=[],
@@ -1019,149 +1025,116 @@ def _format_elapsed(seconds: float) -> str:
     return f"{hours}h{minutes:02d}m"
 
 
-def cmd_crawl(args: argparse.Namespace) -> int:
-    """Run DFS crawl with LLM extraction over ingested skeleton records."""
-    import asyncio
-    import time
+class _ProgressReporter:
+    """Tracks crawl progress and emits ANSI-formatted status lines."""
 
-    from registry.context import ProjectContext
+    def __init__(self, target: Path, max_retries: int, err=None):
+        import time
+        self._target = target
+        self._max_retries = max_retries
+        self._err = err or sys.stderr
+        self._time = time
+        self.ok = 0
+        self.fail = 0
+        self.skip = 0
+        self.retries = 0
+        self._t_start = time.monotonic()
+        self._t_last = time.monotonic()
 
-    target = Path(args.target_dir).resolve()
-    ctx = ProjectContext.from_target(target)
-    state_root = ctx.state_root
-    err = sys.stderr
+    def __call__(self, event: str, **kw):
+        now = self._time.monotonic()
+        elapsed = now - self._t_start
+        fn_name = kw.get("function_name", "?")
+        fpath = _short_path(kw.get("file_path", ""), self._target)
+        err = self._err
 
-    crawl_db_path = state_root / "crawl.db"
-    if not crawl_db_path.exists():
-        print(f"No crawl.db found. Run: cw9 ingest <path> first", file=err)
-        return 1
+        if event == "extracted":
+            self.ok += 1
+            dt = now - self._t_last
+            self._t_last = now
+            n = self.ok + self.fail + self.skip
+            attempt = kw.get("attempt", 1)
+            retry_tag = f" \033[33m(attempt {attempt})\033[0m" if attempt > 1 else ""
+            print(
+                f"  \033[32m+\033[0m [{n}] {fn_name}{retry_tag}  "
+                f"{kw.get('ins', 0)} in / {kw.get('outs', 0)} out  "
+                f"\033[2m{fpath}  {dt:.1f}s  [{_format_elapsed(elapsed)}]\033[0m",
+                file=err,
+            )
 
-    from registry.crawl_orchestrator import CrawlOrchestrator
-    from registry.crawl_store import CrawlStore
+        elif event == "retry":
+            self.retries += 1
+            attempt = kw.get("attempt", 1)
+            max_r = kw.get("max_retries", self._max_retries)
+            error_msg = kw.get("error", "")[:60]
+            print(
+                f"  \033[33m~\033[0m {fn_name} retry {attempt}/{max_r}: "
+                f"\033[2m{error_msg}\033[0m",
+                file=err,
+            )
 
-    # Auto-backup before crawl — cheap insurance against corruption
-    import shutil
-    bak_path = crawl_db_path.with_suffix(".db.pre-crawl")
-    shutil.copy2(crawl_db_path, bak_path)
-    print(f"  Backup: {bak_path.name}", file=err)
+        elif event == "failed":
+            self.fail += 1
+            n = self.ok + self.fail + self.skip
+            error_msg = kw.get("error", "")[:80]
+            print(
+                f"  \033[31mx\033[0m [{n}] FAILED {fn_name}  "
+                f"\033[2m{fpath}\033[0m\n"
+                f"    \033[31m{error_msg}\033[0m",
+                file=err,
+            )
 
-    # Resolve entry points — from --entry flag or from stored entry_points table
-    entry_names = getattr(args, "entry", None) or []
-
-    with CrawlStore(crawl_db_path) as store:
-        if not entry_names:
-            stored_eps = store.get_entry_points() if hasattr(store, "get_entry_points") else []
-            entry_names = [ep.function_name for ep in stored_eps]
-
-        if not entry_names:
-            all_recs = store.get_all_records()
-            entry_names = [
-                r.function_name for r in all_recs
-                if r.do_description == "SKELETON_ONLY"
-            ]
-
-        if not entry_names:
-            print("No entry points found. Specify with --entry or run cw9 ingest first.", file=err)
-            return 1
-
-        total = len(entry_names)
-        max_fns = getattr(args, "max_functions", None)
-        max_retries = getattr(args, "max_retries", None) or 5
-        model_name = getattr(args, "model", None) or "claude-sonnet-4-6"
-        incremental = getattr(args, "incremental", False)
-
-        # Header
-        print(f"\n{'='*60}", file=err)
-        print(f"  DFS Crawl: {target.name}", file=err)
-        print(f"  {total} entry points | model: {model_name} | retries: {max_retries}", file=err)
-        if max_fns:
-            print(f"  limit: {max_fns} functions", file=err)
-        if incremental:
-            print(f"  mode: incremental (skip unchanged)", file=err)
-        print(f"{'='*60}\n", file=err)
-
-        # Progress tracking
-        _progress = {
-            "ok": 0, "fail": 0, "skip": 0, "retries": 0,
-            "t_start": time.monotonic(), "t_last": time.monotonic(),
-        }
-
-        def _on_progress(event, **kw):
-            now = time.monotonic()
-            elapsed = now - _progress["t_start"]
-            fn_name = kw.get("function_name", "?")
-            fpath = _short_path(kw.get("file_path", ""), target)
-
-            if event == "extracted":
-                _progress["ok"] += 1
-                dt = now - _progress["t_last"]
-                _progress["t_last"] = now
-                n = _progress["ok"] + _progress["fail"] + _progress["skip"]
-                attempt = kw.get("attempt", 1)
-                retry_tag = f" \033[33m(attempt {attempt})\033[0m" if attempt > 1 else ""
+        elif event == "skipped":
+            self.skip += 1
+            n = self.ok + self.fail + self.skip
+            if self.skip <= 3 or self.skip % 50 == 0:
                 print(
-                    f"  \033[32m+\033[0m [{n}] {fn_name}{retry_tag}  "
-                    f"{kw.get('ins', 0)} in / {kw.get('outs', 0)} out  "
-                    f"\033[2m{fpath}  {dt:.1f}s  [{_format_elapsed(elapsed)}]\033[0m",
+                    f"  \033[2m- [{n}] skipped {fn_name}  {fpath}\033[0m",
                     file=err,
                 )
 
-            elif event == "retry":
-                _progress["retries"] += 1
-                attempt = kw.get("attempt", 1)
-                max_r = kw.get("max_retries", max_retries)
-                error_msg = kw.get("error", "")[:60]
-                print(
-                    f"  \033[33m~\033[0m {fn_name} retry {attempt}/{max_r}: "
-                    f"\033[2m{error_msg}\033[0m",
-                    file=err,
-                )
 
-            elif event == "failed":
-                _progress["fail"] += 1
-                n = _progress["ok"] + _progress["fail"] + _progress["skip"]
-                error_msg = kw.get("error", "")[:80]
-                print(
-                    f"  \033[31mx\033[0m [{n}] FAILED {fn_name}  "
-                    f"\033[2m{fpath}\033[0m\n"
-                    f"    \033[31m{error_msg}\033[0m",
-                    file=err,
-                )
+def _resolve_entry_points(store, entry_names: list[str]) -> list[str]:
+    """Resolve crawl entry points via three fallback tiers.
 
-            elif event == "skipped":
-                _progress["skip"] += 1
-                n = _progress["ok"] + _progress["fail"] + _progress["skip"]
-                if _progress["skip"] <= 3 or _progress["skip"] % 50 == 0:
-                    print(
-                        f"  \033[2m- [{n}] skipped {fn_name}  {fpath}\033[0m",
-                        file=err,
-                    )
+    1. Explicit --entry flag values (passed in as entry_names)
+    2. Stored entry_points table in the CrawlStore
+    3. All records with SKELETON_ONLY description
+    """
+    if entry_names:
+        return entry_names
 
-        # Build the async LLM extract function
-        concurrency = getattr(args, "concurrency", 10)
-        extract_fn = _build_async_extract_fn(model=model_name)
+    stored_eps = store.get_entry_points() if hasattr(store, "get_entry_points") else []
+    if stored_eps:
+        return [ep.function_name for ep in stored_eps]
 
-        t0 = time.monotonic()
-        orch = CrawlOrchestrator(
-            store=store,
-            entry_points=entry_names,
-            extract_fn=extract_fn,
-            max_functions=max_fns,
-            incremental=incremental,
-            max_retries=max_retries,
-            on_progress=_on_progress,
-            concurrency=concurrency,
-            project_root=target,
-        )
-        result = asyncio.run(orch.run())
-        elapsed = time.monotonic() - t0
+    all_recs = store.get_all_records()
+    return [
+        r.function_name for r in all_recs
+        if r.do_description == SKELETON_SENTINEL
+    ]
 
-    # Summary
+
+def _print_crawl_header(target: Path, total: int, model_name: str,
+                         max_retries: int, max_fns: int | None,
+                         incremental: bool, err) -> None:
+    """Print the crawl header banner."""
+    print(f"\n{'='*60}", file=err)
+    print(f"  DFS Crawl: {target.name}", file=err)
+    print(f"  {total} entry points | model: {model_name} | retries: {max_retries}", file=err)
+    if max_fns:
+        print(f"  limit: {max_fns} functions", file=err)
+    if incremental:
+        print(f"  mode: incremental (skip unchanged)", file=err)
+    print(f"{'='*60}\n", file=err)
+
+
+def _print_crawl_summary(result: dict, retries: int, elapsed: float, err) -> None:
+    """Print the post-crawl summary banner."""
     ok = result["extracted"]
     fail = result["failed"]
     skip = result["skipped"]
     ax = result["ax_records"]
-    retries = _progress["retries"]
 
     print(f"\n{'─'*60}", file=err)
     parts = []
@@ -1181,13 +1154,77 @@ def cmd_crawl(args: argparse.Namespace) -> int:
         print(f"  {_format_elapsed(elapsed)} elapsed ({avg:.1f}s avg per function)", file=err)
     print(f"{'─'*60}\n", file=err)
 
+
+def cmd_crawl(args: argparse.Namespace) -> int:
+    """Run DFS crawl with LLM extraction over ingested skeleton records."""
+    import asyncio
+    import shutil
+    import time
+
+    from registry.context import ProjectContext
+    from registry.crawl_orchestrator import CrawlOrchestrator
+    from registry.crawl_store import CrawlStore
+
+    target = Path(args.target_dir).resolve()
+    ctx = ProjectContext.from_target(target)
+    state_root = ctx.state_root
+    err = sys.stderr
+
+    crawl_db_path = state_root / "crawl.db"
+    if not crawl_db_path.exists():
+        print(f"No crawl.db found. Run: cw9 ingest <path> first", file=err)
+        return 1
+
+    # Auto-backup before crawl — cheap insurance against corruption
+    bak_path = crawl_db_path.with_suffix(".db.pre-crawl")
+    shutil.copy2(crawl_db_path, bak_path)
+    print(f"  Backup: {bak_path.name}", file=err)
+
+    # Resolve parameters
+    max_fns = getattr(args, "max_functions", None)
+    max_retries = getattr(args, "max_retries", None) or DEFAULT_MAX_RETRIES
+    model_name = getattr(args, "model", None) or DEFAULT_MODEL
+    incremental = getattr(args, "incremental", False)
+    concurrency = getattr(args, "concurrency", DEFAULT_CONCURRENCY)
+
+    with CrawlStore(crawl_db_path) as store:
+        entry_names = _resolve_entry_points(
+            store, getattr(args, "entry", None) or []
+        )
+        if not entry_names:
+            print("No entry points found. Specify with --entry or run cw9 ingest first.", file=err)
+            return 1
+
+        _print_crawl_header(target, len(entry_names), model_name,
+                            max_retries, max_fns, incremental, err)
+
+        progress = _ProgressReporter(target, max_retries, err)
+        extract_fn = _build_async_extract_fn(model=model_name)
+
+        t0 = time.monotonic()
+        orch = CrawlOrchestrator(
+            store=store,
+            entry_points=entry_names,
+            extract_fn=extract_fn,
+            max_functions=max_fns,
+            incremental=incremental,
+            max_retries=max_retries,
+            on_progress=progress,
+            concurrency=concurrency,
+            project_root=target,
+        )
+        result = asyncio.run(orch.run())
+        elapsed = time.monotonic() - t0
+
+    _print_crawl_summary(result, progress.retries, elapsed, err)
+
     if getattr(args, "output_json", False):
         print(json.dumps(result))
     return 0
 
 
 def _build_llm_fn(
-    model: str = "claude-sonnet-4-6",
+    model: str = DEFAULT_MODEL,
     system_prompt: str | None = None,
     output_schema: dict | None = None,
 ):
@@ -1211,7 +1248,7 @@ def _build_llm_fn(
             options = ClaudeAgentOptions(
                 allowed_tools=[],
                 system_prompt=system_prompt or "You are a helpful assistant.",
-                max_turns=1,
+                max_turns=4 if output_schema else 1,
                 model=model,
             )
             if output_schema is not None:
@@ -1345,96 +1382,83 @@ def _extract_json_object(text: str) -> dict:
     raise ValueError(f"Could not parse JSON from response: {text[:200]}")
 
 
-def _build_extract_fn(model: str = "claude-sonnet-4-6"):
-    """Build an extract_fn that calls the Claude Agent SDK."""
-    llm_fn = _build_llm_fn(
-        model=model,
-        system_prompt=_EXTRACT_SYSTEM_PROMPT,
-        output_schema=_EXTRACT_OUTPUT_SCHEMA,
+def _build_extraction_prompt(skeleton, body: str, error_feedback: str | None = None) -> str:
+    """Build the LLM prompt for IN:DO:OUT extraction from a function skeleton."""
+    parts = [
+        f"## Function: {skeleton.function_name}",
+        f"File: {skeleton.file_path}:{skeleton.line_number}",
+    ]
+    if skeleton.class_name:
+        parts.append(f"Class: {skeleton.class_name}")
+    if skeleton.params:
+        param_strs = [f"{p.name}: {p.type or 'Any'}" for p in skeleton.params]
+        parts.append(f"Params: {', '.join(param_strs)}")
+    if skeleton.return_type:
+        parts.append(f"Returns: {skeleton.return_type}")
+    parts.append(f"\n## Body\n```\n{body}\n```")
+    if error_feedback:
+        parts.append(f"\n## Previous Error\n{error_feedback}\nPlease fix the JSON output.")
+    return "\n".join(parts)
+
+
+def _data_to_fn_record(data: dict, skeleton) -> "FnRecord":
+    """Convert parsed JSON extraction data to a FnRecord."""
+    from registry.crawl_types import (
+        FnRecord, InField, InSource, OutField, OutKind,
     )
 
-    def extract_fn(skeleton, body, error_feedback=None):
-        from registry.crawl_types import (
-            FnRecord, InField, InSource, OutField, OutKind,
+    source_map = {
+        "parameter": InSource.PARAMETER,
+        "state": InSource.STATE,
+        "literal": InSource.LITERAL,
+        "internal_call": InSource.INTERNAL_CALL,
+        "external": InSource.EXTERNAL,
+    }
+    kind_map = {
+        "ok": OutKind.OK,
+        "err": OutKind.ERR,
+        "side_effect": OutKind.SIDE_EFFECT,
+        "mutation": OutKind.MUTATION,
+    }
+
+    ins = [
+        InField(
+            name=i["name"],
+            type_str=i.get("type_str", "Any"),
+            source=source_map.get(i.get("source", "parameter"), InSource.PARAMETER),
+            source_function=i.get("source_function"),
+            source_file=i.get("source_file"),
+            description=i.get("description", ""),
         )
-
-        prompt_parts = [
-            f"## Function: {skeleton.function_name}",
-            f"File: {skeleton.file_path}:{skeleton.line_number}",
-        ]
-        if skeleton.class_name:
-            prompt_parts.append(f"Class: {skeleton.class_name}")
-        if skeleton.params:
-            param_strs = [f"{p.name}: {p.type or 'Any'}" for p in skeleton.params]
-            prompt_parts.append(f"Params: {', '.join(param_strs)}")
-        if skeleton.return_type:
-            prompt_parts.append(f"Returns: {skeleton.return_type}")
-        prompt_parts.append(f"\n## Body\n```\n{body}\n```")
-        if error_feedback:
-            prompt_parts.append(f"\n## Previous Error\n{error_feedback}\nPlease fix the JSON output.")
-
-        result = llm_fn("\n".join(prompt_parts))
-
-        # structured_output returns a dict directly; fall back to text parsing
-        if isinstance(result, dict):
-            data = result
-        else:
-            data = _extract_json_object(result)
-
-        # Map source strings to InSource enum
-        source_map = {
-            "parameter": InSource.PARAMETER,
-            "state": InSource.STATE,
-            "literal": InSource.LITERAL,
-            "internal_call": InSource.INTERNAL_CALL,
-            "external": InSource.EXTERNAL,
-        }
-        kind_map = {
-            "ok": OutKind.OK,
-            "err": OutKind.ERR,
-            "side_effect": OutKind.SIDE_EFFECT,
-            "mutation": OutKind.MUTATION,
-        }
-
-        ins = []
-        for i in data.get("ins", []):
-            ins.append(InField(
-                name=i["name"],
-                type_str=i.get("type_str", "Any"),
-                source=source_map.get(i.get("source", "parameter"), InSource.PARAMETER),
-                source_function=i.get("source_function"),
-                source_file=i.get("source_file"),
-                description=i.get("description", ""),
-            ))
-
-        outs = []
-        for o in data.get("outs", []):
-            outs.append(OutField(
-                name=kind_map.get(o.get("name", "ok"), OutKind.OK),
-                type_str=o.get("type_str", "Any"),
-                description=o.get("description", ""),
-            ))
-
-        return FnRecord(
-            uuid="00000000-0000-0000-0000-000000000000",  # placeholder; orchestrator overwrites with store UUID
-            function_name=skeleton.function_name,
-            class_name=skeleton.class_name,
-            file_path=skeleton.file_path,
-            line_number=skeleton.line_number,
-            src_hash=skeleton.file_hash,
-            ins=ins,
-            do_description=data.get("do_description", ""),
-            do_steps=data.get("do_steps", []),
-            outs=outs,
-            failure_modes=data.get("failure_modes", []),
-            operational_claim=data.get("operational_claim", ""),
-            skeleton=skeleton,
+        for i in data.get("ins", [])
+    ]
+    outs = [
+        OutField(
+            name=kind_map.get(o.get("name", "ok"), OutKind.OK),
+            type_str=o.get("type_str", "Any"),
+            description=o.get("description", ""),
         )
+        for o in data.get("outs", [])
+    ]
 
-    return extract_fn
+    return FnRecord(
+        uuid=PLACEHOLDER_UUID,
+        function_name=skeleton.function_name,
+        class_name=skeleton.class_name,
+        file_path=skeleton.file_path,
+        line_number=skeleton.line_number,
+        src_hash=skeleton.file_hash,
+        ins=ins,
+        do_description=data.get("do_description", ""),
+        do_steps=data.get("do_steps", []),
+        outs=outs,
+        failure_modes=data.get("failure_modes", []),
+        operational_claim=data.get("operational_claim", ""),
+        skeleton=skeleton,
+    )
 
 
-def _build_async_extract_fn(model: str = "claude-sonnet-4-6"):
+def _build_async_extract_fn(model: str = DEFAULT_MODEL):
     """Build an async extract_fn using standalone query() — fresh context per call.
 
     Each invocation of the returned coroutine creates a completely independent
@@ -1445,44 +1469,29 @@ def _build_async_extract_fn(model: str = "claude-sonnet-4-6"):
     import sys
     os.environ.pop("CLAUDECODE", None)
     from claude_agent_sdk import query as _query, ClaudeAgentOptions, AssistantMessage, ResultMessage, TextBlock
-    from registry.crawl_types import (
-        FnRecord, InField, InSource, OutField, OutKind, Skeleton,
-    )
+    from registry.crawl_types import FnRecord, Skeleton
     # Store query at module level so it can be patched in tests
     sys.modules[__name__].query = _query
 
     async def extract_fn(skeleton: Skeleton, body: str, error_feedback: str | None = None) -> FnRecord:
-        prompt_parts = [
-            f"## Function: {skeleton.function_name}",
-            f"File: {skeleton.file_path}:{skeleton.line_number}",
-        ]
-        if skeleton.class_name:
-            prompt_parts.append(f"Class: {skeleton.class_name}")
-        if skeleton.params:
-            param_strs = [f"{p.name}: {p.type or 'Any'}" for p in skeleton.params]
-            prompt_parts.append(f"Params: {', '.join(param_strs)}")
-        if skeleton.return_type:
-            prompt_parts.append(f"Returns: {skeleton.return_type}")
-        prompt_parts.append(f"\n## Body\n```\n{body}\n```")
-        if error_feedback:
-            prompt_parts.append(f"\n## Previous Error\n{error_feedback}\nPlease fix the JSON output.")
-
-        prompt = "\n".join(prompt_parts)
+        prompt = _build_extraction_prompt(skeleton, body, error_feedback)
 
         options = ClaudeAgentOptions(
             allowed_tools=[],
             system_prompt=_EXTRACT_SYSTEM_PROMPT,
-            max_turns=1,
+            max_turns=4,  # model may waste turns on prose; SDK needs extra for structured output
             model=model,
             output_format={"type": "json_schema", "schema": _EXTRACT_OUTPUT_SCHEMA},
         )
 
         data = None
+        result_subtype = None
         result_text = []
         # Use module-level query (supports test patching)
         _cli_mod = sys.modules[__name__]
         async for message in _cli_mod.query(prompt=prompt, options=options):
             if isinstance(message, ResultMessage):
+                result_subtype = getattr(message, "subtype", None)
                 if message.structured_output:
                     data = message.structured_output
                 elif message.result:
@@ -1492,61 +1501,30 @@ def _build_async_extract_fn(model: str = "claude-sonnet-4-6"):
                     if isinstance(block, TextBlock):
                         result_text.append(block.text)
 
-        # structured_output returns a dict directly; fall back to text parsing
-        if data is None:
+        if data is not None:
+            pass  # structured output succeeded
+        else:
+            import sys as _sys
+            print(
+                f"  [debug] {skeleton.function_name}: structured_output=None "
+                f"subtype={result_subtype} text_len={sum(len(t) for t in result_text)} "
+                f"preview={(''.join(result_text))[:80]!r}",
+                file=_sys.stderr,
+            )
+        if data is not None:
+            pass
+        elif result_subtype in ("error_max_turns", "error_max_structured_output_retries"):
+            raw_preview = "".join(result_text)[:200]
+            raise ValueError(
+                f"Structured output failed ({result_subtype}): {raw_preview}"
+            )
+        else:
+            # No structured_output but no error either (success without it,
+            # or no ResultMessage at all e.g. in tests) — fall back to text parsing
             raw = "".join(result_text)
             data = _extract_json_object(raw)
 
-        # Reuse same JSON→FnRecord mapping as _build_extract_fn
-        source_map = {
-            "parameter": InSource.PARAMETER,
-            "state": InSource.STATE,
-            "literal": InSource.LITERAL,
-            "internal_call": InSource.INTERNAL_CALL,
-            "external": InSource.EXTERNAL,
-        }
-        kind_map = {
-            "ok": OutKind.OK,
-            "err": OutKind.ERR,
-            "side_effect": OutKind.SIDE_EFFECT,
-            "mutation": OutKind.MUTATION,
-        }
-
-        ins = [
-            InField(
-                name=i["name"],
-                type_str=i.get("type_str", "Any"),
-                source=source_map.get(i.get("source", "parameter"), InSource.PARAMETER),
-                source_function=i.get("source_function"),
-                source_file=i.get("source_file"),
-                description=i.get("description", ""),
-            )
-            for i in data.get("ins", [])
-        ]
-        outs = [
-            OutField(
-                name=kind_map.get(o.get("name", "ok"), OutKind.OK),
-                type_str=o.get("type_str", "Any"),
-                description=o.get("description", ""),
-            )
-            for o in data.get("outs", [])
-        ]
-
-        return FnRecord(
-            uuid="00000000-0000-0000-0000-000000000000",
-            function_name=skeleton.function_name,
-            class_name=skeleton.class_name,
-            file_path=skeleton.file_path,
-            line_number=skeleton.line_number,
-            src_hash=skeleton.file_hash,
-            ins=ins,
-            do_description=data.get("do_description", ""),
-            do_steps=data.get("do_steps", []),
-            outs=outs,
-            failure_modes=data.get("failure_modes", []),
-            operational_claim=data.get("operational_claim", ""),
-            skeleton=skeleton,
-        )
+        return _data_to_fn_record(data, skeleton)
 
     return extract_fn
 
@@ -1637,10 +1615,8 @@ def cmd_stale(args: argparse.Namespace) -> int:
     import hashlib
 
     target = Path(args.target_dir).resolve()
-    state_root = target / ".cw9"
-
-    if not state_root.exists():
-        print(f"No .cw9/ found in {target}", file=sys.stderr)
+    state_root = _require_cw9(target)
+    if state_root is None:
         return 1
 
     crawl_db_path = state_root / "crawl.db"
@@ -1679,12 +1655,10 @@ def cmd_stale(args: argparse.Namespace) -> int:
 def cmd_show(args: argparse.Namespace) -> int:
     """Show information about a node. With --card, show IN:DO:OUT card."""
     target = Path(args.target_dir).resolve()
-    state_root = target / ".cw9"
-    node_id = args.node_id
-
-    if not state_root.exists():
-        print(f"No .cw9/ found in {target}", file=sys.stderr)
+    state_root = _require_cw9(target)
+    if state_root is None:
         return 1
+    node_id = args.node_id
 
     if getattr(args, "card", False):
         crawl_db_path = state_root / "crawl.db"
@@ -1735,12 +1709,10 @@ def cmd_show(args: argparse.Namespace) -> int:
 def cmd_gwt_author(args: argparse.Namespace) -> int:
     """Generate GWT specifications from research notes and crawl.db cards."""
     target = Path(args.target_dir).resolve()
-    state_root = target / ".cw9"
-    research_path = Path(args.research).resolve()
-
-    if not state_root.exists():
-        print(f"No .cw9/ found in {target}", file=sys.stderr)
+    state_root = _require_cw9(target)
+    if state_root is None:
         return 1
+    research_path = Path(args.research).resolve()
 
     if not research_path.exists():
         print(f"Research file not found: {research_path}", file=sys.stderr)
@@ -1846,14 +1818,14 @@ def main(argv: list[str] | None = None) -> int:
                          help="Skip already-extracted records whose files haven't changed")
     p_crawl.add_argument("--max-functions", type=int, default=None,
                          help="Limit extraction to N functions")
-    p_crawl.add_argument("--max-retries", type=int, default=5,
-                         help="Max LLM retries per function (default: 5)")
+    p_crawl.add_argument("--max-retries", type=int, default=DEFAULT_MAX_RETRIES,
+                         help=f"Max LLM retries per function (default: {DEFAULT_MAX_RETRIES})")
     p_crawl.add_argument("--model", default=None,
-                         help="Claude model to use (default: claude-sonnet-4-6)")
+                         help=f"Claude model to use (default: {DEFAULT_MODEL})")
     p_crawl.add_argument("--json", action="store_true", dest="output_json",
                          help="Output machine-readable JSON")
-    p_crawl.add_argument("--concurrency", type=_positive_int, default=10,
-                         help="Max concurrent LLM extractions in sweep phase (default: 10)")
+    p_crawl.add_argument("--concurrency", type=_positive_int, default=DEFAULT_CONCURRENCY,
+                         help=f"Max concurrent LLM extractions in sweep phase (default: {DEFAULT_CONCURRENCY})")
 
     # stale
     p_stale = sub.add_parser("stale", help="Check which ingested nodes are stale")
