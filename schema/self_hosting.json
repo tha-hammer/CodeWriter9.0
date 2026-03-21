@@ -1,0 +1,1244 @@
+{
+  "$schema": "self_hosting/v1",
+  "description": "Self-hosting behavioral layer for CW9. Requirements, GWT behaviors, semantic edges, and test artifact mappings.",
+  "requirements": [
+    {
+      "id": "req-0001",
+      "text": "System needs a dependency-tracking DAG over existing resource registry"
+    },
+    {
+      "id": "req-0002",
+      "text": "System needs a one-shot loop that queries registry context, prompts LLM, extracts PlusCal, compiles, composes, verifies with TLC, and routes pass/retry/fail"
+    },
+    {
+      "id": "req-0003",
+      "text": "System needs mechanical translators that convert TLA+ specs into code artifacts conforming to existing schema shapes (data_structures, processors.operations, verifiers, testing.assertions)"
+    },
+    {
+      "id": "req-0004",
+      "text": "System needs an impact analysis query: given a node, find all nodes that transitively depend on it (reverse closure), enabling change-impact assessment"
+    },
+    {
+      "id": "req-0005",
+      "text": "System needs an edge validation pre-check: given a proposed edge, determine whether adding it would maintain all DAG invariants (acyclicity, no duplicates, node-kind compatibility) without actually mutating the DAG"
+    },
+    {
+      "id": "req-0006",
+      "text": "System needs a subgraph extraction query: given a node, return its forward closure (descendants), reverse closure (ancestors), and all edges where both endpoints are in that set"
+    },
+    {
+      "id": "req-0007",
+      "text": "System needs a change propagation query: given a node, return the file paths of test files affected by a change to that node, using the impact set and a test_artifacts mapping"
+    },
+    {
+      "id": "req-0008",
+      "text": "CrawlStore needs formal invariants on its core operations: upsert atomicity, forward subgraph completeness, staleness propagation correctness, and schema initialization idempotency"
+    },
+    {
+      "id": "req-0009",
+      "text": "CrawlOrchestrator needs formal invariants on its core operations: DFS-before-sweep sequencing, graceful shutdown preservation, incremental skip correctness, and semaphore-bounded concurrency"
+    },
+    {
+      "id": "req-0010",
+      "text": "CLI pipeline (cw9 command) needs formal invariants on its core operations: extract preserving registered GWT nodes, loop persisting verified specs, pipeline step ordering with early exit, and register idempotency via criterion-ID bindings"
+    }
+  ],
+  "behaviors": [
+    {
+      "id": "gwt-0001",
+      "name": "closure_update",
+      "given": "a new resource is registered",
+      "when": "the resource is added to the DAG",
+      "then": "transitive closure updates to include all reachable resources"
+    },
+    {
+      "id": "gwt-0002",
+      "name": "component_detection",
+      "given": "two resources share a dependency",
+      "when": "connected components are computed",
+      "then": "both appear in the same component"
+    },
+    {
+      "id": "gwt-0003",
+      "name": "context_query",
+      "given": "a resource ID is provided",
+      "when": "context is queried",
+      "then": "all transitive dependencies and their contracts are returned"
+    },
+    {
+      "id": "gwt-0004",
+      "name": "cycle_rejection",
+      "given": "an edge that would create a cycle is proposed",
+      "when": "the edge is added",
+      "then": "the edge is rejected with an error"
+    },
+    {
+      "id": "gwt-0005",
+      "name": "context_transitive_deps",
+      "given": "a new GWT",
+      "when": "context is queried from registry",
+      "then": "all transitive deps are included"
+    },
+    {
+      "id": "gwt-0006",
+      "name": "counterexample_translation",
+      "given": "a TLC counterexample",
+      "when": "translated to natural language",
+      "then": "it references PlusCal-level concepts only"
+    },
+    {
+      "id": "gwt-0007",
+      "name": "failure_routing",
+      "given": "two consecutive failures",
+      "when": "routing",
+      "then": "requirements inconsistency is reported (not retried)"
+    },
+    {
+      "id": "gwt-0008",
+      "name": "state_var_translation",
+      "given": "a TLA+ spec with declared state variables",
+      "when": "the state variable translator processes it",
+      "then": "a data_structures artifact is produced with fields, types, and validation conforming to backend_schema"
+    },
+    {
+      "id": "gwt-0009",
+      "name": "action_translation",
+      "given": "a TLA+ spec with defined actions",
+      "when": "the action translator processes it",
+      "then": "a processors.operations artifact is produced with parameters, returns, and error_types conforming to backend_schema"
+    },
+    {
+      "id": "gwt-0010",
+      "name": "invariant_translation",
+      "given": "a TLA+ spec with invariants",
+      "when": "the invariant translator processes it",
+      "then": "verifiers and testing.assertions artifacts are produced conforming to backend and shared schemas"
+    },
+    {
+      "id": "gwt-0011",
+      "name": "trace_translation",
+      "given": "a TLC counterexample trace with state transitions",
+      "when": "the trace translator processes it",
+      "then": "concrete test scenarios are generated with setup, steps, and expected outcomes for each state"
+    },
+    {
+      "id": "gwt-0012",
+      "name": "reverse_closure_complete",
+      "given": "a registry DAG with nodes A\u2192B\u2192C (A depends on B depends on C)",
+      "when": "query_impact(C) is called",
+      "then": "the result contains both A and B as affected nodes (full transitive reverse closure)"
+    },
+    {
+      "id": "gwt-0013",
+      "name": "leaf_has_no_impact",
+      "given": "a registry DAG where node X has no dependents (nothing points to X)",
+      "when": "query_impact(X) is called",
+      "then": "the affected set is empty (leaf nodes have zero impact radius)"
+    },
+    {
+      "id": "gwt-0014",
+      "name": "direct_dependents_included",
+      "given": "a registry DAG where nodes D and E both directly depend on node F",
+      "when": "query_impact(F) is called",
+      "then": "D and E both appear in the affected set and in direct_dependents"
+    },
+    {
+      "id": "gwt-0015",
+      "name": "valid_edge_accepted",
+      "given": "a registry DAG with compatible node kinds and no existing path from target to source",
+      "when": "validate_edge(source, target, edge_type) is called",
+      "then": "validation passes with valid=True and empty reason"
+    },
+    {
+      "id": "gwt-0016",
+      "name": "cycle_creating_edge_rejected",
+      "given": "a registry DAG where node Y can already reach node X through existing edges",
+      "when": "validate_edge(X, Y, edge_type) is called (which would create a cycle)",
+      "then": "validation fails with valid=False and reason containing 'cycle'"
+    },
+    {
+      "id": "gwt-0017",
+      "name": "kind_incompatible_edge_rejected",
+      "given": "a registry DAG where a behavior node B exists and a test node T exists",
+      "when": "validate_edge(B, T, 'depends_on') is called (behavior depending on test)",
+      "then": "validation fails with valid=False and reason containing 'kind'"
+    },
+    {
+      "id": "gwt-0018",
+      "name": "chain_subgraph_complete",
+      "given": "a node in a chain (has ancestors and descendants)",
+      "when": "extract_subgraph(node_id) is called",
+      "then": "the result contains all ancestors AND all descendants of the node"
+    },
+    {
+      "id": "gwt-0019",
+      "name": "isolated_node_subgraph",
+      "given": "an isolated node with no edges",
+      "when": "extract_subgraph(node_id) is called",
+      "then": "the result contains only that node and no edges"
+    },
+    {
+      "id": "gwt-0020",
+      "name": "no_dangling_edges",
+      "given": "any subgraph result from extract_subgraph",
+      "when": "the edges in the result are inspected",
+      "then": "every edge has both endpoints in the node set (no dangling edges)"
+    },
+    {
+      "id": "gwt-0021",
+      "name": "upstream_change_propagates",
+      "given": "a node that a test-bearing node depends on",
+      "when": "query_affected_tests(node_id) is called",
+      "then": "the test path is in the result"
+    },
+    {
+      "id": "gwt-0022",
+      "name": "no_downstream_tests_empty",
+      "given": "a node with no downstream test artifacts",
+      "when": "query_affected_tests(node_id) is called",
+      "then": "the result is empty"
+    },
+    {
+      "id": "gwt-0023",
+      "name": "self_test_included",
+      "given": "a node that IS a test-bearing node",
+      "when": "query_affected_tests(node_id) is called",
+      "then": "its own test path is included"
+    },
+    {
+      "id": "gwt-0024",
+      "name": "upsert_atomicity",
+      "given": "an existing record with UUID X and content C in crawl.db",
+      "when": "upsert_record is called with UUID X and updated content C'",
+      "then": "the old record and its ins/outs are replaced atomically: either all of (delete old, insert new) commits or none does, and no other connection observes a partial state"
+    },
+    {
+      "id": "gwt-0025",
+      "name": "forward_subgraph_complete",
+      "given": "a crawl.db with records A, B, C where A calls B and B calls C (via ins.source_uuid edges)",
+      "when": "get_forward_subgraph(A.function_name) is called",
+      "then": "the result contains A, B, and C (full transitive callee closure)"
+    },
+    {
+      "id": "gwt-0026",
+      "name": "staleness_propagation",
+      "given": "a crawl.db where record X has changed src_hash and record Y depends on X (Y has an ins with source_uuid = X.uuid)",
+      "when": "get_stale_records returns X as directly stale and get_transitive_stale is called with [X.uuid]",
+      "then": "Y appears in the transitive stale set (downstream dependents are marked stale)"
+    },
+    {
+      "id": "gwt-0028",
+      "name": "dfs_before_sweep",
+      "given": "a CrawlOrchestrator with entry points and pending records",
+      "when": "run() is called",
+      "then": "the DFS phase completes for all entry points before the sweep phase begins — no sweep extraction starts while DFS is still in progress"
+    },
+    {
+      "id": "gwt-0029",
+      "name": "graceful_shutdown_preserves_progress",
+      "given": "a CrawlOrchestrator mid-extraction (DFS or sweep phase active)",
+      "when": "SIGINT is received and _shutdown_requested is set to True",
+      "then": "any in-flight extract_one call completes and its result is persisted, but no new extractions are started — partial progress is preserved, not lost"
+    },
+    {
+      "id": "gwt-0030",
+      "name": "incremental_skip_unchanged",
+      "given": "a crawl.db with a previously-extracted record whose src_hash matches the current file content",
+      "when": "_should_skip(uuid) is called in incremental mode",
+      "then": "the record is skipped (returns True) and extract_fn is never invoked for that UUID"
+    },
+    {
+      "id": "gwt-0031",
+      "name": "semaphore_bounded_concurrency",
+      "given": "a sweep phase with N pending records and concurrency limit C",
+      "when": "_sweep_remaining() runs all tasks via asyncio.gather",
+      "then": "at most C extract_one calls are active simultaneously — the semaphore prevents exceeding the concurrency bound"
+    },
+    {
+      "id": "gwt-0027",
+      "name": "schema_init_idempotent",
+      "given": "a crawl.db that was previously initialized with the full schema",
+      "when": "connect() is called again (executescript runs CREATE TABLE IF NOT EXISTS)",
+      "then": "the existing tables, indexes, and data are preserved unchanged — no data loss, no schema errors"
+    },
+    {
+      "id": "gwt-0032",
+      "name": "extract_preserves_gwts",
+      "given": "a DAG file containing registered GWT and requirement nodes from prior cw9 register calls",
+      "when": "cw9 extract is run (SchemaExtractor.extract() builds a fresh DAG from schema files)",
+      "then": "all previously registered GWT and requirement nodes are preserved in the output DAG — extract merges schema-derived nodes with existing behavioral nodes rather than overwriting them"
+    },
+    {
+      "id": "gwt-0033",
+      "name": "loop_writes_spec_on_pass",
+      "given": "a GWT ID and a successful TLC verification (LoopResult.PASS) with a compiled spec at a temporary path",
+      "when": "run_loop() completes the verification",
+      "then": "the verified .tla file is copied to ctx.spec_dir/<gwt-id>.tla, the .cfg file is copied alongside it if present, and simulation traces are written to ctx.spec_dir/<gwt-id>_sim_traces.json"
+    },
+    {
+      "id": "gwt-0034",
+      "name": "pipeline_step_ordering",
+      "given": "a set of GWT IDs to process through cw9 pipeline",
+      "when": "cmd_pipeline runs the three phases (setup, loop, bridge)",
+      "then": "setup (init + extract) completes before any loop runs, all loop iterations complete before bridge begins, and bridge only processes GWTs that passed the loop phase — failures in setup cause early exit with nonzero return code"
+    },
+    {
+      "id": "gwt-0035",
+      "name": "register_idempotent",
+      "given": "a criterion_id that was previously registered (entry exists in .cw9/criterion_bindings.json)",
+      "when": "cw9 register is called again with the same criterion_id",
+      "then": "the previously allocated gwt_id is returned without calling dag.register_gwt() again — the bindings file provides stable ID allocation across invocations"
+    }
+  ],
+  "edges": [
+    {
+      "from": "req-0001",
+      "to": "gwt-0001",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0001",
+      "to": "gwt-0002",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0001",
+      "to": "gwt-0003",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0001",
+      "to": "gwt-0004",
+      "type": "decomposes"
+    },
+    {
+      "from": "gwt-0001",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0001",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0001",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0002",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0002",
+      "to": "res-0004",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0003",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0003",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0003",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0003",
+      "to": "res-0004",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0004",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "tpl-0001",
+      "to": "db-f8n5",
+      "type": "models"
+    },
+    {
+      "from": "tpl-0001",
+      "to": "db-d3w8",
+      "type": "models"
+    },
+    {
+      "from": "tpl-0002",
+      "to": "mq-t2f7",
+      "type": "models"
+    },
+    {
+      "from": "tpl-0003",
+      "to": "mq-r4z8",
+      "type": "models"
+    },
+    {
+      "from": "tpl-0003",
+      "to": "mq-u6j3",
+      "type": "models"
+    },
+    {
+      "from": "tpl-0004",
+      "to": "cfg-t5h9",
+      "type": "models"
+    },
+    {
+      "from": "tpl-0004",
+      "to": "ui-x1r9",
+      "type": "models"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "tpl-0001",
+      "type": "implements"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "gwt-0001",
+      "type": "verifies"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "gwt-0002",
+      "type": "verifies"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "gwt-0003",
+      "type": "verifies"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "gwt-0004",
+      "type": "verifies"
+    },
+    {
+      "from": "tpl-0001",
+      "to": "fs-x7p6",
+      "type": "references"
+    },
+    {
+      "from": "tpl-0002",
+      "to": "fs-x7p6",
+      "type": "references"
+    },
+    {
+      "from": "tpl-0003",
+      "to": "fs-x7p6",
+      "type": "references"
+    },
+    {
+      "from": "tpl-0004",
+      "to": "fs-x7p6",
+      "type": "references"
+    },
+    {
+      "from": "tpl-0005",
+      "to": "fs-x7p6",
+      "type": "references"
+    },
+    {
+      "from": "tpl-0006",
+      "to": "tpl-0002",
+      "type": "implements"
+    },
+    {
+      "from": "tpl-0006",
+      "to": "fs-x7p6",
+      "type": "references"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0006",
+      "type": "implements"
+    },
+    {
+      "from": "comp-0001",
+      "to": "db-f8n5",
+      "type": "references"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0001",
+      "type": "composes"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0002",
+      "type": "composes"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0003",
+      "type": "composes"
+    },
+    {
+      "from": "comp-0001",
+      "to": "tpl-0004",
+      "type": "composes"
+    },
+    {
+      "from": "comp-0002",
+      "to": "comp-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "tpl-0002",
+      "type": "implements"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "fs-x7p6",
+      "type": "references"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "gwt-0005",
+      "type": "verifies"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "gwt-0006",
+      "type": "verifies"
+    },
+    {
+      "from": "tpl-0007",
+      "to": "gwt-0007",
+      "type": "verifies"
+    },
+    {
+      "from": "loop-0001",
+      "to": "tpl-0007",
+      "type": "implements"
+    },
+    {
+      "from": "loop-0001",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "loop-0001",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "loop-0001",
+      "to": "comp-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "loop-0001",
+      "to": "comp-0002",
+      "type": "references"
+    },
+    {
+      "from": "loop-0002",
+      "to": "loop-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "loop-0003",
+      "to": "loop-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "gwt-0005",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "req-0002",
+      "to": "gwt-0005",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0002",
+      "to": "gwt-0006",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0002",
+      "to": "gwt-0007",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0003",
+      "to": "gwt-0008",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0003",
+      "to": "gwt-0009",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0003",
+      "to": "gwt-0010",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0003",
+      "to": "gwt-0011",
+      "type": "decomposes"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "tpl-0002",
+      "type": "implements"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "fs-x7p6",
+      "type": "references"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "gwt-0008",
+      "type": "verifies"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "gwt-0009",
+      "type": "verifies"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "gwt-0010",
+      "type": "verifies"
+    },
+    {
+      "from": "tpl-0008",
+      "to": "gwt-0011",
+      "type": "verifies"
+    },
+    {
+      "from": "gwt-0008",
+      "to": "db-f8n5",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0009",
+      "to": "db-b7r2",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0010",
+      "to": "db-j6x9",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0010",
+      "to": "cfg-g1u4",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0010",
+      "to": "cfg-s6e2",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0011",
+      "to": "cfg-s6e2",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0008",
+      "to": "loop-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0009",
+      "to": "loop-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0010",
+      "to": "loop-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0011",
+      "to": "loop-0001",
+      "type": "references"
+    },
+    {
+      "from": "bridge-0001",
+      "to": "gwt-0008",
+      "type": "implements"
+    },
+    {
+      "from": "bridge-0002",
+      "to": "gwt-0009",
+      "type": "implements"
+    },
+    {
+      "from": "bridge-0003",
+      "to": "gwt-0010",
+      "type": "implements"
+    },
+    {
+      "from": "bridge-0004",
+      "to": "gwt-0011",
+      "type": "implements"
+    },
+    {
+      "from": "bridge-0001",
+      "to": "loop-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "bridge-0002",
+      "to": "loop-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "bridge-0003",
+      "to": "loop-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "bridge-0004",
+      "to": "loop-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "bridge-0001",
+      "to": "fs-y3q2",
+      "type": "references"
+    },
+    {
+      "from": "bridge-0002",
+      "to": "fs-y3q2",
+      "type": "references"
+    },
+    {
+      "from": "bridge-0003",
+      "to": "fs-y3q2",
+      "type": "references"
+    },
+    {
+      "from": "bridge-0004",
+      "to": "fs-y3q2",
+      "type": "references"
+    },
+    {
+      "from": "req-0004",
+      "to": "gwt-0012",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0004",
+      "to": "gwt-0013",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0004",
+      "to": "gwt-0014",
+      "type": "decomposes"
+    },
+    {
+      "from": "gwt-0012",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0012",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0012",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0013",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0013",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0013",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0014",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0014",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0014",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "impact-0001",
+      "to": "gwt-0012",
+      "type": "implements"
+    },
+    {
+      "from": "impact-0001",
+      "to": "gwt-0013",
+      "type": "implements"
+    },
+    {
+      "from": "impact-0001",
+      "to": "gwt-0014",
+      "type": "implements"
+    },
+    {
+      "from": "impact-0001",
+      "to": "res-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "impact-0001",
+      "to": "res-0002",
+      "type": "depends_on"
+    },
+    {
+      "from": "impact-0001",
+      "to": "res-0003",
+      "type": "depends_on"
+    },
+    {
+      "from": "req-0005",
+      "to": "gwt-0015",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0005",
+      "to": "gwt-0016",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0005",
+      "to": "gwt-0017",
+      "type": "decomposes"
+    },
+    {
+      "from": "gwt-0015",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0015",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0015",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0016",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0016",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0016",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0017",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0017",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0017",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "depval-0001",
+      "to": "gwt-0015",
+      "type": "implements"
+    },
+    {
+      "from": "depval-0001",
+      "to": "gwt-0016",
+      "type": "implements"
+    },
+    {
+      "from": "depval-0001",
+      "to": "gwt-0017",
+      "type": "implements"
+    },
+    {
+      "from": "depval-0001",
+      "to": "res-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "depval-0001",
+      "to": "res-0002",
+      "type": "depends_on"
+    },
+    {
+      "from": "depval-0001",
+      "to": "res-0003",
+      "type": "depends_on"
+    },
+    {
+      "from": "req-0006",
+      "to": "gwt-0018",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0006",
+      "to": "gwt-0019",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0006",
+      "to": "gwt-0020",
+      "type": "decomposes"
+    },
+    {
+      "from": "gwt-0018",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0018",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0018",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0019",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0019",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0019",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0020",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0020",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0020",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "gwt-0018",
+      "type": "implements"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "gwt-0019",
+      "type": "implements"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "gwt-0020",
+      "type": "implements"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "res-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "res-0002",
+      "type": "depends_on"
+    },
+    {
+      "from": "subgraph-0001",
+      "to": "res-0003",
+      "type": "depends_on"
+    },
+    {
+      "from": "req-0007",
+      "to": "gwt-0021",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0007",
+      "to": "gwt-0022",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0007",
+      "to": "gwt-0023",
+      "type": "decomposes"
+    },
+    {
+      "from": "gwt-0021",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0021",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0021",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0021",
+      "to": "impact-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0022",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0022",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0022",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0022",
+      "to": "impact-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0023",
+      "to": "res-0001",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0023",
+      "to": "res-0002",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0023",
+      "to": "res-0003",
+      "type": "references"
+    },
+    {
+      "from": "gwt-0023",
+      "to": "impact-0001",
+      "type": "references"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "gwt-0021",
+      "type": "implements"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "gwt-0022",
+      "type": "implements"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "gwt-0023",
+      "type": "implements"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "impact-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "res-0001",
+      "type": "depends_on"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "res-0002",
+      "type": "depends_on"
+    },
+    {
+      "from": "chgprop-0001",
+      "to": "res-0003",
+      "type": "depends_on"
+    },
+    {
+      "from": "req-0008",
+      "to": "gwt-0024",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0008",
+      "to": "gwt-0025",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0008",
+      "to": "gwt-0026",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0008",
+      "to": "gwt-0027",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0009",
+      "to": "gwt-0028",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0009",
+      "to": "gwt-0029",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0009",
+      "to": "gwt-0030",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0009",
+      "to": "gwt-0031",
+      "type": "decomposes"
+    },
+    {
+      "from": "orchestrator-0001",
+      "to": "gwt-0028",
+      "type": "implements"
+    },
+    {
+      "from": "orchestrator-0001",
+      "to": "gwt-0029",
+      "type": "implements"
+    },
+    {
+      "from": "orchestrator-0001",
+      "to": "gwt-0030",
+      "type": "implements"
+    },
+    {
+      "from": "orchestrator-0001",
+      "to": "gwt-0031",
+      "type": "implements"
+    },
+    {
+      "from": "crawlstore-0001",
+      "to": "gwt-0024",
+      "type": "implements"
+    },
+    {
+      "from": "crawlstore-0001",
+      "to": "gwt-0025",
+      "type": "implements"
+    },
+    {
+      "from": "crawlstore-0001",
+      "to": "gwt-0026",
+      "type": "implements"
+    },
+    {
+      "from": "crawlstore-0001",
+      "to": "gwt-0027",
+      "type": "implements"
+    },
+    {
+      "from": "req-0010",
+      "to": "gwt-0032",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0010",
+      "to": "gwt-0033",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0010",
+      "to": "gwt-0034",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0010",
+      "to": "gwt-0035",
+      "type": "decomposes"
+    },
+    {
+      "from": "cli-0001",
+      "to": "gwt-0032",
+      "type": "implements"
+    },
+    {
+      "from": "cli-0001",
+      "to": "gwt-0033",
+      "type": "implements"
+    },
+    {
+      "from": "cli-0001",
+      "to": "gwt-0034",
+      "type": "implements"
+    },
+    {
+      "from": "cli-0001",
+      "to": "gwt-0035",
+      "type": "implements"
+    }
+  ],
+  "test_artifacts": {
+    "chgprop-0001": "tests/generated/test_change_propagation.py",
+    "depval-0001": "tests/generated/test_dep_validation.py",
+    "impact-0001": "tests/generated/test_impact_analysis.py",
+    "subgraph-0001": "tests/generated/test_subgraph_extraction.py",
+    "crawlstore-0001": "tests/generated/test_gwt_0024.py",
+    "orchestrator-0001": "tests/generated/test_gwt_0028.py",
+    "cli-0001": "tests/generated/test_gwt_0032.py"
+  }
+}

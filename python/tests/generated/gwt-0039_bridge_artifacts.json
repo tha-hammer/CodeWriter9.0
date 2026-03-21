@@ -1,0 +1,1470 @@
+{
+  "gwt_id": "gwt-0039",
+  "module_name": "RetryPromptBuilder",
+  "data_structures": {
+    "RetryPromptBuilderState": {
+      "function_id": "fn-RetryPromptBuilder-state",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"AddInitialPrompt\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "error_class": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "has_counterexample": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "prompt_sections": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "building",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from RetryPromptBuilder TLA+ spec"
+    }
+  },
+  "operations": {
+    "AddInitialPrompt": {
+      "function_id": "fn-RetryPromptBuilder-AddInitialPrompt",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-AddInitialPrompt",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AddInitialPrompt from RetryPromptBuilder spec"
+    },
+    "AddRetryHeader": {
+      "function_id": "fn-RetryPromptBuilder-AddRetryHeader",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-AddRetryHeader",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AddRetryHeader from RetryPromptBuilder spec"
+    },
+    "AddClassification": {
+      "function_id": "fn-RetryPromptBuilder-AddClassification",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-AddClassification",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AddClassification from RetryPromptBuilder spec"
+    },
+    "AddPreviousOutput": {
+      "function_id": "fn-RetryPromptBuilder-AddPreviousOutput",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-AddPreviousOutput",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/AddPreviousOutputError"
+      ],
+      "error_handling": "raise",
+      "description": "Action AddPreviousOutput from RetryPromptBuilder spec"
+    },
+    "AddErrorMessage": {
+      "function_id": "fn-RetryPromptBuilder-AddErrorMessage",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-AddErrorMessage",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/AddErrorMessageError"
+      ],
+      "error_handling": "raise",
+      "description": "Action AddErrorMessage from RetryPromptBuilder spec"
+    },
+    "AddCounterexample": {
+      "function_id": "fn-RetryPromptBuilder-AddCounterexample",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-AddCounterexample",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AddCounterexample from RetryPromptBuilder spec"
+    },
+    "AddTLCOutput": {
+      "function_id": "fn-RetryPromptBuilder-AddTLCOutput",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-AddTLCOutput",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AddTLCOutput from RetryPromptBuilder spec"
+    },
+    "AddClosing": {
+      "function_id": "fn-RetryPromptBuilder-AddClosing",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-AddClosing",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AddClosing from RetryPromptBuilder spec"
+    },
+    "Finish": {
+      "function_id": "fn-RetryPromptBuilder-Finish",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from RetryPromptBuilder spec"
+    }
+  },
+  "verifiers": {
+    "TypeOK": {
+      "function_id": "fn-RetryPromptBuilder-verify-TypeOK",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-TypeOK",
+      "conditions": [
+        "error_class \\in ErrorClasses",
+        "has_counterexample \\in {TRUE, FALSE}",
+        "prompt_sections \\subseteq PromptSectionUniverse",
+        "phase \\in Phases"
+      ],
+      "message": "TypeOK violation: /\\ error_class \\in ErrorClasses\n    /\\ has_counterexample \\in {TRUE, FALSE}\n    /\\ prompt_sections \\subseteq PromptSe...",
+      "applies_to": [
+        "error_class",
+        "has_counterexample",
+        "phase",
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant TypeOK from RetryPromptBuilder spec"
+    },
+    "RequiredSectionsPresent": {
+      "function_id": "fn-RetryPromptBuilder-verify-RequiredSectionsPresent",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-RequiredSectionsPresent",
+      "conditions": [
+        "phase = \"complete\" =>\n        RequiredCoreSections \\subseteq prompt_sections"
+      ],
+      "message": "RequiredSectionsPresent violation: phase = \"complete\" =>\n        RequiredCoreSections \\subseteq prompt_sections",
+      "applies_to": [
+        "phase",
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant RequiredSectionsPresent from RetryPromptBuilder spec"
+    },
+    "InitialPromptAlwaysPresent": {
+      "function_id": "fn-RetryPromptBuilder-verify-InitialPromptAlwaysPresent",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-InitialPromptAlwaysPresent",
+      "conditions": [
+        "phase = \"complete\" =>\n        \"initial_prompt\" \\in prompt_sections"
+      ],
+      "message": "InitialPromptAlwaysPresent violation: phase = \"complete\" =>\n        \"initial_prompt\" \\in prompt_sections",
+      "applies_to": [
+        "phase",
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant InitialPromptAlwaysPresent from RetryPromptBuilder spec"
+    },
+    "PreviousOutputAlwaysPresent": {
+      "function_id": "fn-RetryPromptBuilder-verify-PreviousOutputAlwaysPresent",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-PreviousOutputAlwaysPresent",
+      "conditions": [
+        "phase = \"complete\" =>\n        \"previous_output\" \\in prompt_sections"
+      ],
+      "message": "PreviousOutputAlwaysPresent violation: phase = \"complete\" =>\n        \"previous_output\" \\in prompt_sections",
+      "applies_to": [
+        "phase",
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant PreviousOutputAlwaysPresent from RetryPromptBuilder spec"
+    },
+    "ClassificationIncludedWhenExpected": {
+      "function_id": "fn-RetryPromptBuilder-verify-ClassificationIncludedWhenExpected",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-ClassificationIncludedWhenExpected",
+      "conditions": [
+        "phase = \"complete\"",
+        "error_class \\in InstructionClasses) =>\n        \"classification\" \\in prompt_sections"
+      ],
+      "message": "ClassificationIncludedWhenExpected violation: (phase = \"complete\" /\\ error_class \\in InstructionClasses) =>\n        \"classification\" \\in prompt_sections",
+      "applies_to": [
+        "error_class",
+        "phase",
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant ClassificationIncludedWhenExpected from RetryPromptBuilder spec"
+    },
+    "ClassificationOmittedWhenNoInstruction": {
+      "function_id": "fn-RetryPromptBuilder-verify-ClassificationOmittedWhenNoInstruction",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-ClassificationOmittedWhenNoInstruction",
+      "conditions": [
+        "phase = \"complete\"",
+        "error_class \\notin InstructionClasses) =>\n        \"classification\" \\notin prompt_sections"
+      ],
+      "message": "ClassificationOmittedWhenNoInstruction violation: (phase = \"complete\" /\\ error_class \\notin InstructionClasses) =>\n        \"classification\" \\notin prompt_sections",
+      "applies_to": [
+        "error_class",
+        "phase",
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant ClassificationOmittedWhenNoInstruction from RetryPromptBuilder spec"
+    },
+    "CounterexampleIncludedWhenPresent": {
+      "function_id": "fn-RetryPromptBuilder-verify-CounterexampleIncludedWhenPresent",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-CounterexampleIncludedWhenPresent",
+      "conditions": [
+        "phase = \"complete\"",
+        "has_counterexample = TRUE) =>\n        \"counterexample\" \\in prompt_sections"
+      ],
+      "message": "CounterexampleIncludedWhenPresent violation: (phase = \"complete\" /\\ has_counterexample = TRUE) =>\n        \"counterexample\" \\in prompt_sections",
+      "applies_to": [
+        "has_counterexample",
+        "phase",
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant CounterexampleIncludedWhenPresent from RetryPromptBuilder spec"
+    },
+    "CounterexampleOmittedWhenAbsent": {
+      "function_id": "fn-RetryPromptBuilder-verify-CounterexampleOmittedWhenAbsent",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-CounterexampleOmittedWhenAbsent",
+      "conditions": [
+        "phase = \"complete\"",
+        "has_counterexample = FALSE) =>\n        \"counterexample\" \\notin prompt_sections"
+      ],
+      "message": "CounterexampleOmittedWhenAbsent violation: (phase = \"complete\" /\\ has_counterexample = FALSE) =>\n        \"counterexample\" \\notin prompt_sections",
+      "applies_to": [
+        "has_counterexample",
+        "phase",
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant CounterexampleOmittedWhenAbsent from RetryPromptBuilder spec"
+    },
+    "GWTThenCondition": {
+      "function_id": "fn-RetryPromptBuilder-verify-GWTThenCondition",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-GWTThenCondition",
+      "conditions": [
+        "phase = \"complete\"",
+        "error_class \\in InstructionClasses) =>",
+        "\"classification\" \\in prompt_sections",
+        "\"previous_output\" \\in prompt_sections",
+        "\"initial_prompt\" \\in prompt_sections"
+      ],
+      "message": "GWTThenCondition violation: (phase = \"complete\" /\\ error_class \\in InstructionClasses) =>\n        /\\ \"classification\" \\in prompt_sections\n       ...",
+      "applies_to": [
+        "error_class",
+        "phase",
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant GWTThenCondition from RetryPromptBuilder spec"
+    },
+    "OnlyKnownSections": {
+      "function_id": "fn-RetryPromptBuilder-verify-OnlyKnownSections",
+      "acceptance_criteria_id": "ac-RetryPromptBuilder-OnlyKnownSections",
+      "conditions": [
+        "prompt_sections \\subseteq PromptSectionUniverse"
+      ],
+      "message": "OnlyKnownSections violation: prompt_sections \\subseteq PromptSectionUniverse",
+      "applies_to": [
+        "prompt_sections"
+      ],
+      "description": "Verifier for invariant OnlyKnownSections from RetryPromptBuilder spec"
+    }
+  },
+  "assertions": {
+    "assert_TypeOK": {
+      "condition": "and error_class in ErrorClasses\n    and has_counterexample in {TRUE, FALSE}\n    and prompt_sections \\subseteq PromptSectionUniverse\n    and phase in Phases",
+      "message": "Assertion failed: TypeOK \u2014 /\\ error_class \\in ErrorClasses\n    /\\ has_counterexample \\in {TRUE, FALSE}\n    /\\ prompt_sections \\subseteq PromptSe...",
+      "description": "Test assertion for TypeOK from RetryPromptBuilder spec"
+    },
+    "assert_RequiredSectionsPresent": {
+      "condition": "phase = \"complete\" implies\n        RequiredCoreSections \\subseteq prompt_sections",
+      "message": "Assertion failed: RequiredSectionsPresent \u2014 phase = \"complete\" =>\n        RequiredCoreSections \\subseteq prompt_sections",
+      "description": "Test assertion for RequiredSectionsPresent from RetryPromptBuilder spec"
+    },
+    "assert_InitialPromptAlwaysPresent": {
+      "condition": "phase = \"complete\" implies\n        \"initial_prompt\" in prompt_sections",
+      "message": "Assertion failed: InitialPromptAlwaysPresent \u2014 phase = \"complete\" =>\n        \"initial_prompt\" \\in prompt_sections",
+      "description": "Test assertion for InitialPromptAlwaysPresent from RetryPromptBuilder spec"
+    },
+    "assert_PreviousOutputAlwaysPresent": {
+      "condition": "phase = \"complete\" implies\n        \"previous_output\" in prompt_sections",
+      "message": "Assertion failed: PreviousOutputAlwaysPresent \u2014 phase = \"complete\" =>\n        \"previous_output\" \\in prompt_sections",
+      "description": "Test assertion for PreviousOutputAlwaysPresent from RetryPromptBuilder spec"
+    },
+    "assert_ClassificationIncludedWhenExpected": {
+      "condition": "(phase = \"complete\" and error_class in InstructionClasses) implies\n        \"classification\" in prompt_sections",
+      "message": "Assertion failed: ClassificationIncludedWhenExpected \u2014 (phase = \"complete\" /\\ error_class \\in InstructionClasses) =>\n        \"classification\" \\in prompt_sections",
+      "description": "Test assertion for ClassificationIncludedWhenExpected from RetryPromptBuilder spec"
+    },
+    "assert_ClassificationOmittedWhenNoInstruction": {
+      "condition": "(phase = \"complete\" and error_class not in InstructionClasses) implies\n        \"classification\" not in prompt_sections",
+      "message": "Assertion failed: ClassificationOmittedWhenNoInstruction \u2014 (phase = \"complete\" /\\ error_class \\notin InstructionClasses) =>\n        \"classification\" \\notin prompt_sections",
+      "description": "Test assertion for ClassificationOmittedWhenNoInstruction from RetryPromptBuilder spec"
+    },
+    "assert_CounterexampleIncludedWhenPresent": {
+      "condition": "(phase = \"complete\" and has_counterexample = TRUE) implies\n        \"counterexample\" in prompt_sections",
+      "message": "Assertion failed: CounterexampleIncludedWhenPresent \u2014 (phase = \"complete\" /\\ has_counterexample = TRUE) =>\n        \"counterexample\" \\in prompt_sections",
+      "description": "Test assertion for CounterexampleIncludedWhenPresent from RetryPromptBuilder spec"
+    },
+    "assert_CounterexampleOmittedWhenAbsent": {
+      "condition": "(phase = \"complete\" and has_counterexample = FALSE) implies\n        \"counterexample\" not in prompt_sections",
+      "message": "Assertion failed: CounterexampleOmittedWhenAbsent \u2014 (phase = \"complete\" /\\ has_counterexample = FALSE) =>\n        \"counterexample\" \\notin prompt_sections",
+      "description": "Test assertion for CounterexampleOmittedWhenAbsent from RetryPromptBuilder spec"
+    },
+    "assert_GWTThenCondition": {
+      "condition": "(phase = \"complete\" and error_class in InstructionClasses) implies\n        and \"classification\" in prompt_sections\n        and \"previous_output\" in prompt_sections\n        and \"initial_prompt\" in prompt_sections",
+      "message": "Assertion failed: GWTThenCondition \u2014 (phase = \"complete\" /\\ error_class \\in InstructionClasses) =>\n        /\\ \"classification\" \\in prompt_sections\n       ...",
+      "description": "Test assertion for GWTThenCondition from RetryPromptBuilder spec"
+    },
+    "assert_OnlyKnownSections": {
+      "condition": "prompt_sections \\subseteq PromptSectionUniverse",
+      "message": "Assertion failed: OnlyKnownSections \u2014 prompt_sections \\subseteq PromptSectionUniverse",
+      "description": "Test assertion for OnlyKnownSections from RetryPromptBuilder spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"previous_output\", \"error_message\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"previous_output\", \"error_message\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"unknown\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"constant_mismatch\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"invariant_violation\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"parse_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddInitialPrompt\"]",
+          "prompt_sections": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AddInitialPrompt",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddRetryHeader\"]",
+          "prompt_sections": "{\"initial_prompt\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AddRetryHeader",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClassification\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AddClassification",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddPreviousOutput\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AddPreviousOutput",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddErrorMessage\"]",
+          "prompt_sections": "{\"initial_prompt\", \"retry_header\", \"classification\", \"previous_output\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AddErrorMessage",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddCounterexample\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AddCounterexample",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddTLCOutput\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AddTLCOutput",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"AddClosing\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "AddClosing",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"building\"",
+          "pc": "[main |-> \"Finish\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "error_class": "\"syntax_error\"",
+          "has_counterexample": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "prompt_sections": "{ \"initial_prompt\","
+        }
+      }
+    ]
+  ]
+}

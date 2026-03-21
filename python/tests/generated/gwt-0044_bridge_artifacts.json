@@ -1,0 +1,728 @@
+{
+  "gwt_id": "gwt-0044",
+  "module_name": "CrawlBridgeResourceNodes",
+  "data_structures": {
+    "CrawlBridgeResourceNodesState": {
+      "function_id": "fn-CrawlBridgeResourceNodes-state",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ProcessRecords\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "dag_nodes": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[u \\in {} |-> \"\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "nodes_added": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "remaining": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Uuids",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CrawlBridgeResourceNodes TLA+ spec"
+    }
+  },
+  "operations": {
+    "ProcessRecords": {
+      "function_id": "fn-CrawlBridgeResourceNodes-ProcessRecords",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-ProcessRecords",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessRecords from CrawlBridgeResourceNodes spec"
+    },
+    "Finish": {
+      "function_id": "fn-CrawlBridgeResourceNodes-Finish",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from CrawlBridgeResourceNodes spec"
+    }
+  },
+  "verifiers": {
+    "RESOURCE": {
+      "function_id": "fn-CrawlBridgeResourceNodes-verify-RESOURCE",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-RESOURCE",
+      "conditions": [
+        "\"RESOURCE\""
+      ],
+      "message": "RESOURCE violation: \"RESOURCE\"",
+      "applies_to": [
+        "CrawlBridgeResourceNodes"
+      ],
+      "description": "Verifier for invariant RESOURCE from CrawlBridgeResourceNodes spec"
+    },
+    "TypeOK": {
+      "function_id": "fn-CrawlBridgeResourceNodes-verify-TypeOK",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-TypeOK",
+      "conditions": [
+        "nodes_added >= 0",
+        "\\A u \\in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE"
+      ],
+      "message": "TypeOK violation: /\\ nodes_added >= 0\n    /\\ \\A u \\in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE",
+      "applies_to": [
+        "dag_nodes",
+        "nodes_added"
+      ],
+      "description": "Verifier for invariant TypeOK from CrawlBridgeResourceNodes spec"
+    },
+    "OnlyResourceKinds": {
+      "function_id": "fn-CrawlBridgeResourceNodes-verify-OnlyResourceKinds",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-OnlyResourceKinds",
+      "conditions": [
+        "\\A u \\in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE"
+      ],
+      "message": "OnlyResourceKinds violation: \\A u \\in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE",
+      "applies_to": [
+        "dag_nodes"
+      ],
+      "description": "Verifier for invariant OnlyResourceKinds from CrawlBridgeResourceNodes spec"
+    },
+    "NodesAddedMatchesDomainSize": {
+      "function_id": "fn-CrawlBridgeResourceNodes-verify-NodesAddedMatchesDomainSize",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-NodesAddedMatchesDomainSize",
+      "conditions": [
+        "nodes_added = Cardinality(DOMAIN dag_nodes"
+      ],
+      "message": "NodesAddedMatchesDomainSize violation: nodes_added = Cardinality(DOMAIN dag_nodes)",
+      "applies_to": [
+        "dag_nodes",
+        "nodes_added"
+      ],
+      "description": "Verifier for invariant NodesAddedMatchesDomainSize from CrawlBridgeResourceNodes spec"
+    },
+    "UUIDDomainSubsetOfInput": {
+      "function_id": "fn-CrawlBridgeResourceNodes-verify-UUIDDomainSubsetOfInput",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-UUIDDomainSubsetOfInput",
+      "conditions": [
+        "DOMAIN dag_nodes \\subseteq Uuids"
+      ],
+      "message": "UUIDDomainSubsetOfInput violation: DOMAIN dag_nodes \\subseteq Uuids",
+      "applies_to": [
+        "dag_nodes"
+      ],
+      "description": "Verifier for invariant UUIDDomainSubsetOfInput from CrawlBridgeResourceNodes spec"
+    },
+    "ProcessedNodesAreResource": {
+      "function_id": "fn-CrawlBridgeResourceNodes-verify-ProcessedNodesAreResource",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-ProcessedNodesAreResource",
+      "conditions": [
+        "\\A u \\in Uuids \\ remaining :",
+        "u \\in DOMAIN dag_nodes",
+        "dag_nodes[u] = RESOURCE"
+      ],
+      "message": "ProcessedNodesAreResource violation: \\A u \\in Uuids \\ remaining :\n        /\\ u \\in DOMAIN dag_nodes\n        /\\ dag_nodes[u] = RESOURCE",
+      "applies_to": [
+        "dag_nodes",
+        "remaining"
+      ],
+      "description": "Verifier for invariant ProcessedNodesAreResource from CrawlBridgeResourceNodes spec"
+    },
+    "TerminalCorrectness": {
+      "function_id": "fn-CrawlBridgeResourceNodes-verify-TerminalCorrectness",
+      "acceptance_criteria_id": "ac-CrawlBridgeResourceNodes-TerminalCorrectness",
+      "conditions": [
+        "remaining = {} =>",
+        "nodes_added = Cardinality(Uuids",
+        "DOMAIN dag_nodes = Uuids",
+        "\\A u \\in Uuids : dag_nodes[u] = RESOURCE",
+        "Cardinality(DOMAIN dag_nodes) = Cardinality(Uuids"
+      ],
+      "message": "TerminalCorrectness violation: remaining = {} =>\n        /\\ nodes_added = Cardinality(Uuids)\n        /\\ DOMAIN dag_nodes = Uuids\n        /\\ \\A u \\in...",
+      "applies_to": [
+        "dag_nodes",
+        "nodes_added",
+        "remaining"
+      ],
+      "description": "Verifier for invariant TerminalCorrectness from CrawlBridgeResourceNodes spec"
+    }
+  },
+  "assertions": {
+    "assert_RESOURCE": {
+      "condition": "\"RESOURCE\"",
+      "message": "Assertion failed: RESOURCE \u2014 \"RESOURCE\"",
+      "description": "Test assertion for RESOURCE from CrawlBridgeResourceNodes spec"
+    },
+    "assert_TypeOK": {
+      "condition": "and nodes_added >= 0\n    and \\A u in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE",
+      "message": "Assertion failed: TypeOK \u2014 /\\ nodes_added >= 0\n    /\\ \\A u \\in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE",
+      "description": "Test assertion for TypeOK from CrawlBridgeResourceNodes spec"
+    },
+    "assert_OnlyResourceKinds": {
+      "condition": "\\A u in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE",
+      "message": "Assertion failed: OnlyResourceKinds \u2014 \\A u \\in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE",
+      "description": "Test assertion for OnlyResourceKinds from CrawlBridgeResourceNodes spec"
+    },
+    "assert_NodesAddedMatchesDomainSize": {
+      "condition": "nodes_added = Cardinality(DOMAIN dag_nodes)",
+      "message": "Assertion failed: NodesAddedMatchesDomainSize \u2014 nodes_added = Cardinality(DOMAIN dag_nodes)",
+      "description": "Test assertion for NodesAddedMatchesDomainSize from CrawlBridgeResourceNodes spec"
+    },
+    "assert_UUIDDomainSubsetOfInput": {
+      "condition": "DOMAIN dag_nodes \\subseteq Uuids",
+      "message": "Assertion failed: UUIDDomainSubsetOfInput \u2014 DOMAIN dag_nodes \\subseteq Uuids",
+      "description": "Test assertion for UUIDDomainSubsetOfInput from CrawlBridgeResourceNodes spec"
+    },
+    "assert_ProcessedNodesAreResource": {
+      "condition": "\\A u in Uuids \\ remaining :\n        and u in DOMAIN dag_nodes\n        and dag_nodes[u] = RESOURCE",
+      "message": "Assertion failed: ProcessedNodesAreResource \u2014 \\A u \\in Uuids \\ remaining :\n        /\\ u \\in DOMAIN dag_nodes\n        /\\ dag_nodes[u] = RESOURCE",
+      "description": "Test assertion for ProcessedNodesAreResource from CrawlBridgeResourceNodes spec"
+    },
+    "assert_TerminalCorrectness": {
+      "condition": "remaining = {} implies\n        and nodes_added = Cardinality(Uuids)\n        and DOMAIN dag_nodes = Uuids\n        and \\A u in Uuids : dag_nodes[u] = RESOURCE\n        and Cardinality(DOMAIN dag_nodes) = Cardinality(Uuids)",
+      "message": "Assertion failed: TerminalCorrectness \u2014 remaining = {} =>\n        /\\ nodes_added = Cardinality(Uuids)\n        /\\ DOMAIN dag_nodes = Uuids\n        /\\ \\A u \\in...",
+      "description": "Test assertion for TerminalCorrectness from CrawlBridgeResourceNodes spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_1}",
+          "dag_nodes": "(Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_1}",
+          "dag_nodes": "(Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_2}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_1}",
+          "dag_nodes": "(Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_1}",
+          "dag_nodes": "(Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_2}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_2}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_2}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_2}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "nodes_added": "0",
+          "remaining": "{Uuids_1, Uuids_2}",
+          "dag_nodes": "<<>>",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "1",
+          "remaining": "{Uuids_1}",
+          "dag_nodes": "(Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"ProcessRecords\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessRecords",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "nodes_added": "2",
+          "remaining": "{}",
+          "dag_nodes": "(Uuids_1 :> \"RESOURCE\" @@ Uuids_2 :> \"RESOURCE\")",
+          "pc": "[bridge |-> \"Done\"]"
+        }
+      }
+    ]
+  ]
+}

@@ -1,0 +1,1053 @@
+{
+  "gwt_id": "gwt-0045",
+  "module_name": "CrawlBridgeOrphanCleanup",
+  "data_structures": {
+    "CrawlBridgeOrphanCleanupState": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-state",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"StartPhase\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "dag_resource_uuid": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "ResourceUUIDNodes",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "dag_resource_nonuuid": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "ResourceNonUUIDNodes",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "dag_other": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "OtherNodes",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "work_queue": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "ResourceUUIDNodes",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "nodes_removed": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "init",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CrawlBridgeOrphanCleanup TLA+ spec"
+    }
+  },
+  "operations": {
+    "StartPhase": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-StartPhase",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-StartPhase",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartPhase from CrawlBridgeOrphanCleanup spec"
+    },
+    "ProcessNodes": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-ProcessNodes",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-ProcessNodes",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessNodes from CrawlBridgeOrphanCleanup spec"
+    },
+    "Finish": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-Finish",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from CrawlBridgeOrphanCleanup spec"
+    }
+  },
+  "verifiers": {
+    "OtherNodesPreserved": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-verify-OtherNodesPreserved",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-OtherNodesPreserved",
+      "conditions": [
+        "dag_other = OtherNodes"
+      ],
+      "message": "OtherNodesPreserved violation: dag_other = OtherNodes",
+      "applies_to": [
+        "dag_other"
+      ],
+      "description": "Verifier for invariant OtherNodesPreserved from CrawlBridgeOrphanCleanup spec"
+    },
+    "NonUUIDResourceNodesPreserved": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-verify-NonUUIDResourceNodesPreserved",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-NonUUIDResourceNodesPreserved",
+      "conditions": [
+        "dag_resource_nonuuid = ResourceNonUUIDNodes"
+      ],
+      "message": "NonUUIDResourceNodesPreserved violation: dag_resource_nonuuid = ResourceNonUUIDNodes",
+      "applies_to": [
+        "dag_resource_nonuuid"
+      ],
+      "description": "Verifier for invariant NonUUIDResourceNodesPreserved from CrawlBridgeOrphanCleanup spec"
+    },
+    "DAGResourceUUIDSubset": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-verify-DAGResourceUUIDSubset",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-DAGResourceUUIDSubset",
+      "conditions": [
+        "dag_resource_uuid \\subseteq ResourceUUIDNodes"
+      ],
+      "message": "DAGResourceUUIDSubset violation: dag_resource_uuid \\subseteq ResourceUUIDNodes",
+      "applies_to": [
+        "dag_resource_uuid"
+      ],
+      "description": "Verifier for invariant DAGResourceUUIDSubset from CrawlBridgeOrphanCleanup spec"
+    },
+    "WorkQueueSubset": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-verify-WorkQueueSubset",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-WorkQueueSubset",
+      "conditions": [
+        "work_queue \\subseteq ResourceUUIDNodes"
+      ],
+      "message": "WorkQueueSubset violation: work_queue \\subseteq ResourceUUIDNodes",
+      "applies_to": [
+        "work_queue"
+      ],
+      "description": "Verifier for invariant WorkQueueSubset from CrawlBridgeOrphanCleanup spec"
+    },
+    "CounterConsistency": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-verify-CounterConsistency",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-CounterConsistency",
+      "conditions": [
+        "nodes_removed = Cardinality(ResourceUUIDNodes) - Cardinality(dag_resource_uuid"
+      ],
+      "message": "CounterConsistency violation: nodes_removed = Cardinality(ResourceUUIDNodes) - Cardinality(dag_resource_uuid)",
+      "applies_to": [
+        "dag_resource_uuid",
+        "nodes_removed"
+      ],
+      "description": "Verifier for invariant CounterConsistency from CrawlBridgeOrphanCleanup spec"
+    },
+    "ProcessedNodesCorrect": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-verify-ProcessedNodesCorrect",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-ProcessedNodesCorrect",
+      "conditions": [
+        "\\A nid \\in ResourceUUIDNodes \\ work_queue :\n        (nid \\in dag_resource_uuid) => (nid \\in CrawlUUIDs"
+      ],
+      "message": "ProcessedNodesCorrect violation: \\A nid \\in ResourceUUIDNodes \\ work_queue :\n        (nid \\in dag_resource_uuid) => (nid \\in CrawlUUIDs)",
+      "applies_to": [
+        "dag_resource_uuid",
+        "work_queue"
+      ],
+      "description": "Verifier for invariant ProcessedNodesCorrect from CrawlBridgeOrphanCleanup spec"
+    },
+    "KeptUUIDNodesAreProtected": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-verify-KeptUUIDNodesAreProtected",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-KeptUUIDNodesAreProtected",
+      "conditions": [
+        "\\A nid \\in dag_resource_uuid :\n        nid \\in CrawlUUIDs \\/ nid \\in work_queue"
+      ],
+      "message": "KeptUUIDNodesAreProtected violation: \\A nid \\in dag_resource_uuid :\n        nid \\in CrawlUUIDs \\/ nid \\in work_queue",
+      "applies_to": [
+        "dag_resource_uuid",
+        "work_queue"
+      ],
+      "description": "Verifier for invariant KeptUUIDNodesAreProtected from CrawlBridgeOrphanCleanup spec"
+    },
+    "NoOrphansRemain": {
+      "function_id": "fn-CrawlBridgeOrphanCleanup-verify-NoOrphansRemain",
+      "acceptance_criteria_id": "ac-CrawlBridgeOrphanCleanup-NoOrphansRemain",
+      "conditions": [
+        "phase = \"done\" =>\n        (\\A nid \\in ResourceUUIDNodes :\n            (nid \\notin CrawlUUIDs) => (nid \\notin dag_resource_uuid"
+      ],
+      "message": "NoOrphansRemain violation: phase = \"done\" =>\n        (\\A nid \\in ResourceUUIDNodes :\n            (nid \\notin CrawlUUIDs) => (nid \\notin dag_reso...",
+      "applies_to": [
+        "dag_resource_uuid",
+        "phase"
+      ],
+      "description": "Verifier for invariant NoOrphansRemain from CrawlBridgeOrphanCleanup spec"
+    }
+  },
+  "assertions": {
+    "assert_OtherNodesPreserved": {
+      "condition": "dag_other = OtherNodes",
+      "message": "Assertion failed: OtherNodesPreserved \u2014 dag_other = OtherNodes",
+      "description": "Test assertion for OtherNodesPreserved from CrawlBridgeOrphanCleanup spec"
+    },
+    "assert_NonUUIDResourceNodesPreserved": {
+      "condition": "dag_resource_nonuuid = ResourceNonUUIDNodes",
+      "message": "Assertion failed: NonUUIDResourceNodesPreserved \u2014 dag_resource_nonuuid = ResourceNonUUIDNodes",
+      "description": "Test assertion for NonUUIDResourceNodesPreserved from CrawlBridgeOrphanCleanup spec"
+    },
+    "assert_DAGResourceUUIDSubset": {
+      "condition": "dag_resource_uuid \\subseteq ResourceUUIDNodes",
+      "message": "Assertion failed: DAGResourceUUIDSubset \u2014 dag_resource_uuid \\subseteq ResourceUUIDNodes",
+      "description": "Test assertion for DAGResourceUUIDSubset from CrawlBridgeOrphanCleanup spec"
+    },
+    "assert_WorkQueueSubset": {
+      "condition": "work_queue \\subseteq ResourceUUIDNodes",
+      "message": "Assertion failed: WorkQueueSubset \u2014 work_queue \\subseteq ResourceUUIDNodes",
+      "description": "Test assertion for WorkQueueSubset from CrawlBridgeOrphanCleanup spec"
+    },
+    "assert_CounterConsistency": {
+      "condition": "nodes_removed = Cardinality(ResourceUUIDNodes) - Cardinality(dag_resource_uuid)",
+      "message": "Assertion failed: CounterConsistency \u2014 nodes_removed = Cardinality(ResourceUUIDNodes) - Cardinality(dag_resource_uuid)",
+      "description": "Test assertion for CounterConsistency from CrawlBridgeOrphanCleanup spec"
+    },
+    "assert_ProcessedNodesCorrect": {
+      "condition": "\\A nid in ResourceUUIDNodes \\ work_queue :\n        (nid in dag_resource_uuid) implies (nid in CrawlUUIDs)",
+      "message": "Assertion failed: ProcessedNodesCorrect \u2014 \\A nid \\in ResourceUUIDNodes \\ work_queue :\n        (nid \\in dag_resource_uuid) => (nid \\in CrawlUUIDs)",
+      "description": "Test assertion for ProcessedNodesCorrect from CrawlBridgeOrphanCleanup spec"
+    },
+    "assert_KeptUUIDNodesAreProtected": {
+      "condition": "\\A nid in dag_resource_uuid :\n        nid in CrawlUUIDs or nid in work_queue",
+      "message": "Assertion failed: KeptUUIDNodesAreProtected \u2014 \\A nid \\in dag_resource_uuid :\n        nid \\in CrawlUUIDs \\/ nid \\in work_queue",
+      "description": "Test assertion for KeptUUIDNodesAreProtected from CrawlBridgeOrphanCleanup spec"
+    },
+    "assert_NoOrphansRemain": {
+      "condition": "phase = \"done\" implies\n        (\\A nid in ResourceUUIDNodes :\n            (nid not in CrawlUUIDs) implies (nid not in dag_resource_uuid))",
+      "message": "Assertion failed: NoOrphansRemain \u2014 phase = \"done\" =>\n        (\\A nid \\in ResourceUUIDNodes :\n            (nid \\notin CrawlUUIDs) => (nid \\notin dag_reso...",
+      "description": "Test assertion for NoOrphansRemain from CrawlBridgeOrphanCleanup spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"init\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"StartPhase\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartPhase",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1, ResourceUUIDNodes_2}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "0",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{ResourceUUIDNodes_1}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{ResourceUUIDNodes_1}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "1",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"ProcessNodes\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessNodes",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"running\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "work_queue": "{}",
+          "dag_resource_nonuuid": "10",
+          "dag_resource_uuid": "{}",
+          "dag_other": "10",
+          "phase": "\"done\"",
+          "nodes_removed": "2",
+          "pc": "[orphan_cleanup |-> \"Done\"]"
+        }
+      }
+    ]
+  ]
+}

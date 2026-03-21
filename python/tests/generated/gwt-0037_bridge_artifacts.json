@@ -1,0 +1,1038 @@
+{
+  "gwt_id": "gwt-0037",
+  "module_name": "ProjectContextResolution",
+  "data_structures": {
+    "ProjectContextResolutionState": {
+      "function_id": "fn-ProjectContextResolution-state",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ResolveConfig\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "config_exists": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "config_engine_valid": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "engine_root_provided": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "engine_equals_target": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "auto_detect_success": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "engine_resolved": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "selected_mode": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "UNRESOLVED",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from ProjectContextResolution TLA+ spec"
+    }
+  },
+  "operations": {
+    "ResolveConfig": {
+      "function_id": "fn-ProjectContextResolution-ResolveConfig",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-ResolveConfig",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ResolveConfig from ProjectContextResolution spec"
+    },
+    "AutoDetect": {
+      "function_id": "fn-ProjectContextResolution-AutoDetect",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-AutoDetect",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AutoDetect from ProjectContextResolution spec"
+    },
+    "SelectMode": {
+      "function_id": "fn-ProjectContextResolution-SelectMode",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-SelectMode",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SelectMode from ProjectContextResolution spec"
+    },
+    "Terminate": {
+      "function_id": "fn-ProjectContextResolution-Terminate",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from ProjectContextResolution spec"
+    }
+  },
+  "verifiers": {
+    "ModeValid": {
+      "function_id": "fn-ProjectContextResolution-verify-ModeValid",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-ModeValid",
+      "conditions": [
+        "selected_mode \\in {\"UNRESOLVED\", \"SELF_HOSTING\", \"EXTERNAL\", \"INSTALLED\"}"
+      ],
+      "message": "ModeValid violation: selected_mode \\in {\"UNRESOLVED\", \"SELF_HOSTING\", \"EXTERNAL\", \"INSTALLED\"}",
+      "applies_to": [
+        "selected_mode"
+      ],
+      "description": "Verifier for invariant ModeValid from ProjectContextResolution spec"
+    },
+    "ResolvedModeConsistency": {
+      "function_id": "fn-ProjectContextResolution-verify-ResolvedModeConsistency",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-ResolvedModeConsistency",
+      "conditions": [
+        " selected_mode = \"SELF_HOSTING\" ) =>\n        ( engine_resolved",
+        "engine_equals_target "
+      ],
+      "message": "ResolvedModeConsistency violation: ( selected_mode = \"SELF_HOSTING\" ) =>\n        ( engine_resolved /\\ engine_equals_target )",
+      "applies_to": [
+        "engine_equals_target",
+        "engine_resolved",
+        "selected_mode"
+      ],
+      "description": "Verifier for invariant ResolvedModeConsistency from ProjectContextResolution spec"
+    },
+    "ExternalModeConsistency": {
+      "function_id": "fn-ProjectContextResolution-verify-ExternalModeConsistency",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-ExternalModeConsistency",
+      "conditions": [
+        " selected_mode = \"EXTERNAL\" ) =>\n        ( engine_resolved",
+        "~engine_equals_target "
+      ],
+      "message": "ExternalModeConsistency violation: ( selected_mode = \"EXTERNAL\" ) =>\n        ( engine_resolved /\\ ~engine_equals_target )",
+      "applies_to": [
+        "engine_equals_target",
+        "engine_resolved",
+        "selected_mode"
+      ],
+      "description": "Verifier for invariant ExternalModeConsistency from ProjectContextResolution spec"
+    },
+    "InstalledModeConsistency": {
+      "function_id": "fn-ProjectContextResolution-verify-InstalledModeConsistency",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-InstalledModeConsistency",
+      "conditions": [
+        " selected_mode = \"INSTALLED\" ) =>\n        ~engine_resolved"
+      ],
+      "message": "InstalledModeConsistency violation: ( selected_mode = \"INSTALLED\" ) =>\n        ~engine_resolved",
+      "applies_to": [
+        "engine_resolved",
+        "selected_mode"
+      ],
+      "description": "Verifier for invariant InstalledModeConsistency from ProjectContextResolution spec"
+    },
+    "ConfigDrivenNeverInstalled": {
+      "function_id": "fn-ProjectContextResolution-verify-ConfigDrivenNeverInstalled",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-ConfigDrivenNeverInstalled",
+      "conditions": [
+        " ~engine_root_provided",
+        "config_exists",
+        "config_engine_valid ) =>\n        ( selected_mode = \"UNRESOLVED\" \\/\n          selected_mode \\in {\"SELF_HOSTING\", \"EXTERNAL\"} "
+      ],
+      "message": "ConfigDrivenNeverInstalled violation: ( ~engine_root_provided /\\ config_exists /\\ config_engine_valid ) =>\n        ( selected_mode = \"UNRESOLVED\" \\/\n      ...",
+      "applies_to": [
+        "config_engine_valid",
+        "config_exists",
+        "engine_root_provided",
+        "selected_mode"
+      ],
+      "description": "Verifier for invariant ConfigDrivenNeverInstalled from ProjectContextResolution spec"
+    },
+    "ThenConfigSelfHosting": {
+      "function_id": "fn-ProjectContextResolution-verify-ThenConfigSelfHosting",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-ThenConfigSelfHosting",
+      "conditions": [
+        " ~engine_root_provided",
+        "config_exists",
+        "config_engine_valid",
+        "engine_equals_target ) =>\n        ( selected_mode = \"UNRESOLVED\" \\/ selected_mode = \"SELF_HOSTING\" "
+      ],
+      "message": "ThenConfigSelfHosting violation: ( ~engine_root_provided /\\\n      config_exists /\\ config_engine_valid /\\\n      engine_equals_target ) =>\n        ( se...",
+      "applies_to": [
+        "config_engine_valid",
+        "config_exists",
+        "engine_equals_target",
+        "engine_root_provided",
+        "selected_mode"
+      ],
+      "description": "Verifier for invariant ThenConfigSelfHosting from ProjectContextResolution spec"
+    },
+    "ThenConfigExternal": {
+      "function_id": "fn-ProjectContextResolution-verify-ThenConfigExternal",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-ThenConfigExternal",
+      "conditions": [
+        " ~engine_root_provided",
+        "config_exists",
+        "config_engine_valid",
+        "~engine_equals_target ) =>\n        ( selected_mode = \"UNRESOLVED\" \\/ selected_mode = \"EXTERNAL\" "
+      ],
+      "message": "ThenConfigExternal violation: ( ~engine_root_provided /\\\n      config_exists /\\ config_engine_valid /\\\n      ~engine_equals_target ) =>\n        ( s...",
+      "applies_to": [
+        "config_engine_valid",
+        "config_exists",
+        "engine_equals_target",
+        "engine_root_provided",
+        "selected_mode"
+      ],
+      "description": "Verifier for invariant ThenConfigExternal from ProjectContextResolution spec"
+    },
+    "ExplicitRootNeverInstalled": {
+      "function_id": "fn-ProjectContextResolution-verify-ExplicitRootNeverInstalled",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-ExplicitRootNeverInstalled",
+      "conditions": [
+        "engine_root_provided =>\n        ( selected_mode = \"UNRESOLVED\" \\/\n          selected_mode \\in {\"SELF_HOSTING\", \"EXTERNAL\"} "
+      ],
+      "message": "ExplicitRootNeverInstalled violation: engine_root_provided =>\n        ( selected_mode = \"UNRESOLVED\" \\/\n          selected_mode \\in {\"SELF_HOSTING\", \"EXTER...",
+      "applies_to": [
+        "engine_root_provided",
+        "selected_mode"
+      ],
+      "description": "Verifier for invariant ExplicitRootNeverInstalled from ProjectContextResolution spec"
+    },
+    "NoSourceNoAuto": {
+      "function_id": "fn-ProjectContextResolution-verify-NoSourceNoAuto",
+      "acceptance_criteria_id": "ac-ProjectContextResolution-NoSourceNoAuto",
+      "conditions": [
+        " ~engine_root_provided",
+        "~( config_exists",
+        "config_engine_valid ",
+        "~auto_detect_success ) =>\n        ( selected_mode = \"UNRESOLVED\" \\/ selected_mode = \"INSTALLED\" "
+      ],
+      "message": "NoSourceNoAuto violation: ( ~engine_root_provided /\\\n      ~( config_exists /\\ config_engine_valid ) /\\\n      ~auto_detect_success ) =>\n       ...",
+      "applies_to": [
+        "auto_detect_success",
+        "config_engine_valid",
+        "config_exists",
+        "engine_root_provided",
+        "selected_mode"
+      ],
+      "description": "Verifier for invariant NoSourceNoAuto from ProjectContextResolution spec"
+    }
+  },
+  "assertions": {
+    "assert_ModeValid": {
+      "condition": "selected_mode in {\"UNRESOLVED\", \"SELF_HOSTING\", \"EXTERNAL\", \"INSTALLED\"}",
+      "message": "Assertion failed: ModeValid \u2014 selected_mode \\in {\"UNRESOLVED\", \"SELF_HOSTING\", \"EXTERNAL\", \"INSTALLED\"}",
+      "description": "Test assertion for ModeValid from ProjectContextResolution spec"
+    },
+    "assert_ResolvedModeConsistency": {
+      "condition": "( selected_mode = \"SELF_HOSTING\" ) implies\n        ( engine_resolved and engine_equals_target )",
+      "message": "Assertion failed: ResolvedModeConsistency \u2014 ( selected_mode = \"SELF_HOSTING\" ) =>\n        ( engine_resolved /\\ engine_equals_target )",
+      "description": "Test assertion for ResolvedModeConsistency from ProjectContextResolution spec"
+    },
+    "assert_ExternalModeConsistency": {
+      "condition": "( selected_mode = \"EXTERNAL\" ) implies\n        ( engine_resolved and ~engine_equals_target )",
+      "message": "Assertion failed: ExternalModeConsistency \u2014 ( selected_mode = \"EXTERNAL\" ) =>\n        ( engine_resolved /\\ ~engine_equals_target )",
+      "description": "Test assertion for ExternalModeConsistency from ProjectContextResolution spec"
+    },
+    "assert_InstalledModeConsistency": {
+      "condition": "( selected_mode = \"INSTALLED\" ) implies\n        ~engine_resolved",
+      "message": "Assertion failed: InstalledModeConsistency \u2014 ( selected_mode = \"INSTALLED\" ) =>\n        ~engine_resolved",
+      "description": "Test assertion for InstalledModeConsistency from ProjectContextResolution spec"
+    },
+    "assert_ConfigDrivenNeverInstalled": {
+      "condition": "( ~engine_root_provided and config_exists and config_engine_valid ) implies\n        ( selected_mode = \"UNRESOLVED\" or\n          selected_mode in {\"SELF_HOSTING\", \"EXTERNAL\"} )",
+      "message": "Assertion failed: ConfigDrivenNeverInstalled \u2014 ( ~engine_root_provided /\\ config_exists /\\ config_engine_valid ) =>\n        ( selected_mode = \"UNRESOLVED\" \\/\n      ...",
+      "description": "Test assertion for ConfigDrivenNeverInstalled from ProjectContextResolution spec"
+    },
+    "assert_ThenConfigSelfHosting": {
+      "condition": "( ~engine_root_provided and\n      config_exists and config_engine_valid and\n      engine_equals_target ) implies\n        ( selected_mode = \"UNRESOLVED\" or selected_mode = \"SELF_HOSTING\" )",
+      "message": "Assertion failed: ThenConfigSelfHosting \u2014 ( ~engine_root_provided /\\\n      config_exists /\\ config_engine_valid /\\\n      engine_equals_target ) =>\n        ( se...",
+      "description": "Test assertion for ThenConfigSelfHosting from ProjectContextResolution spec"
+    },
+    "assert_ThenConfigExternal": {
+      "condition": "( ~engine_root_provided and\n      config_exists and config_engine_valid and\n      ~engine_equals_target ) implies\n        ( selected_mode = \"UNRESOLVED\" or selected_mode = \"EXTERNAL\" )",
+      "message": "Assertion failed: ThenConfigExternal \u2014 ( ~engine_root_provided /\\\n      config_exists /\\ config_engine_valid /\\\n      ~engine_equals_target ) =>\n        ( s...",
+      "description": "Test assertion for ThenConfigExternal from ProjectContextResolution spec"
+    },
+    "assert_ExplicitRootNeverInstalled": {
+      "condition": "engine_root_provided implies\n        ( selected_mode = \"UNRESOLVED\" or\n          selected_mode in {\"SELF_HOSTING\", \"EXTERNAL\"} )",
+      "message": "Assertion failed: ExplicitRootNeverInstalled \u2014 engine_root_provided =>\n        ( selected_mode = \"UNRESOLVED\" \\/\n          selected_mode \\in {\"SELF_HOSTING\", \"EXTER...",
+      "description": "Test assertion for ExplicitRootNeverInstalled from ProjectContextResolution spec"
+    },
+    "assert_NoSourceNoAuto": {
+      "condition": "( ~engine_root_provided and\n      ~( config_exists and config_engine_valid ) and\n      ~auto_detect_success ) implies\n        ( selected_mode = \"UNRESOLVED\" or selected_mode = \"INSTALLED\" )",
+      "message": "Assertion failed: NoSourceNoAuto \u2014 ( ~engine_root_provided /\\\n      ~( config_exists /\\ config_engine_valid ) /\\\n      ~auto_detect_success ) =>\n       ...",
+      "description": "Test assertion for NoSourceNoAuto from ProjectContextResolution spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"SELF_HOSTING\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"SELF_HOSTING\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"SELF_HOSTING\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "TRUE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"SELF_HOSTING\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"INSTALLED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"INSTALLED\"",
+          "engine_root_provided": "FALSE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "TRUE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "FALSE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"EXTERNAL\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "FALSE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"ResolveConfig\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ResolveConfig",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"AutoDetect\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "AutoDetect",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"UNRESOLVED\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"SelectMode\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "SelectMode",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"SELF_HOSTING\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"Terminate\"]",
+          "config_exists": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "auto_detect_success": "FALSE",
+          "config_engine_valid": "FALSE",
+          "engine_equals_target": "TRUE",
+          "engine_resolved": "TRUE",
+          "selected_mode": "\"SELF_HOSTING\"",
+          "engine_root_provided": "TRUE",
+          "pc": "[main |-> \"Done\"]",
+          "config_exists": "FALSE"
+        }
+      }
+    ]
+  ]
+}

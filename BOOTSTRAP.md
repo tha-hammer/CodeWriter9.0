@@ -657,8 +657,138 @@ From this point forward, every new feature goes through:
 
 The system is self-hosting. It uses itself to build itself.
 
-**First self-hosted feature:** UI integration (Phase 6 from the plan).
-The pipeline specifies, verifies, and generates tests for its own UI.
+**First self-hosted feature:** Impact analysis (see Phase 5 completion below).
+
+#### Phase 5 Completion (2026-03-09)
+
+Impact analysis query — the first feature built entirely through the pipeline:
+- GWT behaviors gwt-0012..0014 registered in `schema/self_hosting.json`
+- LLM-generated PlusCal spec via `cw9 loop`
+- TLC verified: 624,466 states, 337,346 distinct, 0 violations
+- Bridge artifacts generated mechanically
+- Tests generated from bridge artifacts
+- `query_impact()` implemented in `dag.py` to pass generated tests
+- IDs: req-0004, gwt-0012/0013/0014, impact-0001
+
+---
+
+### Phase 6: Dependency Validation (COMPLETE — 2026-03-09)
+
+**Second pipeline-built feature.** `validate_edge()` pre-checks:
+acyclicity, duplicate detection, node-kind compatibility.
+
+- IDs: req-0005, gwt-0015/0016/0017, depval-0001
+- TLA+ spec: `templates/pluscal/instances/dep_validation.tla`
+- TLC verified, bridge artifacts generated, tests generated
+- Implemented in `dag.py:validate_edge()`
+
+---
+
+### Phase 7: Subgraph Extraction (COMPLETE — 2026-03-09)
+
+**Third pipeline-built feature.** `extract_subgraph()` returns
+forward+reverse closure + induced edges.
+
+- IDs: req-0006, gwt-0018/0019/0020, subgraph-0001
+- TLA+ spec: `templates/pluscal/instances/subgraph_extraction.tla`
+- TLC verified, bridge artifacts generated, tests generated
+- Implemented in `dag.py:extract_subgraph()`
+
+---
+
+### Phase 8: Change Propagation (COMPLETE — 2026-03-09)
+
+**Fourth pipeline-built feature.** `query_affected_tests()` returns
+test file paths affected by a node change.
+
+- IDs: req-0007, gwt-0021/0022/0023, chgprop-0001
+- TLA+ spec: `templates/pluscal/instances/change_propagation.tla`
+- TLC verified attempt 2: 1,349,968 distinct states, 5 invariants, 0 violations
+- Uses `test_artifacts: dict[str, str]` on RegistryDag (not a Node field)
+- DAG totals after Phase 8: 96 nodes, 198 edges, 9 components
+- All 250 tests passing
+
+---
+
+### Post-Bootstrap: CLI Pipeline (2026-03-10..11)
+
+The CLI pipeline (`cw9` command) was built to operationalize the bootstrap
+methodology for external projects. **This work was NOT pipeline-verified** —
+it was built ad-hoc, which is the technical debt this document now tracks.
+
+Components built without pipeline verification:
+- `cli.py` — 16 CLI commands (init, status, extract, loop, bridge, gen-tests,
+  register, test, pipeline, ingest, crawl, stale, show, gwt-author, cleanup)
+- `context.py` — ProjectContext with 3 factory methods
+- `loop_runner.py` — async LLM driver wrapping claude_agent_sdk
+- `test_gen_loop.py` — LLM-in-the-loop test generation (3-pass)
+- `tla_compiler.py` — TLA+ condition → Python assertion compiler
+- `traces.py` — SimulationTrace datatype and prompt formatting
+- `status.py` — on-disk artifact status gathering
+- `bindings.py` — criterion_bindings.json persistence
+- `cw7.py` — CW7 database extraction
+- `gwt_author.py` — GWT authoring bridge from research notes
+
+---
+
+### Post-Bootstrap: Crawl Pipeline (2026-03-19..20)
+
+The brownfield IN:DO:OUT crawl pipeline was built to analyze existing
+codebases. **Partially pipeline-verified** — 6 of 28 GWT behaviors have
+full TLA+ verification.
+
+Components:
+- `crawl_types.py` — data models (Skeleton, FnRecord, AxRecord, etc.)
+- `crawl_store.py` — SQLite-backed store (6 tables, 4 views)
+- `crawl_orchestrator.py` — DFS + concurrent sweep with semaphore
+- `crawl_bridge.py` — crawl.db → DAG bridge
+- `entry_points.py` — multi-language entry point discovery
+- 5 scanners: scanner_python.py, scanner_typescript.py, scanner_javascript.py,
+  scanner_go.py, scanner_rust.py
+
+Verified GWTs (TLA+ spec + sim traces + bridge artifacts):
+- gwt-0008: `_build_async_extract_fn()` standalone query lifecycle
+- gwt-0014: semaphore-bounded concurrent sweep
+- gwt-0015: error isolation via `return_exceptions=True`
+- gwt-0016: SQLite upsert sequential safety under asyncio
+- gwt-0018: CrawlOrchestrator two-phase sequencing (DFS → sweep)
+- gwt-0022: `--concurrency` flag propagation
+
+Unverified GWTs (registered but no TLA+ spec): gwt-0001..0007, 0009..0013,
+0017, 0019..0021, 0023..0028 (22 behaviors).
+
+---
+
+### Post-Bootstrap: Multi-Language Support (2026-03-11)
+
+Language profiles for test generation. **Not pipeline-verified.**
+- `lang.py` — LanguageProfile protocol + PythonProfile
+- `lang_typescript.py` — TypeScriptProfile
+- `lang_rust.py` — RustProfile
+- `lang_go.py` — GoProfile
+
+---
+
+## Dual DAG Contexts
+
+CW9 maintains two separate DAG contexts:
+
+**Self-hosting DAG** — the bootstrap pipeline describing itself:
+- Loaded from `schema/self_hosting.json` + `resource_registry.generic.json`
+- 96 nodes, 198 edges, 9 connected components (as of Phase 8)
+- GWT IDs: gwt-0001..0023 (bootstrap features)
+- Location: generated on-demand by `cw9 extract` when `self_host=True`
+
+**Crawl DAG** — the CW9 codebase described by crawling:
+- Generated by `cw9 ingest` + `cw9 crawl` + `cw9 register`
+- 1595 nodes (1567 resources + 28 behaviors), 120 edges
+- GWT IDs: gwt-0001..0028 (crawl pipeline behaviors)
+- Location: `dag.json` in repo root
+
+**GWT ID collision:** Both DAGs use `gwt-0001+` independently. The
+self-hosting DAG's gwt-0015 is "valid_edge_accepted" (dep validation).
+The crawl DAG's gwt-0015 is "asyncio_gather_return_exceptions" (error
+isolation). Context determines which is which.
 
 ---
 
@@ -814,3 +944,212 @@ The bootstrap is complete when:
 
 At that point, the system is self-hosting. The flywheel is turning under
 its own power.
+
+---
+
+## Alignment Status (2026-03-20)
+
+### Pipeline-Verified Components
+
+| Component | Phase | GWT IDs | TLA+ Spec | Tests |
+|---|---|---|---|---|
+| Registry DAG | 0 | gwt-0001..0004 | registry_crud.tla | generated |
+| Composition Engine | 2 | (lifecycle) | composition_engine.tla | generated |
+| One-Shot Loop | 3 | gwt-0005..0007 | one_shot_loop.tla | generated |
+| Bridge Translators | 4 | gwt-0008..0011 | bridge_translator.tla | generated |
+| Impact Analysis | 5 | gwt-0012..0014 | impact_analysis.tla | generated |
+| Dep Validation | 6 | gwt-0015..0017 | dep_validation.tla | generated |
+| Subgraph Extraction | 7 | gwt-0018..0020 | subgraph_extraction.tla | generated |
+| Change Propagation | 8 | gwt-0021..0023 | change_propagation.tla | generated |
+| Crawl: async extract | crawl | crawl:gwt-0008 | gwt-0008.tla | generated |
+| Crawl: semaphore sweep | crawl | crawl:gwt-0014 | gwt-0014.tla | generated |
+| Crawl: error isolation | crawl | crawl:gwt-0015 | gwt-0015.tla | generated |
+| Crawl: SQLite safety | crawl | crawl:gwt-0016 | gwt-0016.tla | generated |
+| Crawl: two-phase seq | crawl | crawl:gwt-0018 | gwt-0018.tla | generated |
+| Crawl: concurrency flag | crawl | crawl:gwt-0022 | gwt-0022.tla | generated |
+| CLI: extract preserves | post | gwt-0032 | gwt-0032.tla | generated |
+| CLI: loop writes spec | post | gwt-0033 | gwt-0033.tla | generated |
+| CLI: pipeline ordering | post | gwt-0034 | gwt-0034.tla | generated |
+| CLI: register idempotent | post | gwt-0035 | gwt-0035.tla | generated |
+
+### Unverified Components (Technical Debt)
+
+| Component | Module(s) | Priority | Notes |
+|---|---|---|---|
+| CLI pipeline | cli.py (16 commands) | ✅ | Verified: gwt-0032..0035 |
+| ProjectContext | context.py | Medium | 3 factory methods |
+| Async LLM driver | loop_runner.py | Medium | Wraps claude_agent_sdk |
+| Test gen loop | test_gen_loop.py | Medium | 3-pass LLM-in-the-loop |
+| TLA+ compiler | tla_compiler.py | Low | Prompt enrichment only |
+| Sim traces | traces.py | Low | Data formatting |
+| Status gathering | status.py | Low | Read-only query |
+| Criterion bindings | bindings.py | Low | Simple JSON persistence |
+| CW7 extraction | cw7.py | Medium | Cross-system integration |
+| GWT authoring | gwt_author.py | Medium | LLM prompt building |
+| Crawl store | crawl_store.py | High | SQLite schema, 6 tables |
+| Crawl orchestrator | crawl_orchestrator.py | High | DFS + concurrent sweep |
+| Crawl bridge | crawl_bridge.py | Medium | DAG population |
+| Crawl types | crawl_types.py | Medium | Data models |
+| Entry points | entry_points.py | Medium | Multi-language detection |
+| Python scanner | scanner_python.py | Low | Line-by-line text scan |
+| TS scanner | scanner_typescript.py | Low | Brace-depth counting |
+| JS scanner | scanner_javascript.py | Low | Brace-depth counting |
+| Go scanner | scanner_go.py | Low | Line-by-line + brace depth |
+| Rust scanner | scanner_rust.py | Low | Line-by-line + brace depth |
+| Language profiles | lang.py, lang_*.py | Low | Protocol + 4 backends |
+| 22 crawl GWTs | dag.json | Medium | Registered, no TLA+ spec |
+
+  Two distinct roadmaps:
+
+  Structural Tech Debt (what we've been doing)
+
+  ┌──────┬────────────────────────────────────────────────┬──────────────────────┐
+  │ Done │                      Item                      │        Impact        │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │ ✅   │ extractor.py: hardcoded UUID maps → runtime    │ -80 lines            │
+  │      │ lookup                                         │                      │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │ ✅   │ extractor.py: _self_describe() → data-driven   │ -740 lines           │
+  │      │ loader                                         │                      │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │ ✅   │ cli.py: dead sync extract_fn + duplication     │ -100 lines           │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │ ✅   │ one_shot_loop.py: triplicated state-parsing    │ ~-80 lines           │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │  ✅  │ cli.py: .cw9 guard + sentinel constants        │ ~-50 lines           │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │  ✅  │ cli.py: cmd_ingest (179 lines, raw SQL in CLI  │ decompose            │
+  │      │ handler)                                       │                      │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │  ✅  │ cli.py: cmd_crawl (164 lines, inline progress  │ decompose            │
+  │      │ closure)                                       │                      │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │  ✅  │ cli.py: main() argparse + 30-branch dispatch   │ decompose            │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │  ✅  │ one_shot_loop.py: generate_cfg (106 lines, 3   │ decompose            │
+  │      │ concerns) → _generate_constant_lines,          │                      │
+  │      │ _op_rhs, _extract_invariant_lines              │                      │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │  ✅  │ one_shot_loop.py: TLC subprocess construction  │ _build_tlc_cmd +     │
+  │      │ duplication                                    │ _TLC_TIMEOUT shared  │
+  ├──────┼────────────────────────────────────────────────┼──────────────────────┤
+  │  ✅  │ cli.py: fake argparse.Namespace in             │ _run_loop_core +     │
+  │      │ cmd_pipeline                                   │ _run_bridge_core     │
+  └──────┴────────────────────────────────────────────────┴──────────────────────┘
+
+  ✅ Structural tech debt track COMPLETE (2026-03-20)
+
+  Verification Debt (BOOTSTRAP.md batches)
+
+  ┌───────┬───────────────────────────────────────────────────────────┬──────────┐
+  │ Batch │                        Components                         │ Priority │
+  ├───────┼───────────────────────────────────────────────────────────┼──────────┤
+  │ 1     │ CrawlStore ✅, CrawlOrchestrator ✅, CLI Pipeline ✅         │ High     │
+  ├───────┼───────────────────────────────────────────────────────────┼──────────┤
+  │ 2     │ ProjectContext, LLM Integration, CW7 Bridge, Crawl Bridge │ Medium   │
+  ├───────┼───────────────────────────────────────────────────────────┼──────────┤
+  │ 3     │ 5 Scanners, 4 Language Profiles                           │ Low      │
+  ├───────┼───────────────────────────────────────────────────────────┼──────────┤
+  │ 4     │ 22 registered-but-unverified crawl GWTs                   │ Medium   │
+  └───────┴───────────────────────────────────────────────────────────┴──────────┘
+
+  These are independent tracks. The structural debt makes the codebase easier to
+  maintain and less error-prone. The verification debt brings components under formal
+   spec coverage.
+
+
+
+### Retroactive Alignment Roadmap
+
+The unverified components must be brought under the pipeline in priority
+order. Each alignment batch follows the same pattern:
+
+```
+  1. Write GWT behaviors for the component's key invariants
+  2. Register GWTs in the self-hosting DAG (schema/self_hosting.json)
+  3. Run cw9 loop to generate TLA+ specs
+  4. Run cw9 bridge to extract artifacts
+  5. Run cw9 gen-tests to produce test suites
+  6. Verify existing code passes generated tests
+  7. Fix any failures (existing code is wrong, not the spec)
+```
+
+#### Batch 1: Core Infrastructure (High Priority)
+
+These are the load-bearing components. Bugs here break everything.
+
+**CrawlStore** (`crawl_store.py`) — the SQLite persistence layer: ✅ VERIFIED (2026-03-21)
+- gwt-0024: upsert is idempotent (same UUID + same content = no change)
+- gwt-0025: DFS subgraph query returns all transitive callees
+- gwt-0026: staleness propagation marks downstream records stale
+- gwt-0027: schema migration is forward-compatible (new columns, no drops)
+- 305 generated tests, all passing (cosmic-hr-vqnr)
+
+**CrawlOrchestrator** (`crawl_orchestrator.py`) — the DFS + sweep engine: ✅ VERIFIED (2026-03-21)
+- gwt-0028: orchestrator lifecycle (two-phase sequencing)
+- gwt-0029: graceful shutdown / drain-inflight
+- gwt-0030: incremental skip via src_hash comparison
+- gwt-0031: concurrency control (semaphore + active set invariant)
+- 193 generated tests, all passing (cosmic-hr-n0pp)
+- Test fixes: 3 scaffolding bugs (src_hash→Node mapping, asyncio Semaphore._value timing, drain setup ordering)
+
+**CLI Pipeline** (`cli.py`) — the user-facing interface: ✅ VERIFIED (2026-03-21)
+- gwt-0032: `cw9 extract` preserves registered GWT nodes on re-extract
+- gwt-0033: `cw9 loop` writes spec to .cw9/specs/<gwt-id>.tla on success
+- gwt-0034: `cw9 pipeline` runs steps in correct order with early exit on failure
+- gwt-0035: `cw9 register` is idempotent (same criterion_id = same gwt_id)
+- 192 generated tests, all passing (cosmic-hr-4ji0)
+
+#### Batch 2: Integration Points (Medium Priority) -- VERIFIED (2026-03-21)
+
+**ProjectContext** (`context.py`):
+- gwt-0036: `self_hosting()` resolves engine_root = target_root = state_root to same dir
+- gwt-0037: `from_target()` reads .cw9/config.toml for path resolution, routes to correct mode
+- gwt-0038: `external()` creates isolated state_root under target, engine paths from engine_root
+- 222 generated tests, all passing (cosmic-hr-sl65)
+
+**LLM Integration** (`loop_runner.py`, `test_gen_loop.py`):
+- gwt-0039: retry prompt includes classified error instruction block specific to error class
+- gwt-0040: test gen 3-pass (plan, review, codegen) produces compilable, passing tests
+- gwt-0041: context stack ranking enforced (sim traces > API > verifiers > TLA+ > structural)
+- 302 generated tests, all passing (cosmic-hr-niiw)
+
+**CW7 Bridge** (`cw7.py`, `gwt_author.py`):
+- gwt-0042: CW7 extract produces register-compatible JSON with cw7-crit-N criterion IDs
+- gwt-0043: GWT authoring validates depends_on UUIDs against crawl.db, removes invalid
+- 129 generated tests, all passing (cosmic-hr-bblu)
+
+**Crawl Bridge** (`crawl_bridge.py`):
+- gwt-0044: RESOURCE nodes created per non-external crawl.db record, count = record count
+- gwt-0045: orphan cleanup removes UUID-format RESOURCE nodes not in crawl.db, preserves others
+- 69 generated tests, all passing (cosmic-hr-3qy6)
+
+#### Batch 3: Scanners and Language Profiles (Low Priority)
+
+These are relatively simple, deterministic parsers. Existing hand-written
+tests likely provide adequate coverage. Pipeline verification is
+nice-to-have, not urgent.
+
+**Scanners** (5 files):
+- GWT: each scanner produces Skeleton objects with correct line ranges
+- GWT: nested functions/methods are captured at correct depth
+
+**Language Profiles** (4 files):
+- GWT: TLA+ condition compiles to valid target-language expression
+- GWT: generated test file passes target-language compiler/interpreter
+
+#### Batch 4: Remaining Crawl GWTs
+
+22 registered GWTs in the crawl DAG lack TLA+ specs. These should be
+run through `cw9 loop` to produce specs, then `cw9 bridge` + `cw9 gen-tests`.
+This is mechanical — the GWTs are already registered, just unverified.
+
+### Development Process Going Forward
+
+All new CW9 development must follow the pipeline. See `CLAUDE.md` for
+the mandatory development checklist. The key rule:
+
+**Code comes LAST.** GWT → spec → verify → bridge → tests → implement.
+
+Any PR that adds behavioral code without corresponding GWT registration
+and TLA+ verification is out of process and should not be merged.
