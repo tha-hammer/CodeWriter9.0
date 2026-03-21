@@ -1734,30 +1734,27 @@ def cmd_gwt_author(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        prog="cw9",
-        description="CodeWriter9 — formally verified code generation",
-    )
-    sub = parser.add_subparsers(dest="command")
-
-    # init
+def _add_core_commands(sub: argparse._SubParsersAction) -> None:
+    """Add core project subcommands: init, status, extract, register."""
     p_init = sub.add_parser("init", help="Initialize .cw9/ in a target directory")
     p_init.add_argument("target_dir", nargs="?", default=".", help="Target project directory (default: .)")
     p_init.add_argument("--force", action="store_true", help="Reinitialize existing .cw9/")
     p_init.add_argument("--ensure", action="store_true",
                          help="No-op if .cw9/ already exists (idempotent init)")
 
-    # status
     p_status = sub.add_parser("status", help="Show pipeline progress and per-GWT status")
     p_status.add_argument("target_dir", nargs="?", default=".", help="Target project directory (default: .)")
     p_status.add_argument("--json", action="store_true", dest="output_json", help="Output machine-readable JSON")
 
-    # extract
     p_extract = sub.add_parser("extract", help="Extract DAG from schemas")
     p_extract.add_argument("target_dir", nargs="?", default=".")
 
-    # loop
+    p_reg = sub.add_parser("register", help="Register requirements + GWTs from JSON stdin")
+    p_reg.add_argument("target_dir", nargs="?", default=".")
+
+
+def _add_pipeline_commands(sub: argparse._SubParsersAction) -> None:
+    """Add verification pipeline subcommands: loop, bridge, gen-tests, test, pipeline."""
     p_loop = sub.add_parser("loop", help="Run LLM → PlusCal → TLC for a GWT behavior")
     p_loop.add_argument("gwt_id", help="GWT behavior ID (e.g., gwt-0024)")
     p_loop.add_argument("target_dir", nargs="?", default=".")
@@ -1765,12 +1762,10 @@ def main(argv: list[str] | None = None) -> int:
     p_loop.add_argument("--context-file", type=Path, default=None,
                         help="Supplementary context file passed verbatim to LLM")
 
-    # bridge
     p_bridge = sub.add_parser("bridge", help="Translate verified spec → bridge artifacts")
     p_bridge.add_argument("gwt_id", help="GWT behavior ID")
     p_bridge.add_argument("target_dir", nargs="?", default=".")
 
-    # gen-tests
     p_gen = sub.add_parser("gen-tests", help="Generate test file from bridge artifacts (LLM loop)")
     p_gen.add_argument("gwt_id", help="GWT behavior ID")
     p_gen.add_argument("target_dir", nargs="?", default=".")
@@ -1781,16 +1776,25 @@ def main(argv: list[str] | None = None) -> int:
         help="Target language for test generation (default: python)",
     )
 
-    # register
-    p_reg = sub.add_parser("register", help="Register requirements + GWTs from JSON stdin")
-    p_reg.add_argument("target_dir", nargs="?", default=".")
-
-    # test
     p_test = sub.add_parser("test", help="Run generated tests (smart targeting optional)")
     p_test.add_argument("--node", dest="node_id", help="Only run tests affected by this node")
     p_test.add_argument("target_dir", nargs="?", default=".")
 
-    # ingest
+    p_pipeline = sub.add_parser("pipeline", help="Run full CW9 pipeline: setup -> loop -> bridge")
+    p_pipeline.add_argument("target_dir", nargs="?", default=".")
+    p_pipeline.add_argument("--db", type=Path, default=None,
+                             help="CW7 SQLite database path (or set CW7_DB env var)")
+    p_pipeline.add_argument("--session", default=None)
+    p_pipeline.add_argument("--gwt", action="append", dest="gwts", default=None)
+    p_pipeline.add_argument("--max-retries", type=int, default=8)
+    p_pipeline.add_argument("--skip-setup", action="store_true")
+    p_pipeline.add_argument("--loop-only", action="store_true")
+    p_pipeline.add_argument("--bridge-only", action="store_true")
+    p_pipeline.add_argument("--plan-path-dir", type=Path, default=None)
+
+
+def _add_crawl_commands(sub: argparse._SubParsersAction) -> None:
+    """Add crawl-related subcommands: ingest, crawl, stale, show, gwt-author."""
     p_ingest = sub.add_parser("ingest", help="Ingest an external codebase into the registry")
     p_ingest.add_argument("ingest_path", help="Path to the codebase to ingest")
     p_ingest.add_argument("target_dir", nargs="?", default=".")
@@ -1804,12 +1808,6 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest.add_argument("--json", action="store_true", dest="output_json",
                           help="Output machine-readable JSON")
 
-    # gwt-author
-    p_gwt_author = sub.add_parser("gwt-author", help="Generate GWT specs from research notes + crawl.db")
-    p_gwt_author.add_argument("target_dir", nargs="?", default=".", help="Target project directory (default: .)")
-    p_gwt_author.add_argument("--research", required=True, help="Path to research notes file")
-
-    # crawl
     p_crawl = sub.add_parser("crawl", help="Run DFS LLM extraction over ingested skeletons")
     p_crawl.add_argument("target_dir", nargs="?", default=".")
     p_crawl.add_argument("--entry", action="append", default=None,
@@ -1827,71 +1825,68 @@ def main(argv: list[str] | None = None) -> int:
     p_crawl.add_argument("--concurrency", type=_positive_int, default=DEFAULT_CONCURRENCY,
                          help=f"Max concurrent LLM extractions in sweep phase (default: {DEFAULT_CONCURRENCY})")
 
-    # stale
     p_stale = sub.add_parser("stale", help="Check which ingested nodes are stale")
     p_stale.add_argument("target_dir", nargs="?", default=".")
 
-    # show
     p_show = sub.add_parser("show", help="Show information about a node")
     p_show.add_argument("node_id", help="Node ID to show")
     p_show.add_argument("target_dir", nargs="?", default=".")
     p_show.add_argument("--card", action="store_true", help="Show IN:DO:OUT card from crawl.db")
 
-    # cleanup
+    p_gwt_author = sub.add_parser("gwt-author", help="Generate GWT specs from research notes + crawl.db")
+    p_gwt_author.add_argument("target_dir", nargs="?", default=".", help="Target project directory (default: .)")
+    p_gwt_author.add_argument("--research", required=True, help="Path to research notes file")
+
+
+def _add_utility_commands(sub: argparse._SubParsersAction) -> None:
+    """Add utility subcommands: cleanup."""
     p_cleanup = sub.add_parser("cleanup", help="Remove stale cw9 temp directories from /tmp")
     p_cleanup.add_argument("--max-age", type=int, default=24,
                            help="Remove dirs older than N hours (default: 24, use 0 for all)")
     p_cleanup.add_argument("--dry-run", action="store_true",
                            help="Show what would be removed without deleting")
 
-    # pipeline
-    p_pipeline = sub.add_parser("pipeline", help="Run full CW9 pipeline: setup -> loop -> bridge")
-    p_pipeline.add_argument("target_dir", nargs="?", default=".")
-    p_pipeline.add_argument("--db", type=Path, default=None,
-                             help="CW7 SQLite database path (or set CW7_DB env var)")
-    p_pipeline.add_argument("--session", default=None)
-    p_pipeline.add_argument("--gwt", action="append", dest="gwts", default=None)
-    p_pipeline.add_argument("--max-retries", type=int, default=8)
-    p_pipeline.add_argument("--skip-setup", action="store_true")
-    p_pipeline.add_argument("--loop-only", action="store_true")
-    p_pipeline.add_argument("--bridge-only", action="store_true")
-    p_pipeline.add_argument("--plan-path-dir", type=Path, default=None)
+
+# Dispatch table mapping subcommand names to handler functions.
+_DISPATCH: dict[str, Callable[[argparse.Namespace], int]] = {
+    "init": cmd_init,
+    "status": cmd_status,
+    "extract": cmd_extract,
+    "loop": cmd_loop,
+    "bridge": cmd_bridge,
+    "gen-tests": cmd_gen_tests,
+    "register": cmd_register,
+    "test": cmd_test,
+    "pipeline": cmd_pipeline,
+    "ingest": cmd_ingest,
+    "crawl": cmd_crawl,
+    "stale": cmd_stale,
+    "show": cmd_show,
+    "gwt-author": cmd_gwt_author,
+    "cleanup": cmd_cleanup,
+}
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="cw9",
+        description="CodeWriter9 — formally verified code generation",
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    _add_core_commands(sub)
+    _add_pipeline_commands(sub)
+    _add_crawl_commands(sub)
+    _add_utility_commands(sub)
 
     args = parser.parse_args(argv)
 
-    if args.command == "init":
-        return cmd_init(args)
-    elif args.command == "status":
-        return cmd_status(args)
-    elif args.command == "extract":
-        return cmd_extract(args)
-    elif args.command == "loop":
-        return cmd_loop(args)
-    elif args.command == "bridge":
-        return cmd_bridge(args)
-    elif args.command == "gen-tests":
-        return cmd_gen_tests(args)
-    elif args.command == "register":
-        return cmd_register(args)
-    elif args.command == "test":
-        return cmd_test(args)
-    elif args.command == "pipeline":
-        return cmd_pipeline(args)
-    elif args.command == "ingest":
-        return cmd_ingest(args)
-    elif args.command == "crawl":
-        return cmd_crawl(args)
-    elif args.command == "stale":
-        return cmd_stale(args)
-    elif args.command == "show":
-        return cmd_show(args)
-    elif args.command == "gwt-author":
-        return cmd_gwt_author(args)
-    elif args.command == "cleanup":
-        return cmd_cleanup(args)
-    else:
-        parser.print_help()
-        return 0
+    handler = _DISPATCH.get(args.command)
+    if handler is not None:
+        return handler(args)
+
+    parser.print_help()
+    return 0
 
 
 if __name__ == "__main__":
