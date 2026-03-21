@@ -300,6 +300,22 @@ class CrawlStore:
             self.conn.rollback()
             raise
 
+    def adopt_donor_record(self, donor_uuid: str) -> None:
+        """Remove a donor record and all its FK references.
+
+        Used during ingest when a record is being adopted under a new UUID
+        (e.g. path changed between worktrees). Nullifies inbound FK refs,
+        then deletes the donor's own rows.
+        """
+        self.conn.execute("UPDATE ins SET source_uuid = NULL WHERE source_uuid = ?", (donor_uuid,))
+        self.conn.execute("UPDATE entry_points SET record_uuid = NULL WHERE record_uuid = ?", (donor_uuid,))
+        self.conn.execute("DELETE FROM test_refs WHERE target_uuid = ?", (donor_uuid,))
+        self.conn.execute("DELETE FROM maps WHERE entry_uuid = ?", (donor_uuid,))
+        self.conn.execute("DELETE FROM ins WHERE record_uuid = ?", (donor_uuid,))
+        self.conn.execute("DELETE FROM outs WHERE record_uuid = ?", (donor_uuid,))
+        self.conn.execute("DELETE FROM records WHERE uuid = ?", (donor_uuid,))
+        self.conn.commit()
+
     def get_record(self, uuid: str) -> FnRecord | None:
         row = self.conn.execute(
             "SELECT * FROM records WHERE uuid = ?", (uuid,)
