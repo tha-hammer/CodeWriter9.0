@@ -1,0 +1,2596 @@
+{
+  "gwt_id": "gwt-0029",
+  "module_name": "GracefulShutdown",
+  "data_structures": {
+    "GracefulShutdownState": {
+      "function_id": "fn-GracefulShutdown-state",
+      "acceptance_criteria_id": "ac-GracefulShutdown-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "shutdown_requested": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "in_flight": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "completed": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "started_after_signal": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "in_flight_at_signal": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "pending": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Tasks",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "run_active": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from GracefulShutdown TLA+ spec"
+    }
+  },
+  "operations": {
+    "FireSignal": {
+      "function_id": "fn-GracefulShutdown-FireSignal",
+      "acceptance_criteria_id": "ac-GracefulShutdown-FireSignal",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FireSignal from GracefulShutdown spec"
+    },
+    "OrchestratorLoop": {
+      "function_id": "fn-GracefulShutdown-OrchestratorLoop",
+      "acceptance_criteria_id": "ac-GracefulShutdown-OrchestratorLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action OrchestratorLoop from GracefulShutdown spec"
+    },
+    "StartOrAbort": {
+      "function_id": "fn-GracefulShutdown-StartOrAbort",
+      "acceptance_criteria_id": "ac-GracefulShutdown-StartOrAbort",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartOrAbort from GracefulShutdown spec"
+    },
+    "DrainInflight": {
+      "function_id": "fn-GracefulShutdown-DrainInflight",
+      "acceptance_criteria_id": "ac-GracefulShutdown-DrainInflight",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action DrainInflight from GracefulShutdown spec"
+    },
+    "OrchestratorDone": {
+      "function_id": "fn-GracefulShutdown-OrchestratorDone",
+      "acceptance_criteria_id": "ac-GracefulShutdown-OrchestratorDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action OrchestratorDone from GracefulShutdown spec"
+    },
+    "WaitForWork": {
+      "function_id": "fn-GracefulShutdown-WaitForWork",
+      "acceptance_criteria_id": "ac-GracefulShutdown-WaitForWork",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action WaitForWork from GracefulShutdown spec"
+    },
+    "CheckWork": {
+      "function_id": "fn-GracefulShutdown-CheckWork",
+      "acceptance_criteria_id": "ac-GracefulShutdown-CheckWork",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckWork from GracefulShutdown spec"
+    },
+    "CompleterFinish": {
+      "function_id": "fn-GracefulShutdown-CompleterFinish",
+      "acceptance_criteria_id": "ac-GracefulShutdown-CompleterFinish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CompleterFinish from GracefulShutdown spec"
+    }
+  },
+  "verifiers": {
+    "TypeOK": {
+      "function_id": "fn-GracefulShutdown-verify-TypeOK",
+      "acceptance_criteria_id": "ac-GracefulShutdown-TypeOK",
+      "conditions": [
+        "shutdown_requested   \\in BOOLEAN",
+        "in_flight            \\subseteq Tasks",
+        "completed            \\subseteq Tasks",
+        "started_after_signal \\subseteq Tasks",
+        "in_flight_at_signal  \\subseteq Tasks",
+        "pending              \\subseteq Tasks",
+        "run_active           \\in BOOLEAN"
+      ],
+      "message": "TypeOK violation: /\\ shutdown_requested   \\in BOOLEAN\n    /\\ in_flight            \\subseteq Tasks\n    /\\ completed            \\subseteq...",
+      "applies_to": [
+        "completed",
+        "in_flight",
+        "in_flight_at_signal",
+        "pending",
+        "run_active",
+        "shutdown_requested",
+        "started_after_signal"
+      ],
+      "description": "Verifier for invariant TypeOK from GracefulShutdown spec"
+    },
+    "NoNewAfterShutdown": {
+      "function_id": "fn-GracefulShutdown-verify-NoNewAfterShutdown",
+      "acceptance_criteria_id": "ac-GracefulShutdown-NoNewAfterShutdown",
+      "conditions": [
+        "shutdown_requested => started_after_signal = {}"
+      ],
+      "message": "NoNewAfterShutdown violation: shutdown_requested => started_after_signal = {}",
+      "applies_to": [
+        "shutdown_requested",
+        "started_after_signal"
+      ],
+      "description": "Verifier for invariant NoNewAfterShutdown from GracefulShutdown spec"
+    },
+    "InFlightDoesNotGrow": {
+      "function_id": "fn-GracefulShutdown-verify-InFlightDoesNotGrow",
+      "acceptance_criteria_id": "ac-GracefulShutdown-InFlightDoesNotGrow",
+      "conditions": [
+        "shutdown_requested => in_flight \\subseteq in_flight_at_signal"
+      ],
+      "message": "InFlightDoesNotGrow violation: shutdown_requested => in_flight \\subseteq in_flight_at_signal",
+      "applies_to": [
+        "in_flight",
+        "in_flight_at_signal",
+        "shutdown_requested"
+      ],
+      "description": "Verifier for invariant InFlightDoesNotGrow from GracefulShutdown spec"
+    },
+    "InFlightCompletes": {
+      "function_id": "fn-GracefulShutdown-verify-InFlightCompletes",
+      "acceptance_criteria_id": "ac-GracefulShutdown-InFlightCompletes",
+      "conditions": [
+        "~run_active => in_flight = {}"
+      ],
+      "message": "InFlightCompletes violation: ~run_active => in_flight = {}",
+      "applies_to": [
+        "in_flight",
+        "run_active"
+      ],
+      "description": "Verifier for invariant InFlightCompletes from GracefulShutdown spec"
+    },
+    "CompletedSubsetTasks": {
+      "function_id": "fn-GracefulShutdown-verify-CompletedSubsetTasks",
+      "acceptance_criteria_id": "ac-GracefulShutdown-CompletedSubsetTasks",
+      "conditions": [
+        "completed \\subseteq Tasks"
+      ],
+      "message": "CompletedSubsetTasks violation: completed \\subseteq Tasks",
+      "applies_to": [
+        "completed"
+      ],
+      "description": "Verifier for invariant CompletedSubsetTasks from GracefulShutdown spec"
+    },
+    "Partitioned": {
+      "function_id": "fn-GracefulShutdown-verify-Partitioned",
+      "acceptance_criteria_id": "ac-GracefulShutdown-Partitioned",
+      "conditions": [
+        "in_flight \\intersect completed) = {}",
+        "pending   \\intersect completed) = {}",
+        "pending   \\intersect in_flight) = {}\n\nVARIABLES phase, candidate"
+      ],
+      "message": "Partitioned violation: /\\ (in_flight \\intersect completed) = {}\n    /\\ (pending   \\intersect completed) = {}\n    /\\ (pending   \\intersect in...",
+      "applies_to": [
+        "completed",
+        "in_flight",
+        "pending"
+      ],
+      "description": "Verifier for invariant Partitioned from GracefulShutdown spec"
+    }
+  },
+  "assertions": {
+    "assert_TypeOK": {
+      "condition": "and shutdown_requested   in BOOLEAN\n    and in_flight            \\subseteq Tasks\n    and completed            \\subseteq Tasks\n    and started_after_signal \\subseteq Tasks\n    and in_flight_at_signal  \\subseteq Tasks\n    and pending              \\subseteq Tasks\n    and run_active           in BOOLEAN",
+      "message": "Assertion failed: TypeOK \u2014 /\\ shutdown_requested   \\in BOOLEAN\n    /\\ in_flight            \\subseteq Tasks\n    /\\ completed            \\subseteq...",
+      "description": "Test assertion for TypeOK from GracefulShutdown spec"
+    },
+    "assert_NoNewAfterShutdown": {
+      "condition": "shutdown_requested implies started_after_signal = {}",
+      "message": "Assertion failed: NoNewAfterShutdown \u2014 shutdown_requested => started_after_signal = {}",
+      "description": "Test assertion for NoNewAfterShutdown from GracefulShutdown spec"
+    },
+    "assert_InFlightDoesNotGrow": {
+      "condition": "shutdown_requested implies in_flight \\subseteq in_flight_at_signal",
+      "message": "Assertion failed: InFlightDoesNotGrow \u2014 shutdown_requested => in_flight \\subseteq in_flight_at_signal",
+      "description": "Test assertion for InFlightDoesNotGrow from GracefulShutdown spec"
+    },
+    "assert_InFlightCompletes": {
+      "condition": "~run_active implies in_flight = {}",
+      "message": "Assertion failed: InFlightCompletes \u2014 ~run_active => in_flight = {}",
+      "description": "Test assertion for InFlightCompletes from GracefulShutdown spec"
+    },
+    "assert_CompletedSubsetTasks": {
+      "condition": "completed \\subseteq Tasks",
+      "message": "Assertion failed: CompletedSubsetTasks \u2014 completed \\subseteq Tasks",
+      "description": "Test assertion for CompletedSubsetTasks from GracefulShutdown spec"
+    },
+    "assert_Partitioned": {
+      "condition": "and (in_flight intersect completed) = {}\n    and (pending   intersect completed) = {}\n    and (pending   intersect in_flight) = {}\n\nVARIABLES phase, candidate",
+      "message": "Assertion failed: Partitioned \u2014 /\\ (in_flight \\intersect completed) = {}\n    /\\ (pending   \\intersect completed) = {}\n    /\\ (pending   \\intersect in...",
+      "description": "Test assertion for Partitioned from GracefulShutdown spec"
+    }
+  },
+  "test_scenarios": [
+    {
+      "name": "scenario_GracefulShutdown_NoNewAfterShutdown_0",
+      "setup": {
+        "pending": "{Tasks_1, Tasks_2}",
+        "completed": "{}",
+        "shutdown_requested": "FALSE",
+        "pc": "[orch |-> \"OrchestratorLoop\", signal |-> \"FireSignal\"]",
+        "started_after_signal": "{}",
+        "in_flight": "{}"
+      },
+      "steps": [],
+      "expected_outcome": "NoNewAfterShutdown should hold but was violated at state 1",
+      "invariant_tested": "NoNewAfterShutdown"
+    }
+  ],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1, Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1, Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1, Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"DrainInflight\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[orchestrator |-> \"StartOrAbort\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[orchestrator |-> \"StartOrAbort\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_1"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1, Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"DrainInflight\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{Tasks_2}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[orchestrator |-> \"StartOrAbort\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_1"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1, Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1, Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"DrainInflight\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1, Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"DrainInflight\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_1}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Tasks_1, Tasks_2}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"StartOrAbort\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "Tasks_2"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartOrAbort",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{Tasks_2}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{Tasks_1}",
+          "completed": "{Tasks_2}",
+          "in_flight_at_signal": "{Tasks_2}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "FALSE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "FireSignal",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"running\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorLoop\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"DrainInflight\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DrainInflight",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[ orchestrator |-> \"OrchestratorDone\",",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "TRUE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorDone",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"WaitForWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "WaitForWork",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CheckWork\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckWork",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"CompleterFinish\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CompleterFinish",
+        "vars": {
+          "pending": "{Tasks_1, Tasks_2}",
+          "completed": "{}",
+          "in_flight_at_signal": "{}",
+          "shutdown_requested": "TRUE",
+          "phase": "\"draining\"",
+          "pc": "[orchestrator |-> \"Done\", completer |-> \"Done\", signal |-> \"Done\"]",
+          "started_after_signal": "{}",
+          "in_flight": "{}",
+          "run_active": "FALSE",
+          "candidate": "\"none\""
+        }
+      }
+    ]
+  ]
+}

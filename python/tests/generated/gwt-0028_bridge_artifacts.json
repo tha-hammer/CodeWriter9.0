@@ -1,0 +1,2479 @@
+{
+  "gwt_id": "gwt-0028",
+  "module_name": "DfsBeforeSweep",
+  "data_structures": {
+    "DfsBeforeSweepState": {
+      "function_id": "fn-DfsBeforeSweep-state",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"DfsLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "dfs",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "visited": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "pending": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "InitialPending",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "dfs_complete": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "sweep_active": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from DfsBeforeSweep TLA+ spec"
+    }
+  },
+  "operations": {
+    "DfsLoop": {
+      "function_id": "fn-DfsBeforeSweep-DfsLoop",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-DfsLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action DfsLoop from DfsBeforeSweep spec"
+    },
+    "DfsVisit": {
+      "function_id": "fn-DfsBeforeSweep-DfsVisit",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-DfsVisit",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action DfsVisit from DfsBeforeSweep spec"
+    },
+    "DfsFinish": {
+      "function_id": "fn-DfsBeforeSweep-DfsFinish",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-DfsFinish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action DfsFinish from DfsBeforeSweep spec"
+    },
+    "SweepLoop": {
+      "function_id": "fn-DfsBeforeSweep-SweepLoop",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-SweepLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SweepLoop from DfsBeforeSweep spec"
+    },
+    "SweepActivate": {
+      "function_id": "fn-DfsBeforeSweep-SweepActivate",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-SweepActivate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SweepActivate from DfsBeforeSweep spec"
+    },
+    "SweepProcess": {
+      "function_id": "fn-DfsBeforeSweep-SweepProcess",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-SweepProcess",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SweepProcess from DfsBeforeSweep spec"
+    },
+    "SweepDeactivate": {
+      "function_id": "fn-DfsBeforeSweep-SweepDeactivate",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-SweepDeactivate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SweepDeactivate from DfsBeforeSweep spec"
+    },
+    "Terminate": {
+      "function_id": "fn-DfsBeforeSweep-Terminate",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from DfsBeforeSweep spec"
+    }
+  },
+  "verifiers": {
+    "PhaseSequencing": {
+      "function_id": "fn-DfsBeforeSweep-verify-PhaseSequencing",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-PhaseSequencing",
+      "conditions": [
+        "phase = \"sweep\" => dfs_complete = TRUE"
+      ],
+      "message": "PhaseSequencing violation: phase = \"sweep\" => dfs_complete = TRUE",
+      "applies_to": [
+        "dfs_complete",
+        "phase"
+      ],
+      "description": "Verifier for invariant PhaseSequencing from DfsBeforeSweep spec"
+    },
+    "NoSweepDuringDfs": {
+      "function_id": "fn-DfsBeforeSweep-verify-NoSweepDuringDfs",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-NoSweepDuringDfs",
+      "conditions": [
+        "phase = \"dfs\"   => sweep_active = FALSE"
+      ],
+      "message": "NoSweepDuringDfs violation: phase = \"dfs\"   => sweep_active = FALSE",
+      "applies_to": [
+        "phase",
+        "sweep_active"
+      ],
+      "description": "Verifier for invariant NoSweepDuringDfs from DfsBeforeSweep spec"
+    },
+    "AllEntryPointsVisited": {
+      "function_id": "fn-DfsBeforeSweep-verify-AllEntryPointsVisited",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-AllEntryPointsVisited",
+      "conditions": [
+        "phase /= \"dfs\"  => visited = EntryPoints"
+      ],
+      "message": "AllEntryPointsVisited violation: phase /= \"dfs\"  => visited = EntryPoints",
+      "applies_to": [
+        "phase",
+        "visited"
+      ],
+      "description": "Verifier for invariant AllEntryPointsVisited from DfsBeforeSweep spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-DfsBeforeSweep-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from DfsBeforeSweep spec"
+    },
+    "Invariants": {
+      "function_id": "fn-DfsBeforeSweep-verify-Invariants",
+      "acceptance_criteria_id": "ac-DfsBeforeSweep-Invariants",
+      "conditions": [
+        "PhaseSequencing",
+        "NoSweepDuringDfs",
+        "AllEntryPointsVisited",
+        "BoundedExecution"
+      ],
+      "message": "Invariants violation: PhaseSequencing\n           /\\ NoSweepDuringDfs\n           /\\ AllEntryPointsVisited\n           /\\ BoundedExecution",
+      "applies_to": [
+        "DfsBeforeSweep"
+      ],
+      "description": "Verifier for invariant Invariants from DfsBeforeSweep spec"
+    }
+  },
+  "assertions": {
+    "assert_PhaseSequencing": {
+      "condition": "phase = \"sweep\" implies dfs_complete = TRUE",
+      "message": "Assertion failed: PhaseSequencing \u2014 phase = \"sweep\" => dfs_complete = TRUE",
+      "description": "Test assertion for PhaseSequencing from DfsBeforeSweep spec"
+    },
+    "assert_NoSweepDuringDfs": {
+      "condition": "phase = \"dfs\"   implies sweep_active = FALSE",
+      "message": "Assertion failed: NoSweepDuringDfs \u2014 phase = \"dfs\"   => sweep_active = FALSE",
+      "description": "Test assertion for NoSweepDuringDfs from DfsBeforeSweep spec"
+    },
+    "assert_AllEntryPointsVisited": {
+      "condition": "phase /= \"dfs\"  implies visited = EntryPoints",
+      "message": "Assertion failed: AllEntryPointsVisited \u2014 phase /= \"dfs\"  => visited = EntryPoints",
+      "description": "Test assertion for AllEntryPointsVisited from DfsBeforeSweep spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from DfsBeforeSweep spec"
+    },
+    "assert_Invariants": {
+      "condition": "PhaseSequencing\n           and NoSweepDuringDfs\n           and AllEntryPointsVisited\n           and BoundedExecution",
+      "message": "Assertion failed: Invariants \u2014 PhaseSequencing\n           /\\ NoSweepDuringDfs\n           /\\ AllEntryPointsVisited\n           /\\ BoundedExecution",
+      "description": "Test assertion for Invariants from DfsBeforeSweep spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "0",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsVisit\"]",
+          "step_count": "1",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "DfsVisit",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "DfsLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"dfs\"",
+          "pc": "[main |-> \"DfsFinish\"]",
+          "step_count": "2",
+          "dfs_complete": "FALSE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "DfsFinish",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "2",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{3, 4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "3",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepActivate\"]",
+          "step_count": "4",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "SweepActivate",
+        "vars": {
+          "pending": "{4}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepProcess\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "SweepProcess",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepDeactivate\"]",
+          "step_count": "5",
+          "dfs_complete": "TRUE",
+          "sweep_active": "TRUE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "SweepDeactivate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"SweepLoop\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "SweepLoop",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"sweep\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Terminate",
+        "vars": {
+          "pending": "{}",
+          "visited": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "6",
+          "dfs_complete": "TRUE",
+          "sweep_active": "FALSE"
+        }
+      }
+    ]
+  ]
+}

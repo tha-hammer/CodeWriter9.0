@@ -1,0 +1,1167 @@
+{
+  "gwt_id": "gwt-0031",
+  "module_name": "SemaphoreBoundedConcurrency",
+  "data_structures": {
+    "SemaphoreBoundedConcurrencyState": {
+      "function_id": "fn-SemaphoreBoundedConcurrency-state",
+      "acceptance_criteria_id": "ac-SemaphoreBoundedConcurrency-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Acquire\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "semaphore": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Concurrency",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "active": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "completed": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "pending": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Records",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from SemaphoreBoundedConcurrency TLA+ spec"
+    }
+  },
+  "operations": {},
+  "verifiers": {
+    "SemaphoreNonNeg": {
+      "function_id": "fn-SemaphoreBoundedConcurrency-verify-SemaphoreNonNeg",
+      "acceptance_criteria_id": "ac-SemaphoreBoundedConcurrency-SemaphoreNonNeg",
+      "conditions": [
+        "semaphore >= 0"
+      ],
+      "message": "SemaphoreNonNeg violation: semaphore >= 0",
+      "applies_to": [
+        "semaphore"
+      ],
+      "description": "Verifier for invariant SemaphoreNonNeg from SemaphoreBoundedConcurrency spec"
+    },
+    "ActiveBounded": {
+      "function_id": "fn-SemaphoreBoundedConcurrency-verify-ActiveBounded",
+      "acceptance_criteria_id": "ac-SemaphoreBoundedConcurrency-ActiveBounded",
+      "conditions": [
+        "Cardinality(active) <= Concurrency"
+      ],
+      "message": "ActiveBounded violation: Cardinality(active) <= Concurrency",
+      "applies_to": [
+        "active"
+      ],
+      "description": "Verifier for invariant ActiveBounded from SemaphoreBoundedConcurrency spec"
+    },
+    "SemaphoreConsistent": {
+      "function_id": "fn-SemaphoreBoundedConcurrency-verify-SemaphoreConsistent",
+      "acceptance_criteria_id": "ac-SemaphoreBoundedConcurrency-SemaphoreConsistent",
+      "conditions": [
+        "semaphore + Cardinality(active) = Concurrency"
+      ],
+      "message": "SemaphoreConsistent violation: semaphore + Cardinality(active) = Concurrency",
+      "applies_to": [
+        "active",
+        "semaphore"
+      ],
+      "description": "Verifier for invariant SemaphoreConsistent from SemaphoreBoundedConcurrency spec"
+    },
+    "ActiveReleasedOnComplete": {
+      "function_id": "fn-SemaphoreBoundedConcurrency-verify-ActiveReleasedOnComplete",
+      "acceptance_criteria_id": "ac-SemaphoreBoundedConcurrency-ActiveReleasedOnComplete",
+      "conditions": [
+        "active \\cap completed = {}"
+      ],
+      "message": "ActiveReleasedOnComplete violation: active \\cap completed = {}",
+      "applies_to": [
+        "active",
+        "completed"
+      ],
+      "description": "Verifier for invariant ActiveReleasedOnComplete from SemaphoreBoundedConcurrency spec"
+    },
+    "AllEventuallyProcessed": {
+      "function_id": "fn-SemaphoreBoundedConcurrency-verify-AllEventuallyProcessed",
+      "acceptance_criteria_id": "ac-SemaphoreBoundedConcurrency-AllEventuallyProcessed",
+      "conditions": [
+        "pending = {}",
+        "active = {}) => (completed = Records"
+      ],
+      "message": "AllEventuallyProcessed violation: (pending = {} /\\ active = {}) => (completed = Records)",
+      "applies_to": [
+        "active",
+        "completed",
+        "pending"
+      ],
+      "description": "Verifier for invariant AllEventuallyProcessed from SemaphoreBoundedConcurrency spec"
+    }
+  },
+  "assertions": {
+    "assert_SemaphoreNonNeg": {
+      "condition": "semaphore >= 0",
+      "message": "Assertion failed: SemaphoreNonNeg \u2014 semaphore >= 0",
+      "description": "Test assertion for SemaphoreNonNeg from SemaphoreBoundedConcurrency spec"
+    },
+    "assert_ActiveBounded": {
+      "condition": "Cardinality(active) <= Concurrency",
+      "message": "Assertion failed: ActiveBounded \u2014 Cardinality(active) <= Concurrency",
+      "description": "Test assertion for ActiveBounded from SemaphoreBoundedConcurrency spec"
+    },
+    "assert_SemaphoreConsistent": {
+      "condition": "semaphore + Cardinality(active) = Concurrency",
+      "message": "Assertion failed: SemaphoreConsistent \u2014 semaphore + Cardinality(active) = Concurrency",
+      "description": "Test assertion for SemaphoreConsistent from SemaphoreBoundedConcurrency spec"
+    },
+    "assert_ActiveReleasedOnComplete": {
+      "condition": "active \\cap completed = {}",
+      "message": "Assertion failed: ActiveReleasedOnComplete \u2014 active \\cap completed = {}",
+      "description": "Test assertion for ActiveReleasedOnComplete from SemaphoreBoundedConcurrency spec"
+    },
+    "assert_AllEventuallyProcessed": {
+      "condition": "(pending = {} and active = {}) implies (completed = Records)",
+      "message": "Assertion failed: AllEventuallyProcessed \u2014 (pending = {} /\\ active = {}) => (completed = Records)",
+      "description": "Test assertion for AllEventuallyProcessed from SemaphoreBoundedConcurrency spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{Records_1}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{Records_1}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_1}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_1}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{Records_1}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_2}",
+          "completed": "{Records_1}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_1}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_1}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_1}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_1}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_1}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending": "{Records_1, Records_2}",
+          "completed": "{}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Acquire\")"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "unknown",
+        "vars": {
+          "pending": "{Records_1}",
+          "completed": "{}",
+          "semaphore": "9",
+          "active": "{Records_2}",
+          "pc": "(Records_1 :> \"Acquire\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Extract\")"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Extract\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{}",
+          "semaphore": "8",
+          "active": "{Records_1, Records_2}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Release\")"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_2}",
+          "semaphore": "9",
+          "active": "{Records_1}",
+          "pc": "(Records_1 :> \"Release\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Finish\")"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Finish\" @@ Records_2 :> \"Done\")"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "unknown",
+        "vars": {
+          "pending": "{}",
+          "completed": "{Records_1, Records_2}",
+          "semaphore": "10",
+          "active": "{}",
+          "pc": "(Records_1 :> \"Done\" @@ Records_2 :> \"Done\")"
+        }
+      }
+    ]
+  ]
+}
