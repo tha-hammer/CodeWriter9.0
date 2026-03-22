@@ -1,0 +1,2547 @@
+{
+  "gwt_id": "gwt-0055",
+  "module_name": "scanner_javascript_nested_depth",
+  "data_structures": {
+    "scanner_javascript_nested_depthState": {
+      "function_id": "fn-scanner_javascript_nested_depth-state",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ScanLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "cursor": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "class_stack": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "<< >>",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "brace_depth": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "skeletons": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from scanner_javascript_nested_depth TLA+ spec"
+    }
+  },
+  "operations": {
+    "ScanLoop": {
+      "function_id": "fn-scanner_javascript_nested_depth-ScanLoop",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-ScanLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ScanLoop from scanner_javascript_nested_depth spec"
+    },
+    "ProcessEvent": {
+      "function_id": "fn-scanner_javascript_nested_depth-ProcessEvent",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-ProcessEvent",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessEvent from scanner_javascript_nested_depth spec"
+    },
+    "Advance": {
+      "function_id": "fn-scanner_javascript_nested_depth-Advance",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-Advance",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Advance from scanner_javascript_nested_depth spec"
+    },
+    "Finish": {
+      "function_id": "fn-scanner_javascript_nested_depth-Finish",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from scanner_javascript_nested_depth spec"
+    }
+  },
+  "verifiers": {
+    "DepthConsistency": {
+      "function_id": "fn-scanner_javascript_nested_depth-verify-DepthConsistency",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-DepthConsistency",
+      "conditions": [
+        "\\A s \\in skeletons :\n        \\/ (s.class_name = \"None\")\n        \\/ (s.class_name # \"None\""
+      ],
+      "message": "DepthConsistency violation: \\A s \\in skeletons :\n        \\/ (s.class_name = \"None\")\n        \\/ (s.class_name # \"None\")",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant DepthConsistency from scanner_javascript_nested_depth spec"
+    },
+    "ConstructorExclusion": {
+      "function_id": "fn-scanner_javascript_nested_depth-verify-ConstructorExclusion",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-ConstructorExclusion",
+      "conditions": [
+        "~(\\E s \\in skeletons : s.func_name = \"constructor\""
+      ],
+      "message": "ConstructorExclusion violation: ~(\\E s \\in skeletons : s.func_name = \"constructor\")",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant ConstructorExclusion from scanner_javascript_nested_depth spec"
+    },
+    "HashPrivate": {
+      "function_id": "fn-scanner_javascript_nested_depth-verify-HashPrivate",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-HashPrivate",
+      "conditions": [
+        "\\A s \\in skeletons :\n        (s.func_name = \"#secret\") => (s.visibility = \"private\""
+      ],
+      "message": "HashPrivate violation: \\A s \\in skeletons :\n        (s.func_name = \"#secret\") => (s.visibility = \"private\")",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant HashPrivate from scanner_javascript_nested_depth spec"
+    },
+    "PublicDefault": {
+      "function_id": "fn-scanner_javascript_nested_depth-verify-PublicDefault",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-PublicDefault",
+      "conditions": [
+        "\\A s \\in skeletons :\n        (s.func_name # \"#secret\") => (s.visibility = \"public\""
+      ],
+      "message": "PublicDefault violation: \\A s \\in skeletons :\n        (s.func_name # \"#secret\") => (s.visibility = \"public\")",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant PublicDefault from scanner_javascript_nested_depth spec"
+    },
+    "ReturnTypeNone": {
+      "function_id": "fn-scanner_javascript_nested_depth-verify-ReturnTypeNone",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-ReturnTypeNone",
+      "conditions": [
+        "\\A s \\in skeletons : s.return_type = \"None\""
+      ],
+      "message": "ReturnTypeNone violation: \\A s \\in skeletons : s.return_type = \"None\"",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant ReturnTypeNone from scanner_javascript_nested_depth spec"
+    },
+    "ExpectedResults": {
+      "function_id": "fn-scanner_javascript_nested_depth-verify-ExpectedResults",
+      "acceptance_criteria_id": "ac-scanner_javascript_nested_depth-ExpectedResults",
+      "conditions": [
+        "cursor > N =>",
+        "\\E s \\in skeletons : s.func_name = \"getData\"",
+        "s.class_name = \"A\"",
+        "s.visibility = \"public\"",
+        "\\E s \\in skeletons : s.func_name = \"#secret\"",
+        "s.class_name = \"A\"",
+        "s.visibility = \"private\"",
+        "\\E s \\in skeletons : s.func_name = \"helper\"",
+        "s.class_name = \"None\"",
+        "s.visibility = \"public\"",
+        "~(\\E s \\in skeletons : s.func_name = \"constructor\""
+      ],
+      "message": "ExpectedResults violation: cursor > N =>\n        /\\ \\E s \\in skeletons : s.func_name = \"getData\" /\\ s.class_name = \"A\"    /\\ s.visibility = \"pub...",
+      "applies_to": [
+        "cursor",
+        "skeletons"
+      ],
+      "description": "Verifier for invariant ExpectedResults from scanner_javascript_nested_depth spec"
+    }
+  },
+  "assertions": {
+    "assert_DepthConsistency": {
+      "condition": "\\A s in skeletons :\n        or (s.class_name = \"None\")\n        or (s.class_name # \"None\")",
+      "message": "Assertion failed: DepthConsistency \u2014 \\A s \\in skeletons :\n        \\/ (s.class_name = \"None\")\n        \\/ (s.class_name # \"None\")",
+      "description": "Test assertion for DepthConsistency from scanner_javascript_nested_depth spec"
+    },
+    "assert_ConstructorExclusion": {
+      "condition": "~(\\E s in skeletons : s.func_name = \"constructor\")",
+      "message": "Assertion failed: ConstructorExclusion \u2014 ~(\\E s \\in skeletons : s.func_name = \"constructor\")",
+      "description": "Test assertion for ConstructorExclusion from scanner_javascript_nested_depth spec"
+    },
+    "assert_HashPrivate": {
+      "condition": "\\A s in skeletons :\n        (s.func_name = \"#secret\") implies (s.visibility = \"private\")",
+      "message": "Assertion failed: HashPrivate \u2014 \\A s \\in skeletons :\n        (s.func_name = \"#secret\") => (s.visibility = \"private\")",
+      "description": "Test assertion for HashPrivate from scanner_javascript_nested_depth spec"
+    },
+    "assert_PublicDefault": {
+      "condition": "\\A s in skeletons :\n        (s.func_name # \"#secret\") implies (s.visibility = \"public\")",
+      "message": "Assertion failed: PublicDefault \u2014 \\A s \\in skeletons :\n        (s.func_name # \"#secret\") => (s.visibility = \"public\")",
+      "description": "Test assertion for PublicDefault from scanner_javascript_nested_depth spec"
+    },
+    "assert_ReturnTypeNone": {
+      "condition": "\\A s in skeletons : s.return_type = \"None\"",
+      "message": "Assertion failed: ReturnTypeNone \u2014 \\A s \\in skeletons : s.return_type = \"None\"",
+      "description": "Test assertion for ReturnTypeNone from scanner_javascript_nested_depth spec"
+    },
+    "assert_ExpectedResults": {
+      "condition": "cursor > N implies\n        and \\E s in skeletons : s.func_name = \"getData\" and s.class_name = \"A\"    and s.visibility = \"public\"\n        and \\E s in skeletons : s.func_name = \"#secret\" and s.class_name = \"A\"    and s.visibility = \"private\"\n        and \\E s in skeletons : s.func_name = \"helper\"  and s.class_name = \"None\" and s.visibility = \"public\"\n        and ~(\\E s in skeletons : s.func_name = \"constructor\")",
+      "message": "Assertion failed: ExpectedResults \u2014 cursor > N =>\n        /\\ \\E s \\in skeletons : s.func_name = \"getData\" /\\ s.class_name = \"A\"    /\\ s.visibility = \"pub...",
+      "description": "Test assertion for ExpectedResults from scanner_javascript_nested_depth spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", func_name |-> \"getData\", visibility |-> \"public\", return_type |-> \"None\"], [class_name |-> \"A\", func_name |-> \"#secret\", visibility |-> \"private\", return_type |-> \"None\"], [class_name |-> \"None\", func_name |-> \"helper\", visibility |-> \"public\", return_type |-> \"None\"]}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ]
+  ]
+}

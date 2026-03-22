@@ -1,0 +1,2540 @@
+{
+  "gwt_id": "gwt-0049",
+  "module_name": "scanner_typescript_nested_depth",
+  "data_structures": {
+    "scanner_typescript_nested_depthState": {
+      "function_id": "fn-scanner_typescript_nested_depth-state",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ScanLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "cursor": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "class_stack": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "<< >>",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "brace_depth": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "skeletons": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from scanner_typescript_nested_depth TLA+ spec"
+    }
+  },
+  "operations": {
+    "ScanLoop": {
+      "function_id": "fn-scanner_typescript_nested_depth-ScanLoop",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-ScanLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ScanLoop from scanner_typescript_nested_depth spec"
+    },
+    "ProcessEvent": {
+      "function_id": "fn-scanner_typescript_nested_depth-ProcessEvent",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-ProcessEvent",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessEvent from scanner_typescript_nested_depth spec"
+    },
+    "Advance": {
+      "function_id": "fn-scanner_typescript_nested_depth-Advance",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-Advance",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Advance from scanner_typescript_nested_depth spec"
+    },
+    "Finish": {
+      "function_id": "fn-scanner_typescript_nested_depth-Finish",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from scanner_typescript_nested_depth spec"
+    }
+  },
+  "verifiers": {
+    "DepthConsistency": {
+      "function_id": "fn-scanner_typescript_nested_depth-verify-DepthConsistency",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-DepthConsistency",
+      "conditions": [
+        "\\A s \\in skeletons :\n        \\/ (s.class_name = \"None\"",
+        "s.inside_class = FALSE)\n        \\/ (s.class_name # \"None\"",
+        "s.inside_class = TRUE"
+      ],
+      "message": "DepthConsistency violation: \\A s \\in skeletons :\n        \\/ (s.class_name = \"None\" /\\ s.inside_class = FALSE)\n        \\/ (s.class_name # \"None\" /...",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant DepthConsistency from scanner_typescript_nested_depth spec"
+    },
+    "AllFuncsRecorded": {
+      "function_id": "fn-scanner_typescript_nested_depth-verify-AllFuncsRecorded",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-AllFuncsRecorded",
+      "conditions": [
+        "cursor > N =>\n        \\A k \\in 1..N :\n            Events[k].type \\in {\"Func\", \"Method\"} =>\n                \\E s \\in skeletons : s.func_name = Events[k].name"
+      ],
+      "message": "AllFuncsRecorded violation: cursor > N =>\n        \\A k \\in 1..N :\n            Events[k].type \\in {\"Func\", \"Method\"} =>\n                \\E s \\in s...",
+      "applies_to": [
+        "cursor",
+        "skeletons"
+      ],
+      "description": "Verifier for invariant AllFuncsRecorded from scanner_typescript_nested_depth spec"
+    },
+    "MethodsHaveClass": {
+      "function_id": "fn-scanner_typescript_nested_depth-verify-MethodsHaveClass",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-MethodsHaveClass",
+      "conditions": [
+        "\\A s \\in skeletons :\n        s.inside_class = TRUE => s.class_name # \"None\""
+      ],
+      "message": "MethodsHaveClass violation: \\A s \\in skeletons :\n        s.inside_class = TRUE => s.class_name # \"None\"",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant MethodsHaveClass from scanner_typescript_nested_depth spec"
+    },
+    "FuncsOutsideHaveNone": {
+      "function_id": "fn-scanner_typescript_nested_depth-verify-FuncsOutsideHaveNone",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-FuncsOutsideHaveNone",
+      "conditions": [
+        "\\A s \\in skeletons :\n        s.inside_class = FALSE => s.class_name = \"None\""
+      ],
+      "message": "FuncsOutsideHaveNone violation: \\A s \\in skeletons :\n        s.inside_class = FALSE => s.class_name = \"None\"",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant FuncsOutsideHaveNone from scanner_typescript_nested_depth spec"
+    },
+    "StackDepthNonNegative": {
+      "function_id": "fn-scanner_typescript_nested_depth-verify-StackDepthNonNegative",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-StackDepthNonNegative",
+      "conditions": [
+        "brace_depth >= 0"
+      ],
+      "message": "StackDepthNonNegative violation: brace_depth >= 0",
+      "applies_to": [
+        "brace_depth"
+      ],
+      "description": "Verifier for invariant StackDepthNonNegative from scanner_typescript_nested_depth spec"
+    },
+    "CursorBounded": {
+      "function_id": "fn-scanner_typescript_nested_depth-verify-CursorBounded",
+      "acceptance_criteria_id": "ac-scanner_typescript_nested_depth-CursorBounded",
+      "conditions": [
+        "cursor >= 1",
+        "cursor <= N + 1"
+      ],
+      "message": "CursorBounded violation: cursor >= 1 /\\ cursor <= N + 1",
+      "applies_to": [
+        "cursor"
+      ],
+      "description": "Verifier for invariant CursorBounded from scanner_typescript_nested_depth spec"
+    }
+  },
+  "assertions": {
+    "assert_DepthConsistency": {
+      "condition": "\\A s in skeletons :\n        or (s.class_name = \"None\" and s.inside_class = FALSE)\n        or (s.class_name # \"None\" and s.inside_class = TRUE)",
+      "message": "Assertion failed: DepthConsistency \u2014 \\A s \\in skeletons :\n        \\/ (s.class_name = \"None\" /\\ s.inside_class = FALSE)\n        \\/ (s.class_name # \"None\" /...",
+      "description": "Test assertion for DepthConsistency from scanner_typescript_nested_depth spec"
+    },
+    "assert_AllFuncsRecorded": {
+      "condition": "cursor > N implies\n        \\A k in 1..N :\n            Events[k].type in {\"Func\", \"Method\"} implies\n                \\E s in skeletons : s.func_name = Events[k].name",
+      "message": "Assertion failed: AllFuncsRecorded \u2014 cursor > N =>\n        \\A k \\in 1..N :\n            Events[k].type \\in {\"Func\", \"Method\"} =>\n                \\E s \\in s...",
+      "description": "Test assertion for AllFuncsRecorded from scanner_typescript_nested_depth spec"
+    },
+    "assert_MethodsHaveClass": {
+      "condition": "\\A s in skeletons :\n        s.inside_class = TRUE implies s.class_name # \"None\"",
+      "message": "Assertion failed: MethodsHaveClass \u2014 \\A s \\in skeletons :\n        s.inside_class = TRUE => s.class_name # \"None\"",
+      "description": "Test assertion for MethodsHaveClass from scanner_typescript_nested_depth spec"
+    },
+    "assert_FuncsOutsideHaveNone": {
+      "condition": "\\A s in skeletons :\n        s.inside_class = FALSE implies s.class_name = \"None\"",
+      "message": "Assertion failed: FuncsOutsideHaveNone \u2014 \\A s \\in skeletons :\n        s.inside_class = FALSE => s.class_name = \"None\"",
+      "description": "Test assertion for FuncsOutsideHaveNone from scanner_typescript_nested_depth spec"
+    },
+    "assert_StackDepthNonNegative": {
+      "condition": "brace_depth >= 0",
+      "message": "Assertion failed: StackDepthNonNegative \u2014 brace_depth >= 0",
+      "description": "Test assertion for StackDepthNonNegative from scanner_typescript_nested_depth spec"
+    },
+    "assert_CursorBounded": {
+      "condition": "cursor >= 1 and cursor <= N + 1",
+      "message": "Assertion failed: CursorBounded \u2014 cursor >= 1 /\\ cursor <= N + 1",
+      "description": "Test assertion for CursorBounded from scanner_typescript_nested_depth spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "brace_depth": "0",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "1",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0]>>",
+          "brace_depth": "2",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "3",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "7"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"getUser\"], [class_name |-> \"A\", inside_class |-> TRUE, func_name |-> \"helper\"], [class_name |-> \"B\", inside_class |-> TRUE, func_name |-> \"save\"]}",
+          "class_stack": "<<[name |-> \"A\", depth |-> 0], [name |-> \"B\", depth |-> 2]>>",
+          "brace_depth": "4",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "7"
+        }
+      }
+    ]
+  ]
+}

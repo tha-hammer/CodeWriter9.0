@@ -1,0 +1,1512 @@
+{
+  "gwt_id": "gwt-0051",
+  "module_name": "scanner_go_nested_depth",
+  "data_structures": {
+    "scanner_go_nested_depthState": {
+      "function_id": "fn-scanner_go_nested_depth-state",
+      "acceptance_criteria_id": "ac-scanner_go_nested_depth-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ScanLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "cursor": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "skeletons": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from scanner_go_nested_depth TLA+ spec"
+    }
+  },
+  "operations": {
+    "ScanLoop": {
+      "function_id": "fn-scanner_go_nested_depth-ScanLoop",
+      "acceptance_criteria_id": "ac-scanner_go_nested_depth-ScanLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ScanLoop from scanner_go_nested_depth spec"
+    },
+    "ProcessEvent": {
+      "function_id": "fn-scanner_go_nested_depth-ProcessEvent",
+      "acceptance_criteria_id": "ac-scanner_go_nested_depth-ProcessEvent",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessEvent from scanner_go_nested_depth spec"
+    },
+    "Advance": {
+      "function_id": "fn-scanner_go_nested_depth-Advance",
+      "acceptance_criteria_id": "ac-scanner_go_nested_depth-Advance",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Advance from scanner_go_nested_depth spec"
+    },
+    "Finish": {
+      "function_id": "fn-scanner_go_nested_depth-Finish",
+      "acceptance_criteria_id": "ac-scanner_go_nested_depth-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from scanner_go_nested_depth spec"
+    }
+  },
+  "verifiers": {
+    "ReceiverResolution": {
+      "function_id": "fn-scanner_go_nested_depth-verify-ReceiverResolution",
+      "acceptance_criteria_id": "ac-scanner_go_nested_depth-ReceiverResolution",
+      "conditions": [
+        "\\A s \\in skeletons :\n        \\/ (s.class_name = \"None\"",
+        "s.has_recv = FALSE)\n        \\/ (s.class_name # \"None\"",
+        "s.has_recv = TRUE"
+      ],
+      "message": "ReceiverResolution violation: \\A s \\in skeletons :\n        \\/ (s.class_name = \"None\" /\\ s.has_recv = FALSE)\n        \\/ (s.class_name # \"None\" /\\ s....",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant ReceiverResolution from scanner_go_nested_depth spec"
+    },
+    "VisibilityCorrect": {
+      "function_id": "fn-scanner_go_nested_depth-verify-VisibilityCorrect",
+      "acceptance_criteria_id": "ac-scanner_go_nested_depth-VisibilityCorrect",
+      "conditions": [
+        "\\A s \\in skeletons :\n        \\/ (s.visibility = \"public\"",
+        "s.cap = TRUE)\n        \\/ (s.visibility = \"private\"",
+        "s.cap = FALSE"
+      ],
+      "message": "VisibilityCorrect violation: \\A s \\in skeletons :\n        \\/ (s.visibility = \"public\"  /\\ s.cap = TRUE)\n        \\/ (s.visibility = \"private\" /\\ s....",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant VisibilityCorrect from scanner_go_nested_depth spec"
+    },
+    "AllRecorded": {
+      "function_id": "fn-scanner_go_nested_depth-verify-AllRecorded",
+      "acceptance_criteria_id": "ac-scanner_go_nested_depth-AllRecorded",
+      "conditions": [
+        "cursor > N =>\n        \\A k \\in 1..N :\n            \\E s \\in skeletons : s.func_name = Events[k].name"
+      ],
+      "message": "AllRecorded violation: cursor > N =>\n        \\A k \\in 1..N :\n            \\E s \\in skeletons : s.func_name = Events[k].name",
+      "applies_to": [
+        "cursor",
+        "skeletons"
+      ],
+      "description": "Verifier for invariant AllRecorded from scanner_go_nested_depth spec"
+    }
+  },
+  "assertions": {
+    "assert_ReceiverResolution": {
+      "condition": "\\A s in skeletons :\n        or (s.class_name = \"None\" and s.has_recv = FALSE)\n        or (s.class_name # \"None\" and s.has_recv = TRUE)",
+      "message": "Assertion failed: ReceiverResolution \u2014 \\A s \\in skeletons :\n        \\/ (s.class_name = \"None\" /\\ s.has_recv = FALSE)\n        \\/ (s.class_name # \"None\" /\\ s....",
+      "description": "Test assertion for ReceiverResolution from scanner_go_nested_depth spec"
+    },
+    "assert_VisibilityCorrect": {
+      "condition": "\\A s in skeletons :\n        or (s.visibility = \"public\"  and s.cap = TRUE)\n        or (s.visibility = \"private\" and s.cap = FALSE)",
+      "message": "Assertion failed: VisibilityCorrect \u2014 \\A s \\in skeletons :\n        \\/ (s.visibility = \"public\"  /\\ s.cap = TRUE)\n        \\/ (s.visibility = \"private\" /\\ s....",
+      "description": "Test assertion for VisibilityCorrect from scanner_go_nested_depth spec"
+    },
+    "assert_AllRecorded": {
+      "condition": "cursor > N implies\n        \\A k in 1..N :\n            \\E s in skeletons : s.func_name = Events[k].name",
+      "message": "Assertion failed: AllRecorded \u2014 cursor > N =>\n        \\A k \\in 1..N :\n            \\E s \\in skeletons : s.func_name = Events[k].name",
+      "description": "Test assertion for AllRecorded from scanner_go_nested_depth spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[has_recv |-> FALSE, cap |-> FALSE, class_name |-> \"None\", visibility |-> \"private\", func_name |-> \"helper\"], [has_recv |-> FALSE, cap |-> TRUE, class_name |-> \"None\", visibility |-> \"public\", func_name |-> \"Hello\"], [has_recv |-> TRUE, cap |-> FALSE, class_name |-> \"Point\", visibility |-> \"private\", func_name |-> \"distance\"], [has_recv |-> TRUE, cap |-> TRUE, class_name |-> \"Svc\", visibility |-> \"public\", func_name |-> \"GetUser\"]}",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "5"
+        }
+      }
+    ]
+  ]
+}

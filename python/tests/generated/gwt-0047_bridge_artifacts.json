@@ -1,0 +1,1987 @@
+{
+  "gwt_id": "gwt-0047",
+  "module_name": "scanner_python_nested_depth",
+  "data_structures": {
+    "scanner_python_nested_depthState": {
+      "function_id": "fn-scanner_python_nested_depth-state",
+      "acceptance_criteria_id": "ac-scanner_python_nested_depth-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ScanLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "cursor": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "class_stack": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "<< >>",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "skeletons": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from scanner_python_nested_depth TLA+ spec"
+    }
+  },
+  "operations": {
+    "ScanLoop": {
+      "function_id": "fn-scanner_python_nested_depth-ScanLoop",
+      "acceptance_criteria_id": "ac-scanner_python_nested_depth-ScanLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ScanLoop from scanner_python_nested_depth spec"
+    },
+    "ProcessEvent": {
+      "function_id": "fn-scanner_python_nested_depth-ProcessEvent",
+      "acceptance_criteria_id": "ac-scanner_python_nested_depth-ProcessEvent",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessEvent from scanner_python_nested_depth spec"
+    },
+    "Advance": {
+      "function_id": "fn-scanner_python_nested_depth-Advance",
+      "acceptance_criteria_id": "ac-scanner_python_nested_depth-Advance",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Advance from scanner_python_nested_depth spec"
+    },
+    "Finish": {
+      "function_id": "fn-scanner_python_nested_depth-Finish",
+      "acceptance_criteria_id": "ac-scanner_python_nested_depth-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from scanner_python_nested_depth spec"
+    }
+  },
+  "verifiers": {
+    "DepthConsistency": {
+      "function_id": "fn-scanner_python_nested_depth-verify-DepthConsistency",
+      "acceptance_criteria_id": "ac-scanner_python_nested_depth-DepthConsistency",
+      "conditions": [
+        "\\A s \\in skeletons :\n        LET expected == ResolveName(FilteredStack(\n                SelectSeq(class_stack, LAMBDA e : e.indent < s.def_indent),\n                s.def_indent))\n        IN s.class_name = \"None\" \\/ s.class_name # \"None\""
+      ],
+      "message": "DepthConsistency violation: \\A s \\in skeletons :\n        LET expected == ResolveName(FilteredStack(\n                SelectSeq(class_stack, LAMBDA...",
+      "applies_to": [
+        "class_stack",
+        "skeletons"
+      ],
+      "description": "Verifier for invariant DepthConsistency from scanner_python_nested_depth spec"
+    },
+    "AllDefsRecorded": {
+      "function_id": "fn-scanner_python_nested_depth-verify-AllDefsRecorded",
+      "acceptance_criteria_id": "ac-scanner_python_nested_depth-AllDefsRecorded",
+      "conditions": [
+        "cursor > N =>\n        \\A k \\in 1..N :\n            Events[k].type = \"Def\" =>\n                \\E s \\in skeletons : s.func_name = Events[k].name"
+      ],
+      "message": "AllDefsRecorded violation: cursor > N =>\n        \\A k \\in 1..N :\n            Events[k].type = \"Def\" =>\n                \\E s \\in skeletons : s.fu...",
+      "applies_to": [
+        "cursor",
+        "skeletons"
+      ],
+      "description": "Verifier for invariant AllDefsRecorded from scanner_python_nested_depth spec"
+    },
+    "TopLevelHaveNone": {
+      "function_id": "fn-scanner_python_nested_depth-verify-TopLevelHaveNone",
+      "acceptance_criteria_id": "ac-scanner_python_nested_depth-TopLevelHaveNone",
+      "conditions": [
+        "cursor > N =>\n        \\A s \\in skeletons :\n            s.def_indent = 0 => s.class_name = \"None\""
+      ],
+      "message": "TopLevelHaveNone violation: cursor > N =>\n        \\A s \\in skeletons :\n            s.def_indent = 0 => s.class_name = \"None\"",
+      "applies_to": [
+        "cursor",
+        "skeletons"
+      ],
+      "description": "Verifier for invariant TopLevelHaveNone from scanner_python_nested_depth spec"
+    },
+    "NestedHaveClassName": {
+      "function_id": "fn-scanner_python_nested_depth-verify-NestedHaveClassName",
+      "acceptance_criteria_id": "ac-scanner_python_nested_depth-NestedHaveClassName",
+      "conditions": [
+        "cursor > N =>\n        \\A s \\in skeletons :\n            s.def_indent > 0 => s.class_name # \"None\""
+      ],
+      "message": "NestedHaveClassName violation: cursor > N =>\n        \\A s \\in skeletons :\n            s.def_indent > 0 => s.class_name # \"None\"",
+      "applies_to": [
+        "cursor",
+        "skeletons"
+      ],
+      "description": "Verifier for invariant NestedHaveClassName from scanner_python_nested_depth spec"
+    }
+  },
+  "assertions": {
+    "assert_DepthConsistency": {
+      "condition": "\\A s in skeletons :\n        LET expected == ResolveName(FilteredStack(\n                SelectSeq(class_stack, LAMBDA e : e.indent < s.def_indent),\n                s.def_indent))\n        IN s.class_name = \"None\" or s.class_name # \"None\"",
+      "message": "Assertion failed: DepthConsistency \u2014 \\A s \\in skeletons :\n        LET expected == ResolveName(FilteredStack(\n                SelectSeq(class_stack, LAMBDA...",
+      "description": "Test assertion for DepthConsistency from scanner_python_nested_depth spec"
+    },
+    "assert_AllDefsRecorded": {
+      "condition": "cursor > N implies\n        \\A k in 1..N :\n            Events[k].type = \"Def\" implies\n                \\E s in skeletons : s.func_name = Events[k].name",
+      "message": "Assertion failed: AllDefsRecorded \u2014 cursor > N =>\n        \\A k \\in 1..N :\n            Events[k].type = \"Def\" =>\n                \\E s \\in skeletons : s.fu...",
+      "description": "Test assertion for AllDefsRecorded from scanner_python_nested_depth spec"
+    },
+    "assert_TopLevelHaveNone": {
+      "condition": "cursor > N implies\n        \\A s in skeletons :\n            s.def_indent = 0 implies s.class_name = \"None\"",
+      "message": "Assertion failed: TopLevelHaveNone \u2014 cursor > N =>\n        \\A s \\in skeletons :\n            s.def_indent = 0 => s.class_name = \"None\"",
+      "description": "Test assertion for TopLevelHaveNone from scanner_python_nested_depth spec"
+    },
+    "assert_NestedHaveClassName": {
+      "condition": "cursor > N implies\n        \\A s in skeletons :\n            s.def_indent > 0 implies s.class_name # \"None\"",
+      "message": "Assertion failed: NestedHaveClassName \u2014 cursor > N =>\n        \\A s \\in skeletons :\n            s.def_indent > 0 => s.class_name # \"None\"",
+      "description": "Test assertion for NestedHaveClassName from scanner_python_nested_depth spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<[indent |-> 0, name |-> \"A\"], [indent |-> 1, name |-> \"B\"]>>",
+          "pc": "[scanner |-> \"ProcessEvent\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessEvent",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Advance\"]",
+          "cursor": "5"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"ScanLoop\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Finish\"]",
+          "cursor": "6"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[def_indent |-> 0, class_name |-> \"None\", func_name |-> \"h\"], [def_indent |-> 1, class_name |-> \"A\", func_name |-> \"f\"], [def_indent |-> 2, class_name |-> \"B\", func_name |-> \"g\"]}",
+          "class_stack": "<<>>",
+          "pc": "[scanner |-> \"Done\"]",
+          "cursor": "6"
+        }
+      }
+    ]
+  ]
+}

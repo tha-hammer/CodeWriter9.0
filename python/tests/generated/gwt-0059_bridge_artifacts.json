@@ -1,0 +1,2375 @@
+{
+  "gwt_id": "gwt-0059",
+  "module_name": "typescript_profile_file_validity",
+  "data_structures": {
+    "typescript_profile_file_validityState": {
+      "function_id": "fn-typescript_profile_file_validity-state",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"CompileAll\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "cursor": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "compiled": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "stage": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "passed": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from typescript_profile_file_validity TLA+ spec"
+    }
+  },
+  "operations": {
+    "CompileAll": {
+      "function_id": "fn-typescript_profile_file_validity-CompileAll",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-CompileAll",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CompileAll from typescript_profile_file_validity spec"
+    },
+    "ProcessLoop": {
+      "function_id": "fn-typescript_profile_file_validity-ProcessLoop",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-ProcessLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessLoop from typescript_profile_file_validity spec"
+    },
+    "ProcessV": {
+      "function_id": "fn-typescript_profile_file_validity-ProcessV",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-ProcessV",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessV from typescript_profile_file_validity spec"
+    },
+    "AdvanceV": {
+      "function_id": "fn-typescript_profile_file_validity-AdvanceV",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-AdvanceV",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AdvanceV from typescript_profile_file_validity spec"
+    },
+    "TypeCheck": {
+      "function_id": "fn-typescript_profile_file_validity-TypeCheck",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-TypeCheck",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action TypeCheck from typescript_profile_file_validity spec"
+    },
+    "Discover": {
+      "function_id": "fn-typescript_profile_file_validity-Discover",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-Discover",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Discover from typescript_profile_file_validity spec"
+    },
+    "Run": {
+      "function_id": "fn-typescript_profile_file_validity-Run",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-Run",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Run from typescript_profile_file_validity spec"
+    },
+    "Finish": {
+      "function_id": "fn-typescript_profile_file_validity-Finish",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from typescript_profile_file_validity spec"
+    }
+  },
+  "verifiers": {
+    "BatchConsistent": {
+      "function_id": "fn-typescript_profile_file_validity-verify-BatchConsistent",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-BatchConsistent",
+      "conditions": [
+        "cursor > N =>\n        \\A k \\in 1..N :\n            (Verifiers[k].is_dict",
+        "Verifiers[k].has_cond) =>\n                \\E c \\in compiled : c.name = Verifiers[k].name"
+      ],
+      "message": "BatchConsistent violation: cursor > N =>\n        \\A k \\in 1..N :\n            (Verifiers[k].is_dict /\\ Verifiers[k].has_cond) =>\n                ...",
+      "applies_to": [
+        "compiled",
+        "cursor"
+      ],
+      "description": "Verifier for invariant BatchConsistent from typescript_profile_file_validity spec"
+    },
+    "NonDictSkipped": {
+      "function_id": "fn-typescript_profile_file_validity-verify-NonDictSkipped",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-NonDictSkipped",
+      "conditions": [
+        "~(\\E c \\in compiled : c.name = \"skip\""
+      ],
+      "message": "NonDictSkipped violation: ~(\\E c \\in compiled : c.name = \"skip\")",
+      "applies_to": [
+        "compiled"
+      ],
+      "description": "Verifier for invariant NonDictSkipped from typescript_profile_file_validity spec"
+    },
+    "StageOrdering": {
+      "function_id": "fn-typescript_profile_file_validity-verify-StageOrdering",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-StageOrdering",
+      "conditions": [
+        "stage \\in {\"idle\", \"compile_all\", \"type_check\", \"discover\", \"run\", \"done\"}"
+      ],
+      "message": "StageOrdering violation: stage \\in {\"idle\", \"compile_all\", \"type_check\", \"discover\", \"run\", \"done\"}",
+      "applies_to": [
+        "stage"
+      ],
+      "description": "Verifier for invariant StageOrdering from typescript_profile_file_validity spec"
+    },
+    "TypeCheckPassedOnlyAfterCompile": {
+      "function_id": "fn-typescript_profile_file_validity-verify-TypeCheckPassedOnlyAfterCompile",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-TypeCheckPassedOnlyAfterCompile",
+      "conditions": [
+        "passed => stage \\in {\"type_check\", \"discover\", \"run\", \"done\"}"
+      ],
+      "message": "TypeCheckPassedOnlyAfterCompile violation: passed => stage \\in {\"type_check\", \"discover\", \"run\", \"done\"}",
+      "applies_to": [
+        "passed",
+        "stage"
+      ],
+      "description": "Verifier for invariant TypeCheckPassedOnlyAfterCompile from typescript_profile_file_validity spec"
+    },
+    "CompiledSubsetValid": {
+      "function_id": "fn-typescript_profile_file_validity-verify-CompiledSubsetValid",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-CompiledSubsetValid",
+      "conditions": [
+        "\\A c \\in compiled :\n        \\E k \\in 1..N :\n            Verifiers[k].name = c.name",
+        "Verifiers[k].is_dict",
+        "Verifiers[k].has_cond"
+      ],
+      "message": "CompiledSubsetValid violation: \\A c \\in compiled :\n        \\E k \\in 1..N :\n            Verifiers[k].name = c.name /\\\n            Verifiers[k].is_dic...",
+      "applies_to": [
+        "compiled"
+      ],
+      "description": "Verifier for invariant CompiledSubsetValid from typescript_profile_file_validity spec"
+    },
+    "TerminalImpliesAllChecked": {
+      "function_id": "fn-typescript_profile_file_validity-verify-TerminalImpliesAllChecked",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-TerminalImpliesAllChecked",
+      "conditions": [
+        "stage = \"done\" => passed = TRUE"
+      ],
+      "message": "TerminalImpliesAllChecked violation: stage = \"done\" => passed = TRUE",
+      "applies_to": [
+        "passed",
+        "stage"
+      ],
+      "description": "Verifier for invariant TerminalImpliesAllChecked from typescript_profile_file_validity spec"
+    },
+    "NoDuplicateNames": {
+      "function_id": "fn-typescript_profile_file_validity-verify-NoDuplicateNames",
+      "acceptance_criteria_id": "ac-typescript_profile_file_validity-NoDuplicateNames",
+      "conditions": [
+        "\\A c1 \\in compiled : \\A c2 \\in compiled :\n        c1.name = c2.name => c1 = c2"
+      ],
+      "message": "NoDuplicateNames violation: \\A c1 \\in compiled : \\A c2 \\in compiled :\n        c1.name = c2.name => c1 = c2",
+      "applies_to": [
+        "compiled"
+      ],
+      "description": "Verifier for invariant NoDuplicateNames from typescript_profile_file_validity spec"
+    }
+  },
+  "assertions": {
+    "assert_BatchConsistent": {
+      "condition": "cursor > N implies\n        \\A k in 1..N :\n            (Verifiers[k].is_dict and Verifiers[k].has_cond) implies\n                \\E c in compiled : c.name = Verifiers[k].name",
+      "message": "Assertion failed: BatchConsistent \u2014 cursor > N =>\n        \\A k \\in 1..N :\n            (Verifiers[k].is_dict /\\ Verifiers[k].has_cond) =>\n                ...",
+      "description": "Test assertion for BatchConsistent from typescript_profile_file_validity spec"
+    },
+    "assert_NonDictSkipped": {
+      "condition": "~(\\E c in compiled : c.name = \"skip\")",
+      "message": "Assertion failed: NonDictSkipped \u2014 ~(\\E c \\in compiled : c.name = \"skip\")",
+      "description": "Test assertion for NonDictSkipped from typescript_profile_file_validity spec"
+    },
+    "assert_StageOrdering": {
+      "condition": "stage in {\"idle\", \"compile_all\", \"type_check\", \"discover\", \"run\", \"done\"}",
+      "message": "Assertion failed: StageOrdering \u2014 stage \\in {\"idle\", \"compile_all\", \"type_check\", \"discover\", \"run\", \"done\"}",
+      "description": "Test assertion for StageOrdering from typescript_profile_file_validity spec"
+    },
+    "assert_TypeCheckPassedOnlyAfterCompile": {
+      "condition": "passed implies stage in {\"type_check\", \"discover\", \"run\", \"done\"}",
+      "message": "Assertion failed: TypeCheckPassedOnlyAfterCompile \u2014 passed => stage \\in {\"type_check\", \"discover\", \"run\", \"done\"}",
+      "description": "Test assertion for TypeCheckPassedOnlyAfterCompile from typescript_profile_file_validity spec"
+    },
+    "assert_CompiledSubsetValid": {
+      "condition": "\\A c in compiled :\n        \\E k in 1..N :\n            Verifiers[k].name = c.name and\n            Verifiers[k].is_dict and\n            Verifiers[k].has_cond",
+      "message": "Assertion failed: CompiledSubsetValid \u2014 \\A c \\in compiled :\n        \\E k \\in 1..N :\n            Verifiers[k].name = c.name /\\\n            Verifiers[k].is_dic...",
+      "description": "Test assertion for CompiledSubsetValid from typescript_profile_file_validity spec"
+    },
+    "assert_TerminalImpliesAllChecked": {
+      "condition": "stage = \"done\" implies passed = TRUE",
+      "message": "Assertion failed: TerminalImpliesAllChecked \u2014 stage = \"done\" => passed = TRUE",
+      "description": "Test assertion for TerminalImpliesAllChecked from typescript_profile_file_validity spec"
+    },
+    "assert_NoDuplicateNames": {
+      "condition": "\\A c1 in compiled : \\A c2 in compiled :\n        c1.name = c2.name implies c1 = c2",
+      "message": "Assertion failed: NoDuplicateNames \u2014 \\A c1 \\in compiled : \\A c2 \\in compiled :\n        c1.name = c2.name => c1 = c2",
+      "description": "Test assertion for NoDuplicateNames from typescript_profile_file_validity spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"ProcessLoop\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLoop",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "pc": "[verifier |-> \"TypeCheck\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "TypeCheck",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Discover\"]",
+          "cursor": "5",
+          "stage": "\"type_check\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "Discover",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Run\"]",
+          "cursor": "5",
+          "stage": "\"discover\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Run",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ]
+  ]
+}

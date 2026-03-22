@@ -41,6 +41,14 @@
     {
       "id": "req-0010",
       "text": "CLI pipeline (cw9 command) needs formal invariants on its core operations: extract preserving registered GWT nodes, loop persisting verified specs, pipeline step ordering with early exit, and register idempotency via criterion-ID bindings"
+    },
+    {
+      "id": "req-0015",
+      "text": "Language-specific scanners must produce Skeleton objects with correct 1-indexed line numbers and correct class_name assignment for nested functions/methods"
+    },
+    {
+      "id": "req-0016",
+      "text": "Language profiles must compile TLA+ conditions to valid target-language boolean expressions and generate test files that pass target compiler/interpreter verification"
     }
   ],
   "behaviors": [
@@ -288,6 +296,132 @@
       "given": "a criterion_id that was previously registered (entry exists in .cw9/criterion_bindings.json)",
       "when": "cw9 register is called again with the same criterion_id",
       "then": "the previously allocated gwt_id is returned without calling dag.register_gwt() again — the bindings file provides stable ID allocation across invocations"
+    },
+    {
+      "id": "gwt-0046",
+      "name": "scanner_python_line_ranges",
+      "given": "a Python source file with functions defined at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its def/async def keyword"
+    },
+    {
+      "id": "gwt-0047",
+      "name": "scanner_python_nested_depth",
+      "given": "a Python source file with nested functions inside classes at varying indent levels",
+      "when": "scan_file is called",
+      "then": "nested functions have class_name set to the enclosing class based on indent depth, and top-level functions have class_name=None"
+    },
+    {
+      "id": "gwt-0048",
+      "name": "scanner_typescript_line_ranges",
+      "given": "a TypeScript source file with functions and methods at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its function/method declaration"
+    },
+    {
+      "id": "gwt-0049",
+      "name": "scanner_typescript_nested_depth",
+      "given": "a TypeScript source file with methods inside classes tracked by brace depth",
+      "when": "scan_file is called",
+      "then": "methods inside classes have class_name set to the enclosing class, and functions outside classes have class_name=None"
+    },
+    {
+      "id": "gwt-0050",
+      "name": "scanner_go_line_ranges",
+      "given": "a Go source file with func declarations at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its func keyword"
+    },
+    {
+      "id": "gwt-0051",
+      "name": "scanner_go_nested_depth",
+      "given": "a Go source file with receiver methods on struct types",
+      "when": "scan_file is called",
+      "then": "receiver methods have class_name set to the receiver type, and package-level functions have class_name=None"
+    },
+    {
+      "id": "gwt-0052",
+      "name": "scanner_rust_line_ranges",
+      "given": "a Rust source file with fn declarations at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its fn keyword"
+    },
+    {
+      "id": "gwt-0053",
+      "name": "scanner_rust_nested_depth",
+      "given": "a Rust source file with fn declarations inside impl blocks",
+      "when": "scan_file is called",
+      "then": "methods inside impl blocks have class_name set to the impl type, and free functions have class_name=None"
+    },
+    {
+      "id": "gwt-0054",
+      "name": "scanner_javascript_line_ranges",
+      "given": "a JavaScript source file with functions at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its function declaration"
+    },
+    {
+      "id": "gwt-0055",
+      "name": "scanner_javascript_nested_depth",
+      "given": "a JavaScript source file with methods inside classes tracked by brace depth",
+      "when": "scan_file is called",
+      "then": "methods inside classes have class_name set to the enclosing class, and functions outside classes have class_name=None"
+    },
+    {
+      "id": "gwt-0056",
+      "name": "python_profile_condition_compile",
+      "given": "a TLA+ expression with standard operators (\\in, /\\, \\/, =, #, \\A, \\E, Len, Cardinality)",
+      "when": "PythonProfile.compile_condition is called",
+      "then": "a CompiledExpression is returned with a valid Python boolean expression using correct operator mapping (in, and, or, ==, !=, all, any, len)"
+    },
+    {
+      "id": "gwt-0057",
+      "name": "python_profile_file_validity",
+      "given": "a PythonProfile and bridge artifacts with verifier conditions",
+      "when": "compile_assertions is called and the resulting expressions are embedded in a test file",
+      "then": "the test file passes Python syntax check via compile() and pytest --collect-only succeeds"
+    },
+    {
+      "id": "gwt-0058",
+      "name": "typescript_profile_condition_compile",
+      "given": "a TLA+ expression with standard operators",
+      "when": "TypeScriptProfile.compile_condition is called",
+      "then": "a CompiledExpression is returned with a valid TypeScript expression using correct operator mapping (\\in → .includes(), = → ===, # → !==, quantifiers → .every/.some)"
+    },
+    {
+      "id": "gwt-0059",
+      "name": "typescript_profile_file_validity",
+      "given": "a TypeScriptProfile and bridge artifacts with verifier conditions",
+      "when": "compile_assertions is called and the resulting expressions are embedded in a test file",
+      "then": "the test file passes TypeScript type-checking via tsc --noEmit"
+    },
+    {
+      "id": "gwt-0060",
+      "name": "go_profile_condition_compile",
+      "given": "a TLA+ expression with standard operators",
+      "when": "GoProfile.compile_condition is called",
+      "then": "a CompiledExpression is returned with a valid Go expression (\\in → slices.Contains, quantifiers emit helper_defs with allSatisfy/anySatisfy functions)"
+    },
+    {
+      "id": "gwt-0061",
+      "name": "go_profile_file_validity",
+      "given": "a GoProfile and bridge artifacts with verifier conditions",
+      "when": "compile_assertions is called and the resulting expressions are embedded in a test file",
+      "then": "the test file passes go vet ./... and go test -list . ./..."
+    },
+    {
+      "id": "gwt-0062",
+      "name": "rust_profile_condition_compile",
+      "given": "a TLA+ expression with standard operators",
+      "when": "RustProfile.compile_condition is called",
+      "then": "a CompiledExpression is returned with a valid Rust expression (\\in → .contains(&x), quantifiers → .iter().all/.any, tuples → ())"
+    },
+    {
+      "id": "gwt-0063",
+      "name": "rust_profile_file_validity",
+      "given": "a RustProfile and bridge artifacts with verifier conditions",
+      "when": "compile_assertions is called and the resulting expressions are embedded in a test file",
+      "then": "the test file passes cargo check (Rust compiler type-checking)"
     }
   ],
   "edges": [
@@ -1230,6 +1364,96 @@
       "from": "cli-0001",
       "to": "gwt-0035",
       "type": "implements"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0046",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0047",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0048",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0049",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0050",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0051",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0052",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0053",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0054",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0055",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0056",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0057",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0058",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0059",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0060",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0061",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0062",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0063",
+      "type": "decomposes"
     }
   ],
   "test_artifacts": {

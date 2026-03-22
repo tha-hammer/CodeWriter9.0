@@ -1,0 +1,2589 @@
+{
+  "gwt_id": "gwt-0052",
+  "module_name": "scanner_rust_line_ranges",
+  "data_structures": {
+    "scanner_rust_line_rangesState": {
+      "function_id": "fn-scanner_rust_line_ranges-state",
+      "acceptance_criteria_id": "ac-scanner_rust_line_ranges-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ScanLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "i": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "skeletons": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "in_trait": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from scanner_rust_line_ranges TLA+ spec"
+    }
+  },
+  "operations": {
+    "ScanLoop": {
+      "function_id": "fn-scanner_rust_line_ranges-ScanLoop",
+      "acceptance_criteria_id": "ac-scanner_rust_line_ranges-ScanLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ScanLoop from scanner_rust_line_ranges spec"
+    },
+    "ProcessLine": {
+      "function_id": "fn-scanner_rust_line_ranges-ProcessLine",
+      "acceptance_criteria_id": "ac-scanner_rust_line_ranges-ProcessLine",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessLine from scanner_rust_line_ranges spec"
+    },
+    "Advance": {
+      "function_id": "fn-scanner_rust_line_ranges-Advance",
+      "acceptance_criteria_id": "ac-scanner_rust_line_ranges-Advance",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Advance from scanner_rust_line_ranges spec"
+    },
+    "Finish": {
+      "function_id": "fn-scanner_rust_line_ranges-Finish",
+      "acceptance_criteria_id": "ac-scanner_rust_line_ranges-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from scanner_rust_line_ranges spec"
+    }
+  },
+  "verifiers": {
+    "LineNumberCorrect": {
+      "function_id": "fn-scanner_rust_line_ranges-verify-LineNumberCorrect",
+      "acceptance_criteria_id": "ac-scanner_rust_line_ranges-LineNumberCorrect",
+      "conditions": [
+        "\\A s \\in skeletons :",
+        "s.line_num >= 1",
+        "s.line_num <= N",
+        "Lines[s.line_num] = \"Fn\""
+      ],
+      "message": "LineNumberCorrect violation: \\A s \\in skeletons :\n        /\\ s.line_num >= 1\n        /\\ s.line_num <= N\n        /\\ Lines[s.line_num] = \"Fn\"",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant LineNumberCorrect from scanner_rust_line_ranges spec"
+    },
+    "TraitExclusion": {
+      "function_id": "fn-scanner_rust_line_ranges-verify-TraitExclusion",
+      "acceptance_criteria_id": "ac-scanner_rust_line_ranges-TraitExclusion",
+      "conditions": [
+        "\\A s \\in skeletons :\n        ~(\\E j \\in 1..(s.line_num - 1) :\n            Lines[j] = \"TraitOpen\"",
+        "~(\\E m \\in (j+1)..(s.line_num - 1) : Lines[m] = \"CloseBrace\""
+      ],
+      "message": "TraitExclusion violation: \\A s \\in skeletons :\n        ~(\\E j \\in 1..(s.line_num - 1) :\n            Lines[j] = \"TraitOpen\" /\\\n            ~(\\E ...",
+      "applies_to": [
+        "skeletons"
+      ],
+      "description": "Verifier for invariant TraitExclusion from scanner_rust_line_ranges spec"
+    },
+    "NoGaps": {
+      "function_id": "fn-scanner_rust_line_ranges-verify-NoGaps",
+      "acceptance_criteria_id": "ac-scanner_rust_line_ranges-NoGaps",
+      "conditions": [
+        "i > N =>\n        \\A k \\in 1..N :\n            (Lines[k] = \"Fn\"",
+        "~InTrait(k)) =>\n                \\E s \\in skeletons : s.line_num = k"
+      ],
+      "message": "NoGaps violation: i > N =>\n        \\A k \\in 1..N :\n            (Lines[k] = \"Fn\" /\\ ~InTrait(k)) =>\n                \\E s \\in skeletons :...",
+      "applies_to": [
+        "i",
+        "skeletons"
+      ],
+      "description": "Verifier for invariant NoGaps from scanner_rust_line_ranges spec"
+    },
+    "CursorBounded": {
+      "function_id": "fn-scanner_rust_line_ranges-verify-CursorBounded",
+      "acceptance_criteria_id": "ac-scanner_rust_line_ranges-CursorBounded",
+      "conditions": [
+        "i <= N + 1"
+      ],
+      "message": "CursorBounded violation: i <= N + 1",
+      "applies_to": [
+        "i"
+      ],
+      "description": "Verifier for invariant CursorBounded from scanner_rust_line_ranges spec"
+    }
+  },
+  "assertions": {
+    "assert_LineNumberCorrect": {
+      "condition": "\\A s in skeletons :\n        and s.line_num >= 1\n        and s.line_num <= N\n        and Lines[s.line_num] = \"Fn\"",
+      "message": "Assertion failed: LineNumberCorrect \u2014 \\A s \\in skeletons :\n        /\\ s.line_num >= 1\n        /\\ s.line_num <= N\n        /\\ Lines[s.line_num] = \"Fn\"",
+      "description": "Test assertion for LineNumberCorrect from scanner_rust_line_ranges spec"
+    },
+    "assert_TraitExclusion": {
+      "condition": "\\A s in skeletons :\n        ~(\\E j in 1..(s.line_num - 1) :\n            Lines[j] = \"TraitOpen\" and\n            ~(\\E m in (j+1)..(s.line_num - 1) : Lines[m] = \"CloseBrace\"))",
+      "message": "Assertion failed: TraitExclusion \u2014 \\A s \\in skeletons :\n        ~(\\E j \\in 1..(s.line_num - 1) :\n            Lines[j] = \"TraitOpen\" /\\\n            ~(\\E ...",
+      "description": "Test assertion for TraitExclusion from scanner_rust_line_ranges spec"
+    },
+    "assert_NoGaps": {
+      "condition": "i > N implies\n        \\A k in 1..N :\n            (Lines[k] = \"Fn\" and ~InTrait(k)) implies\n                \\E s in skeletons : s.line_num = k",
+      "message": "Assertion failed: NoGaps \u2014 i > N =>\n        \\A k \\in 1..N :\n            (Lines[k] = \"Fn\" /\\ ~InTrait(k)) =>\n                \\E s \\in skeletons :...",
+      "description": "Test assertion for NoGaps from scanner_rust_line_ranges spec"
+    },
+    "assert_CursorBounded": {
+      "condition": "i <= N + 1",
+      "message": "Assertion failed: CursorBounded \u2014 i <= N + 1",
+      "description": "Test assertion for CursorBounded from scanner_rust_line_ranges spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "1",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "2",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "3",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "4",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "4",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "5",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "TRUE",
+          "i": "6",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "6",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"ProcessLine\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "ProcessLine",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "7",
+          "pc": "[scanner |-> \"Advance\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "Advance",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"ScanLoop\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "ScanLoop",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "skeletons": "{[line_num |-> 2], [line_num |-> 7]}",
+          "in_trait": "FALSE",
+          "i": "8",
+          "pc": "[scanner |-> \"Done\"]"
+        }
+      }
+    ]
+  ]
+}

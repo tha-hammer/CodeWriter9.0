@@ -1,0 +1,2561 @@
+{
+  "gwt_id": "gwt-0061",
+  "module_name": "go_profile_file_validity",
+  "data_structures": {
+    "go_profile_file_validityState": {
+      "function_id": "fn-go_profile_file_validity-state",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"CompileAll\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "cursor": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "compiled": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "helper_needed": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "stage": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "passed": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from go_profile_file_validity TLA+ spec"
+    }
+  },
+  "operations": {
+    "CompileAll": {
+      "function_id": "fn-go_profile_file_validity-CompileAll",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-CompileAll",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CompileAll from go_profile_file_validity spec"
+    },
+    "LoopStart": {
+      "function_id": "fn-go_profile_file_validity-LoopStart",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-LoopStart",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action LoopStart from go_profile_file_validity spec"
+    },
+    "ProcessV": {
+      "function_id": "fn-go_profile_file_validity-ProcessV",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-ProcessV",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessV from go_profile_file_validity spec"
+    },
+    "AdvanceV": {
+      "function_id": "fn-go_profile_file_validity-AdvanceV",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-AdvanceV",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AdvanceV from go_profile_file_validity spec"
+    },
+    "GoVet": {
+      "function_id": "fn-go_profile_file_validity-GoVet",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-GoVet",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action GoVet from go_profile_file_validity spec"
+    },
+    "ListTests": {
+      "function_id": "fn-go_profile_file_validity-ListTests",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-ListTests",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ListTests from go_profile_file_validity spec"
+    },
+    "RunTests": {
+      "function_id": "fn-go_profile_file_validity-RunTests",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-RunTests",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunTests from go_profile_file_validity spec"
+    },
+    "Finish": {
+      "function_id": "fn-go_profile_file_validity-Finish",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from go_profile_file_validity spec"
+    }
+  },
+  "verifiers": {
+    "BatchConsistent": {
+      "function_id": "fn-go_profile_file_validity-verify-BatchConsistent",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-BatchConsistent",
+      "conditions": [
+        "cursor > N =>\n        \\A k \\in 1..N :\n            (Verifiers[k].is_dict",
+        "Verifiers[k].has_cond) =>\n                \\E c \\in compiled : c.name = Verifiers[k].name"
+      ],
+      "message": "BatchConsistent violation: cursor > N =>\n        \\A k \\in 1..N :\n            (Verifiers[k].is_dict /\\ Verifiers[k].has_cond) =>\n                ...",
+      "applies_to": [
+        "compiled",
+        "cursor"
+      ],
+      "description": "Verifier for invariant BatchConsistent from go_profile_file_validity spec"
+    },
+    "HelperIncluded": {
+      "function_id": "fn-go_profile_file_validity-verify-HelperIncluded",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-HelperIncluded",
+      "conditions": [
+        "helper_needed =>\n        (stage \\in {\"vet\", \"list\", \"run\", \"done\"} => passed = TRUE"
+      ],
+      "message": "HelperIncluded violation: helper_needed =>\n        (stage \\in {\"vet\", \"list\", \"run\", \"done\"} => passed = TRUE)",
+      "applies_to": [
+        "helper_needed",
+        "passed",
+        "stage"
+      ],
+      "description": "Verifier for invariant HelperIncluded from go_profile_file_validity spec"
+    },
+    "StageOrdering": {
+      "function_id": "fn-go_profile_file_validity-verify-StageOrdering",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-StageOrdering",
+      "conditions": [
+        "stage \\in {\"idle\", \"compile_all\", \"vet\", \"list\", \"run\", \"done\"}"
+      ],
+      "message": "StageOrdering violation: stage \\in {\"idle\", \"compile_all\", \"vet\", \"list\", \"run\", \"done\"}",
+      "applies_to": [
+        "stage"
+      ],
+      "description": "Verifier for invariant StageOrdering from go_profile_file_validity spec"
+    },
+    "VetPassedWhenDone": {
+      "function_id": "fn-go_profile_file_validity-verify-VetPassedWhenDone",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-VetPassedWhenDone",
+      "conditions": [
+        "stage = \"done\" => passed = TRUE"
+      ],
+      "message": "VetPassedWhenDone violation: stage = \"done\" => passed = TRUE",
+      "applies_to": [
+        "passed",
+        "stage"
+      ],
+      "description": "Verifier for invariant VetPassedWhenDone from go_profile_file_validity spec"
+    },
+    "CompiledOnlyEligible": {
+      "function_id": "fn-go_profile_file_validity-verify-CompiledOnlyEligible",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-CompiledOnlyEligible",
+      "conditions": [
+        "\\A c \\in compiled :\n        \\E k \\in 1..N :\n            Verifiers[k].name = c.name",
+        "Verifiers[k].is_dict",
+        "Verifiers[k].has_cond"
+      ],
+      "message": "CompiledOnlyEligible violation: \\A c \\in compiled :\n        \\E k \\in 1..N :\n            Verifiers[k].name = c.name /\\\n            Verifiers[k].is_dic...",
+      "applies_to": [
+        "compiled"
+      ],
+      "description": "Verifier for invariant CompiledOnlyEligible from go_profile_file_validity spec"
+    },
+    "HelperNeededIffQuantUsed": {
+      "function_id": "fn-go_profile_file_validity-verify-HelperNeededIffQuantUsed",
+      "acceptance_criteria_id": "ac-go_profile_file_validity-HelperNeededIffQuantUsed",
+      "conditions": [
+        "cursor > N =>\n        (helper_needed <=>\n            \\E k \\in 1..N :\n                Verifiers[k].is_dict",
+        "Verifiers[k].has_cond",
+        "Verifiers[k].uses_quant"
+      ],
+      "message": "HelperNeededIffQuantUsed violation: cursor > N =>\n        (helper_needed <=>\n            \\E k \\in 1..N :\n                Verifiers[k].is_dict /\\\n        ...",
+      "applies_to": [
+        "cursor",
+        "helper_needed"
+      ],
+      "description": "Verifier for invariant HelperNeededIffQuantUsed from go_profile_file_validity spec"
+    }
+  },
+  "assertions": {
+    "assert_BatchConsistent": {
+      "condition": "cursor > N implies\n        \\A k in 1..N :\n            (Verifiers[k].is_dict and Verifiers[k].has_cond) implies\n                \\E c in compiled : c.name = Verifiers[k].name",
+      "message": "Assertion failed: BatchConsistent \u2014 cursor > N =>\n        \\A k \\in 1..N :\n            (Verifiers[k].is_dict /\\ Verifiers[k].has_cond) =>\n                ...",
+      "description": "Test assertion for BatchConsistent from go_profile_file_validity spec"
+    },
+    "assert_HelperIncluded": {
+      "condition": "helper_needed implies\n        (stage in {\"vet\", \"list\", \"run\", \"done\"} implies passed = TRUE)",
+      "message": "Assertion failed: HelperIncluded \u2014 helper_needed =>\n        (stage \\in {\"vet\", \"list\", \"run\", \"done\"} => passed = TRUE)",
+      "description": "Test assertion for HelperIncluded from go_profile_file_validity spec"
+    },
+    "assert_StageOrdering": {
+      "condition": "stage in {\"idle\", \"compile_all\", \"vet\", \"list\", \"run\", \"done\"}",
+      "message": "Assertion failed: StageOrdering \u2014 stage \\in {\"idle\", \"compile_all\", \"vet\", \"list\", \"run\", \"done\"}",
+      "description": "Test assertion for StageOrdering from go_profile_file_validity spec"
+    },
+    "assert_VetPassedWhenDone": {
+      "condition": "stage = \"done\" implies passed = TRUE",
+      "message": "Assertion failed: VetPassedWhenDone \u2014 stage = \"done\" => passed = TRUE",
+      "description": "Test assertion for VetPassedWhenDone from go_profile_file_validity spec"
+    },
+    "assert_CompiledOnlyEligible": {
+      "condition": "\\A c in compiled :\n        \\E k in 1..N :\n            Verifiers[k].name = c.name and\n            Verifiers[k].is_dict and\n            Verifiers[k].has_cond",
+      "message": "Assertion failed: CompiledOnlyEligible \u2014 \\A c \\in compiled :\n        \\E k \\in 1..N :\n            Verifiers[k].name = c.name /\\\n            Verifiers[k].is_dic...",
+      "description": "Test assertion for CompiledOnlyEligible from go_profile_file_validity spec"
+    },
+    "assert_HelperNeededIffQuantUsed": {
+      "condition": "cursor > N implies\n        (helper_needed <implies\n            \\E k in 1..N :\n                Verifiers[k].is_dict and\n                Verifiers[k].has_cond and\n                Verifiers[k].uses_quant)",
+      "message": "Assertion failed: HelperNeededIffQuantUsed \u2014 cursor > N =>\n        (helper_needed <=>\n            \\E k \\in 1..N :\n                Verifiers[k].is_dict /\\\n        ...",
+      "description": "Test assertion for HelperNeededIffQuantUsed from go_profile_file_validity spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"CompileAll\"]",
+          "cursor": "1",
+          "stage": "\"idle\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "CompileAll",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "1",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"]}",
+          "passed": "FALSE",
+          "helper_needed": "FALSE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "2",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "3",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ProcessV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "ProcessV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"AdvanceV\"]",
+          "cursor": "4",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AdvanceV",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"LoopStart\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "LoopStart",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "FALSE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"GoVet\"]",
+          "cursor": "5",
+          "stage": "\"compile_all\""
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "GoVet",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"ListTests\"]",
+          "cursor": "5",
+          "stage": "\"vet\""
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "ListTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"RunTests\"]",
+          "cursor": "5",
+          "stage": "\"list\""
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "RunTests",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Finish\"]",
+          "cursor": "5",
+          "stage": "\"run\""
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "Finish",
+        "vars": {
+          "compiled": "{[name |-> \"inv1\"], [name |-> \"inv2\"]}",
+          "passed": "TRUE",
+          "helper_needed": "TRUE",
+          "pc": "[verifier |-> \"Done\"]",
+          "cursor": "5",
+          "stage": "\"done\""
+        }
+      }
+    ]
+  ]
+}
