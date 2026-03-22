@@ -2,8 +2,17 @@ import pytest
 from pathlib import Path
 from registry.scanner_javascript import scan_file as _scan_file
 
+def _skel_to_dict(s):
+    """Convert Skeleton dataclass to dict for test assertions (TLA+ sentinel convention)."""
+    return {
+        "function_name": s.function_name,
+        "class_name": s.class_name if s.class_name is not None else "None",
+        "visibility": s.visibility,
+        "return_type": s.return_type if s.return_type is not None else "None",
+    }
+
 def scan_file(path):
-    return _scan_file(Path(path) if isinstance(path, str) else path)
+    return [_skel_to_dict(s) for s in _scan_file(Path(path) if isinstance(path, str) else path)]
 
 # ---------------------------------------------------------------------------
 # Canonical JavaScript source encoding the 6-event TLA+ sequence:

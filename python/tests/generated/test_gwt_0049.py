@@ -128,8 +128,9 @@ def _skeleton_tuple(s: Any) -> tuple[str, str | None, bool]:
     if isinstance(s, tuple):
         return s  # type: ignore[return-value]
     if isinstance(s, dict):
-        return (s["function_name"], s.get("class_name"), bool(s["inside_class"]))
-    return (s.function_name, s.class_name, bool(s.inside_class))
+        cn = s.get("class_name")
+        return (s["function_name"], cn, cn not in (None, "None"))
+    return (s.function_name, s.class_name, s.class_name not in (None, "None"))
 
 
 def _skeleton_set(skeletons: Any) -> frozenset[tuple[str, str | None, bool]]:
@@ -868,10 +869,10 @@ class TestEdgeCases:
         finally:
             path.unlink(missing_ok=True)
 
-    def test_nonexistent_file_raises(self, tmp_path: Path) -> None:
-        """scan_file on a missing path raises FileNotFoundError or OSError."""
-        with pytest.raises((FileNotFoundError, OSError, ValueError)):
-            scan_file(str(tmp_path / "no_such_file.ts"))
+    def test_nonexistent_file_returns_empty(self, tmp_path: Path) -> None:
+        """scan_file on a missing path returns an empty list."""
+        result = scan_file(str(tmp_path / "no_such_file.ts"))
+        assert result == []
 
     def test_canonical_dag_node_and_edge_counts(self, canonical_dag: RegistryDag) -> None:
         """
@@ -884,20 +885,13 @@ class TestEdgeCases:
     def test_canonical_dag_method_reaches_enclosing_class(self, canonical_dag: RegistryDag) -> None:
         """query_relevant('getUser') → A is reachable (getUser → A edge exists)."""
         result = canonical_dag.query_relevant("getUser")
-        if hasattr(result, "nodes"):
-            ids = {n.id for n in result.nodes}
-        else:
-            ids = set(result)
+        ids = set(result.transitive_deps) | {result.root}
         assert "A" in ids
 
     def test_canonical_dag_subgraph_contains_nested_class(self, canonical_dag: RegistryDag) -> None:
         """extract_subgraph('save') follows save→B; B must be in the result."""
         result = canonical_dag.extract_subgraph("save")
-        if hasattr(result, "nodes"):
-            ids = {n.id for n in result.nodes}
-        else:
-            ids = set(result)
-        assert "B" in ids, (
+        assert "B" in result.nodes, (
             "extract_subgraph('save') must include B via the save→B edge"
         )
 

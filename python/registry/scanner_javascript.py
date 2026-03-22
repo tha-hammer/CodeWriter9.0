@@ -287,7 +287,7 @@ def scan_file(path: Path) -> list[Skeleton]:
             param_text, j, full_sig = _gather_params(lines, i, line[paren_start + 1:])
             params = _parse_js_params(param_text)
 
-            visibility = "public" if _is_export(line) else "private"
+            visibility = "private" if func_name.startswith("#") else "public"
             current_class = class_stack[-1][0] if class_stack else None
 
             skeletons.append(Skeleton(
@@ -318,7 +318,7 @@ def scan_file(path: Path) -> list[Skeleton]:
             param_text, j, full_sig = _gather_params(lines, i, line[paren_start + 1:])
             params = _parse_js_params(param_text)
 
-            visibility = "public" if _is_export(line) else "private"
+            visibility = "private" if func_name.startswith("#") else "public"
             current_class = class_stack[-1][0] if class_stack else None
 
             skeletons.append(Skeleton(
