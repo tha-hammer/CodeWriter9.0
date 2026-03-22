@@ -280,8 +280,8 @@ class TestCmdGwtAuthor:
             }]
         })
         monkeypatch.setattr(
-            "registry.gwt_author._call_llm",
-            lambda prompt: mock_response,
+            "registry.cli._build_llm_fn",
+            lambda: (lambda prompt: mock_response),
         )
 
         rc = main(["gwt-author", "--research", str(notes), str(project)])
