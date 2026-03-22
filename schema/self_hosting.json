@@ -49,6 +49,10 @@
     {
       "id": "req-0016",
       "text": "Language profiles must compile TLA+ conditions to valid target-language boolean expressions and generate test files that pass target compiler/interpreter verification"
+    },
+    {
+      "id": "req-0017",
+      "text": "System needs horizontal contract verification: cross-reference caller outputs against callee inputs in crawl.db to detect type mismatches, flag unresolved dependencies, and produce a complete seam report where every edge is accounted for"
     }
   ],
   "behaviors": [
@@ -422,6 +426,34 @@
       "given": "a RustProfile and bridge artifacts with verifier conditions",
       "when": "compile_assertions is called and the resulting expressions are embedded in a test file",
       "then": "the test file passes cargo check (Rust compiler type-checking)"
+    },
+    {
+      "id": "gwt-0064",
+      "name": "seam_mismatch_detected",
+      "given": "crawl.db has caller A with outs [{ok, \"Dict[str, Any]\"}] and callee B with ins [{name: \"config\", type_str: \"Config\", source: \"internal_call\", source_uuid: A.uuid}]",
+      "when": "check_seam(A.uuid, B.uuid) is called",
+      "then": "a SeamMismatch is reported with severity \"type_mismatch\" because B expects \"Config\" but A provides \"Dict[str, Any]\""
+    },
+    {
+      "id": "gwt-0065",
+      "name": "seam_satisfied_no_report",
+      "given": "crawl.db has caller A with outs [{ok, \"list[FnRecord]\"}] and callee B with ins [{name: \"records\", type_str: \"list[FnRecord]\", source: \"internal_call\", source_uuid: A.uuid}]",
+      "when": "check_seam(A.uuid, B.uuid) is called",
+      "then": "no SeamMismatch is reported because the type contract is satisfied via exact match"
+    },
+    {
+      "id": "gwt-0066",
+      "name": "seam_unresolved_flagged",
+      "given": "crawl.db has callee B with ins [{name: \"data\", source: \"internal_call\", source_uuid: NULL}]",
+      "when": "check_all_seams() iterates the deps view and unresolved ins",
+      "then": "an UnresolvedSeam is reported for B.ins[\"data\"] because source_uuid is NULL and the seam cannot be verified"
+    },
+    {
+      "id": "gwt-0067",
+      "name": "seam_report_complete",
+      "given": "crawl.db with N dependency edges, M type mismatches, K unresolved, and (N-M-K) satisfied seams",
+      "when": "check_all_seams() runs to completion",
+      "then": "SeamReport contains exactly M mismatches plus K unresolved plus (N-M-K) satisfied and total_edges equals N so every edge is accounted for"
     }
   ],
   "edges": [
@@ -1454,6 +1486,46 @@
       "from": "req-0016",
       "to": "gwt-0063",
       "type": "decomposes"
+    },
+    {
+      "from": "req-0017",
+      "to": "gwt-0064",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0017",
+      "to": "gwt-0065",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0017",
+      "to": "gwt-0066",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0017",
+      "to": "gwt-0067",
+      "type": "decomposes"
+    },
+    {
+      "from": "seamchecker-0001",
+      "to": "gwt-0064",
+      "type": "verifies"
+    },
+    {
+      "from": "seamchecker-0001",
+      "to": "gwt-0065",
+      "type": "verifies"
+    },
+    {
+      "from": "seamchecker-0001",
+      "to": "gwt-0066",
+      "type": "verifies"
+    },
+    {
+      "from": "seamchecker-0001",
+      "to": "gwt-0067",
+      "type": "verifies"
     }
   ],
   "test_artifacts": {
@@ -1463,6 +1535,7 @@
     "subgraph-0001": "tests/generated/test_subgraph_extraction.py",
     "crawlstore-0001": "tests/generated/test_gwt_0024.py",
     "orchestrator-0001": "tests/generated/test_gwt_0028.py",
-    "cli-0001": "tests/generated/test_gwt_0032.py"
+    "cli-0001": "tests/generated/test_gwt_0032.py",
+    "seamchecker-0001": "tests/test_seam_checker.py"
   }
 }
