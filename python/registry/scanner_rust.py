@@ -244,7 +244,10 @@ def scan_file(path: Path) -> list[Skeleton]:
         impl_match = _IMPL_RE.match(line)
         if impl_match and not _FUNC_RE.match(line):
             type_name = impl_match.group(2)
-            block_stack.append((type_name, brace_depth, False))
+            # impl Trait for Type blocks are treated like trait blocks
+            # (methods are trait-required, not standalone)
+            is_trait_impl = bool(re.search(r'\bfor\b', line[:line.index('{')] if '{' in line else line))
+            block_stack.append((type_name, brace_depth, is_trait_impl))
             brace_depth += line.count("{") - line.count("}")
             # Pop blocks that have closed
             while block_stack and brace_depth <= block_stack[-1][1]:

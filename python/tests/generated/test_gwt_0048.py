@@ -444,11 +444,11 @@ class TestEdgeCases:
         result = scan_file(path)
         assert result == []
 
-    def test_nonexistent_file_raises(self, tmp_path):
-        """scan_file raises an exception for a path that does not exist."""
+    def test_nonexistent_file_returns_empty(self, tmp_path):
+        """scan_file returns empty list for a path that does not exist."""
         bad_path = str(tmp_path / "does_not_exist.ts")
-        with pytest.raises(Exception):
-            scan_file(bad_path)
+        result = scan_file(bad_path)
+        assert result == []
 
     def test_all_func_lines(self, tmp_path):
         """All-Func topology: every line captured, found == {1..5}."""

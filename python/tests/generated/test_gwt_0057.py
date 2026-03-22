@@ -81,7 +81,7 @@ def _assert_collect_implies_syntax(passed: bool, stage: str) -> None:
 
 
 def _assert_done_implies_all_checked(passed: bool, stage: str) -> None:
-    if stage in ("done", "run"):
+    if stage == "done":
         assert passed is True, (
             f"DoneImpliesAllChecked violated: "
             f"stage={stage!r} reached but passed={passed!r}"

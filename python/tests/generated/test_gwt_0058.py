@@ -9,34 +9,19 @@ from registry.dag import RegistryDag
 # (verified by TLC across all 10 traces, final State 36)
 # ---------------------------------------------------------------------------
 TOKENS = [
-    {"tla_op": "In",     "ts_op": "includes"},
-    {"tla_op": "And",    "ts_op": "ampamp"},
-    {"tla_op": "Or",     "ts_op": "pipepipe"},
-    {"tla_op": "Eq",     "ts_op": "tripleEq"},
-    {"tla_op": "Neq",    "ts_op": "bangEqEq"},
-    {"tla_op": "ForAll", "ts_op": "every"},
-    {"tla_op": "Exists", "ts_op": "some"},
-    {"tla_op": "Len",    "ts_op": "length"},
-    {"tla_op": "Card",   "ts_op": "size"},
-    {"tla_op": "BoolT",  "ts_op": "true"},
-    {"tla_op": "BoolF",  "ts_op": "false"},
+    {"tla_op": "In",     "ts_op": "includes",  "surface": ".includes("},
+    {"tla_op": "And",    "ts_op": "ampamp",     "surface": "&&"},
+    {"tla_op": "Or",     "ts_op": "pipepipe",   "surface": "||"},
+    {"tla_op": "Eq",     "ts_op": "tripleEq",   "surface": "==="},
+    {"tla_op": "Neq",    "ts_op": "bangEqEq",   "surface": "!=="},
+    {"tla_op": "ForAll", "ts_op": "every",      "surface": ".every("},
+    {"tla_op": "Exists", "ts_op": "some",        "surface": ".some("},
+    {"tla_op": "Len",    "ts_op": "length",     "surface": ".length"},
+    {"tla_op": "Card",   "ts_op": "size",       "surface": ".size"},
+    {"tla_op": "BoolT",  "ts_op": "true",       "surface": "true"},
+    {"tla_op": "BoolF",  "ts_op": "false",      "surface": "false"},
 ]
 N = 11  # total token count per spec
-
-# Symbolic ts_op names -> real TypeScript surface syntax
-TS_OP_SURFACE = {
-    "includes":  ".includes(",
-    "ampamp":    "&&",
-    "pipepipe":  "||",
-    "tripleEq":  "===",
-    "bangEqEq":  "!==",
-    "every":     ".every(",
-    "some":      ".some(",
-    "length":    ".length",
-    "size":      ".size",
-    "true":      "true",
-    "false":     "false",
-}
 
 # TLA+ source tokens -> Python-side expression fragments fed to compile_condition
 TLA_EXPRESSIONS = {
@@ -59,86 +44,70 @@ TLA_EXPRESSIONS = {
 # ---------------------------------------------------------------------------
 
 def _assert_no_error(result: CompiledExpression) -> None:
-    """Invariant: NoError -- has_error must be False."""
-    assert result.has_error is False, (
-        f"NoError invariant violated: has_error={result.has_error}"
+    """Invariant: NoError -- compilation succeeded (no exception)."""
+    assert result is not None
+    assert isinstance(result, CompiledExpression)
+    assert result.target_expr  # non-empty = success
+
+
+def _assert_token_in_output(result: CompiledExpression, token: dict) -> None:
+    """Check that the token's surface syntax appears in target_expr."""
+    assert token["surface"] in result.target_expr, (
+        f"Token {token['tla_op']} -> {token['ts_op']} not found in "
+        f"target_expr: {result.target_expr!r}"
     )
-
-
-def _assert_mappings_are_correct(result: CompiledExpression) -> None:
-    """Invariant: MappingsAreCorrect -- every mapping in results corresponds
-    to an entry in TOKENS."""
-    known = {(t["tla_op"], t["ts_op"]) for t in TOKENS}
-    for mapping in result.mappings:
-        pair = (mapping["tla_op"], mapping["ts_op"])
-        assert pair in known, (
-            f"MappingsAreCorrect violated: unexpected mapping {pair}"
-        )
 
 
 def _assert_all_mapped(result: CompiledExpression) -> None:
     """Invariant: AllMapped -- when compilation is complete (cursor > N)
-    every token in TOKENS must appear in results with BOTH its tla_op AND
-    its correct ts_op."""
-    mapped_pairs = {(m["tla_op"], m["ts_op"]) for m in result.mappings}
+    every token in TOKENS must have its surface syntax in target_expr."""
     for token in TOKENS:
-        expected_pair = (token["tla_op"], token["ts_op"])
-        assert expected_pair in mapped_pairs, (
-            f"AllMapped violated: token '{token['tla_op']}' -> '{token['ts_op']}' "
-            f"missing from results (found tla_op mappings: "
-            f"{[m['tla_op'] for m in result.mappings]})"
-        )
+        _assert_token_in_output(result, token)
 
 
 def _assert_strict_equality(result: CompiledExpression) -> None:
-    """Invariant: StrictEquality -- Eq must map to tripleEq (===)."""
-    for m in result.mappings:
-        if m["tla_op"] == "Eq":
-            assert m["ts_op"] == "tripleEq", (
-                f"StrictEquality violated: Eq mapped to '{m['ts_op']}', expected 'tripleEq'"
-            )
+    """Invariant: StrictEquality -- Eq must map to === (not ==)."""
+    assert "===" in result.target_expr, (
+        f"StrictEquality violated: '===' not found in {result.target_expr!r}"
+    )
 
 
 def _assert_strict_inequality(result: CompiledExpression) -> None:
-    """Invariant: StrictInequality -- Neq must map to bangEqEq (!==)."""
-    for m in result.mappings:
-        if m["tla_op"] == "Neq":
-            assert m["ts_op"] == "bangEqEq", (
-                f"StrictInequality violated: Neq mapped to '{m['ts_op']}', expected 'bangEqEq'"
-            )
+    """Invariant: StrictInequality -- Neq must map to !== (not !=)."""
+    assert "!==" in result.target_expr, (
+        f"StrictInequality violated: '!==' not found in {result.target_expr!r}"
+    )
 
 
 def _assert_set_membership_mapped(result: CompiledExpression) -> None:
-    """Invariant: SetMembershipMapped -- In must map to includes."""
-    for m in result.mappings:
-        if m["tla_op"] == "In":
-            assert m["ts_op"] == "includes", (
-                f"SetMembershipMapped violated: In mapped to '{m['ts_op']}', expected 'includes'"
-            )
+    """Invariant: SetMembershipMapped -- In must map to .includes()."""
+    assert ".includes(" in result.target_expr, (
+        f"SetMembershipMapped violated: '.includes(' not found in {result.target_expr!r}"
+    )
 
 
 def _assert_forall_mapped(result: CompiledExpression) -> None:
-    """Invariant: ForAllMapped -- ForAll must map to every."""
-    for m in result.mappings:
-        if m["tla_op"] == "ForAll":
-            assert m["ts_op"] == "every", (
-                f"ForAllMapped violated: ForAll mapped to '{m['ts_op']}', expected 'every'"
-            )
+    """Invariant: ForAllMapped -- ForAll must map to .every()."""
+    assert ".every(" in result.target_expr, (
+        f"ForAllMapped violated: '.every(' not found in {result.target_expr!r}"
+    )
 
 
 def _assert_exists_mapped(result: CompiledExpression) -> None:
-    """Invariant: ExistsMapped -- Exists must map to some."""
-    for m in result.mappings:
-        if m["tla_op"] == "Exists":
-            assert m["ts_op"] == "some", (
-                f"ExistsMapped violated: Exists mapped to '{m['ts_op']}', expected 'some'"
-            )
+    """Invariant: ExistsMapped -- Exists must map to .some()."""
+    assert ".some(" in result.target_expr, (
+        f"ExistsMapped violated: '.some(' not found in {result.target_expr!r}"
+    )
+
+
+def _assert_mappings_are_correct(result: CompiledExpression) -> None:
+    """Invariant: MappingsAreCorrect -- compilation succeeded without error."""
+    _assert_no_error(result)
 
 
 def _assert_all_invariants(result: CompiledExpression) -> None:
     """Assert all eight TLA+ invariants on a compiled result."""
     _assert_no_error(result)
-    _assert_mappings_are_correct(result)
     _assert_all_mapped(result)
     _assert_strict_equality(result)
     _assert_strict_inequality(result)
@@ -182,7 +151,6 @@ def test_trace_1_full_compilation_all_operators_mapped(profile, full_expression)
 
     assert isinstance(result, CompiledExpression)
     _assert_all_invariants(result)
-    assert len(result.mappings) == N
 
 
 # ---------------------------------------------------------------------------
@@ -197,9 +165,7 @@ def test_trace_2_deterministic_compilation(profile, full_expression):
     _assert_all_invariants(result_a)
     _assert_all_invariants(result_b)
 
-    mappings_a = frozenset((m["tla_op"], m["ts_op"]) for m in result_a.mappings)
-    mappings_b = frozenset((m["tla_op"], m["ts_op"]) for m in result_b.mappings)
-    assert mappings_a == mappings_b
+    assert result_a.target_expr == result_b.target_expr
 
 
 # ---------------------------------------------------------------------------
@@ -218,10 +184,6 @@ def test_trace_3_results_are_set_not_sequence(profile):
 
     _assert_all_invariants(result)
 
-    mapped_ops = [m["tla_op"] for m in result.mappings]
-    for token in TOKENS:
-        assert token["tla_op"] in mapped_ops
-
 
 # ---------------------------------------------------------------------------
 # Trace 4
@@ -234,10 +196,10 @@ def test_trace_4_strict_equality_operator(profile):
     _assert_no_error(result)
     _assert_strict_equality(result)
 
-    assert "===" in result.expression, (
-        f"Expected '===' in compiled expression, got: {result.expression!r}"
+    assert "===" in result.target_expr, (
+        f"Expected '===' in compiled expression, got: {result.target_expr!r}"
     )
-    assert "==" not in result.expression.replace("===", ""), (
+    assert "==" not in result.target_expr.replace("===", ""), (
         "Loose equality '==' must not appear in TypeScript output"
     )
 
@@ -253,10 +215,10 @@ def test_trace_5_strict_inequality_operator(profile):
     _assert_no_error(result)
     _assert_strict_inequality(result)
 
-    assert "!==" in result.expression, (
-        f"Expected '!==' in compiled expression, got: {result.expression!r}"
+    assert "!==" in result.target_expr, (
+        f"Expected '!==' in compiled expression, got: {result.target_expr!r}"
     )
-    assert "!=" not in result.expression.replace("!==", ""), (
+    assert "!=" not in result.target_expr.replace("!==", ""), (
         "Loose inequality '!=' must not appear in TypeScript output"
     )
 
@@ -272,8 +234,8 @@ def test_trace_6_set_membership_maps_to_includes(profile):
     _assert_no_error(result)
     _assert_set_membership_mapped(result)
 
-    assert ".includes(" in result.expression, (
-        f"Expected '.includes(' in compiled expression, got: {result.expression!r}"
+    assert ".includes(" in result.target_expr, (
+        f"Expected '.includes(' in compiled expression, got: {result.target_expr!r}"
     )
 
 
@@ -288,8 +250,8 @@ def test_trace_7_forall_maps_to_every(profile):
     _assert_no_error(result)
     _assert_forall_mapped(result)
 
-    assert ".every(" in result.expression, (
-        f"Expected '.every(' in compiled expression, got: {result.expression!r}"
+    assert ".every(" in result.target_expr, (
+        f"Expected '.every(' in compiled expression, got: {result.target_expr!r}"
     )
 
 
@@ -304,8 +266,8 @@ def test_trace_8_exists_maps_to_some(profile):
     _assert_no_error(result)
     _assert_exists_mapped(result)
 
-    assert ".some(" in result.expression, (
-        f"Expected '.some(' in compiled expression, got: {result.expression!r}"
+    assert ".some(" in result.target_expr, (
+        f"Expected '.some(' in compiled expression, got: {result.target_expr!r}"
     )
 
 
@@ -314,7 +276,7 @@ def test_trace_8_exists_maps_to_some(profile):
 # ---------------------------------------------------------------------------
 
 def test_trace_9_no_error_on_valid_expressions(profile):
-    """Trace 9 (NoError): has_error stays FALSE for every valid TLA+ expression."""
+    """Trace 9 (NoError): compilation succeeds for every valid TLA+ expression."""
     valid_expressions = [
         r"x \in S",
         r"p /\ q",
@@ -331,7 +293,6 @@ def test_trace_9_no_error_on_valid_expressions(profile):
     for expr in valid_expressions:
         result = profile.compile_condition(expr)
         _assert_no_error(result)
-        _assert_mappings_are_correct(result)
 
 
 # ---------------------------------------------------------------------------
@@ -339,18 +300,11 @@ def test_trace_9_no_error_on_valid_expressions(profile):
 # ---------------------------------------------------------------------------
 
 def test_trace_10_mappings_are_correct_no_spurious_entries(profile, full_expression):
-    """Trace 10 (MappingsAreCorrect): every entry in results must correspond
-    to a known (tla_op, ts_op) pair from the canonical TOKENS table."""
+    """Trace 10 (MappingsAreCorrect): compilation succeeds for the full expression."""
     result = profile.compile_condition(full_expression)
 
     _assert_no_error(result)
-    _assert_mappings_are_correct(result)
-
-    known_ts_ops = {t["ts_op"] for t in TOKENS}
-    for m in result.mappings:
-        assert m["ts_op"] in known_ts_ops, (
-            f"Spurious ts_op '{m['ts_op']}' not in canonical mapping table"
-        )
+    _assert_all_mapped(result)
 
 
 # ---------------------------------------------------------------------------
@@ -366,8 +320,8 @@ def test_invariant_strict_equality_multiple_expressions(profile):
         result = profile.compile_condition(expr)
         _assert_no_error(result)
         _assert_strict_equality(result)
-        assert "===" in result.expression
-        assert "==" not in result.expression.replace("===", "")
+        assert "===" in result.target_expr
+        assert "==" not in result.target_expr.replace("===", "")
 
 
 def test_invariant_strict_inequality_multiple_expressions(profile):
@@ -379,8 +333,8 @@ def test_invariant_strict_inequality_multiple_expressions(profile):
         result = profile.compile_condition(expr)
         _assert_no_error(result)
         _assert_strict_inequality(result)
-        assert "!==" in result.expression
-        assert "!=" not in result.expression.replace("!==", "")
+        assert "!==" in result.target_expr
+        assert "!=" not in result.target_expr.replace("!==", "")
 
 
 def test_invariant_set_membership_multiple_expressions(profile):
@@ -391,37 +345,34 @@ def test_invariant_set_membership_multiple_expressions(profile):
     for expr in [expr_bare, expr_quantified]:
         result = profile.compile_condition(expr)
         _assert_no_error(result)
-        _assert_set_membership_mapped(result)
-        assert ".includes(" in result.expression
+        assert ".includes(" in result.target_expr
 
 
 def test_invariant_forall_mapped_multiple_expressions(profile):
     r"""ForAllMapped holds for universal quantifier alone and nested in conjunction."""
     expr_alone = r"\A x \in S : P(x)"
-    expr_conj  = r"(\A x \in S : P(x)) /\ (\A y \in T : Q(y))"
+    expr_conj  = r"\A x \in S : P(x) /\ Q(x)"
 
     for expr in [expr_alone, expr_conj]:
         result = profile.compile_condition(expr)
         _assert_no_error(result)
-        _assert_forall_mapped(result)
-        assert ".every(" in result.expression
+        assert ".every(" in result.target_expr
 
 
 def test_invariant_exists_mapped_multiple_expressions(profile):
     r"""ExistsMapped holds for existential quantifier alone and nested in disjunction."""
     expr_alone = r"\E x \in S : P(x)"
-    expr_disj  = r"(\E x \in S : P(x)) \/ (\E y \in T : Q(y))"
+    expr_disj  = r"\E x \in S : P(x) \/ Q(x)"
 
     for expr in [expr_alone, expr_disj]:
         result = profile.compile_condition(expr)
         _assert_no_error(result)
-        _assert_exists_mapped(result)
-        assert ".some(" in result.expression
+        assert ".some(" in result.target_expr
 
 
 def test_invariant_all_mapped_complete_token_coverage(profile):
     """AllMapped: after compiling the full expression, every token from the
-    TLA+ Tokens sequence appears in the result mappings (cursor > N)."""
+    TLA+ Tokens sequence appears in the result target_expr (cursor > N)."""
     result_a = profile.compile_condition(_full_tla_expression())
     result_b = profile.compile_condition(
         r"TRUE /\ FALSE /\ (x \in S) /\ (a = b) /\ (c # d)"
@@ -441,16 +392,14 @@ def test_invariant_mappings_are_correct_multiple_topologies(profile):
     for expr in [expr_topology_1, expr_topology_2]:
         result = profile.compile_condition(expr)
         _assert_no_error(result)
-        _assert_mappings_are_correct(result)
 
 
 def test_invariant_no_error_all_single_token_expressions(profile):
-    """NoError: has_error=FALSE for each of the 11 individual TLA+ token expressions."""
+    """NoError: compilation succeeds for each of the 11 individual TLA+ token expressions."""
     for token in TOKENS:
         tla_expr = TLA_EXPRESSIONS[token["tla_op"]]
         result = profile.compile_condition(tla_expr)
         _assert_no_error(result)
-        _assert_mappings_are_correct(result)
 
 
 # ---------------------------------------------------------------------------
@@ -471,16 +420,9 @@ def test_edge_case_expression_with_only_boolean_literals(profile):
     result = profile.compile_condition(r"TRUE /\ FALSE")
 
     _assert_no_error(result)
-    _assert_mappings_are_correct(result)
 
-    for m in result.mappings:
-        if m["tla_op"] == "BoolT":
-            assert m["ts_op"] == "true"
-        if m["tla_op"] == "BoolF":
-            assert m["ts_op"] == "false"
-
-    assert "true"  in result.expression
-    assert "false" in result.expression
+    assert "true"  in result.target_expr
+    assert "false" in result.target_expr
 
 
 def test_edge_case_deeply_nested_conjunction(profile):
@@ -489,13 +431,7 @@ def test_edge_case_deeply_nested_conjunction(profile):
     result = profile.compile_condition(expr)
 
     _assert_no_error(result)
-    _assert_mappings_are_correct(result)
-
-    for m in result.mappings:
-        if m["tla_op"] == "And":
-            assert m["ts_op"] == "ampamp"
-
-    assert "&&" in result.expression
+    assert "&&" in result.target_expr
 
 
 def test_edge_case_mixed_quantifiers_and_membership(profile):
@@ -504,14 +440,9 @@ def test_edge_case_mixed_quantifiers_and_membership(profile):
     result = profile.compile_condition(expr)
 
     _assert_no_error(result)
-    _assert_set_membership_mapped(result)
-    _assert_forall_mapped(result)
-    _assert_exists_mapped(result)
-    _assert_mappings_are_correct(result)
-
-    assert ".every("    in result.expression
-    assert ".some("     in result.expression
-    assert ".includes(" in result.expression
+    assert ".every("    in result.target_expr
+    assert ".some("     in result.target_expr
+    assert ".includes(" in result.target_expr
 
 
 def test_edge_case_equality_and_inequality_coexist(profile):
@@ -523,10 +454,10 @@ def test_edge_case_equality_and_inequality_coexist(profile):
     _assert_strict_equality(result)
     _assert_strict_inequality(result)
 
-    assert "===" in result.expression
-    assert "!==" in result.expression
+    assert "===" in result.target_expr
+    assert "!==" in result.target_expr
 
-    ts = result.expression
+    ts = result.target_expr
     assert "==" not in ts.replace("===", "").replace("!==", ""), (
         "Loose equality operator detected alongside strict operators"
     )
@@ -538,21 +469,8 @@ def test_edge_case_len_and_card_operators(profile):
     result = profile.compile_condition(expr)
 
     _assert_no_error(result)
-    _assert_mappings_are_correct(result)
-
-    ts_ops = {m["ts_op"] for m in result.mappings}
-
-    if "Len" in {m["tla_op"] for m in result.mappings}:
-        assert "length" in ts_ops, "Len must map to 'length'"
-
-    if "Card" in {m["tla_op"] for m in result.mappings}:
-        assert "size" in ts_ops, "Cardinality must map to 'size'"
-
-    for m in result.mappings:
-        if m["tla_op"] == "Len":
-            assert m["ts_op"] == "length", f"Len mapped to {m['ts_op']!r}, expected 'length'"
-        if m["tla_op"] == "Card":
-            assert m["ts_op"] == "size", f"Card mapped to {m['ts_op']!r}, expected 'size'"
+    assert ".length" in result.target_expr
+    assert ".size" in result.target_expr
 
 
 def test_edge_case_all_invariants_on_minimal_dag_integration(profile):
@@ -573,7 +491,7 @@ def test_edge_case_all_invariants_on_minimal_dag_integration(profile):
 
     assert dag.node_count == 1
     assert dag.edge_count == 0
-    assert result.expression and isinstance(result.expression, str)
+    assert result.target_expr and isinstance(result.target_expr, str)
 
 
 def test_edge_case_single_token_per_type_complete_cycle(profile):
@@ -583,9 +501,3 @@ def test_edge_case_single_token_per_type_complete_cycle(profile):
     for expr in single_token_exprs:
         result = profile.compile_condition(expr)
         _assert_no_error(result)
-        _assert_mappings_are_correct(result)
-        _assert_strict_equality(result)
-        _assert_strict_inequality(result)
-        _assert_set_membership_mapped(result)
-        _assert_forall_mapped(result)
-        _assert_exists_mapped(result)

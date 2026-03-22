@@ -480,10 +480,11 @@ def test_registry_dag_remove_node_decrements_count():
     assert dag.node_count == 0
 
 
-def test_registry_dag_remove_nonexistent_raises_node_not_found():
+def test_registry_dag_remove_nonexistent_is_noop():
+    """Removing a nonexistent node is a silent no-op (no exception)."""
     dag = RegistryDag()
-    with pytest.raises(NodeNotFoundError):
-        dag.remove_node("nonexistent")
+    dag.remove_node("nonexistent")
+    assert dag.node_count == 0
 
 
 def test_registry_dag_add_edge_increments_edge_count():

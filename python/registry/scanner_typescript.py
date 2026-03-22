@@ -39,7 +39,7 @@ _FUNC_RE = re.compile(
 _ARROW_RE = re.compile(
     r"^(\s*)"                           # leading whitespace
     r"(?:export\s+)?(?:default\s+)?"    # optional export/default
-    r"(?:const|let|var)\s+(\w+)"        # binding keyword + name
+    r"(?:(?:const|let|var)\s+)?(\w+)"   # optional binding keyword + name
     r"\s*=\s*"                          # assignment
     r"(async\s+)?"                      # optional async
     r"\("                               # opening paren
@@ -258,7 +258,7 @@ def scan_file(path: Path) -> list[Skeleton]:
             params = _parse_params(param_text)
             return_type = _parse_return_type(full_sig[full_sig.index("("):])
 
-            visibility = "public" if _is_export(line) else "private"
+            visibility = "private" if func_name.startswith("#") else "public"
             # Determine class context
             current_class = class_stack[-1][0] if class_stack else None
 
@@ -295,7 +295,7 @@ def scan_file(path: Path) -> list[Skeleton]:
             # For arrow functions, look for ): ReturnType =>
             return_type = _parse_return_type(full_sig[full_sig.index("("):])
 
-            visibility = "public" if _is_export(line) else "private"
+            visibility = "private" if func_name.startswith("#") else "public"
             current_class = class_stack[-1][0] if class_stack else None
 
             skeletons.append(Skeleton(

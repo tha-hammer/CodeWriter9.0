@@ -767,14 +767,12 @@ def test_dag_node_count_equals_verifier_count(dag_full):
 def test_dag_extract_subgraph_includes_inv1(dag_full):
     result = dag_full.extract_subgraph("inv1")
     assert result is not None
-    node_ids = {n.id for n in result.nodes}
-    assert "inv1" in node_ids
+    assert "inv1" in result.nodes
 
 
 def test_dag_extract_subgraph_inv1_reaches_inv2(dag_full):
     result = dag_full.extract_subgraph("inv1")
-    node_ids = {n.id for n in result.nodes}
-    assert "inv2" in node_ids
+    assert "inv2" in result.nodes
 
 
 def test_dag_query_impact_on_compiled_node(dag_full):

@@ -83,25 +83,26 @@ class GoProfile:
         m_all = re.search(r'\\A\s+(\w+)\s+\\in\s+(\w+)\s*:\s*(.+)', expr)
         if m_all:
             var, collection, predicate = m_all.group(1), m_all.group(2), m_all.group(3)
-            # Clean up the predicate
             pred_clean = predicate.strip()
+            replacement = f'allSatisfy({collection}, func({var} int) bool {{ return {pred_clean} }})'
             expr = re.sub(
                 r'\\A\s+\w+\s+\\in\s+\w+\s*:\s*.+',
-                f'allSatisfy({collection}, func({var} int) bool {{ return {pred_clean} }})',
+                lambda _m: replacement,
                 expr
             )
-            helper_defs = _ALL_SATISFY_HELPER
+            helper_defs += _ALL_SATISFY_HELPER
 
         m_any = re.search(r'\\E\s+(\w+)\s+\\in\s+(\w+)\s*:\s*(.+)', expr)
         if m_any:
             var, collection, predicate = m_any.group(1), m_any.group(2), m_any.group(3)
             pred_clean = predicate.strip()
+            replacement = f'anySatisfy({collection}, func({var} int) bool {{ return {pred_clean} }})'
             expr = re.sub(
                 r'\\E\s+\w+\s+\\in\s+\w+\s*:\s*.+',
-                f'anySatisfy({collection}, func({var} int) bool {{ return {pred_clean} }})',
+                lambda _m: replacement,
                 expr
             )
-            helper_defs = _ANY_SATISFY_HELPER
+            helper_defs += _ANY_SATISFY_HELPER
 
         # Phase 6: Set/sequence operators (after quantifiers)
         expr = re.sub(r'(\w+)\s+\\in\s+(\w+)', r'slices.Contains(\2, \1)', expr)

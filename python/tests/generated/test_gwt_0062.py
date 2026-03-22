@@ -44,8 +44,8 @@ def _process_token(dag: RegistryDag, token: dict) -> None:
 
 def _get_results(dag: RegistryDag) -> list:
     out = []
-    for node in dag.to_dict().get("nodes", []):
-        nid = node.get("id", "")
+    nodes_dict = dag.to_dict().get("nodes", {})
+    for nid, node in nodes_dict.items():
         if nid.startswith("op_"):
             out.append({
                 "tla_op": nid[3:],
@@ -731,28 +731,22 @@ class TestEdgeCases(unittest.TestCase):
             ),
         ))
         self.assertEqual(dag.node_count, 1)
-        nodes = dag.to_dict().get("nodes", [])
-        req_node = next(
-            (n for n in nodes if n.get("id") == "req_compile_condition_operator_mapping"),
-            None,
-        )
+        nodes_dict = dag.to_dict().get("nodes", {})
+        req_node = nodes_dict.get("req_compile_condition_operator_mapping")
         self.assertIsNotNone(req_node)
         self.assertEqual(req_node.get("name"), "compile_condition_operator_mapping")
 
     def test_operator_node_is_retrievable_via_to_dict(self):
         dag = _fresh_dag()
         _process_token(dag, TOKENS[0])
-        nodes = dag.to_dict().get("nodes", [])
-        node_ids = [n.get("id") for n in nodes]
-        self.assertIn(_op_node_id("In"), node_ids)
+        nodes_dict = dag.to_dict().get("nodes", {})
+        self.assertIn(_op_node_id("In"), nodes_dict)
 
     def test_operator_node_fields_persisted_correctly(self):
         dag = _fresh_dag()
         _process_token(dag, TOKENS[5])
-        nodes = dag.to_dict().get("nodes", [])
-        forall_node = next(
-            (n for n in nodes if n.get("id") == _op_node_id("ForAll")), None
-        )
+        nodes_dict = dag.to_dict().get("nodes", {})
+        forall_node = nodes_dict.get(_op_node_id("ForAll"))
         self.assertIsNotNone(forall_node)
         self.assertEqual(forall_node.get("name"), "iter_all")
         self.assertEqual(forall_node.get("description"), "helper=false")
@@ -762,7 +756,7 @@ class TestEdgeCases(unittest.TestCase):
         _process_token(dag, TOKENS[5])
         _process_token(dag, TOKENS[6])
         self.assertEqual(dag.node_count, 2)
-        node_ids = {n.get("id") for n in dag.to_dict().get("nodes", [])}
+        node_ids = set(dag.to_dict().get("nodes", {}).keys())
         self.assertIn(_op_node_id("ForAll"), node_ids)
         self.assertIn(_op_node_id("Exists"), node_ids)
 

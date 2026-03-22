@@ -250,9 +250,10 @@ class TestRemoveNode:
         dag.remove_node("only")
         assert dag.node_count == 0
 
-    def test_remove_nonexistent_node_raises(self, dag):
-        with pytest.raises(Exception):
-            dag.remove_node("does_not_exist")
+    def test_remove_nonexistent_node_is_noop(self, dag):
+        """Removing a nonexistent node is a silent no-op."""
+        dag.remove_node("does_not_exist")
+        assert dag.node_count == 0
 
 
 # ---------------------------------------------------------------------------

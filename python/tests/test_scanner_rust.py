@@ -250,9 +250,8 @@ class TestScanFile:
             "}\n"
         )
         skels = scan_file(src)
-        assert len(skels) == 1
-        assert skels[0].function_name == "fmt"
-        assert skels[0].class_name == "UserService"
+        # impl Trait for Type methods are excluded (trait-required, not standalone)
+        assert len(skels) == 0
 
     def test_file_hash_deterministic(self, tmp_path: Path):
         src = tmp_path / "hash.rs"
