@@ -3,6 +3,7 @@
 No database required. Everything is derived from:
   .cw9/dag.json            → universe of GWT IDs
   .cw9/sessions/*_result.json  → per-GWT outcome (written by run_loop)
+  .cw9/sessions/*_progress.json → live phase tracking (written during run_loop)
   .cw9/sessions/*_attempt*.txt → attempt count fallback (in-progress detection)
   .cw9/specs/*.tla             → verified specs
   .cw9/bridge/*_bridge_artifacts.json → bridge completion
@@ -11,6 +12,7 @@ No database required. Everything is derived from:
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -56,6 +58,44 @@ class ProjectStatus:
             "bridge_complete": self.bridge_complete,
             "gwts": {gid: gs.to_dict() for gid, gs in self.gwts.items()},
         }
+
+
+def write_progress(
+    session_dir: Path,
+    gwt_id: str,
+    attempt: int,
+    max_attempts: int,
+    phase: str,
+    *,
+    detail: str = "",
+    pid: int | None = None,
+) -> None:
+    """Write a live progress file for a running loop.
+
+    Phase values:
+      "starting"     — loop is initializing
+      "llm_call"     — waiting for LLM API response
+      "llm_done"     — LLM responded, about to compile/verify
+      "compiling"    — running pcal.trans (PlusCal → TLA+)
+      "tlc_verify"   — running TLC model checker
+      "tlc_done"     — TLC finished, processing result
+      "sim_traces"   — generating simulation traces (post-pass)
+      "bridging"     — extracting bridge artifacts (post-pass)
+      "complete"     — loop finished (result file written)
+
+    The file is overwritten on each call. External observers poll it.
+    """
+    session_dir.mkdir(parents=True, exist_ok=True)
+    path = session_dir / f"{gwt_id}_progress.json"
+    path.write_text(json.dumps({
+        "gwt_id": gwt_id,
+        "attempt": attempt,
+        "max_attempts": max_attempts,
+        "phase": phase,
+        "detail": detail,
+        "pid": pid or 0,
+        "updated_at": time.time(),
+    }))
 
 
 def write_result_file(

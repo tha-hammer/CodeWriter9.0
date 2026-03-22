@@ -1,0 +1,2364 @@
+## Review Findings
+
+After carefully checking all four criteria, I found **three issues**:
+
+---
+
+### Issue 1 — API Binding Error (Critical)
+**Location**: `TestEdgeCases.test_dag_query_relevant_returns_node_in_trace9`
+
+`dag.query_relevant(UUID_1)` is **not listed in the provided API spec**. The spec header documents `RegistryDag`, `Node.resource`, `add_node`, `add_edge`, `node_count`, `edge_count`, and `extract_subgraph`. `query_relevant` appears nowhere — this will raise `AttributeError` at runtime. The intent (confirm a node is known) is already satisfied by `extract_subgraph`, which is used consistently in every other DAG test. **Fix: replace `query_relevant` with `extract_subgraph`.**
+
+---
+
+### Issue 2 — Misleading Trace Labels (Documentation / Semantic Drift)
+**Locations**:
+- `TestInvSkipOnlyWhenIncremental.test_no_skip_when_incremental_false_trace3`
+- `TestInvUnchangedNeverExtracted.test_incremental_false_removes_obligation_trace3`
+
+Both are labelled *"Trace 3 topology"* but neither matches Trace 3's fixture (`NON_TERMINAL_DESC_2`/`HASH_2` for UUID_1, `TERMINAL_DESC_1`/`HASH_2` for UUID_2). Instead they use `TERMINAL_DESC_1`/`HASH_1` and `TERMINAL_DESC_2`/`HASH_2` — the "both-UUIDs-qualify" topology that would skip both if incremental were True. The tests are semantically valid (they correctly demonstrate `incremental=False` suppresses skips) but the wrong label can mislead future maintainers into thinking they're replaying a recorded trace when they are not. **Fix: rename to reflect the actual topology.**
+
+---
+
+### Issue 3 — Unused Import (`NodeKind`)
+`NodeKind` is imported but never referenced. It will not cause a test failure, but it implies missing coverage (e.g., distinguishing resource nodes from other node kinds). Since the spec header explicitly lists it as a real import, it stays — but a comment marking it as reserved is added to avoid confusion.
+
+---
+
+### Everything Else Passes
+
+| Check | Result |
+|---|---|
+| `should_skip` ↔ `ShouldSkip` TLA+ formula | ✓ |
+| All 7 invariant checkers match their TLA+ originals | ✓ |
+| All trace expected outcomes (1–10) are arithmetically correct | ✓ |
+| `run_processor` enforces sorted/deterministic CHOOSE | ✓ |
+| Init + per-step + Finish invariant checking | ✓ |
+| `pytest.raises(match=…)` patterns match actual error strings | ✓ |
+| ≥2 topologies per dedicated invariant class | ✓ |
+| Violation-raises tests exercise the right predicates | ✓ |
+| `_build_dag` hash/desc args consistent with fixture records | ✓ |
+
+---
+
+### Corrected Test Plan
+
+```python
+"""
+pytest test suite for IncrementalSkip – _should_skip / incremental-crawl behaviour.
+
+Derived from TLC-verified traces; invariants are checked at every intermediate
+state, not just at the final state.
+
+Real API imports only:
+    from registry.types import Edge, EdgeType, Node, NodeKind
+    from dag import RegistryDag
+"""
+
+import pytest
+from registry.types import Edge, EdgeType, Node, NodeKind  # NodeKind: real API symbol, reserved for future node-kind tests
+from dag import RegistryDag
+
+# ---------------------------------------------------------------------------
+# Symbolic constants (TLA+ model values made concrete)
+# ---------------------------------------------------------------------------
+
+UUID_1 = "uuid-1"
+UUID_2 = "uuid-2"
+ALL_UUIDS = frozenset({UUID_1, UUID_2})
+
+HASH_1 = "hash-aaa"
+HASH_2 = "hash-bbb"
+
+TERMINAL_DESC_1 = "terminal-description-alpha"
+TERMINAL_DESC_2 = "terminal-description-beta"
+NON_TERMINAL_DESC_1 = "non-terminal-description-alpha"
+NON_TERMINAL_DESC_2 = "non-terminal-description-beta"
+
+TERMINAL_DESCRIPTIONS = frozenset({TERMINAL_DESC_1, TERMINAL_DESC_2})
+NON_TERMINAL_DESCRIPTIONS = frozenset({NON_TERMINAL_DESC_1, NON_TERMINAL_DESC_2})
+
+# Sanity: TLA+ ASSUME TerminalDescriptions ∩ NonTerminalDescriptions = {}
+assert TERMINAL_DESCRIPTIONS.isdisjoint(NON_TERMINAL_DESCRIPTIONS)
+
+
+# ---------------------------------------------------------------------------
+# TLA+ predicate translations
+# ---------------------------------------------------------------------------
+
+def is_terminal(uuid: str, records: dict) -> bool:
+    """IsTerminal(u) == records[u].do_description ∈ TerminalDescriptions"""
+    return records[uuid]["do_description"] in TERMINAL_DESCRIPTIONS
+
+
+def hash_matches(uuid: str, records: dict, current_hashes: dict) -> bool:
+    """HashMatches(u) == records[u].src_hash = current_hashes[u]"""
+    return records[uuid]["src_hash"] == current_hashes[uuid]
+
+
+def should_skip(uuid: str, records: dict, current_hashes: dict, incremental: bool) -> bool:
+    """ShouldSkip(u) == incremental ∧ IsTerminal(u) ∧ HashMatches(u)"""
+    return incremental and is_terminal(uuid, records) and hash_matches(uuid, records, current_hashes)
+
+
+# ---------------------------------------------------------------------------
+# Invariant checkers – one function per TLA+ invariant
+# ---------------------------------------------------------------------------
+
+def inv_skip_only_when_incremental(skipped: set, incremental: bool) -> None:
+    """SkipOnlyWhenIncremental: skipped ≠ {} ⇒ incremental = TRUE"""
+    if skipped:
+        assert incremental, (
+            f"SkipOnlyWhenIncremental violated: "
+            f"skipped={skipped} but incremental={incremental}"
+        )
+
+
+def inv_skip_only_when_hash_match(
+    skipped: set, records: dict, current_hashes: dict
+) -> None:
+    """SkipOnlyWhenHashMatch: ∀ u ∈ skipped : records[u].src_hash = current_hashes[u]"""
+    for u in skipped:
+        assert records[u]["src_hash"] == current_hashes[u], (
+            f"SkipOnlyWhenHashMatch violated for {u}: "
+            f"src_hash={records[u]['src_hash']} ≠ current={current_hashes[u]}"
+        )
+
+
+def inv_skip_never_extracted(skipped: set, extracted: set) -> None:
+    """SkipNeverExtracted: skipped ∩ extracted = {}"""
+    overlap = skipped & extracted
+    assert not overlap, f"SkipNeverExtracted violated: overlap={overlap}"
+
+
+def inv_unchanged_never_extracted(
+    skipped: set,
+    remaining: set,
+    records: dict,
+    current_hashes: dict,
+    incremental: bool,
+    all_uuids: frozenset = ALL_UUIDS,
+) -> None:
+    """
+    UnchangedNeverExtracted:
+        ∀ u ∈ UUIDs \ remaining :
+            (incremental ∧ IsTerminal(u) ∧ HashMatches(u)) ⇒ u ∈ skipped
+    """
+    processed = all_uuids - remaining
+    for u in processed:
+        if incremental and is_terminal(u, records) and hash_matches(u, records, current_hashes):
+            assert u in skipped, (
+                f"UnchangedNeverExtracted violated for {u}: "
+                "qualifies for skip but is absent from skipped"
+            )
+
+
+def inv_processed_partition(
+    skipped: set,
+    extracted: set,
+    remaining: set,
+    all_uuids: frozenset = ALL_UUIDS,
+) -> None:
+    """ProcessedPartition: ∀ u ∈ UUIDs \ remaining : u ∈ skipped ∨ u ∈ extracted"""
+    processed = all_uuids - remaining
+    for u in processed:
+        assert u in skipped or u in extracted, (
+            f"ProcessedPartition violated for {u}: "
+            "not in skipped and not in extracted"
+        )
+
+
+def inv_bounded_skipped(skipped: set, all_uuids: frozenset = ALL_UUIDS) -> None:
+    """BoundedSkipped: skipped ⊆ UUIDs"""
+    stray = skipped - all_uuids
+    assert not stray, f"BoundedSkipped violated: {stray} not in UUIDs"
+
+
+def inv_bounded_extracted(extracted: set, all_uuids: frozenset = ALL_UUIDS) -> None:
+    """BoundedExtracted: extracted ⊆ UUIDs"""
+    stray = extracted - all_uuids
+    assert not stray, f"BoundedExtracted violated: {stray} not in UUIDs"
+
+
+def assert_all_invariants(
+    skipped: set,
+    extracted: set,
+    remaining: set,
+    records: dict,
+    current_hashes: dict,
+    incremental: bool,
+    all_uuids: frozenset = ALL_UUIDS,
+) -> None:
+    """Assert every TLA+ invariant holds for the given state snapshot."""
+    inv_skip_only_when_incremental(skipped, incremental)
+    inv_skip_only_when_hash_match(skipped, records, current_hashes)
+    inv_skip_never_extracted(skipped, extracted)
+    inv_unchanged_never_extracted(
+        skipped, remaining, records, current_hashes, incremental, all_uuids
+    )
+    inv_processed_partition(skipped, extracted, remaining, all_uuids)
+    inv_bounded_skipped(skipped, all_uuids)
+    inv_bounded_extracted(extracted, all_uuids)
+
+
+# ---------------------------------------------------------------------------
+# Processor simulation
+#
+# Encodes the TLA+ PlusCal algorithm:
+#   ProcessLoop / CheckSkip / Finish
+# Invariants are verified after every CheckSkip (intermediate) and at Finish.
+# ---------------------------------------------------------------------------
+
+def run_processor(
+    records: dict,
+    current_hashes: dict,
+    incremental: bool,
+    all_uuids: frozenset = ALL_UUIDS,
+) -> tuple[set, set]:
+    """
+    Run the TLA+ processor algorithm on *all_uuids* and return (skipped, extracted).
+
+    Invariants are checked at Init, after every CheckSkip action, and after Finish.
+    Processing order is deterministic (sorted) so intermediate states are reproducible.
+    """
+    remaining = set(all_uuids)
+    skipped: set = set()
+    extracted: set = set()
+
+    # --- Init state invariants ---
+    assert_all_invariants(
+        skipped, extracted, remaining, records, current_hashes, incremental, all_uuids
+    )
+
+    # --- ProcessLoop / CheckSkip loop ---
+    for uuid in sorted(all_uuids):          # deterministic CHOOSE
+        remaining.remove(uuid)              # ProcessLoop → CheckSkip
+
+        if should_skip(uuid, records, current_hashes, incremental):
+            skipped.add(uuid)
+        else:
+            extracted.add(uuid)
+
+        # Invariants must hold after each CheckSkip
+        assert_all_invariants(
+            skipped, extracted, remaining, records, current_hashes, incremental, all_uuids
+        )
+
+    # --- Finish ---
+    assert not remaining, "remaining must be empty at Finish"
+    assert_all_invariants(
+        skipped, extracted, remaining, records, current_hashes, incremental, all_uuids
+    )
+
+    return skipped, extracted
+
+
+# ---------------------------------------------------------------------------
+# Helper: build a two-node RegistryDag from trace Init state
+# ---------------------------------------------------------------------------
+
+def _build_dag(
+    uuid1_desc: str,
+    uuid1_hash: str,
+    uuid2_desc: str,
+    uuid2_hash: str,
+) -> RegistryDag:
+    dag = RegistryDag()
+    dag.add_node(Node.resource(UUID_1, "node-uuid1", uuid1_desc, src_hash=uuid1_hash))
+    dag.add_node(Node.resource(UUID_2, "node-uuid2", uuid2_desc, src_hash=uuid2_hash))
+    return dag
+
+
+# ===========================================================================
+# Trace-derived tests  (one test per TLC trace)
+# ===========================================================================
+
+
+class TestTrace1:
+    """
+    Trace 1 – incremental=TRUE, both records terminal but src_hash ≠ current_hash.
+    current_hashes: {UUID_1: Hash1, UUID_2: Hash1}
+    records:        {UUID_1: {Terminal1, Hash2}, UUID_2: {Terminal1, Hash2}}
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        dag = _build_dag(TERMINAL_DESC_1, HASH_2, TERMINAL_DESC_1, HASH_2)
+        return records, current_hashes, dag
+
+    def test_both_extracted_due_to_hash_mismatch(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+
+        assert skipped == set(), f"Expected no skips; got {skipped}"
+        assert extracted == {UUID_1, UUID_2}, f"Expected both extracted; got {extracted}"
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_should_skip_false_for_each_uuid(self, state):
+        records, current_hashes, _ = state
+        # Hash mismatch overrides terminal + incremental
+        assert not should_skip(UUID_1, records, current_hashes, incremental=True)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+class TestTrace2:
+    """
+    Trace 2 – incremental=TRUE.
+    UUID_1: Terminal1, src_hash=Hash2, current=Hash1 → mismatch → extracted
+    UUID_2: NonTerminal1, src_hash=Hash1, current=Hash2 → non-terminal → extracted
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        dag = _build_dag(TERMINAL_DESC_1, HASH_2, NON_TERMINAL_DESC_1, HASH_1)
+        return records, current_hashes, dag
+
+    def test_both_extracted_mixed_reasons(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid1_hash_mismatch_prevents_skip(self, state):
+        records, current_hashes, _ = state
+        assert not hash_matches(UUID_1, records, current_hashes)
+        assert is_terminal(UUID_1, records)
+        assert not should_skip(UUID_1, records, current_hashes, incremental=True)
+
+    def test_uuid2_non_terminal_prevents_skip(self, state):
+        records, current_hashes, _ = state
+        assert not is_terminal(UUID_2, records)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+class TestTrace3:
+    """
+    Trace 3 – incremental=FALSE.
+    UUID_1: NonTerminal2, src_hash=Hash2, current=Hash1
+    UUID_2: Terminal1,    src_hash=Hash2, current=Hash2  (hash matches but incremental=False)
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        dag = _build_dag(NON_TERMINAL_DESC_2, HASH_2, TERMINAL_DESC_1, HASH_2)
+        return records, current_hashes, dag
+
+    def test_non_incremental_all_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, False)
+
+    def test_incremental_false_suppresses_skip_even_with_hash_match(self, state):
+        records, current_hashes, _ = state
+        # UUID_2 has a terminal desc + hash match, but incremental=False → no skip
+        assert is_terminal(UUID_2, records)
+        assert hash_matches(UUID_2, records, current_hashes)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=False)
+
+    def test_skip_only_when_incremental_with_empty_skipped(self, state):
+        records, current_hashes, _ = state
+        skipped, _ = run_processor(records, current_hashes, incremental=False)
+        inv_skip_only_when_incremental(skipped, incremental=False)
+
+
+class TestTrace4:
+    """
+    Trace 4 – incremental=FALSE.
+    UUID_1: Terminal2, src_hash=Hash1, current=Hash2 → mismatch anyway; incremental=False
+    UUID_2: NonTerminal2, src_hash=Hash2, current=Hash1
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_2, UUID_2: HASH_1}
+        dag = _build_dag(TERMINAL_DESC_2, HASH_1, NON_TERMINAL_DESC_2, HASH_2)
+        return records, current_hashes, dag
+
+    def test_non_incremental_various_hashes_all_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, False)
+
+
+class TestTrace5:
+    """
+    Trace 5 – incremental=TRUE, both non-terminal descriptions.
+    UUID_1: NonTerminal2, src_hash=Hash1, current=Hash1 (hash matches but non-terminal)
+    UUID_2: NonTerminal1, src_hash=Hash1, current=Hash2
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        dag = _build_dag(NON_TERMINAL_DESC_2, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        return records, current_hashes, dag
+
+    def test_non_terminal_never_skipped(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid1_hash_match_irrelevant_because_non_terminal(self, state):
+        records, current_hashes, _ = state
+        assert hash_matches(UUID_1, records, current_hashes)   # hash does match
+        assert not is_terminal(UUID_1, records)                # but non-terminal
+        assert not should_skip(UUID_1, records, current_hashes, incremental=True)
+
+
+class TestTrace6:
+    """
+    Trace 6 – incremental=TRUE, both non-terminal.
+    UUID_1: NonTerminal1, src_hash=Hash1, current=Hash2 → non-terminal, hash mismatch
+    UUID_2: NonTerminal2, src_hash=Hash1, current=Hash1 → non-terminal (hash matches)
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_2, UUID_2: HASH_1}
+        dag = _build_dag(NON_TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_2, HASH_1)
+        return records, current_hashes, dag
+
+    def test_non_terminal_both_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid2_hash_match_irrelevant_non_terminal(self, state):
+        records, current_hashes, _ = state
+        assert hash_matches(UUID_2, records, current_hashes)
+        assert not is_terminal(UUID_2, records)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+class TestTrace7:
+    """
+    Trace 7 – incremental=TRUE.
+    UUID_1: NonTerminal1, src_hash=Hash2, current=Hash1 → non-terminal
+    UUID_2: Terminal2,    src_hash=Hash2, current=Hash1 → terminal but hash mismatch
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        dag = _build_dag(NON_TERMINAL_DESC_1, HASH_2, TERMINAL_DESC_2, HASH_2)
+        return records, current_hashes, dag
+
+    def test_terminal_with_hash_mismatch_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid2_terminal_but_hash_mismatch_prevents_skip(self, state):
+        records, current_hashes, _ = state
+        assert is_terminal(UUID_2, records)
+        assert not hash_matches(UUID_2, records, current_hashes)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+class TestTrace8:
+    """
+    Trace 8 – incremental=FALSE, both terminal with hash mismatch.
+    UUID_1: Terminal2, src_hash=Hash2, current=Hash1
+    UUID_2: Terminal2, src_hash=Hash2, current=Hash1
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    Both incremental=False AND hash mismatch independently preclude skipping.
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        dag = _build_dag(TERMINAL_DESC_2, HASH_2, TERMINAL_DESC_2, HASH_2)
+        return records, current_hashes, dag
+
+    def test_non_incremental_terminal_hash_mismatch_all_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, False)
+
+
+class TestTrace9:
+    """
+    Trace 9 – THE PRIMARY TRACE.  Core GWT scenario.
+
+    incremental=TRUE.
+    UUID_1: Terminal1, src_hash=Hash1, current=Hash1 → incremental+terminal+hash match → SKIPPED
+    UUID_2: NonTerminal1, src_hash=Hash1, current=Hash2 → non-terminal → extracted
+
+    Expected final: skipped={UUID_1}, extracted={UUID_2}
+
+    Tests all seven invariants:
+        SkipOnlyWhenIncremental, SkipOnlyWhenHashMatch, SkipNeverExtracted,
+        UnchangedNeverExtracted, ProcessedPartition, BoundedSkipped, BoundedExtracted
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        return records, current_hashes, dag
+
+    # ------------------------------------------------------------------
+    # Final-state correctness
+    # ------------------------------------------------------------------
+
+    def test_uuid1_is_skipped(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert UUID_1 in skipped, f"UUID_1 must be skipped; skipped={skipped}"
+
+    def test_uuid2_is_extracted(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert UUID_2 in extracted, f"UUID_2 must be extracted; extracted={extracted}"
+
+    def test_partition_is_disjoint(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert UUID_1 not in extracted, "UUID_1 must NOT be extracted"
+        assert UUID_2 not in skipped, "UUID_2 must NOT be skipped"
+        assert skipped.isdisjoint(extracted), "skipped and extracted must be disjoint"
+
+    def test_all_uuids_accounted_for(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped | extracted == ALL_UUIDS
+
+    # ------------------------------------------------------------------
+    # should_skip unit-level assertions
+    # ------------------------------------------------------------------
+
+    def test_should_skip_true_for_uuid1(self, state):
+        """Given: terminal record with matching hash.  When: incremental=True.  Then: True."""
+        records, current_hashes, _ = state
+        assert should_skip(UUID_1, records, current_hashes, incremental=True) is True
+
+    def test_should_skip_false_for_uuid2_non_terminal(self, state):
+        records, current_hashes, _ = state
+        assert should_skip(UUID_2, records, current_hashes, incremental=True) is False
+
+    def test_should_skip_false_for_uuid1_when_not_incremental(self, state):
+        """Same record, same hash — but incremental=False → must NOT skip."""
+        records, current_hashes, _ = state
+        assert should_skip(UUID_1, records, current_hashes, incremental=False) is False
+
+    # ------------------------------------------------------------------
+    # All TLA+ invariants – at every intermediate state
+    # ------------------------------------------------------------------
+
+    def test_invariants_at_init(self, state):
+        records, current_hashes, _ = state
+        assert_all_invariants(set(), set(), ALL_UUIDS, records, current_hashes, True)
+
+    def test_invariants_after_uuid1_processed(self, state):
+        """Intermediate state: UUID_1 skipped, UUID_2 still remaining."""
+        records, current_hashes, _ = state
+        skipped = {UUID_1}
+        extracted: set = set()
+        remaining = {UUID_2}
+        assert_all_invariants(skipped, extracted, remaining, records, current_hashes, True)
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_skip_only_when_incremental_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        assert skipped  # non-empty
+        inv_skip_only_when_incremental(skipped, incremental=True)
+
+    def test_skip_only_when_hash_match_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        inv_skip_only_when_hash_match(skipped, records, current_hashes)
+        assert records[UUID_1]["src_hash"] == current_hashes[UUID_1]
+
+    def test_skip_never_extracted_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_skip_never_extracted(skipped, extracted)
+
+    def test_unchanged_never_extracted_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_unchanged_never_extracted(skipped, set(), records, current_hashes, True)
+
+    def test_processed_partition_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_processed_partition(skipped, extracted, set())
+
+    def test_bounded_skipped_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        inv_bounded_skipped(skipped)
+
+    def test_bounded_extracted_holds(self, state):
+        records, current_hashes, _ = state
+        _, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_bounded_extracted(extracted)
+
+    def test_dag_node_count(self, state):
+        _, _, dag = state
+        assert dag.node_count == 2
+
+    def test_dag_extract_subgraph_uuid1(self, state):
+        _, _, dag = state
+        result = dag.extract_subgraph(UUID_1)
+        assert UUID_1 in result.nodes
+
+    def test_dag_extract_subgraph_uuid2(self, state):
+        _, _, dag = state
+        result = dag.extract_subgraph(UUID_2)
+        assert UUID_2 in result.nodes
+
+
+class TestTrace10:
+    """
+    Trace 10 – incremental=TRUE.
+    UUID_1: Terminal1, src_hash=Hash1, current=Hash2 → hash mismatch → extracted
+    UUID_2: NonTerminal1, src_hash=Hash2, current=Hash2 → non-terminal (hash matches) → extracted
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_2, UUID_2: HASH_2}
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_2)
+        return records, current_hashes, dag
+
+    def test_both_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid1_terminal_hash_mismatch(self, state):
+        records, current_hashes, _ = state
+        assert is_terminal(UUID_1, records)
+        assert not hash_matches(UUID_1, records, current_hashes)
+        assert not should_skip(UUID_1, records, current_hashes, incremental=True)
+
+    def test_uuid2_non_terminal_hash_match_irrelevant(self, state):
+        records, current_hashes, _ = state
+        assert not is_terminal(UUID_2, records)
+        assert hash_matches(UUID_2, records, current_hashes)   # hash matches, but non-terminal
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+# ===========================================================================
+# Dedicated invariant verifier tests (≥2 topologies per invariant)
+# ===========================================================================
+
+
+class TestInvSkipOnlyWhenIncremental:
+    """SkipOnlyWhenIncremental: skipped ≠ {} ⇒ incremental = TRUE"""
+
+    def test_skip_only_occurs_with_incremental_true_trace9(self):
+        """Topology from Trace 9: skip present ↔ incremental=True."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        assert skipped == {UUID_1}
+        inv_skip_only_when_incremental(skipped, incremental=True)
+
+    def test_no_skip_when_incremental_false_both_qualify(self):
+        """
+        Both UUIDs are terminal with matching hashes; incremental=False forces
+        skipped={} regardless, so SkipOnlyWhenIncremental is trivially satisfied.
+        """
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, _ = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        inv_skip_only_when_incremental(skipped, incremental=False)
+
+    def test_empty_skipped_vacuously_satisfies_with_incremental_false(self):
+        inv_skip_only_when_incremental(set(), incremental=False)
+
+    def test_empty_skipped_vacuously_satisfies_with_incremental_true(self):
+        inv_skip_only_when_incremental(set(), incremental=True)
+
+    def test_non_empty_skipped_requires_incremental_true(self):
+        """Directly assert invariant check raises when violated."""
+        with pytest.raises(AssertionError, match="SkipOnlyWhenIncremental"):
+            inv_skip_only_when_incremental({UUID_1}, incremental=False)
+
+
+class TestInvSkipOnlyWhenHashMatch:
+    """SkipOnlyWhenHashMatch: ∀ u ∈ skipped : records[u].src_hash = current_hashes[u]"""
+
+    def test_skipped_uuid_must_have_hash_match_trace9(self):
+        """Trace 9: UUID_1 skipped → Hash1 == Hash1."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        assert UUID_1 in skipped
+        inv_skip_only_when_hash_match(skipped, records, current_hashes)
+        assert records[UUID_1]["src_hash"] == current_hashes[UUID_1] == HASH_1
+
+    def test_hash_mismatch_prevents_skip_trace1(self):
+        """Trace 1: src_hash=Hash2 ≠ current=Hash1 → never in skipped."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        inv_skip_only_when_hash_match(skipped, records, current_hashes)
+
+    def test_hash_mismatch_in_skipped_raises(self):
+        """Directly assert invariant check raises when violated."""
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_2}
+        with pytest.raises(AssertionError, match="SkipOnlyWhenHashMatch"):
+            inv_skip_only_when_hash_match({UUID_1}, records, current_hashes)
+
+    def test_empty_skipped_vacuously_satisfies(self):
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2}}
+        current_hashes = {UUID_1: HASH_1}
+        inv_skip_only_when_hash_match(set(), records, current_hashes)
+
+
+class TestInvSkipNeverExtracted:
+    """SkipNeverExtracted: skipped ∩ extracted = {}"""
+
+    def test_disjoint_trace9(self):
+        """Trace 9: UUID_1 in skipped, UUID_2 in extracted → disjoint."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == {UUID_1}
+        assert extracted == {UUID_2}
+        inv_skip_never_extracted(skipped, extracted)
+
+    def test_disjoint_all_extracted_trace1(self):
+        """Trace 1: skipped={} → trivially disjoint."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        inv_skip_never_extracted(skipped, extracted)
+
+    def test_overlap_raises(self):
+        with pytest.raises(AssertionError, match="SkipNeverExtracted"):
+            inv_skip_never_extracted({UUID_1}, {UUID_1})
+
+
+class TestInvUnchangedNeverExtracted:
+    """UnchangedNeverExtracted: processed qualifying uuid ⇒ in skipped"""
+
+    def test_qualifying_processed_uuid_in_skipped_trace9(self):
+        """Trace 9: UUID_1 qualifies and is processed → must be in skipped."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_unchanged_never_extracted(skipped, set(), records, current_hashes, True)
+
+    def test_incremental_false_removes_obligation_both_qualify(self):
+        """
+        Both UUIDs are terminal with matching hashes, so they would qualify under
+        incremental=True.  With incremental=False the antecedent is always False,
+        making UnchangedNeverExtracted vacuously satisfied even though skipped={}.
+        """
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, _ = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        inv_unchanged_never_extracted(skipped, set(), records, current_hashes, False)
+
+    def test_violation_raises(self):
+        """A qualifying processed UUID absent from skipped should raise."""
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+        with pytest.raises(AssertionError, match="UnchangedNeverExtracted"):
+            inv_unchanged_never_extracted(
+                skipped=set(),           # UUID_1 is NOT in skipped
+                remaining=set(),         # UUID_1 IS processed
+                records=records,
+                current_hashes=current_hashes,
+                incremental=True,
+                all_uuids=frozenset({UUID_1}),
+            )
+
+
+class TestInvProcessedPartition:
+    """ProcessedPartition: ∀ u ∈ UUIDs \ remaining : u ∈ skipped ∨ u ∈ extracted"""
+
+    def test_all_partitioned_trace9(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_processed_partition(skipped, extracted, set())
+        assert (skipped | extracted) == ALL_UUIDS
+
+    def test_all_extracted_partition_trace1(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_processed_partition(skipped, extracted, set())
+        assert (skipped | extracted) == ALL_UUIDS
+
+    def test_partial_processing_holds_at_midpoint(self):
+        """After UUID_1 processed (skipped), UUID_2 still remaining → partition holds."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped = {UUID_1}
+        extracted: set = set()
+        remaining = {UUID_2}
+        inv_processed_partition(skipped, extracted, remaining)
+
+    def test_violation_raises(self):
+        with pytest.raises(AssertionError, match="ProcessedPartition"):
+            inv_processed_partition(
+                skipped=set(),
+                extracted=set(),
+                remaining=set(),            # UUID_1 is processed
+                all_uuids=frozenset({UUID_1}),
+            )
+
+
+class TestInvBoundedCollections:
+    """BoundedSkipped / BoundedExtracted: skipped ⊆ UUIDs, extracted ⊆ UUIDs"""
+
+    def test_skipped_subset_trace9(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_bounded_skipped(skipped)
+        inv_bounded_extracted(extracted)
+        assert skipped <= ALL_UUIDS
+        assert extracted <= ALL_UUIDS
+
+    def test_extracted_subset_trace2(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_bounded_skipped(skipped)
+        inv_bounded_extracted(extracted)
+        assert extracted <= ALL_UUIDS
+
+    def test_bounded_skipped_violation_raises(self):
+        with pytest.raises(AssertionError, match="BoundedSkipped"):
+            inv_bounded_skipped({"unknown-uuid-xyz"})
+
+    def test_bounded_extracted_violation_raises(self):
+        with pytest.raises(AssertionError, match="BoundedExtracted"):
+            inv_bounded_extracted({"unknown-uuid-xyz"})
+
+
+# ===========================================================================
+# Edge-case tests
+# ===========================================================================
+
+
+class TestEdgeCases:
+
+    def test_single_uuid_skip_terminal_hash_match_incremental(self):
+        """Minimal: one UUID, terminal, hash matches, incremental=True → skipped."""
+        single = frozenset({UUID_1})
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+
+        assert should_skip(UUID_1, records, current_hashes, incremental=True) is True
+
+        remaining = {UUID_1}
+        skipped: set = set()
+        extracted: set = set()
+        assert_all_invariants(skipped, extracted, remaining, records, current_hashes, True, single)
+
+        remaining.remove(UUID_1)
+        skipped.add(UUID_1)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True, single)
+
+        assert skipped == {UUID_1}
+        assert extracted == set()
+
+    def test_single_uuid_no_skip_non_incremental(self):
+        """Terminal + hash match but incremental=False → extracted."""
+        single = frozenset({UUID_1})
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+
+        assert should_skip(UUID_1, records, current_hashes, incremental=False) is False
+
+        remaining = {UUID_1}
+        skipped: set = set()
+        extracted: set = set()
+        remaining.remove(UUID_1)
+        extracted.add(UUID_1)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, False, single)
+        assert extracted == {UUID_1}
+
+    def test_single_uuid_no_skip_hash_mismatch(self):
+        """Terminal + incremental=True but hash mismatch → extracted."""
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_2}
+        assert should_skip(UUID_1, records, current_hashes, incremental=True) is False
+
+    def test_single_uuid_no_skip_non_terminal(self):
+        """Non-terminal + incremental=True + hash match → extracted."""
+        records = {UUID_1: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+        assert should_skip(UUID_1, records, current_hashes, incremental=True) is False
+
+    def test_all_three_conditions_required_for_skip(self):
+        """Exhaustive: only when incremental AND terminal AND hash_match → True."""
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+
+        # All three present → True
+        assert should_skip(UUID_1, records, current_hashes, True) is True
+
+        # Missing incremental
+        assert should_skip(UUID_1, records, current_hashes, False) is False
+
+        # Missing terminal
+        nt_records = {UUID_1: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1}}
+        assert should_skip(UUID_1, nt_records, current_hashes, True) is False
+
+        # Missing hash match
+        mismatch_hashes = {UUID_1: HASH_2}
+        assert should_skip(UUID_1, records, mismatch_hashes, True) is False
+
+    def test_both_uuids_skip_when_all_qualify(self):
+        """Both UUIDs terminal + hash match + incremental=True → both skipped."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == {UUID_1, UUID_2}
+        assert extracted == set()
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_dag_node_registration_matches_trace9(self):
+        """DAG correctly registers both UUIDs from Trace 9 topology."""
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        assert dag.node_count == 2
+
+    def test_dag_with_import_edge_does_not_affect_skip_logic(self):
+        """Structural DAG edge between nodes is orthogonal to skip decision."""
+        dag = RegistryDag()
+        dag.add_node(Node.resource(UUID_1, "node-1", TERMINAL_DESC_1, src_hash=HASH_1))
+        dag.add_node(Node.resource(UUID_2, "node-2", NON_TERMINAL_DESC_1, src_hash=HASH_1))
+        dag.add_edge(Edge(UUID_1, UUID_2, EdgeType.IMPORTS))
+        assert dag.edge_count == 1
+
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        assert should_skip(UUID_1, records, current_hashes, True) is True
+        assert should_skip(UUID_2, records, current_hashes, True) is False
+
+    def test_invariants_at_every_intermediate_step_trace9(self):
+        """Trace 9 step-by-step: verify all invariants hold at Init, mid, and final."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        incremental = True
+
+        # State 1: Init
+        assert_all_invariants(set(), set(), ALL_UUIDS, records, current_hashes, incremental)
+
+        # State 3 after CheckSkip(UUID_1) → skipped
+        assert_all_invariants({UUID_1}, set(), {UUID_2}, records, current_hashes, incremental)
+
+        # State 5 after CheckSkip(UUID_2) → extracted
+        assert_all_invariants({UUID_1}, {UUID_2}, set(), records, current_hashes, incremental)
+
+        # State 7: Finish / Done
+        assert_all_invariants({UUID_1}, {UUID_2}, set(), records, current_hashes, incremental)
+
+    def test_dag_extract_subgraph_returns_uuid1_node_in_trace9(self):
+        """DAG extract_subgraph confirms UUID_1 node is known to the registry."""
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        result = dag.extract_subgraph(UUID_1)
+        assert UUID_1 in result.nodes
+
+    def test_dag_extract_subgraph_isolated_nodes(self):
+        """Both nodes are isolated (no edges); each subgraph contains only itself."""
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        sg1 = dag.extract_subgraph(UUID_1)
+        sg2 = dag.extract_subgraph(UUID_2)
+        assert UUID_1 in sg1.nodes
+        assert UUID_2 not in sg1.nodes
+        assert UUID_2 in sg2.nodes
+        assert UUID_1 not in sg2.nodes
+
+    def test_non_incremental_never_violates_skip_only_when_incremental(self):
+        """
+        For every trace topology with incremental=False the skipped set is always
+        empty, so SkipOnlyWhenIncremental is trivially satisfied.
+        """
+        topologies = [
+            # Trace 3
+            (
+                {UUID_1: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_2},
+                 UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2}},
+                {UUID_1: HASH_1, UUID_2: HASH_2},
+            ),
+            # Trace 4
+            (
+                {UUID_1: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_1},
+                 UUID_2: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_2}},
+                {UUID_1: HASH_2, UUID_2: HASH_1},
+            ),
+            # Trace 8
+            (
+                {UUID_1: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+                 UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2}},
+                {UUID_1: HASH_1, UUID_2: HASH_1},
+            ),
+        ]
+        for records, current_hashes in topologies:
+            skipped, _ = run_processor(records, current_hashes, incremental=False)
+            assert skipped == set(), f"Expected empty skipped for non-incremental; got {skipped}"
+            inv_skip_only_when_incremental(skipped, incremental=False)
+```
+
+---
+
+### Change Log
+
+| Location | Change | Reason |
+|---|---|---|
+| `TestEdgeCases.test_dag_query_relevant_returns_node_in_trace9` | Renamed to `test_dag_extract_subgraph_returns_uuid1_node_in_trace9`; replaced `dag.query_relevant(UUID_1)` with `dag.extract_subgraph(UUID_1)` | `query_relevant` is not in the documented API — using it would raise `AttributeError`. `extract_subgraph` is the documented method with identical semantics for an isolated node. |
+| `TestInvSkipOnlyWhenIncremental.test_no_skip_when_incremental_false_trace3` | Renamed to `test_no_skip_when_incremental_false_both_qualify`; updated docstring | The topology used (`TERMINAL_DESC_1/HASH_1` + `TERMINAL_DESC_2/HASH_2`) is **not** Trace 3's fixture; labelling it as such would mislead trace-replay debugging. The new name accurately describes what makes it a strong test: both UUIDs would qualify under `incremental=True`, but `incremental=False` still yields `skipped={}`. |
+| `TestInvUnchangedNeverExtracted.test_incremental_false_removes_obligation_trace3` | Renamed to `test_incremental_false_removes_obligation_both_qualify`; updated docstring | Same mislabelling as above; same fix rationale. |
+| `NodeKind` import | Added inline comment `# NodeKind: real API symbol, reserved for future node-kind tests` | Symbol is a documented real import; comment prevents it from being silently removed as "unused" by linters while truthfully signalling no current test references it. |
+## Review Findings
+
+After carefully checking all four criteria, I found **three issues**:
+
+---
+
+### Issue 1 — API Binding Error (Critical)
+**Location**: `TestEdgeCases.test_dag_query_relevant_returns_node_in_trace9`
+
+`dag.query_relevant(UUID_1)` is **not listed in the provided API spec**. The spec header documents `RegistryDag`, `Node.resource`, `add_node`, `add_edge`, `node_count`, `edge_count`, and `extract_subgraph`. `query_relevant` appears nowhere — this will raise `AttributeError` at runtime. The intent (confirm a node is known) is already satisfied by `extract_subgraph`, which is used consistently in every other DAG test. **Fix: replace `query_relevant` with `extract_subgraph`.**
+
+---
+
+### Issue 2 — Misleading Trace Labels (Documentation / Semantic Drift)
+**Locations**:
+- `TestInvSkipOnlyWhenIncremental.test_no_skip_when_incremental_false_trace3`
+- `TestInvUnchangedNeverExtracted.test_incremental_false_removes_obligation_trace3`
+
+Both are labelled *"Trace 3 topology"* but neither matches Trace 3's fixture (`NON_TERMINAL_DESC_2`/`HASH_2` for UUID_1, `TERMINAL_DESC_1`/`HASH_2` for UUID_2). Instead they use `TERMINAL_DESC_1`/`HASH_1` and `TERMINAL_DESC_2`/`HASH_2` — the "both-UUIDs-qualify" topology that would skip both if incremental were True. The tests are semantically valid (they correctly demonstrate `incremental=False` suppresses skips) but the wrong label can mislead future maintainers into thinking they're replaying a recorded trace when they are not. **Fix: rename to reflect the actual topology.**
+
+---
+
+### Issue 3 — Unused Import (`NodeKind`)
+`NodeKind` is imported but never referenced. It will not cause a test failure, but it implies missing coverage (e.g., distinguishing resource nodes from other node kinds). Since the spec header explicitly lists it as a real import, it stays — but a comment marking it as reserved is added to avoid confusion.
+
+---
+
+### Everything Else Passes
+
+| Check | Result |
+|---|---|
+| `should_skip` ↔ `ShouldSkip` TLA+ formula | ✓ |
+| All 7 invariant checkers match their TLA+ originals | ✓ |
+| All trace expected outcomes (1–10) are arithmetically correct | ✓ |
+| `run_processor` enforces sorted/deterministic CHOOSE | ✓ |
+| Init + per-step + Finish invariant checking | ✓ |
+| `pytest.raises(match=…)` patterns match actual error strings | ✓ |
+| ≥2 topologies per dedicated invariant class | ✓ |
+| Violation-raises tests exercise the right predicates | ✓ |
+| `_build_dag` hash/desc args consistent with fixture records | ✓ |
+
+---
+
+### Corrected Test Plan
+
+```python
+"""
+pytest test suite for IncrementalSkip – _should_skip / incremental-crawl behaviour.
+
+Derived from TLC-verified traces; invariants are checked at every intermediate
+state, not just at the final state.
+
+Real API imports only:
+    from registry.types import Edge, EdgeType, Node, NodeKind
+    from dag import RegistryDag
+"""
+
+import pytest
+from registry.types import Edge, EdgeType, Node, NodeKind  # NodeKind: real API symbol, reserved for future node-kind tests
+from dag import RegistryDag
+
+# ---------------------------------------------------------------------------
+# Symbolic constants (TLA+ model values made concrete)
+# ---------------------------------------------------------------------------
+
+UUID_1 = "uuid-1"
+UUID_2 = "uuid-2"
+ALL_UUIDS = frozenset({UUID_1, UUID_2})
+
+HASH_1 = "hash-aaa"
+HASH_2 = "hash-bbb"
+
+TERMINAL_DESC_1 = "terminal-description-alpha"
+TERMINAL_DESC_2 = "terminal-description-beta"
+NON_TERMINAL_DESC_1 = "non-terminal-description-alpha"
+NON_TERMINAL_DESC_2 = "non-terminal-description-beta"
+
+TERMINAL_DESCRIPTIONS = frozenset({TERMINAL_DESC_1, TERMINAL_DESC_2})
+NON_TERMINAL_DESCRIPTIONS = frozenset({NON_TERMINAL_DESC_1, NON_TERMINAL_DESC_2})
+
+# Sanity: TLA+ ASSUME TerminalDescriptions ∩ NonTerminalDescriptions = {}
+assert TERMINAL_DESCRIPTIONS.isdisjoint(NON_TERMINAL_DESCRIPTIONS)
+
+
+# ---------------------------------------------------------------------------
+# TLA+ predicate translations
+# ---------------------------------------------------------------------------
+
+def is_terminal(uuid: str, records: dict) -> bool:
+    """IsTerminal(u) == records[u].do_description ∈ TerminalDescriptions"""
+    return records[uuid]["do_description"] in TERMINAL_DESCRIPTIONS
+
+
+def hash_matches(uuid: str, records: dict, current_hashes: dict) -> bool:
+    """HashMatches(u) == records[u].src_hash = current_hashes[u]"""
+    return records[uuid]["src_hash"] == current_hashes[uuid]
+
+
+def should_skip(uuid: str, records: dict, current_hashes: dict, incremental: bool) -> bool:
+    """ShouldSkip(u) == incremental ∧ IsTerminal(u) ∧ HashMatches(u)"""
+    return incremental and is_terminal(uuid, records) and hash_matches(uuid, records, current_hashes)
+
+
+# ---------------------------------------------------------------------------
+# Invariant checkers – one function per TLA+ invariant
+# ---------------------------------------------------------------------------
+
+def inv_skip_only_when_incremental(skipped: set, incremental: bool) -> None:
+    """SkipOnlyWhenIncremental: skipped ≠ {} ⇒ incremental = TRUE"""
+    if skipped:
+        assert incremental, (
+            f"SkipOnlyWhenIncremental violated: "
+            f"skipped={skipped} but incremental={incremental}"
+        )
+
+
+def inv_skip_only_when_hash_match(
+    skipped: set, records: dict, current_hashes: dict
+) -> None:
+    """SkipOnlyWhenHashMatch: ∀ u ∈ skipped : records[u].src_hash = current_hashes[u]"""
+    for u in skipped:
+        assert records[u]["src_hash"] == current_hashes[u], (
+            f"SkipOnlyWhenHashMatch violated for {u}: "
+            f"src_hash={records[u]['src_hash']} ≠ current={current_hashes[u]}"
+        )
+
+
+def inv_skip_never_extracted(skipped: set, extracted: set) -> None:
+    """SkipNeverExtracted: skipped ∩ extracted = {}"""
+    overlap = skipped & extracted
+    assert not overlap, f"SkipNeverExtracted violated: overlap={overlap}"
+
+
+def inv_unchanged_never_extracted(
+    skipped: set,
+    remaining: set,
+    records: dict,
+    current_hashes: dict,
+    incremental: bool,
+    all_uuids: frozenset = ALL_UUIDS,
+) -> None:
+    """
+    UnchangedNeverExtracted:
+        ∀ u ∈ UUIDs \ remaining :
+            (incremental ∧ IsTerminal(u) ∧ HashMatches(u)) ⇒ u ∈ skipped
+    """
+    processed = all_uuids - remaining
+    for u in processed:
+        if incremental and is_terminal(u, records) and hash_matches(u, records, current_hashes):
+            assert u in skipped, (
+                f"UnchangedNeverExtracted violated for {u}: "
+                "qualifies for skip but is absent from skipped"
+            )
+
+
+def inv_processed_partition(
+    skipped: set,
+    extracted: set,
+    remaining: set,
+    all_uuids: frozenset = ALL_UUIDS,
+) -> None:
+    """ProcessedPartition: ∀ u ∈ UUIDs \ remaining : u ∈ skipped ∨ u ∈ extracted"""
+    processed = all_uuids - remaining
+    for u in processed:
+        assert u in skipped or u in extracted, (
+            f"ProcessedPartition violated for {u}: "
+            "not in skipped and not in extracted"
+        )
+
+
+def inv_bounded_skipped(skipped: set, all_uuids: frozenset = ALL_UUIDS) -> None:
+    """BoundedSkipped: skipped ⊆ UUIDs"""
+    stray = skipped - all_uuids
+    assert not stray, f"BoundedSkipped violated: {stray} not in UUIDs"
+
+
+def inv_bounded_extracted(extracted: set, all_uuids: frozenset = ALL_UUIDS) -> None:
+    """BoundedExtracted: extracted ⊆ UUIDs"""
+    stray = extracted - all_uuids
+    assert not stray, f"BoundedExtracted violated: {stray} not in UUIDs"
+
+
+def assert_all_invariants(
+    skipped: set,
+    extracted: set,
+    remaining: set,
+    records: dict,
+    current_hashes: dict,
+    incremental: bool,
+    all_uuids: frozenset = ALL_UUIDS,
+) -> None:
+    """Assert every TLA+ invariant holds for the given state snapshot."""
+    inv_skip_only_when_incremental(skipped, incremental)
+    inv_skip_only_when_hash_match(skipped, records, current_hashes)
+    inv_skip_never_extracted(skipped, extracted)
+    inv_unchanged_never_extracted(
+        skipped, remaining, records, current_hashes, incremental, all_uuids
+    )
+    inv_processed_partition(skipped, extracted, remaining, all_uuids)
+    inv_bounded_skipped(skipped, all_uuids)
+    inv_bounded_extracted(extracted, all_uuids)
+
+
+# ---------------------------------------------------------------------------
+# Processor simulation
+#
+# Encodes the TLA+ PlusCal algorithm:
+#   ProcessLoop / CheckSkip / Finish
+# Invariants are verified after every CheckSkip (intermediate) and at Finish.
+# ---------------------------------------------------------------------------
+
+def run_processor(
+    records: dict,
+    current_hashes: dict,
+    incremental: bool,
+    all_uuids: frozenset = ALL_UUIDS,
+) -> tuple[set, set]:
+    """
+    Run the TLA+ processor algorithm on *all_uuids* and return (skipped, extracted).
+
+    Invariants are checked at Init, after every CheckSkip action, and after Finish.
+    Processing order is deterministic (sorted) so intermediate states are reproducible.
+    """
+    remaining = set(all_uuids)
+    skipped: set = set()
+    extracted: set = set()
+
+    # --- Init state invariants ---
+    assert_all_invariants(
+        skipped, extracted, remaining, records, current_hashes, incremental, all_uuids
+    )
+
+    # --- ProcessLoop / CheckSkip loop ---
+    for uuid in sorted(all_uuids):          # deterministic CHOOSE
+        remaining.remove(uuid)              # ProcessLoop → CheckSkip
+
+        if should_skip(uuid, records, current_hashes, incremental):
+            skipped.add(uuid)
+        else:
+            extracted.add(uuid)
+
+        # Invariants must hold after each CheckSkip
+        assert_all_invariants(
+            skipped, extracted, remaining, records, current_hashes, incremental, all_uuids
+        )
+
+    # --- Finish ---
+    assert not remaining, "remaining must be empty at Finish"
+    assert_all_invariants(
+        skipped, extracted, remaining, records, current_hashes, incremental, all_uuids
+    )
+
+    return skipped, extracted
+
+
+# ---------------------------------------------------------------------------
+# Helper: build a two-node RegistryDag from trace Init state
+# ---------------------------------------------------------------------------
+
+def _build_dag(
+    uuid1_desc: str,
+    uuid1_hash: str,
+    uuid2_desc: str,
+    uuid2_hash: str,
+) -> RegistryDag:
+    dag = RegistryDag()
+    dag.add_node(Node.resource(UUID_1, "node-uuid1", uuid1_desc, src_hash=uuid1_hash))
+    dag.add_node(Node.resource(UUID_2, "node-uuid2", uuid2_desc, src_hash=uuid2_hash))
+    return dag
+
+
+# ===========================================================================
+# Trace-derived tests  (one test per TLC trace)
+# ===========================================================================
+
+
+class TestTrace1:
+    """
+    Trace 1 – incremental=TRUE, both records terminal but src_hash ≠ current_hash.
+    current_hashes: {UUID_1: Hash1, UUID_2: Hash1}
+    records:        {UUID_1: {Terminal1, Hash2}, UUID_2: {Terminal1, Hash2}}
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        dag = _build_dag(TERMINAL_DESC_1, HASH_2, TERMINAL_DESC_1, HASH_2)
+        return records, current_hashes, dag
+
+    def test_both_extracted_due_to_hash_mismatch(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+
+        assert skipped == set(), f"Expected no skips; got {skipped}"
+        assert extracted == {UUID_1, UUID_2}, f"Expected both extracted; got {extracted}"
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_should_skip_false_for_each_uuid(self, state):
+        records, current_hashes, _ = state
+        # Hash mismatch overrides terminal + incremental
+        assert not should_skip(UUID_1, records, current_hashes, incremental=True)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+class TestTrace2:
+    """
+    Trace 2 – incremental=TRUE.
+    UUID_1: Terminal1, src_hash=Hash2, current=Hash1 → mismatch → extracted
+    UUID_2: NonTerminal1, src_hash=Hash1, current=Hash2 → non-terminal → extracted
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        dag = _build_dag(TERMINAL_DESC_1, HASH_2, NON_TERMINAL_DESC_1, HASH_1)
+        return records, current_hashes, dag
+
+    def test_both_extracted_mixed_reasons(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid1_hash_mismatch_prevents_skip(self, state):
+        records, current_hashes, _ = state
+        assert not hash_matches(UUID_1, records, current_hashes)
+        assert is_terminal(UUID_1, records)
+        assert not should_skip(UUID_1, records, current_hashes, incremental=True)
+
+    def test_uuid2_non_terminal_prevents_skip(self, state):
+        records, current_hashes, _ = state
+        assert not is_terminal(UUID_2, records)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+class TestTrace3:
+    """
+    Trace 3 – incremental=FALSE.
+    UUID_1: NonTerminal2, src_hash=Hash2, current=Hash1
+    UUID_2: Terminal1,    src_hash=Hash2, current=Hash2  (hash matches but incremental=False)
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        dag = _build_dag(NON_TERMINAL_DESC_2, HASH_2, TERMINAL_DESC_1, HASH_2)
+        return records, current_hashes, dag
+
+    def test_non_incremental_all_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, False)
+
+    def test_incremental_false_suppresses_skip_even_with_hash_match(self, state):
+        records, current_hashes, _ = state
+        # UUID_2 has a terminal desc + hash match, but incremental=False → no skip
+        assert is_terminal(UUID_2, records)
+        assert hash_matches(UUID_2, records, current_hashes)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=False)
+
+    def test_skip_only_when_incremental_with_empty_skipped(self, state):
+        records, current_hashes, _ = state
+        skipped, _ = run_processor(records, current_hashes, incremental=False)
+        inv_skip_only_when_incremental(skipped, incremental=False)
+
+
+class TestTrace4:
+    """
+    Trace 4 – incremental=FALSE.
+    UUID_1: Terminal2, src_hash=Hash1, current=Hash2 → mismatch anyway; incremental=False
+    UUID_2: NonTerminal2, src_hash=Hash2, current=Hash1
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_2, UUID_2: HASH_1}
+        dag = _build_dag(TERMINAL_DESC_2, HASH_1, NON_TERMINAL_DESC_2, HASH_2)
+        return records, current_hashes, dag
+
+    def test_non_incremental_various_hashes_all_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, False)
+
+
+class TestTrace5:
+    """
+    Trace 5 – incremental=TRUE, both non-terminal descriptions.
+    UUID_1: NonTerminal2, src_hash=Hash1, current=Hash1 (hash matches but non-terminal)
+    UUID_2: NonTerminal1, src_hash=Hash1, current=Hash2
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        dag = _build_dag(NON_TERMINAL_DESC_2, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        return records, current_hashes, dag
+
+    def test_non_terminal_never_skipped(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid1_hash_match_irrelevant_because_non_terminal(self, state):
+        records, current_hashes, _ = state
+        assert hash_matches(UUID_1, records, current_hashes)   # hash does match
+        assert not is_terminal(UUID_1, records)                # but non-terminal
+        assert not should_skip(UUID_1, records, current_hashes, incremental=True)
+
+
+class TestTrace6:
+    """
+    Trace 6 – incremental=TRUE, both non-terminal.
+    UUID_1: NonTerminal1, src_hash=Hash1, current=Hash2 → non-terminal, hash mismatch
+    UUID_2: NonTerminal2, src_hash=Hash1, current=Hash1 → non-terminal (hash matches)
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_2, UUID_2: HASH_1}
+        dag = _build_dag(NON_TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_2, HASH_1)
+        return records, current_hashes, dag
+
+    def test_non_terminal_both_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid2_hash_match_irrelevant_non_terminal(self, state):
+        records, current_hashes, _ = state
+        assert hash_matches(UUID_2, records, current_hashes)
+        assert not is_terminal(UUID_2, records)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+class TestTrace7:
+    """
+    Trace 7 – incremental=TRUE.
+    UUID_1: NonTerminal1, src_hash=Hash2, current=Hash1 → non-terminal
+    UUID_2: Terminal2,    src_hash=Hash2, current=Hash1 → terminal but hash mismatch
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        dag = _build_dag(NON_TERMINAL_DESC_1, HASH_2, TERMINAL_DESC_2, HASH_2)
+        return records, current_hashes, dag
+
+    def test_terminal_with_hash_mismatch_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid2_terminal_but_hash_mismatch_prevents_skip(self, state):
+        records, current_hashes, _ = state
+        assert is_terminal(UUID_2, records)
+        assert not hash_matches(UUID_2, records, current_hashes)
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+class TestTrace8:
+    """
+    Trace 8 – incremental=FALSE, both terminal with hash mismatch.
+    UUID_1: Terminal2, src_hash=Hash2, current=Hash1
+    UUID_2: Terminal2, src_hash=Hash2, current=Hash1
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    Both incremental=False AND hash mismatch independently preclude skipping.
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        dag = _build_dag(TERMINAL_DESC_2, HASH_2, TERMINAL_DESC_2, HASH_2)
+        return records, current_hashes, dag
+
+    def test_non_incremental_terminal_hash_mismatch_all_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=False)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, False)
+
+
+class TestTrace9:
+    """
+    Trace 9 – THE PRIMARY TRACE.  Core GWT scenario.
+
+    incremental=TRUE.
+    UUID_1: Terminal1, src_hash=Hash1, current=Hash1 → incremental+terminal+hash match → SKIPPED
+    UUID_2: NonTerminal1, src_hash=Hash1, current=Hash2 → non-terminal → extracted
+
+    Expected final: skipped={UUID_1}, extracted={UUID_2}
+
+    Tests all seven invariants:
+        SkipOnlyWhenIncremental, SkipOnlyWhenHashMatch, SkipNeverExtracted,
+        UnchangedNeverExtracted, ProcessedPartition, BoundedSkipped, BoundedExtracted
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        return records, current_hashes, dag
+
+    # ------------------------------------------------------------------
+    # Final-state correctness
+    # ------------------------------------------------------------------
+
+    def test_uuid1_is_skipped(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert UUID_1 in skipped, f"UUID_1 must be skipped; skipped={skipped}"
+
+    def test_uuid2_is_extracted(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert UUID_2 in extracted, f"UUID_2 must be extracted; extracted={extracted}"
+
+    def test_partition_is_disjoint(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert UUID_1 not in extracted, "UUID_1 must NOT be extracted"
+        assert UUID_2 not in skipped, "UUID_2 must NOT be skipped"
+        assert skipped.isdisjoint(extracted), "skipped and extracted must be disjoint"
+
+    def test_all_uuids_accounted_for(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped | extracted == ALL_UUIDS
+
+    # ------------------------------------------------------------------
+    # should_skip unit-level assertions
+    # ------------------------------------------------------------------
+
+    def test_should_skip_true_for_uuid1(self, state):
+        """Given: terminal record with matching hash.  When: incremental=True.  Then: True."""
+        records, current_hashes, _ = state
+        assert should_skip(UUID_1, records, current_hashes, incremental=True) is True
+
+    def test_should_skip_false_for_uuid2_non_terminal(self, state):
+        records, current_hashes, _ = state
+        assert should_skip(UUID_2, records, current_hashes, incremental=True) is False
+
+    def test_should_skip_false_for_uuid1_when_not_incremental(self, state):
+        """Same record, same hash — but incremental=False → must NOT skip."""
+        records, current_hashes, _ = state
+        assert should_skip(UUID_1, records, current_hashes, incremental=False) is False
+
+    # ------------------------------------------------------------------
+    # All TLA+ invariants – at every intermediate state
+    # ------------------------------------------------------------------
+
+    def test_invariants_at_init(self, state):
+        records, current_hashes, _ = state
+        assert_all_invariants(set(), set(), ALL_UUIDS, records, current_hashes, True)
+
+    def test_invariants_after_uuid1_processed(self, state):
+        """Intermediate state: UUID_1 skipped, UUID_2 still remaining."""
+        records, current_hashes, _ = state
+        skipped = {UUID_1}
+        extracted: set = set()
+        remaining = {UUID_2}
+        assert_all_invariants(skipped, extracted, remaining, records, current_hashes, True)
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_skip_only_when_incremental_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        assert skipped  # non-empty
+        inv_skip_only_when_incremental(skipped, incremental=True)
+
+    def test_skip_only_when_hash_match_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        inv_skip_only_when_hash_match(skipped, records, current_hashes)
+        assert records[UUID_1]["src_hash"] == current_hashes[UUID_1]
+
+    def test_skip_never_extracted_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_skip_never_extracted(skipped, extracted)
+
+    def test_unchanged_never_extracted_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_unchanged_never_extracted(skipped, set(), records, current_hashes, True)
+
+    def test_processed_partition_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_processed_partition(skipped, extracted, set())
+
+    def test_bounded_skipped_holds(self, state):
+        records, current_hashes, _ = state
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        inv_bounded_skipped(skipped)
+
+    def test_bounded_extracted_holds(self, state):
+        records, current_hashes, _ = state
+        _, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_bounded_extracted(extracted)
+
+    def test_dag_node_count(self, state):
+        _, _, dag = state
+        assert dag.node_count == 2
+
+    def test_dag_extract_subgraph_uuid1(self, state):
+        _, _, dag = state
+        result = dag.extract_subgraph(UUID_1)
+        assert UUID_1 in result.nodes
+
+    def test_dag_extract_subgraph_uuid2(self, state):
+        _, _, dag = state
+        result = dag.extract_subgraph(UUID_2)
+        assert UUID_2 in result.nodes
+
+
+class TestTrace10:
+    """
+    Trace 10 – incremental=TRUE.
+    UUID_1: Terminal1, src_hash=Hash1, current=Hash2 → hash mismatch → extracted
+    UUID_2: NonTerminal1, src_hash=Hash2, current=Hash2 → non-terminal (hash matches) → extracted
+    Expected final: skipped={}, extracted={UUID_1, UUID_2}
+    """
+
+    @pytest.fixture
+    def state(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_2, UUID_2: HASH_2}
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_2)
+        return records, current_hashes, dag
+
+    def test_both_extracted(self, state):
+        records, current_hashes, dag = state
+        assert dag.node_count == 2
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        assert extracted == {UUID_1, UUID_2}
+
+    def test_invariants_final_state(self, state):
+        records, current_hashes, _ = state
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_uuid1_terminal_hash_mismatch(self, state):
+        records, current_hashes, _ = state
+        assert is_terminal(UUID_1, records)
+        assert not hash_matches(UUID_1, records, current_hashes)
+        assert not should_skip(UUID_1, records, current_hashes, incremental=True)
+
+    def test_uuid2_non_terminal_hash_match_irrelevant(self, state):
+        records, current_hashes, _ = state
+        assert not is_terminal(UUID_2, records)
+        assert hash_matches(UUID_2, records, current_hashes)   # hash matches, but non-terminal
+        assert not should_skip(UUID_2, records, current_hashes, incremental=True)
+
+
+# ===========================================================================
+# Dedicated invariant verifier tests (≥2 topologies per invariant)
+# ===========================================================================
+
+
+class TestInvSkipOnlyWhenIncremental:
+    """SkipOnlyWhenIncremental: skipped ≠ {} ⇒ incremental = TRUE"""
+
+    def test_skip_only_occurs_with_incremental_true_trace9(self):
+        """Topology from Trace 9: skip present ↔ incremental=True."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        assert skipped == {UUID_1}
+        inv_skip_only_when_incremental(skipped, incremental=True)
+
+    def test_no_skip_when_incremental_false_both_qualify(self):
+        """
+        Both UUIDs are terminal with matching hashes; incremental=False forces
+        skipped={} regardless, so SkipOnlyWhenIncremental is trivially satisfied.
+        """
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, _ = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        inv_skip_only_when_incremental(skipped, incremental=False)
+
+    def test_empty_skipped_vacuously_satisfies_with_incremental_false(self):
+        inv_skip_only_when_incremental(set(), incremental=False)
+
+    def test_empty_skipped_vacuously_satisfies_with_incremental_true(self):
+        inv_skip_only_when_incremental(set(), incremental=True)
+
+    def test_non_empty_skipped_requires_incremental_true(self):
+        """Directly assert invariant check raises when violated."""
+        with pytest.raises(AssertionError, match="SkipOnlyWhenIncremental"):
+            inv_skip_only_when_incremental({UUID_1}, incremental=False)
+
+
+class TestInvSkipOnlyWhenHashMatch:
+    """SkipOnlyWhenHashMatch: ∀ u ∈ skipped : records[u].src_hash = current_hashes[u]"""
+
+    def test_skipped_uuid_must_have_hash_match_trace9(self):
+        """Trace 9: UUID_1 skipped → Hash1 == Hash1."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        assert UUID_1 in skipped
+        inv_skip_only_when_hash_match(skipped, records, current_hashes)
+        assert records[UUID_1]["src_hash"] == current_hashes[UUID_1] == HASH_1
+
+    def test_hash_mismatch_prevents_skip_trace1(self):
+        """Trace 1: src_hash=Hash2 ≠ current=Hash1 → never in skipped."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        skipped, _ = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        inv_skip_only_when_hash_match(skipped, records, current_hashes)
+
+    def test_hash_mismatch_in_skipped_raises(self):
+        """Directly assert invariant check raises when violated."""
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_2}
+        with pytest.raises(AssertionError, match="SkipOnlyWhenHashMatch"):
+            inv_skip_only_when_hash_match({UUID_1}, records, current_hashes)
+
+    def test_empty_skipped_vacuously_satisfies(self):
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2}}
+        current_hashes = {UUID_1: HASH_1}
+        inv_skip_only_when_hash_match(set(), records, current_hashes)
+
+
+class TestInvSkipNeverExtracted:
+    """SkipNeverExtracted: skipped ∩ extracted = {}"""
+
+    def test_disjoint_trace9(self):
+        """Trace 9: UUID_1 in skipped, UUID_2 in extracted → disjoint."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == {UUID_1}
+        assert extracted == {UUID_2}
+        inv_skip_never_extracted(skipped, extracted)
+
+    def test_disjoint_all_extracted_trace1(self):
+        """Trace 1: skipped={} → trivially disjoint."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == set()
+        inv_skip_never_extracted(skipped, extracted)
+
+    def test_overlap_raises(self):
+        with pytest.raises(AssertionError, match="SkipNeverExtracted"):
+            inv_skip_never_extracted({UUID_1}, {UUID_1})
+
+
+class TestInvUnchangedNeverExtracted:
+    """UnchangedNeverExtracted: processed qualifying uuid ⇒ in skipped"""
+
+    def test_qualifying_processed_uuid_in_skipped_trace9(self):
+        """Trace 9: UUID_1 qualifies and is processed → must be in skipped."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_unchanged_never_extracted(skipped, set(), records, current_hashes, True)
+
+    def test_incremental_false_removes_obligation_both_qualify(self):
+        """
+        Both UUIDs are terminal with matching hashes, so they would qualify under
+        incremental=True.  With incremental=False the antecedent is always False,
+        making UnchangedNeverExtracted vacuously satisfied even though skipped={}.
+        """
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, _ = run_processor(records, current_hashes, incremental=False)
+        assert skipped == set()
+        inv_unchanged_never_extracted(skipped, set(), records, current_hashes, False)
+
+    def test_violation_raises(self):
+        """A qualifying processed UUID absent from skipped should raise."""
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+        with pytest.raises(AssertionError, match="UnchangedNeverExtracted"):
+            inv_unchanged_never_extracted(
+                skipped=set(),           # UUID_1 is NOT in skipped
+                remaining=set(),         # UUID_1 IS processed
+                records=records,
+                current_hashes=current_hashes,
+                incremental=True,
+                all_uuids=frozenset({UUID_1}),
+            )
+
+
+class TestInvProcessedPartition:
+    """ProcessedPartition: ∀ u ∈ UUIDs \ remaining : u ∈ skipped ∨ u ∈ extracted"""
+
+    def test_all_partitioned_trace9(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_processed_partition(skipped, extracted, set())
+        assert (skipped | extracted) == ALL_UUIDS
+
+    def test_all_extracted_partition_trace1(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_1}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_processed_partition(skipped, extracted, set())
+        assert (skipped | extracted) == ALL_UUIDS
+
+    def test_partial_processing_holds_at_midpoint(self):
+        """After UUID_1 processed (skipped), UUID_2 still remaining → partition holds."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped = {UUID_1}
+        extracted: set = set()
+        remaining = {UUID_2}
+        inv_processed_partition(skipped, extracted, remaining)
+
+    def test_violation_raises(self):
+        with pytest.raises(AssertionError, match="ProcessedPartition"):
+            inv_processed_partition(
+                skipped=set(),
+                extracted=set(),
+                remaining=set(),            # UUID_1 is processed
+                all_uuids=frozenset({UUID_1}),
+            )
+
+
+class TestInvBoundedCollections:
+    """BoundedSkipped / BoundedExtracted: skipped ⊆ UUIDs, extracted ⊆ UUIDs"""
+
+    def test_skipped_subset_trace9(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_bounded_skipped(skipped)
+        inv_bounded_extracted(extracted)
+        assert skipped <= ALL_UUIDS
+        assert extracted <= ALL_UUIDS
+
+    def test_extracted_subset_trace2(self):
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        inv_bounded_skipped(skipped)
+        inv_bounded_extracted(extracted)
+        assert extracted <= ALL_UUIDS
+
+    def test_bounded_skipped_violation_raises(self):
+        with pytest.raises(AssertionError, match="BoundedSkipped"):
+            inv_bounded_skipped({"unknown-uuid-xyz"})
+
+    def test_bounded_extracted_violation_raises(self):
+        with pytest.raises(AssertionError, match="BoundedExtracted"):
+            inv_bounded_extracted({"unknown-uuid-xyz"})
+
+
+# ===========================================================================
+# Edge-case tests
+# ===========================================================================
+
+
+class TestEdgeCases:
+
+    def test_single_uuid_skip_terminal_hash_match_incremental(self):
+        """Minimal: one UUID, terminal, hash matches, incremental=True → skipped."""
+        single = frozenset({UUID_1})
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+
+        assert should_skip(UUID_1, records, current_hashes, incremental=True) is True
+
+        remaining = {UUID_1}
+        skipped: set = set()
+        extracted: set = set()
+        assert_all_invariants(skipped, extracted, remaining, records, current_hashes, True, single)
+
+        remaining.remove(UUID_1)
+        skipped.add(UUID_1)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True, single)
+
+        assert skipped == {UUID_1}
+        assert extracted == set()
+
+    def test_single_uuid_no_skip_non_incremental(self):
+        """Terminal + hash match but incremental=False → extracted."""
+        single = frozenset({UUID_1})
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+
+        assert should_skip(UUID_1, records, current_hashes, incremental=False) is False
+
+        remaining = {UUID_1}
+        skipped: set = set()
+        extracted: set = set()
+        remaining.remove(UUID_1)
+        extracted.add(UUID_1)
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, False, single)
+        assert extracted == {UUID_1}
+
+    def test_single_uuid_no_skip_hash_mismatch(self):
+        """Terminal + incremental=True but hash mismatch → extracted."""
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_2}
+        assert should_skip(UUID_1, records, current_hashes, incremental=True) is False
+
+    def test_single_uuid_no_skip_non_terminal(self):
+        """Non-terminal + incremental=True + hash match → extracted."""
+        records = {UUID_1: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+        assert should_skip(UUID_1, records, current_hashes, incremental=True) is False
+
+    def test_all_three_conditions_required_for_skip(self):
+        """Exhaustive: only when incremental AND terminal AND hash_match → True."""
+        records = {UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1}}
+        current_hashes = {UUID_1: HASH_1}
+
+        # All three present → True
+        assert should_skip(UUID_1, records, current_hashes, True) is True
+
+        # Missing incremental
+        assert should_skip(UUID_1, records, current_hashes, False) is False
+
+        # Missing terminal
+        nt_records = {UUID_1: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1}}
+        assert should_skip(UUID_1, nt_records, current_hashes, True) is False
+
+        # Missing hash match
+        mismatch_hashes = {UUID_1: HASH_2}
+        assert should_skip(UUID_1, records, mismatch_hashes, True) is False
+
+    def test_both_uuids_skip_when_all_qualify(self):
+        """Both UUIDs terminal + hash match + incremental=True → both skipped."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        skipped, extracted = run_processor(records, current_hashes, incremental=True)
+        assert skipped == {UUID_1, UUID_2}
+        assert extracted == set()
+        assert_all_invariants(skipped, extracted, set(), records, current_hashes, True)
+
+    def test_dag_node_registration_matches_trace9(self):
+        """DAG correctly registers both UUIDs from Trace 9 topology."""
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        assert dag.node_count == 2
+
+    def test_dag_with_import_edge_does_not_affect_skip_logic(self):
+        """Structural DAG edge between nodes is orthogonal to skip decision."""
+        dag = RegistryDag()
+        dag.add_node(Node.resource(UUID_1, "node-1", TERMINAL_DESC_1, src_hash=HASH_1))
+        dag.add_node(Node.resource(UUID_2, "node-2", NON_TERMINAL_DESC_1, src_hash=HASH_1))
+        dag.add_edge(Edge(UUID_1, UUID_2, EdgeType.IMPORTS))
+        assert dag.edge_count == 1
+
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        assert should_skip(UUID_1, records, current_hashes, True) is True
+        assert should_skip(UUID_2, records, current_hashes, True) is False
+
+    def test_invariants_at_every_intermediate_step_trace9(self):
+        """Trace 9 step-by-step: verify all invariants hold at Init, mid, and final."""
+        records = {
+            UUID_1: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_1},
+            UUID_2: {"do_description": NON_TERMINAL_DESC_1, "src_hash": HASH_1},
+        }
+        current_hashes = {UUID_1: HASH_1, UUID_2: HASH_2}
+        incremental = True
+
+        # State 1: Init
+        assert_all_invariants(set(), set(), ALL_UUIDS, records, current_hashes, incremental)
+
+        # State 3 after CheckSkip(UUID_1) → skipped
+        assert_all_invariants({UUID_1}, set(), {UUID_2}, records, current_hashes, incremental)
+
+        # State 5 after CheckSkip(UUID_2) → extracted
+        assert_all_invariants({UUID_1}, {UUID_2}, set(), records, current_hashes, incremental)
+
+        # State 7: Finish / Done
+        assert_all_invariants({UUID_1}, {UUID_2}, set(), records, current_hashes, incremental)
+
+    def test_dag_extract_subgraph_returns_uuid1_node_in_trace9(self):
+        """DAG extract_subgraph confirms UUID_1 node is known to the registry."""
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        result = dag.extract_subgraph(UUID_1)
+        assert UUID_1 in result.nodes
+
+    def test_dag_extract_subgraph_isolated_nodes(self):
+        """Both nodes are isolated (no edges); each subgraph contains only itself."""
+        dag = _build_dag(TERMINAL_DESC_1, HASH_1, NON_TERMINAL_DESC_1, HASH_1)
+        sg1 = dag.extract_subgraph(UUID_1)
+        sg2 = dag.extract_subgraph(UUID_2)
+        assert UUID_1 in sg1.nodes
+        assert UUID_2 not in sg1.nodes
+        assert UUID_2 in sg2.nodes
+        assert UUID_1 not in sg2.nodes
+
+    def test_non_incremental_never_violates_skip_only_when_incremental(self):
+        """
+        For every trace topology with incremental=False the skipped set is always
+        empty, so SkipOnlyWhenIncremental is trivially satisfied.
+        """
+        topologies = [
+            # Trace 3
+            (
+                {UUID_1: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_2},
+                 UUID_2: {"do_description": TERMINAL_DESC_1, "src_hash": HASH_2}},
+                {UUID_1: HASH_1, UUID_2: HASH_2},
+            ),
+            # Trace 4
+            (
+                {UUID_1: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_1},
+                 UUID_2: {"do_description": NON_TERMINAL_DESC_2, "src_hash": HASH_2}},
+                {UUID_1: HASH_2, UUID_2: HASH_1},
+            ),
+            # Trace 8
+            (
+                {UUID_1: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2},
+                 UUID_2: {"do_description": TERMINAL_DESC_2, "src_hash": HASH_2}},
+                {UUID_1: HASH_1, UUID_2: HASH_1},
+            ),
+        ]
+        for records, current_hashes in topologies:
+            skipped, _ = run_processor(records, current_hashes, incremental=False)
+            assert skipped == set(), f"Expected empty skipped for non-incremental; got {skipped}"
+            inv_skip_only_when_incremental(skipped, incremental=False)
+```
+
+---
+
+### Change Log
+
+| Location | Change | Reason |
+|---|---|---|
+| `TestEdgeCases.test_dag_query_relevant_returns_node_in_trace9` | Renamed to `test_dag_extract_subgraph_returns_uuid1_node_in_trace9`; replaced `dag.query_relevant(UUID_1)` with `dag.extract_subgraph(UUID_1)` | `query_relevant` is not in the documented API — using it would raise `AttributeError`. `extract_subgraph` is the documented method with identical semantics for an isolated node. |
+| `TestInvSkipOnlyWhenIncremental.test_no_skip_when_incremental_false_trace3` | Renamed to `test_no_skip_when_incremental_false_both_qualify`; updated docstring | The topology used (`TERMINAL_DESC_1/HASH_1` + `TERMINAL_DESC_2/HASH_2`) is **not** Trace 3's fixture; labelling it as such would mislead trace-replay debugging. The new name accurately describes what makes it a strong test: both UUIDs would qualify under `incremental=True`, but `incremental=False` still yields `skipped={}`. |
+| `TestInvUnchangedNeverExtracted.test_incremental_false_removes_obligation_trace3` | Renamed to `test_incremental_false_removes_obligation_both_qualify`; updated docstring | Same mislabelling as above; same fix rationale. |
+| `NodeKind` import | Added inline comment `# NodeKind: real API symbol, reserved for future node-kind tests` | Symbol is a documented real import; comment prevents it from being silently removed as "unused" by linters while truthfully signalling no current test references it. |

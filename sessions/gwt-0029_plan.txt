@@ -1,0 +1,2329 @@
+```python
+"""
+pytest test suite for CrawlOrchestrator graceful-shutdown behavior.
+
+All 10 TLC-verified GracefulShutdown traces are translated into concrete
+pytest tests.  OrchestratorSim mirrors the TLA+ three-process PlusCal
+algorithm exactly.  RegistryDag is the authoritative task registry.
+All six TLA+ invariants are asserted after every state transition.
+"""
+from __future__ import annotations
+
+import pytest
+from registry.dag import NodeNotFoundError, RegistryDag
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TLA+ CONSTANTS  Tasks = {Tasks_1, Tasks_2}
+# ─────────────────────────────────────────────────────────────────────────────
+
+TASK_1: str = "Tasks_1"
+TASK_2: str = "Tasks_2"
+ALL_TASKS: frozenset = frozenset({TASK_1, TASK_2})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DAG factories (derived from trace Init states)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _make_dag() -> RegistryDag:
+    """
+    Baseline topology: two independent behavior nodes, no edges.
+    Corresponds to TLA+ Init: pending = {Tasks_1, Tasks_2}.
+    """
+    dag = RegistryDag()
+    dag.add_node(Node.behavior(
+        TASK_1, "Crawl Task 1",
+        given="a URL for task-1 is in the pending queue",
+        when="the orchestrator selects Tasks_1 for extraction",
+        then="the extraction result for task-1 is persisted to storage",
+    ))
+    dag.add_node(Node.behavior(
+        TASK_2, "Crawl Task 2",
+        given="a URL for task-2 is in the pending queue",
+        when="the orchestrator selects Tasks_2 for extraction",
+        then="the extraction result for task-2 is persisted to storage",
+    ))
+    return dag
+
+
+def _make_dag_with_dependency() -> RegistryDag:
+    """Tasks_1 IMPORTS Tasks_2 — used in edge-case dependency tests."""
+    dag = _make_dag()
+    dag.add_edge(Edge(TASK_1, TASK_2, EdgeType.IMPORTS))
+    return dag
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OrchestratorSim — Python translation of TLA+ GracefulShutdown
+# ─────────────────────────────────────────────────────────────────────────────
+
+class OrchestratorSim:
+    """
+    Faithful simulation of the TLA+ GracefulShutdown three-process algorithm.
+
+    Variable names, guards, and effects mirror the TLA+ spec verbatim.
+    The RegistryDag is the authoritative task registry; invariant
+    assertions map directly to TLA+ INVARIANT declarations.
+    """
+
+    def __init__(self, dag: RegistryDag, tasks: frozenset = ALL_TASKS) -> None:
+        self.dag = dag
+        self.all_tasks: frozenset = tasks
+        # TLA+ global variables — Init values
+        self.shutdown_requested: bool = False
+        self.in_flight: set = set()
+        self.completed: set = set()
+        self.started_after_signal: set = set()
+        self.in_flight_at_signal: set = set()
+        self.pending: set = set(tasks)
+        self.run_active: bool = True
+        # Orchestrator-local variables — Init values
+        self.phase: str = "running"
+        self.candidate: str = "none"
+
+    # ── TLA+ Actions ─────────────────────────────────────────────────────────
+
+    def fire_signal(self, do_shutdown: bool = True) -> None:
+        """
+        FireSignal:
+          'either shutdown_requested := TRUE; in_flight_at_signal := in_flight
+               or skip
+           end either'
+        Pass do_shutdown=False to select the skip (no-op) branch.
+        """
+        if do_shutdown:
+            self.shutdown_requested = True
+            self.in_flight_at_signal = set(self.in_flight)
+
+    def orchestrator_loop_pick(self, task: str) -> None:
+        """
+        OrchestratorLoop — first (pick-task) disjunct of the while loop.
+        Guard: ¬shutdown_requested ∧ pending ≠ {}
+        Effect: candidate := task; pending := pending ∖ {task}
+        """
+        assert self.phase == "running", \
+            f"orchestrator_loop_pick requires phase='running', got {self.phase!r}"
+        assert not self.shutdown_requested, \
+            "orchestrator_loop_pick: cannot pick after shutdown_requested=True"
+        assert task in self.pending, \
+            f"orchestrator_loop_pick: {task!r} not in pending={self.pending}"
+        self.candidate = task
+        self.pending.discard(task)
+
+    def orchestrator_loop_drain(self) -> None:
+        """
+        OrchestratorLoop — second (drain) disjunct of the while loop.
+        Guard: shutdown_requested ∨ pending = {}
+        Effect: phase := 'draining'
+        """
+        assert self.phase == "running", \
+            f"orchestrator_loop_drain requires phase='running', got {self.phase!r}"
+        assert self.shutdown_requested or not self.pending, (
+            f"orchestrator_loop_drain guard failed: "
+            f"shutdown={self.shutdown_requested}, pending={self.pending}"
+        )
+        self.phase = "draining"
+
+    def orchestrator_loop_advance_to_drain(self) -> None:
+        """
+        OrchestratorLoop — else branch (phase = 'draining').
+        Advances orchestrator pc from 'OrchestratorLoop' to 'DrainInflight'.
+        No variable changes; models the TLA+ pc tick.
+        """
+        assert self.phase == "draining", \
+            f"orchestrator_loop_advance_to_drain requires phase='draining', got {self.phase!r}"
+
+    def start_or_abort(self) -> None:
+        """
+        StartOrAbort:
+          ¬shutdown_requested → in_flight := in_flight ∪ {candidate}
+           shutdown_requested → pending   := pending   ∪ {candidate}
+        candidate := 'none'
+        """
+        assert self.candidate != "none", "start_or_abort called with no candidate"
+        if not self.shutdown_requested:
+            self.in_flight.add(self.candidate)
+        else:
+            self.pending.add(self.candidate)
+        self.candidate = "none"
+
+    def drain_inflight(self) -> None:
+        """DrainInflight: 'await in_flight = {}' — asserts the guard."""
+        assert self.in_flight == set(), \
+            f"drain_inflight: in_flight={self.in_flight} must be empty"
+
+    def orchestrator_done(self) -> None:
+        """OrchestratorDone: run_active := FALSE."""
+        self.run_active = False
+
+    def wait_for_work(self) -> None:
+        """WaitForWork: 'await in_flight ≠ {} ∨ ¬run_active' — asserts guard."""
+        assert self.in_flight or not self.run_active, (
+            f"wait_for_work guard failed: "
+            f"in_flight={self.in_flight}, run_active={self.run_active}"
+        )
+
+    def check_work(self, task: str | None = None) -> bool:
+        """
+        CheckWork:
+          in_flight ≠ {} → complete one task → goto WaitForWork   (returns True)
+          in_flight = {} →                     goto CompleterFinish (returns False)
+
+        Supply task for a deterministic pick; defaults to min(in_flight).
+        """
+        if self.in_flight:
+            t = task if task is not None else min(self.in_flight)
+            assert t in self.in_flight, \
+                f"check_work: {t!r} not in in_flight={self.in_flight}"
+            self.in_flight.discard(t)
+            self.completed.add(t)
+            return True
+        return False
+
+    def completer_finish(self) -> None:
+        """CompleterFinish: skip. Asserts in_flight is still empty."""
+        assert not self.in_flight, \
+            f"completer_finish: in_flight={self.in_flight} must be empty"
+
+    # ── TLA+ Invariant assertions ─────────────────────────────────────────────
+
+    def assert_type_ok(self) -> None:
+        """TypeOK: every variable has the correct TLA+ type."""
+        assert isinstance(self.shutdown_requested, bool), \
+            "TypeOK: shutdown_requested is not bool"
+        assert isinstance(self.run_active, bool), \
+            "TypeOK: run_active is not bool"
+        assert self.in_flight <= self.all_tasks, \
+            f"TypeOK: in_flight ⊄ Tasks, extra={self.in_flight - self.all_tasks}"
+        assert self.completed <= self.all_tasks, \
+            f"TypeOK: completed ⊄ Tasks, extra={self.completed - self.all_tasks}"
+        assert self.started_after_signal <= self.all_tasks, \
+            f"TypeOK: started_after_signal ⊄ Tasks"
+        assert self.in_flight_at_signal <= self.all_tasks, \
+            f"TypeOK: in_flight_at_signal ⊄ Tasks"
+        assert self.pending <= self.all_tasks, \
+            f"TypeOK: pending ⊄ Tasks, extra={self.pending - self.all_tasks}"
+
+    def assert_no_new_after_shutdown(self) -> None:
+        """NoNewAfterShutdown: shutdown_requested ⇒ started_after_signal = {}."""
+        if self.shutdown_requested:
+            assert self.started_after_signal == set(), (
+                f"NoNewAfterShutdown violated: "
+                f"started_after_signal={self.started_after_signal}"
+            )
+
+    def assert_in_flight_does_not_grow(self) -> None:
+        """InFlightDoesNotGrow: shutdown_requested ⇒ in_flight ⊆ in_flight_at_signal."""
+        if self.shutdown_requested:
+            assert self.in_flight <= self.in_flight_at_signal, (
+                f"InFlightDoesNotGrow violated: "
+                f"in_flight={self.in_flight} ⊄ "
+                f"in_flight_at_signal={self.in_flight_at_signal}"
+            )
+
+    def assert_in_flight_completes(self) -> None:
+        """InFlightCompletes: ¬run_active ⇒ in_flight = {}."""
+        if not self.run_active:
+            assert self.in_flight == set(), (
+                f"InFlightCompletes violated: "
+                f"in_flight={self.in_flight} while run_active=False"
+            )
+
+    def assert_completed_subset_tasks(self) -> None:
+        """CompletedSubsetTasks: completed ⊆ Tasks."""
+        assert self.completed <= self.all_tasks, (
+            f"CompletedSubsetTasks violated: "
+            f"completed contains unknown tasks {self.completed - self.all_tasks}"
+        )
+
+    def assert_partitioned(self) -> None:
+        """Partitioned: in_flight, completed, pending are pairwise disjoint."""
+        assert self.in_flight.isdisjoint(self.completed), (
+            f"Partitioned(in_flight ∩ completed) = {self.in_flight & self.completed}"
+        )
+        assert self.pending.isdisjoint(self.completed), (
+            f"Partitioned(pending ∩ completed) = {self.pending & self.completed}"
+        )
+        assert self.pending.isdisjoint(self.in_flight), (
+            f"Partitioned(pending ∩ in_flight) = {self.pending & self.in_flight}"
+        )
+
+    def assert_all_invariants(self) -> None:
+        """Assert all six TLA+ invariants at the current state."""
+        self.assert_type_ok()
+        self.assert_no_new_after_shutdown()
+        self.assert_in_flight_does_not_grow()
+        self.assert_in_flight_completes()
+        self.assert_completed_subset_tasks()
+        self.assert_partitioned()
+
+    # ── State snapshot helper ─────────────────────────────────────────────────
+
+    def assert_state(
+        self,
+        *,
+        pending: set | None = None,
+        completed: set | None = None,
+        in_flight: set | None = None,
+        in_flight_at_signal: set | None = None,
+        started_after_signal: set | None = None,
+        shutdown_requested: bool | None = None,
+        run_active: bool | None = None,
+        phase: str | None = None,
+    ) -> None:
+        """Assert expected values for any subset of TLA+ variables."""
+        if pending is not None:
+            assert self.pending == pending, \
+                f"pending: got {self.pending!r}, expected {pending!r}"
+        if completed is not None:
+            assert self.completed == completed, \
+                f"completed: got {self.completed!r}, expected {completed!r}"
+        if in_flight is not None:
+            assert self.in_flight == in_flight, \
+                f"in_flight: got {self.in_flight!r}, expected {in_flight!r}"
+        if in_flight_at_signal is not None:
+            assert self.in_flight_at_signal == in_flight_at_signal, \
+                f"in_flight_at_signal: got {self.in_flight_at_signal!r}, expected {in_flight_at_signal!r}"
+        if started_after_signal is not None:
+            assert self.started_after_signal == started_after_signal, \
+                f"started_after_signal: got {self.started_after_signal!r}"
+        if shutdown_requested is not None:
+            assert self.shutdown_requested == shutdown_requested, \
+                f"shutdown_requested: got {self.shutdown_requested!r}, expected {shutdown_requested!r}"
+        if run_active is not None:
+            assert self.run_active == run_active, \
+                f"run_active: got {self.run_active!r}, expected {run_active!r}"
+        if phase is not None:
+            assert self.phase == phase, \
+                f"phase: got {self.phase!r}, expected {phase!r}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TLC Trace Tests  (Traces 1 – 10)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestTrace1:
+    """
+    Trace 1 (17 steps): FireSignal fires as a no-op (skip) before the first
+    task starts. Both tasks complete without interruption. No shutdown.
+
+    Actions: OrchestratorLoop(T1) → FireSignal(skip) → StartOrAbort →
+             WaitForWork → CheckWork(T1) → OrchestratorLoop(T2) →
+             StartOrAbort → WaitForWork → CheckWork(T2) →
+             OrchestratorLoop(drain) → OrchestratorLoop(advance) →
+             DrainInflight → OrchestratorDone → WaitForWork →
+             CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        # State 1 – Init
+        sim.assert_all_invariants()
+        sim.assert_state(
+            pending={TASK_1, TASK_2}, completed=set(), in_flight=set(),
+            shutdown_requested=False, run_active=True, phase="running",
+        )
+
+        # State 2 – OrchestratorLoop picks Tasks_1
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_all_invariants()
+        assert sim.pending == {TASK_2}
+        assert sim.candidate == TASK_1
+
+        # State 3 – FireSignal (skip branch — no shutdown)
+        sim.fire_signal(do_shutdown=False)
+        sim.assert_all_invariants()
+        assert not sim.shutdown_requested
+
+        # State 4 – StartOrAbort → Tasks_1 enters in_flight
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_1}
+        assert sim.candidate == "none"
+
+        # State 5 – WaitForWork (in_flight ≠ {})
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 6 – CheckWork → Tasks_1 completed
+        sim.check_work(TASK_1)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1}
+        assert sim.in_flight == set()
+
+        # State 7 – OrchestratorLoop picks Tasks_2
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.pending == set()
+
+        # State 8 – StartOrAbort → Tasks_2 enters in_flight
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_2}
+
+        # State 9 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 10 – CheckWork → Tasks_2 completed
+        sim.check_work(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1, TASK_2}
+        assert sim.in_flight == set()
+
+        # State 11 – OrchestratorLoop: pending={} → phase=draining
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        assert sim.phase == "draining"
+
+        # State 12 – OrchestratorLoop (draining) → advance pc to DrainInflight
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        # State 13 – DrainInflight (in_flight={})
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        # State 14 – OrchestratorDone → run_active=False
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert not sim.run_active
+
+        # State 15 – WaitForWork (¬run_active)
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 16 – CheckWork(empty) → CompleterFinish path
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        # State 17 – CompleterFinish
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending=set(), completed={TASK_1, TASK_2}, in_flight=set(),
+            in_flight_at_signal=set(), started_after_signal=set(),
+            shutdown_requested=False, run_active=False, phase="draining",
+        )
+        assert dag.node_count == 2
+
+
+class TestTrace2:
+    """
+    Trace 2 (17 steps): Tasks_1 launched; FireSignal (skip); Tasks_2 launched;
+    both in-flight; orchestrator drains; completions interleaved with drain.
+
+    Actions: OrchestratorLoop(T1) → StartOrAbort → FireSignal(skip) →
+             OrchestratorLoop(T2) → StartOrAbort → WaitForWork →
+             OrchestratorLoop(drain) → CheckWork(T2) → WaitForWork →
+             OrchestratorLoop(advance) → CheckWork(T1) → DrainInflight →
+             OrchestratorDone → WaitForWork → CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        # State 1 – Init
+        sim.assert_all_invariants()
+
+        # State 2 – OrchestratorLoop picks Tasks_1
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_all_invariants()
+
+        # State 3 – StartOrAbort → in_flight={Tasks_1}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_1}
+
+        # State 4 – FireSignal (skip)
+        sim.fire_signal(do_shutdown=False)
+        sim.assert_all_invariants()
+        assert not sim.shutdown_requested
+
+        # State 5 – OrchestratorLoop picks Tasks_2
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.pending == set()
+
+        # State 6 – StartOrAbort → in_flight={Tasks_1, Tasks_2}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_1, TASK_2}
+
+        # State 7 – WaitForWork (in_flight ≠ {})
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 8 – OrchestratorLoop: pending={} → phase=draining
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        assert sim.phase == "draining"
+
+        # State 9 – CheckWork → Tasks_2 completed
+        sim.check_work(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_2}
+        assert sim.in_flight == {TASK_1}
+
+        # State 10 – WaitForWork (in_flight={Tasks_1})
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 11 – OrchestratorLoop (draining) → advance pc to DrainInflight
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        # State 12 – CheckWork → Tasks_1 completed
+        sim.check_work(TASK_1)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1, TASK_2}
+        assert sim.in_flight == set()
+
+        # State 13 – DrainInflight
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        # State 14 – OrchestratorDone
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+
+        # State 15 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 16 – CheckWork(empty)
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        # State 17 – CompleterFinish
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending=set(), completed={TASK_1, TASK_2}, in_flight=set(),
+            in_flight_at_signal=set(), started_after_signal=set(),
+            shutdown_requested=False, run_active=False, phase="draining",
+        )
+        assert dag.node_count == 2
+
+
+class TestTrace3:
+    """
+    Trace 3 (17 steps): Tasks_1 launched; completer waits; FireSignal (skip);
+    orchestrator picks Tasks_2; completer finishes Tasks_1; Tasks_2 launches
+    and completes; normal shutdown.
+
+    Actions: OrchestratorLoop(T1) → StartOrAbort → WaitForWork →
+             FireSignal(skip) → OrchestratorLoop(pick T2) → CheckWork(T1) →
+             StartOrAbort → WaitForWork → CheckWork(T2) →
+             OrchestratorLoop(drain) → OrchestratorLoop(advance) →
+             DrainInflight → OrchestratorDone → WaitForWork →
+             CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        # State 1 – Init
+        sim.assert_all_invariants()
+
+        # State 2 – OrchestratorLoop picks Tasks_1
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_all_invariants()
+
+        # State 3 – StartOrAbort → in_flight={Tasks_1}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_1}
+
+        # State 4 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 5 – FireSignal (skip)
+        sim.fire_signal(do_shutdown=False)
+        sim.assert_all_invariants()
+        assert not sim.shutdown_requested
+
+        # State 6 – OrchestratorLoop picks Tasks_2 (interleaved: completer at CheckWork)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.pending == set()
+        assert sim.candidate == TASK_2
+
+        # State 7 – CheckWork → Tasks_1 completed (completer fires before StartOrAbort)
+        sim.check_work(TASK_1)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1}
+        assert sim.in_flight == set()
+
+        # State 8 – StartOrAbort → Tasks_2 enters in_flight
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_2}
+
+        # State 9 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 10 – CheckWork → Tasks_2 completed
+        sim.check_work(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1, TASK_2}
+
+        # State 11 – OrchestratorLoop drain
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+
+        # State 12 – OrchestratorLoop advance
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        # State 13 – DrainInflight
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        # State 14 – OrchestratorDone
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+
+        # State 15 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 16 – CheckWork(empty)
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        # State 17 – CompleterFinish
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending=set(), completed={TASK_1, TASK_2}, in_flight=set(),
+            in_flight_at_signal=set(), started_after_signal=set(),
+            shutdown_requested=False, run_active=False, phase="draining",
+        )
+
+
+class TestTrace4:
+    """
+    Trace 4 (17 steps): Tasks_2 picked first; FireSignal (skip) fires during
+    pick; both tasks start; Tasks_1 completes before drain; drain; Tasks_2
+    completes during drain.
+
+    Actions: OrchestratorLoop(T2) → FireSignal(skip) → StartOrAbort →
+             WaitForWork → OrchestratorLoop(T1) → StartOrAbort →
+             CheckWork(T1) → OrchestratorLoop(drain) →
+             OrchestratorLoop(advance) → WaitForWork → CheckWork(T2) →
+             DrainInflight → OrchestratorDone → WaitForWork →
+             CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        # State 1 – Init
+        sim.assert_all_invariants()
+
+        # State 2 – OrchestratorLoop picks Tasks_2
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.pending == {TASK_1}
+
+        # State 3 – FireSignal (skip)
+        sim.fire_signal(do_shutdown=False)
+        sim.assert_all_invariants()
+
+        # State 4 – StartOrAbort → in_flight={Tasks_2}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_2}
+
+        # State 5 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 6 – OrchestratorLoop picks Tasks_1
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_all_invariants()
+        assert sim.pending == set()
+
+        # State 7 – StartOrAbort → in_flight={Tasks_1, Tasks_2}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_1, TASK_2}
+
+        # State 8 – CheckWork → Tasks_1 completed
+        sim.check_work(TASK_1)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1}
+        assert sim.in_flight == {TASK_2}
+
+        # State 9 – OrchestratorLoop: pending={} → phase=draining
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        assert sim.phase == "draining"
+
+        # State 10 – OrchestratorLoop (draining) → advance
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        # State 11 – WaitForWork (in_flight={Tasks_2})
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 12 – CheckWork → Tasks_2 completed
+        sim.check_work(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1, TASK_2}
+        assert sim.in_flight == set()
+
+        # State 13 – DrainInflight
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        # State 14 – OrchestratorDone
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+
+        # State 15 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 16 – CheckWork(empty)
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        # State 17 – CompleterFinish
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending=set(), completed={TASK_1, TASK_2}, in_flight=set(),
+            in_flight_at_signal=set(), started_after_signal=set(),
+            shutdown_requested=False, run_active=False, phase="draining",
+        )
+
+
+class TestTrace5:
+    """
+    Trace 5 (17 steps): FireSignal fires as skip at the very first step.
+    Both tasks complete normally afterward.
+
+    Actions: FireSignal(skip) → OrchestratorLoop(T1) → StartOrAbort →
+             WaitForWork → CheckWork(T1) → OrchestratorLoop(T2) →
+             StartOrAbort → WaitForWork → CheckWork(T2) →
+             OrchestratorLoop(drain) → OrchestratorLoop(advance) →
+             DrainInflight → OrchestratorDone → WaitForWork →
+             CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        # State 1 – Init
+        sim.assert_all_invariants()
+
+        # State 2 – FireSignal (skip)
+        sim.fire_signal(do_shutdown=False)
+        sim.assert_all_invariants()
+        assert not sim.shutdown_requested
+
+        # State 3 – OrchestratorLoop picks Tasks_1
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_all_invariants()
+
+        # State 4 – StartOrAbort → in_flight={Tasks_1}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+
+        # State 5 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 6 – CheckWork → Tasks_1 completed
+        sim.check_work(TASK_1)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1}
+
+        # State 7 – OrchestratorLoop picks Tasks_2
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_all_invariants()
+
+        # State 8 – StartOrAbort → in_flight={Tasks_2}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+
+        # State 9 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 10 – CheckWork → Tasks_2 completed
+        sim.check_work(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1, TASK_2}
+
+        # State 11 – OrchestratorLoop drain
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+
+        # State 12 – OrchestratorLoop advance
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        # State 13 – DrainInflight
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        # State 14 – OrchestratorDone
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+
+        # State 15 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 16 – CheckWork(empty)
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        # State 17 – CompleterFinish
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending=set(), completed={TASK_1, TASK_2}, in_flight=set(),
+            in_flight_at_signal=set(), started_after_signal=set(),
+            shutdown_requested=False, run_active=False, phase="draining",
+        )
+
+
+class TestTrace6:
+    """
+    Trace 6 (9 steps): KEY EARLY-SHUTDOWN TRACE.
+    SIGINT fires BEFORE any task starts. Orchestrator immediately drains.
+    Both tasks survive in pending — zero progress lost.
+
+    Actions: FireSignal(SHUTDOWN) → OrchestratorLoop(drain) →
+             OrchestratorLoop(advance) → DrainInflight → OrchestratorDone →
+             WaitForWork → CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        # State 1 – Init
+        sim.assert_all_invariants()
+        assert sim.pending == {TASK_1, TASK_2}
+
+        # State 2 – FireSignal (SHUTDOWN) with no tasks in-flight
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_all_invariants()
+        assert sim.shutdown_requested
+        assert sim.in_flight_at_signal == set()  # nothing was in-flight
+
+        # State 3 – OrchestratorLoop: shutdown_requested=True → phase=draining
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        assert sim.phase == "draining"
+        # Pending tasks must not have been touched
+        assert sim.pending == {TASK_1, TASK_2}
+
+        # State 4 – OrchestratorLoop (draining) → advance to DrainInflight
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        # State 5 – DrainInflight (in_flight={})
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        # State 6 – OrchestratorDone → run_active=False
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert not sim.run_active
+
+        # State 7 – WaitForWork (¬run_active)
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 8 – CheckWork(empty) → CompleterFinish path
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        # State 9 – CompleterFinish
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        # Final state — both tasks preserved in pending, none lost
+        sim.assert_state(
+            pending={TASK_1, TASK_2},
+            completed=set(),
+            in_flight=set(),
+            in_flight_at_signal=set(),
+            started_after_signal=set(),
+            shutdown_requested=True,
+            run_active=False,
+            phase="draining",
+        )
+        assert dag.node_count == 2
+
+    def test_no_task_started_after_early_shutdown(self) -> None:
+        """started_after_signal must remain {} throughout early shutdown."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        assert sim.started_after_signal == set()
+        sim.orchestrator_loop_drain()
+        assert sim.started_after_signal == set()
+        sim.orchestrator_loop_advance_to_drain()
+        assert sim.started_after_signal == set()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        assert sim.started_after_signal == set()
+        sim.assert_all_invariants()
+
+
+class TestTrace7:
+    """
+    Trace 7 (17 steps): Tasks_2 starts; FireSignal (skip); Tasks_1 starts;
+    both in-flight; orchestrator drains; Tasks_2 then Tasks_1 complete.
+
+    Actions: OrchestratorLoop(T2) → FireSignal(skip) → StartOrAbort →
+             WaitForWork → OrchestratorLoop(T1) → StartOrAbort →
+             OrchestratorLoop(drain) → OrchestratorLoop(advance) →
+             CheckWork(T2) → WaitForWork → CheckWork(T1) → DrainInflight →
+             OrchestratorDone → WaitForWork → CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        # State 1 – Init
+        sim.assert_all_invariants()
+
+        # State 2 – OrchestratorLoop picks Tasks_2
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.pending == {TASK_1}
+
+        # State 3 – FireSignal (skip)
+        sim.fire_signal(do_shutdown=False)
+        sim.assert_all_invariants()
+
+        # State 4 – StartOrAbort → in_flight={Tasks_2}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_2}
+
+        # State 5 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 6 – OrchestratorLoop picks Tasks_1
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_all_invariants()
+        assert sim.pending == set()
+
+        # State 7 – StartOrAbort → in_flight={Tasks_1, Tasks_2}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_1, TASK_2}
+
+        # State 8 – OrchestratorLoop: pending={} → phase=draining
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        assert sim.phase == "draining"
+
+        # State 9 – OrchestratorLoop (draining) → advance
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        # State 10 – CheckWork → Tasks_2 completed
+        sim.check_work(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_2}
+        assert sim.in_flight == {TASK_1}
+
+        # State 11 – WaitForWork (in_flight={Tasks_1})
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 12 – CheckWork → Tasks_1 completed
+        sim.check_work(TASK_1)
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1, TASK_2}
+        assert sim.in_flight == set()
+
+        # State 13 – DrainInflight
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        # State 14 – OrchestratorDone
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+
+        # State 15 – WaitForWork
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 16 – CheckWork(empty)
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        # State 17 – CompleterFinish
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending=set(), completed={TASK_1, TASK_2}, in_flight=set(),
+            in_flight_at_signal=set(), started_after_signal=set(),
+            shutdown_requested=False, run_active=False, phase="draining",
+        )
+
+
+class TestTrace8:
+    """
+    Trace 8 (13 
+```python
+    KEY GRACEFUL SHUTDOWN TRACE.
+    Tasks_2 launched; SIGINT fires (real shutdown); Tasks_1 stays in pending;
+    Tasks_2 (in-flight at signal) completes and is persisted; Tasks_1 is NOT
+    started. Partial progress preserved.
+
+    Actions: OrchestratorLoop(T2) → StartOrAbort → FireSignal(SHUTDOWN) →
+             WaitForWork → OrchestratorLoop(drain) → CheckWork(T2) →
+             OrchestratorLoop(advance) → DrainInflight → OrchestratorDone →
+             WaitForWork → CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        # State 1 – Init
+        sim.assert_all_invariants()
+
+        # State 2 – OrchestratorLoop picks Tasks_2
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.pending == {TASK_1}
+
+        # State 3 – StartOrAbort → in_flight={Tasks_2}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_2}
+
+        # State 4 – FireSignal (SHUTDOWN) — Tasks_2 is in-flight
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_all_invariants()
+        assert sim.shutdown_requested
+        assert sim.in_flight_at_signal == {TASK_2}  # snapshot taken at signal
+
+        # State 5 – WaitForWork (in_flight={Tasks_2} ≠ {})
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 6 – OrchestratorLoop: shutdown_requested=True → phase=draining
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        assert sim.phase == "draining"
+        assert TASK_1 in sim.pending  # Tasks_1 must NOT be started
+
+        # State 7 – CheckWork → Tasks_2 (in-flight at signal) completes + persisted
+        sim.check_work(TASK_2)
+        sim.assert_all_invariants()
+        assert TASK_2 in sim.completed       # persisted
+        assert sim.in_flight == set()
+        assert TASK_1 in sim.pending         # never started after shutdown
+
+        # State 8 – OrchestratorLoop (draining) → advance
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        # State 9 – DrainInflight
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        # State 10 – OrchestratorDone → run_active=False
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert not sim.run_active
+
+        # State 11 – WaitForWork (¬run_active)
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 12 – CheckWork(empty)
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        # State 13 – CompleterFinish
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending={TASK_1},           # not started — preserved for next run
+            completed={TASK_2},         # in-flight at signal — persisted
+            in_flight=set(),
+            in_flight_at_signal={TASK_2},
+            started_after_signal=set(),
+            shutdown_requested=True,
+            run_active=False,
+            phase="draining",
+        )
+        assert dag.node_count == 2
+        # Both task nodes still queryable in registry
+        dag.query_relevant(TASK_1)
+        dag.query_relevant(TASK_2)
+
+    def test_inflight_at_signal_subset_of_completed_after_shutdown(self) -> None:
+        """Every task snapshotted in in_flight_at_signal must appear in completed."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.wait_for_work()
+        sim.check_work()
+        sim.completer_finish()
+        assert sim.in_flight_at_signal <= sim.completed, (
+            f"in_flight_at_signal={sim.in_flight_at_signal} ⊄ completed={sim.completed}"
+        )
+
+    def test_task_not_started_after_shutdown(self) -> None:
+        """Tasks_1 (pending at shutdown) must never appear in in_flight or completed."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        # At this point Tasks_1 must still be in pending only
+        assert TASK_1 in sim.pending
+        assert TASK_1 not in sim.in_flight
+        assert TASK_1 not in sim.completed
+        sim.assert_all_invariants()
+
+
+class TestTrace9:
+    """
+    Trace 9 (9 steps): Second TLC witness for early-shutdown.
+    SIGINT fires before any extraction; both tasks remain in pending.
+
+    Actions: FireSignal(SHUTDOWN) → OrchestratorLoop(drain) →
+             OrchestratorLoop(advance) → DrainInflight → OrchestratorDone →
+             WaitForWork → CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        sim.assert_all_invariants()
+
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_all_invariants()
+        assert sim.shutdown_requested
+        assert sim.in_flight_at_signal == set()
+
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        assert sim.phase == "draining"
+
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert not sim.run_active
+
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending={TASK_1, TASK_2},
+            completed=set(),
+            in_flight=set(),
+            in_flight_at_signal=set(),
+            started_after_signal=set(),
+            shutdown_requested=True,
+            run_active=False,
+            phase="draining",
+        )
+
+
+class TestTrace10:
+    """
+    Trace 10 (9 steps): Third TLC witness for early-shutdown.
+    Structurally identical to Traces 6 and 9; confirms the invariant holds
+    across all TLC-generated witnesses for this scenario.
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        sim.assert_all_invariants()
+
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_all_invariants()
+
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending={TASK_1, TASK_2},
+            completed=set(),
+            in_flight=set(),
+            shutdown_requested=True,
+            run_active=False,
+            phase="draining",
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Invariant-focused tests  (each exercises ≥2 trace-derived topologies)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestInvariantTypeOK:
+    """TypeOK: every variable keeps its correct TLA+ type throughout."""
+
+    def test_types_preserved_no_shutdown(self) -> None:
+        """Topology derived from Trace 1: both tasks complete, no shutdown."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.assert_type_ok()
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_type_ok()
+        sim.start_or_abort()
+        sim.assert_type_ok()
+        sim.check_work(TASK_1)
+        sim.assert_type_ok()
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_type_ok()
+        sim.start_or_abort()
+        sim.assert_type_ok()
+        sim.check_work(TASK_2)
+        sim.assert_type_ok()
+        sim.orchestrator_loop_drain()
+        sim.assert_type_ok()
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_type_ok()
+        sim.drain_inflight()
+        sim.assert_type_ok()
+        sim.orchestrator_done()
+        sim.assert_type_ok()
+        assert isinstance(sim.shutdown_requested, bool)
+        assert isinstance(sim.run_active, bool)
+        assert isinstance(sim.pending, set)
+        assert isinstance(sim.in_flight, set)
+        assert isinstance(sim.completed, set)
+
+    def test_types_preserved_with_shutdown(self) -> None:
+        """Topology derived from Trace 8: mid-flight shutdown."""
+        for first_task in (TASK_1, TASK_2):
+            dag = _make_dag()
+            sim = OrchestratorSim(dag)
+            sim.assert_type_ok()
+            sim.orchestrator_loop_pick(first_task)
+            sim.assert_type_ok()
+            sim.start_or_abort()
+            sim.assert_type_ok()
+            sim.fire_signal(do_shutdown=True)
+            sim.assert_type_ok()
+            sim.orchestrator_loop_drain()
+            sim.assert_type_ok()
+            sim.check_work(first_task)
+            sim.assert_type_ok()
+            sim.orchestrator_loop_advance_to_drain()
+            sim.assert_type_ok()
+            sim.drain_inflight()
+            sim.assert_type_ok()
+            sim.orchestrator_done()
+            sim.assert_type_ok()
+            assert isinstance(sim.shutdown_requested, bool)
+            assert isinstance(sim.run_active, bool)
+
+
+class TestInvariantNoNewAfterShutdown:
+    """NoNewAfterShutdown: started_after_signal is always {} when shutdown is set."""
+
+    def test_empty_before_any_task_starts(self) -> None:
+        """Topology from Trace 6: signal fires before all tasks."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_no_new_after_shutdown()
+        assert sim.started_after_signal == set()
+        sim.orchestrator_loop_drain()
+        sim.assert_no_new_after_shutdown()
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_no_new_after_shutdown()
+
+    def test_empty_when_signal_fires_mid_flight(self) -> None:
+        """Topology from Trace 8: signal fires while Tasks_2 in-flight."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_no_new_after_shutdown()
+        assert sim.started_after_signal == set()
+        # Drain without starting Tasks_1
+        sim.orchestrator_loop_drain()
+        sim.assert_no_new_after_shutdown()
+        assert sim.started_after_signal == set()
+        sim.check_work(TASK_2)
+        sim.assert_no_new_after_shutdown()
+
+
+class TestInvariantInFlightDoesNotGrow:
+    """InFlightDoesNotGrow: after shutdown, in_flight ⊆ in_flight_at_signal."""
+
+    def test_in_flight_shrinks_as_tasks_complete(self) -> None:
+        """Topology from Trace 8: Tasks_2 in-flight at signal, then completes."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_in_flight_does_not_grow()
+        assert sim.in_flight <= sim.in_flight_at_signal
+
+        sim.orchestrator_loop_drain()
+        sim.assert_in_flight_does_not_grow()
+
+        sim.check_work(TASK_2)
+        sim.assert_in_flight_does_not_grow()
+        # in_flight is now empty — still a valid subset
+        assert sim.in_flight <= sim.in_flight_at_signal
+
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_in_flight_does_not_grow()
+
+    def test_in_flight_empty_at_signal_stays_subset(self) -> None:
+        """Topology from Trace 6: signal fires with in_flight={}; {} ⊆ {} holds."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        assert sim.in_flight_at_signal == set()
+        sim.assert_in_flight_does_not_grow()
+        assert sim.in_flight <= sim.in_flight_at_signal
+
+
+class TestInvariantInFlightCompletes:
+    """InFlightCompletes: ¬run_active ⇒ in_flight = {}."""
+
+    def test_in_flight_empty_when_run_inactive_no_shutdown(self) -> None:
+        """Topology from Trace 1: both tasks complete before run_active=False."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        sim.check_work(TASK_1)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_drain()
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_in_flight_completes()
+        assert sim.in_flight == set()
+
+    def test_in_flight_empty_when_run_inactive_with_shutdown(self) -> None:
+        """Topology from Trace 8: in-flight task completes before run_active=False."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_in_flight_completes()
+        assert sim.in_flight == set()
+
+
+class TestInvariantCompletedSubsetTasks:
+    """CompletedSubsetTasks: completed ⊆ Tasks at every step."""
+
+    def test_completed_grows_within_tasks_no_shutdown(self) -> None:
+        """Topology from Trace 1: both tasks cycle through completed."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.assert_completed_subset_tasks()
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        sim.check_work(TASK_1)
+        sim.assert_completed_subset_tasks()
+        assert sim.completed == {TASK_1}
+        assert sim.completed <= ALL_TASKS
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.check_work(TASK_2)
+        sim.assert_completed_subset_tasks()
+        assert sim.completed == {TASK_1, TASK_2}
+        assert sim.completed <= ALL_TASKS
+
+    def test_completed_subset_after_partial_shutdown(self) -> None:
+        """Topology from Trace 8: only Tasks_2 completes."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.assert_completed_subset_tasks()
+        assert sim.completed == {TASK_2}
+        assert sim.completed <= ALL_TASKS
+
+
+class TestInvariantPartitioned:
+    """Partitioned: in_flight, completed, pending are pairwise disjoint."""
+
+    def test_partition_through_full_lifecycle(self) -> None:
+        """Topology from Trace 1: partition holds at every transition."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.assert_partitioned()
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_partitioned()
+        sim.start_or_abort()
+        sim.assert_partitioned()
+        # Tasks_1 in in_flight, Tasks_2 in pending
+        assert sim.in_flight.isdisjoint(sim.pending)
+        sim.check_work(TASK_1)
+        sim.assert_partitioned()
+        # Tasks_1 in completed, Tasks_2 still in pending
+        assert sim.completed.isdisjoint(sim.pending)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_partitioned()
+        sim.start_or_abort()
+        sim.assert_partitioned()
+        sim.check_work(TASK_2)
+        sim.assert_partitioned()
+
+    def test_partition_during_shutdown_with_inflight(self) -> None:
+        """Topology from Trace 8: pending/in_flight/completed disjoint after signal."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_partitioned()
+        # pending={T1}, candidate=T2
+        sim.start_or_abort()
+        sim.assert_partitioned()
+        # pending={T1}, in_flight={T2}
+        assert TASK_1 in sim.pending
+        assert TASK_2 in sim.in_flight
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_partitioned()
+        sim.orchestrator_loop_drain()
+        sim.assert_partitioned()
+        sim.check_work(TASK_2)
+        sim.assert_partitioned()
+        # pending={T1}, completed={T2}, in_flight={}
+        assert sim.pending.isdisjoint(sim.completed)
+        assert sim.in_flight.isdisjoint(sim.completed)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Edge-case tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestEdgeCases:
+
+    def test_early_shutdown_preserves_all_pending(self) -> None:
+        """
+        When SIGINT fires before any task launches, all pending tasks survive.
+        in_flight_at_signal={} and started_after_signal={}.
+        (Derived from Traces 6, 9, 10.)
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        assert sim.in_flight_at_signal == set()
+        assert sim.started_after_signal == set()
+        assert sim.pending == {TASK_1, TASK_2}
+        sim.assert_all_invariants()
+
+    def test_start_or_abort_requeues_candidate_after_shutdown(self) -> None:
+        """
+        Candidate set before shutdown is returned to pending by StartOrAbort,
+        not silently dropped and not launched.
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        assert sim.candidate == TASK_1
+        sim.fire_signal(do_shutdown=True)
+        # candidate was set before signal; StartOrAbort must requeue it
+        sim.start_or_abort()
+        assert TASK_1 in sim.pending
+        assert TASK_1 not in sim.in_flight
+        sim.assert_all_invariants()
+
+    def test_both_tasks_inflight_at_signal_both_complete(self) -> None:
+        """
+        If SIGINT fires while both tasks are in-flight, both must complete
+        (in_flight_at_signal={T1,T2}; InFlightDoesNotGrow holds throughout).
+        (Derived from Traces 2 and 7 structure with shutdown enabled.)
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        assert sim.in_flight_at_signal == {TASK_1, TASK_2}
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        sim.check_work(TASK_1)
+        sim.assert_all_invariants()
+        sim.check_work(TASK_2)
+        assert sim.in_flight == set()
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1, TASK_2}
+        assert sim.pending == set()
+
+    def test_dag_with_dependency_edge_invariants_hold(self) -> None:
+        """
+        Adding an IMPORTS edge between tasks does not break any invariant.
+        (Derived from Trace 8 topology extended with a dependency edge.)
+        """
+        dag = _make_dag_with_dependency()
+        assert dag.edge_count >= 1
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert TASK_1 in sim.pending
+        assert TASK_2 in sim.completed
+
+    def test_shutdown_before_any_orchestrator_action(self) -> None:
+        """
+        SIGINT can arrive before the orchestrator has run even once.
+        State machine must handle this: pending stays intact, no task starts.
+        (Derived from Traces 6/9/10.)
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        assert sim.shutdown_requested
+        assert sim.phase == "running"
+        assert sim.pending == {TASK_1, TASK_2}
+        sim.assert_all_invariants()
+        sim.orchestrator_loop_drain()
+        assert sim.phase == "draining"
+        assert sim.pending == {TASK_1, TASK_2}
+        sim.assert_all_invariants()
+
+    def test_completer_finish_requires_empty_inflight(self) -> None:
+        """CompleterFinish must not fire while in_flight is non-empty."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        # in_flight={TASK_1} — CompleterFinish precondition must fail
+        with pytest.raises(AssertionError):
+            sim.completer_finish()
+
+    def test_drain_inflight_requires_empty_inflight(self) -> None:
+        """DrainInflight must not fire while in_flight is non-empty."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        sim.orchestrator_loop_drain()
+        sim.orchestrator_loop_advance_to_drain()
+        with pytest.raises(AssertionError):
+            sim.drain_inflight()  # in_flight={TASK_1} — must fail
+
+    def test_pick_after_shutdown_raises(self) -> None:
+        """orchestrator_loop_pick must be rejected after shutdown_requested=True."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        with pytest.raises(AssertionError):
+            sim.orchestrator_loop_pick(TASK_1)
+
+    def test_subgraph_and_component_queries_on_registered_tasks(self) -> None:
+        """
+        Both registered task nodes must be queryable via the RegistryDag API
+        without error; isolated nodes have their own components.
+        """
+        dag = _make_dag()
+        sg1 = dag.extract_subgraph(TASK_1)
+        sg2 = dag.extract_subgraph(TASK_2)
+        assert sg1 is not None
+        assert sg2 is not None
+        members_1 = dag.component_members(TASK_1)
+        members_2 = dag.component_members(TASK_2)
+        assert TASK_1 in members_1
+        assert TASK_2 in members_2
+
+    def test_unknown_task_not_in_registry(self) -> None:
+        """Querying a non-existent task ID raises NodeNotFoundError."""
+        dag = _make_dag()
+        with pytest.raises(NodeNotFoundError):
+            dag.query_relevant("unknown_task_xyz")
+
+    def test_query_relevant_returns_result_for_both_tasks(self) -> None:
+        """Both registered task nodes must be queryable without error."""
+        dag = _make_dag()
+        result1 = dag.query_relevant(TASK_1)
+        result2 = dag.query_relevant(TASK_2)
+        assert result1 is not None
+        assert result2 is not None
+
+    def test_partial_completion_partial_pending_after_shutdown(self) -> None:
+        """
+        After shutdown with Tasks_1 pending and Tasks_2 completed,
+        pending ∪ completed accounts for all tasks (none silently dropped).
+        (Key property: partial progress preserved, not lost.)
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.wait_for_work()
+        sim.check_work()
+        sim.completer_finish()
+        accounted = sim.pending | sim.completed | sim.in_flight
+        assert accounted == ALL_TASKS, (
+            f"Tasks not accounted for: {ALL_TASKS - accounted}"
+        )
+        sim.assert_all_invariants()
+```
+```python
+    KEY GRACEFUL SHUTDOWN TRACE.
+    Tasks_2 launched; SIGINT fires (real shutdown); Tasks_1 stays in pending;
+    Tasks_2 (in-flight at signal) completes and is persisted; Tasks_1 is NOT
+    started. Partial progress preserved.
+
+    Actions: OrchestratorLoop(T2) → StartOrAbort → FireSignal(SHUTDOWN) →
+             WaitForWork → OrchestratorLoop(drain) → CheckWork(T2) →
+             OrchestratorLoop(advance) → DrainInflight → OrchestratorDone →
+             WaitForWork → CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        # State 1 – Init
+        sim.assert_all_invariants()
+
+        # State 2 – OrchestratorLoop picks Tasks_2
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_all_invariants()
+        assert sim.pending == {TASK_1}
+
+        # State 3 – StartOrAbort → in_flight={Tasks_2}
+        sim.start_or_abort()
+        sim.assert_all_invariants()
+        assert sim.in_flight == {TASK_2}
+
+        # State 4 – FireSignal (SHUTDOWN) — Tasks_2 is in-flight
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_all_invariants()
+        assert sim.shutdown_requested
+        assert sim.in_flight_at_signal == {TASK_2}  # snapshot taken at signal
+
+        # State 5 – WaitForWork (in_flight={Tasks_2} ≠ {})
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 6 – OrchestratorLoop: shutdown_requested=True → phase=draining
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        assert sim.phase == "draining"
+        assert TASK_1 in sim.pending  # Tasks_1 must NOT be started
+
+        # State 7 – CheckWork → Tasks_2 (in-flight at signal) completes + persisted
+        sim.check_work(TASK_2)
+        sim.assert_all_invariants()
+        assert TASK_2 in sim.completed       # persisted
+        assert sim.in_flight == set()
+        assert TASK_1 in sim.pending         # never started after shutdown
+
+        # State 8 – OrchestratorLoop (draining) → advance
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        # State 9 – DrainInflight
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        # State 10 – OrchestratorDone → run_active=False
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert not sim.run_active
+
+        # State 11 – WaitForWork (¬run_active)
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        # State 12 – CheckWork(empty)
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        # State 13 – CompleterFinish
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending={TASK_1},           # not started — preserved for next run
+            completed={TASK_2},         # in-flight at signal — persisted
+            in_flight=set(),
+            in_flight_at_signal={TASK_2},
+            started_after_signal=set(),
+            shutdown_requested=True,
+            run_active=False,
+            phase="draining",
+        )
+        assert dag.node_count == 2
+        # Both task nodes still queryable in registry
+        dag.query_relevant(TASK_1)
+        dag.query_relevant(TASK_2)
+
+    def test_inflight_at_signal_subset_of_completed_after_shutdown(self) -> None:
+        """Every task snapshotted in in_flight_at_signal must appear in completed."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.wait_for_work()
+        sim.check_work()
+        sim.completer_finish()
+        assert sim.in_flight_at_signal <= sim.completed, (
+            f"in_flight_at_signal={sim.in_flight_at_signal} ⊄ completed={sim.completed}"
+        )
+
+    def test_task_not_started_after_shutdown(self) -> None:
+        """Tasks_1 (pending at shutdown) must never appear in in_flight or completed."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        # At this point Tasks_1 must still be in pending only
+        assert TASK_1 in sim.pending
+        assert TASK_1 not in sim.in_flight
+        assert TASK_1 not in sim.completed
+        sim.assert_all_invariants()
+
+
+class TestTrace9:
+    """
+    Trace 9 (9 steps): Second TLC witness for early-shutdown.
+    SIGINT fires before any extraction; both tasks remain in pending.
+
+    Actions: FireSignal(SHUTDOWN) → OrchestratorLoop(drain) →
+             OrchestratorLoop(advance) → DrainInflight → OrchestratorDone →
+             WaitForWork → CheckWork(empty) → CompleterFinish
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        sim.assert_all_invariants()
+
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_all_invariants()
+        assert sim.shutdown_requested
+        assert sim.in_flight_at_signal == set()
+
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        assert sim.phase == "draining"
+
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert not sim.run_active
+
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending={TASK_1, TASK_2},
+            completed=set(),
+            in_flight=set(),
+            in_flight_at_signal=set(),
+            started_after_signal=set(),
+            shutdown_requested=True,
+            run_active=False,
+            phase="draining",
+        )
+
+
+class TestTrace10:
+    """
+    Trace 10 (9 steps): Third TLC witness for early-shutdown.
+    Structurally identical to Traces 6 and 9; confirms the invariant holds
+    across all TLC-generated witnesses for this scenario.
+    """
+
+    def test_full_trace(self) -> None:
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+
+        sim.assert_all_invariants()
+
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_all_invariants()
+
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_all_invariants()
+
+        sim.drain_inflight()
+        sim.assert_all_invariants()
+
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+
+        sim.wait_for_work()
+        sim.assert_all_invariants()
+
+        assert not sim.check_work()
+        sim.assert_all_invariants()
+
+        sim.completer_finish()
+        sim.assert_all_invariants()
+
+        sim.assert_state(
+            pending={TASK_1, TASK_2},
+            completed=set(),
+            in_flight=set(),
+            shutdown_requested=True,
+            run_active=False,
+            phase="draining",
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Invariant-focused tests  (each exercises ≥2 trace-derived topologies)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestInvariantTypeOK:
+    """TypeOK: every variable keeps its correct TLA+ type throughout."""
+
+    def test_types_preserved_no_shutdown(self) -> None:
+        """Topology derived from Trace 1: both tasks complete, no shutdown."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.assert_type_ok()
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_type_ok()
+        sim.start_or_abort()
+        sim.assert_type_ok()
+        sim.check_work(TASK_1)
+        sim.assert_type_ok()
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_type_ok()
+        sim.start_or_abort()
+        sim.assert_type_ok()
+        sim.check_work(TASK_2)
+        sim.assert_type_ok()
+        sim.orchestrator_loop_drain()
+        sim.assert_type_ok()
+        sim.orchestrator_loop_advance_to_drain()
+        sim.assert_type_ok()
+        sim.drain_inflight()
+        sim.assert_type_ok()
+        sim.orchestrator_done()
+        sim.assert_type_ok()
+        assert isinstance(sim.shutdown_requested, bool)
+        assert isinstance(sim.run_active, bool)
+        assert isinstance(sim.pending, set)
+        assert isinstance(sim.in_flight, set)
+        assert isinstance(sim.completed, set)
+
+    def test_types_preserved_with_shutdown(self) -> None:
+        """Topology derived from Trace 8: mid-flight shutdown."""
+        for first_task in (TASK_1, TASK_2):
+            dag = _make_dag()
+            sim = OrchestratorSim(dag)
+            sim.assert_type_ok()
+            sim.orchestrator_loop_pick(first_task)
+            sim.assert_type_ok()
+            sim.start_or_abort()
+            sim.assert_type_ok()
+            sim.fire_signal(do_shutdown=True)
+            sim.assert_type_ok()
+            sim.orchestrator_loop_drain()
+            sim.assert_type_ok()
+            sim.check_work(first_task)
+            sim.assert_type_ok()
+            sim.orchestrator_loop_advance_to_drain()
+            sim.assert_type_ok()
+            sim.drain_inflight()
+            sim.assert_type_ok()
+            sim.orchestrator_done()
+            sim.assert_type_ok()
+            assert isinstance(sim.shutdown_requested, bool)
+            assert isinstance(sim.run_active, bool)
+
+
+class TestInvariantNoNewAfterShutdown:
+    """NoNewAfterShutdown: started_after_signal is always {} when shutdown is set."""
+
+    def test_empty_before_any_task_starts(self) -> None:
+        """Topology from Trace 6: signal fires before all tasks."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_no_new_after_shutdown()
+        assert sim.started_after_signal == set()
+        sim.orchestrator_loop_drain()
+        sim.assert_no_new_after_shutdown()
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_no_new_after_shutdown()
+
+    def test_empty_when_signal_fires_mid_flight(self) -> None:
+        """Topology from Trace 8: signal fires while Tasks_2 in-flight."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_no_new_after_shutdown()
+        assert sim.started_after_signal == set()
+        # Drain without starting Tasks_1
+        sim.orchestrator_loop_drain()
+        sim.assert_no_new_after_shutdown()
+        assert sim.started_after_signal == set()
+        sim.check_work(TASK_2)
+        sim.assert_no_new_after_shutdown()
+
+
+class TestInvariantInFlightDoesNotGrow:
+    """InFlightDoesNotGrow: after shutdown, in_flight ⊆ in_flight_at_signal."""
+
+    def test_in_flight_shrinks_as_tasks_complete(self) -> None:
+        """Topology from Trace 8: Tasks_2 in-flight at signal, then completes."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_in_flight_does_not_grow()
+        assert sim.in_flight <= sim.in_flight_at_signal
+
+        sim.orchestrator_loop_drain()
+        sim.assert_in_flight_does_not_grow()
+
+        sim.check_work(TASK_2)
+        sim.assert_in_flight_does_not_grow()
+        # in_flight is now empty — still a valid subset
+        assert sim.in_flight <= sim.in_flight_at_signal
+
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_in_flight_does_not_grow()
+
+    def test_in_flight_empty_at_signal_stays_subset(self) -> None:
+        """Topology from Trace 6: signal fires with in_flight={}; {} ⊆ {} holds."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        assert sim.in_flight_at_signal == set()
+        sim.assert_in_flight_does_not_grow()
+        assert sim.in_flight <= sim.in_flight_at_signal
+
+
+class TestInvariantInFlightCompletes:
+    """InFlightCompletes: ¬run_active ⇒ in_flight = {}."""
+
+    def test_in_flight_empty_when_run_inactive_no_shutdown(self) -> None:
+        """Topology from Trace 1: both tasks complete before run_active=False."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        sim.check_work(TASK_1)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_drain()
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_in_flight_completes()
+        assert sim.in_flight == set()
+
+    def test_in_flight_empty_when_run_inactive_with_shutdown(self) -> None:
+        """Topology from Trace 8: in-flight task completes before run_active=False."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_in_flight_completes()
+        assert sim.in_flight == set()
+
+
+class TestInvariantCompletedSubsetTasks:
+    """CompletedSubsetTasks: completed ⊆ Tasks at every step."""
+
+    def test_completed_grows_within_tasks_no_shutdown(self) -> None:
+        """Topology from Trace 1: both tasks cycle through completed."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.assert_completed_subset_tasks()
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        sim.check_work(TASK_1)
+        sim.assert_completed_subset_tasks()
+        assert sim.completed == {TASK_1}
+        assert sim.completed <= ALL_TASKS
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.check_work(TASK_2)
+        sim.assert_completed_subset_tasks()
+        assert sim.completed == {TASK_1, TASK_2}
+        assert sim.completed <= ALL_TASKS
+
+    def test_completed_subset_after_partial_shutdown(self) -> None:
+        """Topology from Trace 8: only Tasks_2 completes."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.assert_completed_subset_tasks()
+        assert sim.completed == {TASK_2}
+        assert sim.completed <= ALL_TASKS
+
+
+class TestInvariantPartitioned:
+    """Partitioned: in_flight, completed, pending are pairwise disjoint."""
+
+    def test_partition_through_full_lifecycle(self) -> None:
+        """Topology from Trace 1: partition holds at every transition."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.assert_partitioned()
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.assert_partitioned()
+        sim.start_or_abort()
+        sim.assert_partitioned()
+        # Tasks_1 in in_flight, Tasks_2 in pending
+        assert sim.in_flight.isdisjoint(sim.pending)
+        sim.check_work(TASK_1)
+        sim.assert_partitioned()
+        # Tasks_1 in completed, Tasks_2 still in pending
+        assert sim.completed.isdisjoint(sim.pending)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_partitioned()
+        sim.start_or_abort()
+        sim.assert_partitioned()
+        sim.check_work(TASK_2)
+        sim.assert_partitioned()
+
+    def test_partition_during_shutdown_with_inflight(self) -> None:
+        """Topology from Trace 8: pending/in_flight/completed disjoint after signal."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.assert_partitioned()
+        # pending={T1}, candidate=T2
+        sim.start_or_abort()
+        sim.assert_partitioned()
+        # pending={T1}, in_flight={T2}
+        assert TASK_1 in sim.pending
+        assert TASK_2 in sim.in_flight
+        sim.fire_signal(do_shutdown=True)
+        sim.assert_partitioned()
+        sim.orchestrator_loop_drain()
+        sim.assert_partitioned()
+        sim.check_work(TASK_2)
+        sim.assert_partitioned()
+        # pending={T1}, completed={T2}, in_flight={}
+        assert sim.pending.isdisjoint(sim.completed)
+        assert sim.in_flight.isdisjoint(sim.completed)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Edge-case tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestEdgeCases:
+
+    def test_early_shutdown_preserves_all_pending(self) -> None:
+        """
+        When SIGINT fires before any task launches, all pending tasks survive.
+        in_flight_at_signal={} and started_after_signal={}.
+        (Derived from Traces 6, 9, 10.)
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        assert sim.in_flight_at_signal == set()
+        assert sim.started_after_signal == set()
+        assert sim.pending == {TASK_1, TASK_2}
+        sim.assert_all_invariants()
+
+    def test_start_or_abort_requeues_candidate_after_shutdown(self) -> None:
+        """
+        Candidate set before shutdown is returned to pending by StartOrAbort,
+        not silently dropped and not launched.
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        assert sim.candidate == TASK_1
+        sim.fire_signal(do_shutdown=True)
+        # candidate was set before signal; StartOrAbort must requeue it
+        sim.start_or_abort()
+        assert TASK_1 in sim.pending
+        assert TASK_1 not in sim.in_flight
+        sim.assert_all_invariants()
+
+    def test_both_tasks_inflight_at_signal_both_complete(self) -> None:
+        """
+        If SIGINT fires while both tasks are in-flight, both must complete
+        (in_flight_at_signal={T1,T2}; InFlightDoesNotGrow holds throughout).
+        (Derived from Traces 2 and 7 structure with shutdown enabled.)
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        assert sim.in_flight_at_signal == {TASK_1, TASK_2}
+        sim.orchestrator_loop_drain()
+        sim.assert_all_invariants()
+        sim.check_work(TASK_1)
+        sim.assert_all_invariants()
+        sim.check_work(TASK_2)
+        assert sim.in_flight == set()
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert sim.completed == {TASK_1, TASK_2}
+        assert sim.pending == set()
+
+    def test_dag_with_dependency_edge_invariants_hold(self) -> None:
+        """
+        Adding an IMPORTS edge between tasks does not break any invariant.
+        (Derived from Trace 8 topology extended with a dependency edge.)
+        """
+        dag = _make_dag_with_dependency()
+        assert dag.edge_count >= 1
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.assert_all_invariants()
+        assert TASK_1 in sim.pending
+        assert TASK_2 in sim.completed
+
+    def test_shutdown_before_any_orchestrator_action(self) -> None:
+        """
+        SIGINT can arrive before the orchestrator has run even once.
+        State machine must handle this: pending stays intact, no task starts.
+        (Derived from Traces 6/9/10.)
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        assert sim.shutdown_requested
+        assert sim.phase == "running"
+        assert sim.pending == {TASK_1, TASK_2}
+        sim.assert_all_invariants()
+        sim.orchestrator_loop_drain()
+        assert sim.phase == "draining"
+        assert sim.pending == {TASK_1, TASK_2}
+        sim.assert_all_invariants()
+
+    def test_completer_finish_requires_empty_inflight(self) -> None:
+        """CompleterFinish must not fire while in_flight is non-empty."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        # in_flight={TASK_1} — CompleterFinish precondition must fail
+        with pytest.raises(AssertionError):
+            sim.completer_finish()
+
+    def test_drain_inflight_requires_empty_inflight(self) -> None:
+        """DrainInflight must not fire while in_flight is non-empty."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_1)
+        sim.start_or_abort()
+        sim.orchestrator_loop_drain()
+        sim.orchestrator_loop_advance_to_drain()
+        with pytest.raises(AssertionError):
+            sim.drain_inflight()  # in_flight={TASK_1} — must fail
+
+    def test_pick_after_shutdown_raises(self) -> None:
+        """orchestrator_loop_pick must be rejected after shutdown_requested=True."""
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.fire_signal(do_shutdown=True)
+        with pytest.raises(AssertionError):
+            sim.orchestrator_loop_pick(TASK_1)
+
+    def test_subgraph_and_component_queries_on_registered_tasks(self) -> None:
+        """
+        Both registered task nodes must be queryable via the RegistryDag API
+        without error; isolated nodes have their own components.
+        """
+        dag = _make_dag()
+        sg1 = dag.extract_subgraph(TASK_1)
+        sg2 = dag.extract_subgraph(TASK_2)
+        assert sg1 is not None
+        assert sg2 is not None
+        members_1 = dag.component_members(TASK_1)
+        members_2 = dag.component_members(TASK_2)
+        assert TASK_1 in members_1
+        assert TASK_2 in members_2
+
+    def test_unknown_task_not_in_registry(self) -> None:
+        """Querying a non-existent task ID raises NodeNotFoundError."""
+        dag = _make_dag()
+        with pytest.raises(NodeNotFoundError):
+            dag.query_relevant("unknown_task_xyz")
+
+    def test_query_relevant_returns_result_for_both_tasks(self) -> None:
+        """Both registered task nodes must be queryable without error."""
+        dag = _make_dag()
+        result1 = dag.query_relevant(TASK_1)
+        result2 = dag.query_relevant(TASK_2)
+        assert result1 is not None
+        assert result2 is not None
+
+    def test_partial_completion_partial_pending_after_shutdown(self) -> None:
+        """
+        After shutdown with Tasks_1 pending and Tasks_2 completed,
+        pending ∪ completed accounts for all tasks (none silently dropped).
+        (Key property: partial progress preserved, not lost.)
+        """
+        dag = _make_dag()
+        sim = OrchestratorSim(dag)
+        sim.orchestrator_loop_pick(TASK_2)
+        sim.start_or_abort()
+        sim.fire_signal(do_shutdown=True)
+        sim.orchestrator_loop_drain()
+        sim.check_work(TASK_2)
+        sim.orchestrator_loop_advance_to_drain()
+        sim.drain_inflight()
+        sim.orchestrator_done()
+        sim.wait_for_work()
+        sim.check_work()
+        sim.completer_finish()
+        accounted = sim.pending | sim.completed | sim.in_flight
+        assert accounted == ALL_TASKS, (
+            f"Tasks not accounted for: {ALL_TASKS - accounted}"
+        )
+        sim.assert_all_invariants()
+```

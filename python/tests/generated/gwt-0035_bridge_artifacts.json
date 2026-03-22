@@ -1,0 +1,1978 @@
+{
+  "gwt_id": "gwt-0035",
+  "module_name": "RegisterIdempotent",
+  "data_structures": {
+    "RegisterIdempotentState": {
+      "function_id": "fn-RegisterIdempotent-state",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"StartFirst\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "bindings": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[c \\in {} |-> 0]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "dag_nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "next_id": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "to_process": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "registered": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "first_inv",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "call_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "call_count_at_save": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "bindings_at_save": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[c \\in {} |-> 0]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from RegisterIdempotent TLA+ spec"
+    }
+  },
+  "operations": {
+    "StartFirst": {
+      "function_id": "fn-RegisterIdempotent-StartFirst",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-StartFirst",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartFirst from RegisterIdempotent spec"
+    },
+    "ProcessFirstLoop": {
+      "function_id": "fn-RegisterIdempotent-ProcessFirstLoop",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-ProcessFirstLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessFirstLoop from RegisterIdempotent spec"
+    },
+    "SaveFirst": {
+      "function_id": "fn-RegisterIdempotent-SaveFirst",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-SaveFirst",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SaveFirst from RegisterIdempotent spec"
+    },
+    "ProcessSecondLoop": {
+      "function_id": "fn-RegisterIdempotent-ProcessSecondLoop",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-ProcessSecondLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessSecondLoop from RegisterIdempotent spec"
+    },
+    "Finish": {
+      "function_id": "fn-RegisterIdempotent-Finish",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from RegisterIdempotent spec"
+    }
+  },
+  "verifiers": {
+    "IdempotentAllocation": {
+      "function_id": "fn-RegisterIdempotent-verify-IdempotentAllocation",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-IdempotentAllocation",
+      "conditions": [
+        "phase = \"done\" =>\n    (\\A c \\in InputCriteria : bindings[c] = bindings_at_save[c]"
+      ],
+      "message": "IdempotentAllocation violation: phase = \"done\" =>\n    (\\A c \\in InputCriteria : bindings[c] = bindings_at_save[c])",
+      "applies_to": [
+        "bindings",
+        "bindings_at_save",
+        "phase"
+      ],
+      "description": "Verifier for invariant IdempotentAllocation from RegisterIdempotent spec"
+    },
+    "NoDuplicateNodes": {
+      "function_id": "fn-RegisterIdempotent-verify-NoDuplicateNodes",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-NoDuplicateNodes",
+      "conditions": [
+        "Cardinality(dag_nodes) = Cardinality(DOMAIN bindings"
+      ],
+      "message": "NoDuplicateNodes violation: Cardinality(dag_nodes) = Cardinality(DOMAIN bindings)",
+      "applies_to": [
+        "bindings",
+        "dag_nodes"
+      ],
+      "description": "Verifier for invariant NoDuplicateNodes from RegisterIdempotent spec"
+    },
+    "BindingStable": {
+      "function_id": "fn-RegisterIdempotent-verify-BindingStable",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-BindingStable",
+      "conditions": [
+        "\\A c \\in DOMAIN bindings_at_save :\n    (c \\in DOMAIN bindings) => (bindings[c] = bindings_at_save[c]"
+      ],
+      "message": "BindingStable violation: \\A c \\in DOMAIN bindings_at_save :\n    (c \\in DOMAIN bindings) => (bindings[c] = bindings_at_save[c])",
+      "applies_to": [
+        "bindings",
+        "bindings_at_save"
+      ],
+      "description": "Verifier for invariant BindingStable from RegisterIdempotent spec"
+    },
+    "SecondCallSkipsAllocate": {
+      "function_id": "fn-RegisterIdempotent-verify-SecondCallSkipsAllocate",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-SecondCallSkipsAllocate",
+      "conditions": [
+        "phase = \"done\" => call_count = call_count_at_save"
+      ],
+      "message": "SecondCallSkipsAllocate violation: phase = \"done\" => call_count = call_count_at_save",
+      "applies_to": [
+        "call_count",
+        "call_count_at_save",
+        "phase"
+      ],
+      "description": "Verifier for invariant SecondCallSkipsAllocate from RegisterIdempotent spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-RegisterIdempotent-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-RegisterIdempotent-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from RegisterIdempotent spec"
+    }
+  },
+  "assertions": {
+    "assert_IdempotentAllocation": {
+      "condition": "phase = \"done\" implies\n    (\\A c in InputCriteria : bindings[c] = bindings_at_save[c])",
+      "message": "Assertion failed: IdempotentAllocation \u2014 phase = \"done\" =>\n    (\\A c \\in InputCriteria : bindings[c] = bindings_at_save[c])",
+      "description": "Test assertion for IdempotentAllocation from RegisterIdempotent spec"
+    },
+    "assert_NoDuplicateNodes": {
+      "condition": "Cardinality(dag_nodes) = Cardinality(DOMAIN bindings)",
+      "message": "Assertion failed: NoDuplicateNodes \u2014 Cardinality(dag_nodes) = Cardinality(DOMAIN bindings)",
+      "description": "Test assertion for NoDuplicateNodes from RegisterIdempotent spec"
+    },
+    "assert_BindingStable": {
+      "condition": "\\A c in DOMAIN bindings_at_save :\n    (c in DOMAIN bindings) implies (bindings[c] = bindings_at_save[c])",
+      "message": "Assertion failed: BindingStable \u2014 \\A c \\in DOMAIN bindings_at_save :\n    (c \\in DOMAIN bindings) => (bindings[c] = bindings_at_save[c])",
+      "description": "Test assertion for BindingStable from RegisterIdempotent spec"
+    },
+    "assert_SecondCallSkipsAllocate": {
+      "condition": "phase = \"done\" implies call_count = call_count_at_save",
+      "message": "Assertion failed: SecondCallSkipsAllocate \u2014 phase = \"done\" => call_count = call_count_at_save",
+      "description": "Test assertion for SecondCallSkipsAllocate from RegisterIdempotent spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from RegisterIdempotent spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_2 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "5",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_2 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "5",
+          "registered": "{InputCriteria_1}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_2 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "5",
+          "registered": "{InputCriteria_1}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_2 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "5",
+          "registered": "{InputCriteria_1}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_2 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "5",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_1}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "step_count": "5",
+          "registered": "{InputCriteria_1}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 1 @@ InputCriteria_2 :> 2)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_2 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "5",
+          "registered": "{InputCriteria_1}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_2 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "5",
+          "registered": "{InputCriteria_1}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_2 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "5",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"StartFirst\"]",
+          "bindings": "<<>>",
+          "step_count": "0",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartFirst",
+        "vars": {
+          "call_count": "0",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "<<>>",
+          "step_count": "1",
+          "registered": "{}",
+          "call_count_at_save": "0",
+          "next_id": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "1",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_2 :> 1)",
+          "step_count": "2",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "2"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"ProcessFirstLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessFirstLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "<<>>",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"first_inv\"",
+          "pc": "[main |-> \"SaveFirst\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "3",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "0",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "SaveFirst",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1, InputCriteria_2}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "4",
+          "registered": "{}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{InputCriteria_1}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "5",
+          "registered": "{InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"ProcessSecondLoop\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ProcessSecondLoop",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"second_inv\"",
+          "pc": "[main |-> \"Finish\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "6",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "call_count": "2",
+          "to_process": "{}",
+          "bindings_at_save": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "dag_nodes": "{1, 2}",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "bindings": "(InputCriteria_1 :> 2 @@ InputCriteria_2 :> 1)",
+          "step_count": "7",
+          "registered": "{InputCriteria_1, InputCriteria_2}",
+          "call_count_at_save": "2",
+          "next_id": "3"
+        }
+      }
+    ]
+  ]
+}

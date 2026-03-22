@@ -603,46 +603,6 @@ class TestRegistryDagRemoveNode:
         assert dag.edges[0].to_id == "r3"
 
 
-class TestRegistryDagMergeWithCrawlUuids:
-    def test_merge_preserves_crawl_nodes(self):
-        old_dag = RegistryDag()
-        crawl_uuid = make_record_uuid("src/main.py", "handler")
-        old_dag.add_node(Node.resource(crawl_uuid, "handler @ src/main.py"))
-        old_dag.add_node(Node.resource("gwt-0001", "test gwt"))
-
-        new_dag = RegistryDag()
-        new_dag.add_node(Node.resource("r1", "Fresh resource"))
-
-        merged = new_dag.merge_registered_nodes(old_dag, crawl_uuids={crawl_uuid})
-        assert merged == 2  # crawl node + gwt node
-        assert crawl_uuid in new_dag.nodes
-        assert "gwt-0001" in new_dag.nodes
-
-    def test_merge_without_crawl_uuids_skips_crawl_nodes(self):
-        old_dag = RegistryDag()
-        crawl_uuid = make_record_uuid("src/main.py", "handler")
-        old_dag.add_node(Node.resource(crawl_uuid, "handler @ src/main.py"))
-
-        new_dag = RegistryDag()
-        merged = new_dag.merge_registered_nodes(old_dag)
-        assert merged == 0
-        assert crawl_uuid not in new_dag.nodes
-
-    def test_merge_preserves_crawl_edges(self):
-        old_dag = RegistryDag()
-        u1 = make_record_uuid("src/a.py", "func_a")
-        u2 = make_record_uuid("src/b.py", "func_b")
-        old_dag.add_node(Node.resource(u1, "func_a"))
-        old_dag.add_node(Node.resource(u2, "func_b"))
-        old_dag.add_edge(Edge(u1, u2, EdgeType.CALLS))
-
-        new_dag = RegistryDag()
-        new_dag.merge_registered_nodes(old_dag, crawl_uuids={u1, u2})
-        assert new_dag.edge_count == 1
-        assert new_dag.edges[0].from_id == u1
-        assert new_dag.edges[0].to_id == u2
-
-
 # ── JSON parser tests ────────────────────────────────────────────
 
 class TestExtractJsonObject:

@@ -1,0 +1,222 @@
+---- MODULE GracefulShutdown ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Tasks
+
+ASSUME Tasks # {} /\ IsFiniteSet(Tasks)
+
+(*--algorithm GracefulShutdown
+
+variables
+    shutdown_requested   = FALSE,
+    in_flight            = {},
+    completed            = {},
+    started_after_signal = {},
+    in_flight_at_signal  = {},
+    pending              = Tasks,
+    run_active           = TRUE;
+
+define
+
+    TypeOK ==
+        /\ shutdown_requested   \in BOOLEAN
+        /\ in_flight            \subseteq Tasks
+        /\ completed            \subseteq Tasks
+        /\ started_after_signal \subseteq Tasks
+        /\ in_flight_at_signal  \subseteq Tasks
+        /\ pending              \subseteq Tasks
+        /\ run_active           \in BOOLEAN
+
+    NoNewAfterShutdown ==
+        shutdown_requested => started_after_signal = {}
+
+    InFlightDoesNotGrow ==
+        shutdown_requested => in_flight \subseteq in_flight_at_signal
+
+    InFlightCompletes ==
+        ~run_active => in_flight = {}
+
+    CompletedSubsetTasks ==
+        completed \subseteq Tasks
+
+    Partitioned ==
+        /\ (in_flight \intersect completed) = {}
+        /\ (pending   \intersect completed) = {}
+        /\ (pending   \intersect in_flight) = {}
+
+end define;
+
+fair process signal_handler = "signal"
+begin
+    FireSignal:
+        either
+            shutdown_requested  := TRUE;
+            in_flight_at_signal := in_flight;
+        or
+            skip;
+        end either;
+end process;
+
+fair process orchestrator = "orchestrator"
+variables
+    phase     = "running",
+    candidate = "none";
+begin
+    OrchestratorLoop:
+        while phase = "running" do
+            either
+                await ~shutdown_requested /\ pending # {};
+                with t \in pending do
+                    candidate := t;
+                    pending   := pending \ {t};
+                end with;
+            StartOrAbort:
+                if ~shutdown_requested then
+                    in_flight := in_flight \union {candidate};
+                else
+                    pending := pending \union {candidate};
+                end if;
+                candidate := "none";
+            or
+                await shutdown_requested \/ pending = {};
+                phase := "draining";
+            end either;
+        end while;
+    DrainInflight:
+        await in_flight = {};
+    OrchestratorDone:
+        run_active := FALSE;
+end process;
+
+fair process completer = "completer"
+begin
+    WaitForWork:
+        await in_flight # {} \/ ~run_active;
+    CheckWork:
+        if in_flight # {} then
+            with t \in in_flight do
+                in_flight := in_flight \ {t};
+                completed := completed \union {t};
+            end with;
+            goto WaitForWork;
+        end if;
+    CompleterFinish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE GracefulShutdown ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Tasks
+
+ASSUME Tasks # {} /\ IsFiniteSet(Tasks)
+
+(*--algorithm GracefulShutdown
+
+variables
+    shutdown_requested   = FALSE,
+    in_flight            = {},
+    completed            = {},
+    started_after_signal = {},
+    in_flight_at_signal  = {},
+    pending              = Tasks,
+    run_active           = TRUE;
+
+define
+
+    TypeOK ==
+        /\ shutdown_requested   \in BOOLEAN
+        /\ in_flight            \subseteq Tasks
+        /\ completed            \subseteq Tasks
+        /\ started_after_signal \subseteq Tasks
+        /\ in_flight_at_signal  \subseteq Tasks
+        /\ pending              \subseteq Tasks
+        /\ run_active           \in BOOLEAN
+
+    NoNewAfterShutdown ==
+        shutdown_requested => started_after_signal = {}
+
+    InFlightDoesNotGrow ==
+        shutdown_requested => in_flight \subseteq in_flight_at_signal
+
+    InFlightCompletes ==
+        ~run_active => in_flight = {}
+
+    CompletedSubsetTasks ==
+        completed \subseteq Tasks
+
+    Partitioned ==
+        /\ (in_flight \intersect completed) = {}
+        /\ (pending   \intersect completed) = {}
+        /\ (pending   \intersect in_flight) = {}
+
+end define;
+
+fair process signal_handler = "signal"
+begin
+    FireSignal:
+        either
+            shutdown_requested  := TRUE;
+            in_flight_at_signal := in_flight;
+        or
+            skip;
+        end either;
+end process;
+
+fair process orchestrator = "orchestrator"
+variables
+    phase     = "running",
+    candidate = "none";
+begin
+    OrchestratorLoop:
+        while phase = "running" do
+            either
+                await ~shutdown_requested /\ pending # {};
+                with t \in pending do
+                    candidate := t;
+                    pending   := pending \ {t};
+                end with;
+            StartOrAbort:
+                if ~shutdown_requested then
+                    in_flight := in_flight \union {candidate};
+                else
+                    pending := pending \union {candidate};
+                end if;
+                candidate := "none";
+            or
+                await shutdown_requested \/ pending = {};
+                phase := "draining";
+            end either;
+        end while;
+    DrainInflight:
+        await in_flight = {};
+    OrchestratorDone:
+        run_active := FALSE;
+end process;
+
+fair process completer = "completer"
+begin
+    WaitForWork:
+        await in_flight # {} \/ ~run_active;
+    CheckWork:
+        if in_flight # {} then
+            with t \in in_flight do
+                in_flight := in_flight \ {t};
+                completed := completed \union {t};
+            end with;
+            goto WaitForWork;
+        end if;
+    CompleterFinish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

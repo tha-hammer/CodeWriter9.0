@@ -78,7 +78,7 @@ class TestAsyncExtractFnQueryParams:
 
         opts = captured_kwargs["options"]
         assert opts.allowed_tools == []
-        assert opts.max_turns == 1
+        assert opts.max_turns == 4  # extra turns for structured output retries
         assert opts.system_prompt == _EXTRACT_SYSTEM_PROMPT
         assert opts.model == "claude-sonnet-4-6"
 

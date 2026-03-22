@@ -1,0 +1,240 @@
+The persistent duplication in my output is causing the double-module parse error. I will switch to pure TLA+ (no PlusCal algorithm block) so there is no pcal.trans dependency and no `\* BEGIN TRANSLATION` placeholder — the module is fully self-contained.
+
+---- MODULE DfsBeforeSweep ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    EntryPoints,
+    InitialPending,
+    MaxSteps
+
+VARIABLES
+    phase,
+    visited,
+    pending,
+    dfs_complete,
+    sweep_active,
+    step_count
+
+vars == <<phase, visited, pending, dfs_complete, sweep_active, step_count>>
+
+TypeOK ==
+    /\ phase        \in {"dfs", "sweep", "done"}
+    /\ visited      \subseteq EntryPoints
+    /\ pending      \subseteq InitialPending
+    /\ dfs_complete \in BOOLEAN
+    /\ sweep_active \in BOOLEAN
+    /\ step_count   \in 0..MaxSteps
+
+PhaseSequencing ==
+    phase = "sweep" => dfs_complete = TRUE
+
+NoSweepDuringDfs ==
+    phase = "dfs" => sweep_active = FALSE
+
+AllEntryPointsVisited ==
+    phase # "dfs" => EntryPoints \subseteq visited
+
+BoundedExecution ==
+    step_count <= MaxSteps
+
+DfsPrecedesSweep ==
+    /\ TypeOK
+    /\ PhaseSequencing
+    /\ NoSweepDuringDfs
+    /\ AllEntryPointsVisited
+    /\ BoundedExecution
+
+Init ==
+    /\ phase        = "dfs"
+    /\ visited      = {}
+    /\ pending      = InitialPending
+    /\ dfs_complete = FALSE
+    /\ sweep_active = FALSE
+    /\ step_count   = 0
+
+DfsVisit ==
+    /\ phase = "dfs"
+    /\ EntryPoints \ visited # {}
+    /\ \E ep \in EntryPoints \ visited :
+           /\ visited'    = visited \cup {ep}
+           /\ step_count' = step_count + 1
+    /\ UNCHANGED <<phase, pending, dfs_complete, sweep_active>>
+
+DfsFinish ==
+    /\ phase = "dfs"
+    /\ EntryPoints \ visited = {}
+    /\ dfs_complete' = TRUE
+    /\ phase'        = "sweep"
+    /\ step_count'   = step_count + 1
+    /\ UNCHANGED <<visited, pending, sweep_active>>
+
+SweepActivate ==
+    /\ phase = "sweep"
+    /\ ~sweep_active
+    /\ pending # {}
+    /\ sweep_active' = TRUE
+    /\ step_count'   = step_count + 1
+    /\ UNCHANGED <<phase, visited, pending, dfs_complete>>
+
+SweepExtract ==
+    /\ phase = "sweep"
+    /\ sweep_active
+    /\ pending # {}
+    /\ \E rec \in pending :
+           pending' = pending \ {rec}
+    /\ sweep_active' = FALSE
+    /\ step_count'   = step_count + 1
+    /\ UNCHANGED <<phase, visited, dfs_complete>>
+
+SweepComplete ==
+    /\ phase = "sweep"
+    /\ ~sweep_active
+    /\ pending = {}
+    /\ phase'      = "done"
+    /\ step_count' = step_count + 1
+    /\ UNCHANGED <<visited, pending, dfs_complete, sweep_active>>
+
+Terminating ==
+    /\ phase = "done"
+    /\ UNCHANGED vars
+
+Next ==
+    \/ DfsVisit
+    \/ DfsFinish
+    \/ SweepActivate
+    \/ SweepExtract
+    \/ SweepComplete
+    \/ Terminating
+
+Fairness ==
+    /\ WF_vars(DfsVisit)
+    /\ WF_vars(DfsFinish)
+    /\ WF_vars(SweepActivate)
+    /\ WF_vars(SweepExtract)
+    /\ WF_vars(SweepComplete)
+
+Spec == Init /\ [][Next]_vars /\ Fairness
+
+====
+The persistent duplication in my output is causing the double-module parse error. I will switch to pure TLA+ (no PlusCal algorithm block) so there is no pcal.trans dependency and no `\* BEGIN TRANSLATION` placeholder — the module is fully self-contained.
+
+---- MODULE DfsBeforeSweep ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    EntryPoints,
+    InitialPending,
+    MaxSteps
+
+VARIABLES
+    phase,
+    visited,
+    pending,
+    dfs_complete,
+    sweep_active,
+    step_count
+
+vars == <<phase, visited, pending, dfs_complete, sweep_active, step_count>>
+
+TypeOK ==
+    /\ phase        \in {"dfs", "sweep", "done"}
+    /\ visited      \subseteq EntryPoints
+    /\ pending      \subseteq InitialPending
+    /\ dfs_complete \in BOOLEAN
+    /\ sweep_active \in BOOLEAN
+    /\ step_count   \in 0..MaxSteps
+
+PhaseSequencing ==
+    phase = "sweep" => dfs_complete = TRUE
+
+NoSweepDuringDfs ==
+    phase = "dfs" => sweep_active = FALSE
+
+AllEntryPointsVisited ==
+    phase # "dfs" => EntryPoints \subseteq visited
+
+BoundedExecution ==
+    step_count <= MaxSteps
+
+DfsPrecedesSweep ==
+    /\ TypeOK
+    /\ PhaseSequencing
+    /\ NoSweepDuringDfs
+    /\ AllEntryPointsVisited
+    /\ BoundedExecution
+
+Init ==
+    /\ phase        = "dfs"
+    /\ visited      = {}
+    /\ pending      = InitialPending
+    /\ dfs_complete = FALSE
+    /\ sweep_active = FALSE
+    /\ step_count   = 0
+
+DfsVisit ==
+    /\ phase = "dfs"
+    /\ EntryPoints \ visited # {}
+    /\ \E ep \in EntryPoints \ visited :
+           /\ visited'    = visited \cup {ep}
+           /\ step_count' = step_count + 1
+    /\ UNCHANGED <<phase, pending, dfs_complete, sweep_active>>
+
+DfsFinish ==
+    /\ phase = "dfs"
+    /\ EntryPoints \ visited = {}
+    /\ dfs_complete' = TRUE
+    /\ phase'        = "sweep"
+    /\ step_count'   = step_count + 1
+    /\ UNCHANGED <<visited, pending, sweep_active>>
+
+SweepActivate ==
+    /\ phase = "sweep"
+    /\ ~sweep_active
+    /\ pending # {}
+    /\ sweep_active' = TRUE
+    /\ step_count'   = step_count + 1
+    /\ UNCHANGED <<phase, visited, pending, dfs_complete>>
+
+SweepExtract ==
+    /\ phase = "sweep"
+    /\ sweep_active
+    /\ pending # {}
+    /\ \E rec \in pending :
+           pending' = pending \ {rec}
+    /\ sweep_active' = FALSE
+    /\ step_count'   = step_count + 1
+    /\ UNCHANGED <<phase, visited, dfs_complete>>
+
+SweepComplete ==
+    /\ phase = "sweep"
+    /\ ~sweep_active
+    /\ pending = {}
+    /\ phase'      = "done"
+    /\ step_count' = step_count + 1
+    /\ UNCHANGED <<visited, pending, dfs_complete, sweep_active>>
+
+Terminating ==
+    /\ phase = "done"
+    /\ UNCHANGED vars
+
+Next ==
+    \/ DfsVisit
+    \/ DfsFinish
+    \/ SweepActivate
+    \/ SweepExtract
+    \/ SweepComplete
+    \/ Terminating
+
+Fairness ==
+    /\ WF_vars(DfsVisit)
+    /\ WF_vars(DfsFinish)
+    /\ WF_vars(SweepActivate)
+    /\ WF_vars(SweepExtract)
+    /\ WF_vars(SweepComplete)
+
+Spec == Init /\ [][Next]_vars /\ Fairness
+
+====

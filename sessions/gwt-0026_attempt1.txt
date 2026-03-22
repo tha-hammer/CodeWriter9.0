@@ -1,0 +1,170 @@
+---- MODULE StalenessPropagation ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Nodes,
+    Hashes,
+    MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+ASSUME Nodes /= {} /\ Hashes /= {}
+
+(*--algorithm StalenessPropagation
+
+variables
+    stored_hashes  \in [Nodes -> Hashes],
+    current_hashes \in [Nodes -> Hashes],
+    edges          \in SUBSET (Nodes \X Nodes),
+    direct_stale   = {},
+    transitive_stale = {},
+    phase          = "detect",
+    step_count     = 0,
+    prev_size      = 0;
+
+define
+
+    DirectlyStale ==
+        {n \in Nodes : stored_hashes[n] /= current_hashes[n]}
+
+    OneHopExpand(S) ==
+        S \cup {e[1] : e \in {ep \in edges : ep[2] \in S}}
+
+    DirectCorrect ==
+        phase /= "detect" => direct_stale = DirectlyStale
+
+    MonotonicGrowth ==
+        Cardinality(transitive_stale) >= prev_size
+
+    TransitiveComplete ==
+        phase = "complete" =>
+            /\ OneHopExpand(transitive_stale) = transitive_stale
+            /\ direct_stale \subseteq transitive_stale
+
+    NoFalseNegatives ==
+        phase = "complete" =>
+            \A n \in Nodes : n \in direct_stale => n \in transitive_stale
+
+    AllDependentsIncluded ==
+        phase = "complete" =>
+            \A e \in edges :
+                e[2] \in transitive_stale => e[1] \in transitive_stale
+
+    BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process detector = "detector"
+begin
+    DetectDirect:
+        direct_stale     := DirectlyStale;
+        transitive_stale := DirectlyStale;
+        prev_size        := 0;
+        phase            := "propagate";
+        step_count       := step_count + 1;
+
+    PropLoop:
+        while phase = "propagate" /\ step_count < MaxSteps do
+            PropStep:
+                prev_size        := Cardinality(transitive_stale);
+                transitive_stale := OneHopExpand(transitive_stale);
+                step_count       := step_count + 1;
+            CheckFix:
+                if Cardinality(transitive_stale) = prev_size then
+                    phase := "complete";
+                end if;
+        end while;
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE StalenessPropagation ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Nodes,
+    Hashes,
+    MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps > 0
+ASSUME Nodes /= {} /\ Hashes /= {}
+
+(*--algorithm StalenessPropagation
+
+variables
+    stored_hashes  \in [Nodes -> Hashes],
+    current_hashes \in [Nodes -> Hashes],
+    edges          \in SUBSET (Nodes \X Nodes),
+    direct_stale   = {},
+    transitive_stale = {},
+    phase          = "detect",
+    step_count     = 0,
+    prev_size      = 0;
+
+define
+
+    DirectlyStale ==
+        {n \in Nodes : stored_hashes[n] /= current_hashes[n]}
+
+    OneHopExpand(S) ==
+        S \cup {e[1] : e \in {ep \in edges : ep[2] \in S}}
+
+    DirectCorrect ==
+        phase /= "detect" => direct_stale = DirectlyStale
+
+    MonotonicGrowth ==
+        Cardinality(transitive_stale) >= prev_size
+
+    TransitiveComplete ==
+        phase = "complete" =>
+            /\ OneHopExpand(transitive_stale) = transitive_stale
+            /\ direct_stale \subseteq transitive_stale
+
+    NoFalseNegatives ==
+        phase = "complete" =>
+            \A n \in Nodes : n \in direct_stale => n \in transitive_stale
+
+    AllDependentsIncluded ==
+        phase = "complete" =>
+            \A e \in edges :
+                e[2] \in transitive_stale => e[1] \in transitive_stale
+
+    BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process detector = "detector"
+begin
+    DetectDirect:
+        direct_stale     := DirectlyStale;
+        transitive_stale := DirectlyStale;
+        prev_size        := 0;
+        phase            := "propagate";
+        step_count       := step_count + 1;
+
+    PropLoop:
+        while phase = "propagate" /\ step_count < MaxSteps do
+            PropStep:
+                prev_size        := Cardinality(transitive_stale);
+                transitive_stale := OneHopExpand(transitive_stale);
+                step_count       := step_count + 1;
+            CheckFix:
+                if Cardinality(transitive_stale) = prev_size then
+                    phase := "complete";
+                end if;
+        end while;
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

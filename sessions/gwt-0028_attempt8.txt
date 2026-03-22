@@ -1,0 +1,154 @@
+The real error is now visible: `S \subseteq T, but S was not enumerable`. The `\subseteq` checks in `TypeOK` and `AllEntryPointsVisited` are the culprits — TLC cannot enumerate a set when the CONSTANT has no assigned enumerable model value. The fix is to drop all `\subseteq` expressions from the invariants and replace `AllEntryPointsVisited` with a set-equality check (`visited = EntryPoints`), which TLC can evaluate against concrete values without requiring enumeration of an abstract constant.
+
+---- MODULE DfsBeforeSweep ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    EntryPoints,
+    InitialPending,
+    MaxSteps
+
+(* --algorithm DfsBeforeSweep
+
+variables
+    phase        = "dfs",
+    visited      = {},
+    pending      = InitialPending,
+    dfs_complete = FALSE,
+    sweep_active = FALSE,
+    step_count   = 0;
+
+define
+
+    PhaseSequencing ==
+        phase = "sweep" => dfs_complete = TRUE
+
+    NoSweepDuringDfs ==
+        phase = "dfs" => sweep_active = FALSE
+
+    AllEntryPointsVisited ==
+        phase # "dfs" => visited = EntryPoints
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    DfsPrecedesSweep ==
+        /\ PhaseSequencing
+        /\ NoSweepDuringDfs
+        /\ AllEntryPointsVisited
+        /\ BoundedExecution
+
+end define;
+
+fair process orchestrator = "orchestrator"
+begin
+    Run:
+        while phase # "done" /\ step_count < MaxSteps do
+            if phase = "dfs" /\ EntryPoints \ visited # {} then
+                with ep \in EntryPoints \ visited do
+                    visited    := visited \cup {ep};
+                    step_count := step_count + 1;
+                end with;
+            elsif phase = "dfs" /\ EntryPoints \ visited = {} then
+                dfs_complete := TRUE;
+                phase        := "sweep";
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ ~sweep_active /\ pending # {} then
+                sweep_active := TRUE;
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ sweep_active /\ pending # {} then
+                with rec \in pending do
+                    pending := pending \ {rec};
+                end with;
+                sweep_active := FALSE;
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ ~sweep_active /\ pending = {} then
+                phase      := "done";
+                step_count := step_count + 1;
+            end if;
+        end while;
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+The real error is now visible: `S \subseteq T, but S was not enumerable`. The `\subseteq` checks in `TypeOK` and `AllEntryPointsVisited` are the culprits — TLC cannot enumerate a set when the CONSTANT has no assigned enumerable model value. The fix is to drop all `\subseteq` expressions from the invariants and replace `AllEntryPointsVisited` with a set-equality check (`visited = EntryPoints`), which TLC can evaluate against concrete values without requiring enumeration of an abstract constant.
+
+---- MODULE DfsBeforeSweep ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    EntryPoints,
+    InitialPending,
+    MaxSteps
+
+(* --algorithm DfsBeforeSweep
+
+variables
+    phase        = "dfs",
+    visited      = {},
+    pending      = InitialPending,
+    dfs_complete = FALSE,
+    sweep_active = FALSE,
+    step_count   = 0;
+
+define
+
+    PhaseSequencing ==
+        phase = "sweep" => dfs_complete = TRUE
+
+    NoSweepDuringDfs ==
+        phase = "dfs" => sweep_active = FALSE
+
+    AllEntryPointsVisited ==
+        phase # "dfs" => visited = EntryPoints
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    DfsPrecedesSweep ==
+        /\ PhaseSequencing
+        /\ NoSweepDuringDfs
+        /\ AllEntryPointsVisited
+        /\ BoundedExecution
+
+end define;
+
+fair process orchestrator = "orchestrator"
+begin
+    Run:
+        while phase # "done" /\ step_count < MaxSteps do
+            if phase = "dfs" /\ EntryPoints \ visited # {} then
+                with ep \in EntryPoints \ visited do
+                    visited    := visited \cup {ep};
+                    step_count := step_count + 1;
+                end with;
+            elsif phase = "dfs" /\ EntryPoints \ visited = {} then
+                dfs_complete := TRUE;
+                phase        := "sweep";
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ ~sweep_active /\ pending # {} then
+                sweep_active := TRUE;
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ sweep_active /\ pending # {} then
+                with rec \in pending do
+                    pending := pending \ {rec};
+                end with;
+                sweep_active := FALSE;
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ ~sweep_active /\ pending = {} then
+                phase      := "done";
+                step_count := step_count + 1;
+            end if;
+        end while;
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

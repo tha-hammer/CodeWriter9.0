@@ -1,0 +1,141 @@
+Now I understand the root cause. The `_classify_constants` heuristic defaults constants to **numeric** (value `10`) unless it detects a set-usage pattern. `OldGwts \union OldReqs` doesn't trigger the set classifier — so the cfg assigns `OldGwts = 10`, causing `10 \union 10` to throw a TLC type error at State 1. The fix is `ASSUME X # {}` which the classifier regex explicitly recognises as a set indicator.
+Good. All my `define` operators start with `/\`, `phase`, or `step_count` — none start with `{`, `<`, `"`, or a digit — so they all pass through correctly as `INVARIANT` lines. The only fix needed is the constant classification. Here is the corrected, single-copy module:
+
+---- MODULE ExtractPreservesGwts ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    OldGwts,
+    OldReqs,
+    SchemaNodes,
+    MaxSteps
+
+ASSUME OldGwts # {}
+ASSUME OldReqs # {}
+ASSUME SchemaNodes # {}
+
+(* --algorithm ExtractPreservesGwts
+variables
+    old_dag_nodes = {},
+    extracted_nodes = {},
+    result_nodes = {},
+    old_gwt_nodes = {},
+    phase = "load_old",
+    step_count = 0;
+
+define
+    TypeOK ==
+        /\ phase \in {"load_old", "extract", "merge", "save", "done"}
+        /\ step_count <= MaxSteps
+
+    GwtPreserved ==
+        phase = "done" => old_gwt_nodes \subseteq result_nodes
+
+    SchemaFresh ==
+        phase = "done" => extracted_nodes \subseteq result_nodes
+
+    NoGwtLoss ==
+        phase = "done" => \A n \in old_gwt_nodes : n \in result_nodes
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    MergeCorrect ==
+        phase = "done" => result_nodes = extracted_nodes \union old_gwt_nodes
+end define;
+
+fair process extractor = "main"
+begin
+    LoadOld:
+        old_dag_nodes := OldGwts \union OldReqs;
+        old_gwt_nodes := OldGwts \union OldReqs;
+        phase := "extract";
+        step_count := step_count + 1;
+    Extract:
+        extracted_nodes := SchemaNodes;
+        phase := "merge";
+        step_count := step_count + 1;
+    Merge:
+        result_nodes := extracted_nodes \union old_gwt_nodes;
+        phase := "save";
+        step_count := step_count + 1;
+    Save:
+        phase := "done";
+        step_count := step_count + 1;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+Good. All my `define` operators start with `/\`, `phase`, or `step_count` — none start with `{`, `<`, `"`, or a digit — so they all pass through correctly as `INVARIANT` lines. The only fix needed is the constant classification. Here is the corrected, single-copy module:
+
+---- MODULE ExtractPreservesGwts ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    OldGwts,
+    OldReqs,
+    SchemaNodes,
+    MaxSteps
+
+ASSUME OldGwts # {}
+ASSUME OldReqs # {}
+ASSUME SchemaNodes # {}
+
+(* --algorithm ExtractPreservesGwts
+variables
+    old_dag_nodes = {},
+    extracted_nodes = {},
+    result_nodes = {},
+    old_gwt_nodes = {},
+    phase = "load_old",
+    step_count = 0;
+
+define
+    TypeOK ==
+        /\ phase \in {"load_old", "extract", "merge", "save", "done"}
+        /\ step_count <= MaxSteps
+
+    GwtPreserved ==
+        phase = "done" => old_gwt_nodes \subseteq result_nodes
+
+    SchemaFresh ==
+        phase = "done" => extracted_nodes \subseteq result_nodes
+
+    NoGwtLoss ==
+        phase = "done" => \A n \in old_gwt_nodes : n \in result_nodes
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    MergeCorrect ==
+        phase = "done" => result_nodes = extracted_nodes \union old_gwt_nodes
+end define;
+
+fair process extractor = "main"
+begin
+    LoadOld:
+        old_dag_nodes := OldGwts \union OldReqs;
+        old_gwt_nodes := OldGwts \union OldReqs;
+        phase := "extract";
+        step_count := step_count + 1;
+    Extract:
+        extracted_nodes := SchemaNodes;
+        phase := "merge";
+        step_count := step_count + 1;
+    Merge:
+        result_nodes := extracted_nodes \union old_gwt_nodes;
+        phase := "save";
+        step_count := step_count + 1;
+    Save:
+        phase := "done";
+        step_count := step_count + 1;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

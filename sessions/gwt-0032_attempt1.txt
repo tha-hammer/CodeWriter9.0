@@ -1,0 +1,174 @@
+---- MODULE ExtractPreservesGwts ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    OldGwts,
+    OldReqs,
+    SchemaNodes,
+    MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps >= 4
+ASSUME IsFiniteSet(OldGwts)
+ASSUME IsFiniteSet(OldReqs)
+ASSUME IsFiniteSet(SchemaNodes)
+ASSUME OldGwts \cap OldReqs = {}
+ASSUME OldGwts \cap SchemaNodes = {}
+ASSUME OldReqs \cap SchemaNodes = {}
+
+(* --algorithm ExtractPreservesGwts
+
+variables
+    old_dag_nodes = {},
+    extracted_nodes = {},
+    result_nodes = {},
+    old_gwt_nodes = {},
+    phase = "load_old",
+    step_count = 0;
+
+define
+
+    AllNodes == OldGwts \union OldReqs \union SchemaNodes
+
+    TypeOK ==
+        /\ old_dag_nodes \subseteq AllNodes
+        /\ extracted_nodes \subseteq SchemaNodes
+        /\ result_nodes \subseteq AllNodes
+        /\ old_gwt_nodes \subseteq (OldGwts \union OldReqs)
+        /\ phase \in {"load_old", "extract", "merge", "save", "done"}
+        /\ step_count \in 0..MaxSteps
+
+    GwtPreserved ==
+        phase = "done" => old_gwt_nodes \subseteq result_nodes
+
+    SchemaFresh ==
+        phase = "done" => extracted_nodes \subseteq result_nodes
+
+    NoGwtLoss ==
+        phase = "done" => \A n \in old_gwt_nodes : n \in result_nodes
+
+    BoundedExecution == step_count <= MaxSteps
+
+    MergeCorrect ==
+        phase = "done" =>
+            result_nodes = extracted_nodes \union old_gwt_nodes
+
+end define;
+
+fair process extractor = "main"
+begin
+    LoadOld:
+        old_dag_nodes := OldGwts \union OldReqs;
+        old_gwt_nodes := OldGwts \union OldReqs;
+        phase := "extract";
+        step_count := step_count + 1;
+    Extract:
+        extracted_nodes := SchemaNodes;
+        phase := "merge";
+        step_count := step_count + 1;
+    Merge:
+        result_nodes := extracted_nodes \union old_gwt_nodes;
+        phase := "save";
+        step_count := step_count + 1;
+    Save:
+        phase := "done";
+        step_count := step_count + 1;
+    Finish:
+        assert old_gwt_nodes \subseteq result_nodes;
+        assert extracted_nodes \subseteq result_nodes;
+        assert \A n \in old_gwt_nodes : n \in result_nodes;
+        skip;
+end process;
+
+end algorithm; *)
+
+THEOREM TypeOK /\ GwtPreserved /\ SchemaFresh /\ NoGwtLoss /\ BoundedExecution /\ MergeCorrect
+
+====
+---- MODULE ExtractPreservesGwts ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    OldGwts,
+    OldReqs,
+    SchemaNodes,
+    MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps >= 4
+ASSUME IsFiniteSet(OldGwts)
+ASSUME IsFiniteSet(OldReqs)
+ASSUME IsFiniteSet(SchemaNodes)
+ASSUME OldGwts \cap OldReqs = {}
+ASSUME OldGwts \cap SchemaNodes = {}
+ASSUME OldReqs \cap SchemaNodes = {}
+
+(* --algorithm ExtractPreservesGwts
+
+variables
+    old_dag_nodes = {},
+    extracted_nodes = {},
+    result_nodes = {},
+    old_gwt_nodes = {},
+    phase = "load_old",
+    step_count = 0;
+
+define
+
+    AllNodes == OldGwts \union OldReqs \union SchemaNodes
+
+    TypeOK ==
+        /\ old_dag_nodes \subseteq AllNodes
+        /\ extracted_nodes \subseteq SchemaNodes
+        /\ result_nodes \subseteq AllNodes
+        /\ old_gwt_nodes \subseteq (OldGwts \union OldReqs)
+        /\ phase \in {"load_old", "extract", "merge", "save", "done"}
+        /\ step_count \in 0..MaxSteps
+
+    GwtPreserved ==
+        phase = "done" => old_gwt_nodes \subseteq result_nodes
+
+    SchemaFresh ==
+        phase = "done" => extracted_nodes \subseteq result_nodes
+
+    NoGwtLoss ==
+        phase = "done" => \A n \in old_gwt_nodes : n \in result_nodes
+
+    BoundedExecution == step_count <= MaxSteps
+
+    MergeCorrect ==
+        phase = "done" =>
+            result_nodes = extracted_nodes \union old_gwt_nodes
+
+end define;
+
+fair process extractor = "main"
+begin
+    LoadOld:
+        old_dag_nodes := OldGwts \union OldReqs;
+        old_gwt_nodes := OldGwts \union OldReqs;
+        phase := "extract";
+        step_count := step_count + 1;
+    Extract:
+        extracted_nodes := SchemaNodes;
+        phase := "merge";
+        step_count := step_count + 1;
+    Merge:
+        result_nodes := extracted_nodes \union old_gwt_nodes;
+        phase := "save";
+        step_count := step_count + 1;
+    Save:
+        phase := "done";
+        step_count := step_count + 1;
+    Finish:
+        assert old_gwt_nodes \subseteq result_nodes;
+        assert extracted_nodes \subseteq result_nodes;
+        assert \A n \in old_gwt_nodes : n \in result_nodes;
+        skip;
+end process;
+
+end algorithm; *)
+
+THEOREM TypeOK /\ GwtPreserved /\ SchemaFresh /\ NoGwtLoss /\ BoundedExecution /\ MergeCorrect
+
+====

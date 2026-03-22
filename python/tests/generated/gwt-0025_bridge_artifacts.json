@@ -1,0 +1,994 @@
+{
+  "gwt_id": "gwt-0025",
+  "module_name": "ForwardSubgraphComplete",
+  "data_structures": {
+    "ForwardSubgraphCompleteState": {
+      "function_id": "fn-ForwardSubgraphComplete-state",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Seed\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "visited": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "frontier": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "init",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "depth": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from ForwardSubgraphComplete TLA+ spec"
+    }
+  },
+  "operations": {
+    "Seed": {
+      "function_id": "fn-ForwardSubgraphComplete-Seed",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-Seed",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Seed from ForwardSubgraphComplete spec"
+    },
+    "Expand": {
+      "function_id": "fn-ForwardSubgraphComplete-Expand",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-Expand",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Expand from ForwardSubgraphComplete spec"
+    },
+    "Terminate": {
+      "function_id": "fn-ForwardSubgraphComplete-Terminate",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from ForwardSubgraphComplete spec"
+    }
+  },
+  "verifiers": {
+    "SeedAlwaysIncluded": {
+      "function_id": "fn-ForwardSubgraphComplete-verify-SeedAlwaysIncluded",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-SeedAlwaysIncluded",
+      "conditions": [
+        "phase /= \"init\" => StartNode \\in visited"
+      ],
+      "message": "SeedAlwaysIncluded violation: phase /= \"init\" => StartNode \\in visited",
+      "applies_to": [
+        "phase",
+        "visited"
+      ],
+      "description": "Verifier for invariant SeedAlwaysIncluded from ForwardSubgraphComplete spec"
+    },
+    "ChainFullyCovered": {
+      "function_id": "fn-ForwardSubgraphComplete-verify-ChainFullyCovered",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-ChainFullyCovered",
+      "conditions": [
+        "phase = \"complete\" =>",
+        "NA \\in visited",
+        "NB \\in visited",
+        "NC \\in visited"
+      ],
+      "message": "ChainFullyCovered violation: phase = \"complete\" =>\n        /\\ NA \\in visited\n        /\\ NB \\in visited\n        /\\ NC \\in visited",
+      "applies_to": [
+        "phase",
+        "visited"
+      ],
+      "description": "Verifier for invariant ChainFullyCovered from ForwardSubgraphComplete spec"
+    },
+    "CompletenessInvariant": {
+      "function_id": "fn-ForwardSubgraphComplete-verify-CompletenessInvariant",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-CompletenessInvariant",
+      "conditions": [
+        "phase = \"complete\" => Reachable \\subseteq visited"
+      ],
+      "message": "CompletenessInvariant violation: phase = \"complete\" => Reachable \\subseteq visited",
+      "applies_to": [
+        "phase",
+        "visited"
+      ],
+      "description": "Verifier for invariant CompletenessInvariant from ForwardSubgraphComplete spec"
+    },
+    "FrontierSubsetVisited": {
+      "function_id": "fn-ForwardSubgraphComplete-verify-FrontierSubsetVisited",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-FrontierSubsetVisited",
+      "conditions": [
+        "frontier \\subseteq visited"
+      ],
+      "message": "FrontierSubsetVisited violation: frontier \\subseteq visited",
+      "applies_to": [
+        "frontier",
+        "visited"
+      ],
+      "description": "Verifier for invariant FrontierSubsetVisited from ForwardSubgraphComplete spec"
+    },
+    "BoundedDepth": {
+      "function_id": "fn-ForwardSubgraphComplete-verify-BoundedDepth",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-BoundedDepth",
+      "conditions": [
+        "depth <= MaxSteps"
+      ],
+      "message": "BoundedDepth violation: depth <= MaxSteps",
+      "applies_to": [
+        "depth"
+      ],
+      "description": "Verifier for invariant BoundedDepth from ForwardSubgraphComplete spec"
+    },
+    "ValidPhase": {
+      "function_id": "fn-ForwardSubgraphComplete-verify-ValidPhase",
+      "acceptance_criteria_id": "ac-ForwardSubgraphComplete-ValidPhase",
+      "conditions": [
+        "phase \\in {\"init\", \"expanding\", \"complete\", \"partial\"}"
+      ],
+      "message": "ValidPhase violation: phase \\in {\"init\", \"expanding\", \"complete\", \"partial\"}",
+      "applies_to": [
+        "phase"
+      ],
+      "description": "Verifier for invariant ValidPhase from ForwardSubgraphComplete spec"
+    }
+  },
+  "assertions": {
+    "assert_SeedAlwaysIncluded": {
+      "condition": "phase /= \"init\" implies StartNode in visited",
+      "message": "Assertion failed: SeedAlwaysIncluded \u2014 phase /= \"init\" => StartNode \\in visited",
+      "description": "Test assertion for SeedAlwaysIncluded from ForwardSubgraphComplete spec"
+    },
+    "assert_ChainFullyCovered": {
+      "condition": "phase = \"complete\" implies\n        and NA in visited\n        and NB in visited\n        and NC in visited",
+      "message": "Assertion failed: ChainFullyCovered \u2014 phase = \"complete\" =>\n        /\\ NA \\in visited\n        /\\ NB \\in visited\n        /\\ NC \\in visited",
+      "description": "Test assertion for ChainFullyCovered from ForwardSubgraphComplete spec"
+    },
+    "assert_CompletenessInvariant": {
+      "condition": "phase = \"complete\" implies Reachable \\subseteq visited",
+      "message": "Assertion failed: CompletenessInvariant \u2014 phase = \"complete\" => Reachable \\subseteq visited",
+      "description": "Test assertion for CompletenessInvariant from ForwardSubgraphComplete spec"
+    },
+    "assert_FrontierSubsetVisited": {
+      "condition": "frontier \\subseteq visited",
+      "message": "Assertion failed: FrontierSubsetVisited \u2014 frontier \\subseteq visited",
+      "description": "Test assertion for FrontierSubsetVisited from ForwardSubgraphComplete spec"
+    },
+    "assert_BoundedDepth": {
+      "condition": "depth <= MaxSteps",
+      "message": "Assertion failed: BoundedDepth \u2014 depth <= MaxSteps",
+      "description": "Test assertion for BoundedDepth from ForwardSubgraphComplete spec"
+    },
+    "assert_ValidPhase": {
+      "condition": "phase in {\"init\", \"expanding\", \"complete\", \"partial\"}",
+      "message": "Assertion failed: ValidPhase \u2014 phase \\in {\"init\", \"expanding\", \"complete\", \"partial\"}",
+      "description": "Test assertion for ValidPhase from ForwardSubgraphComplete spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "depth": "0",
+          "visited": "{}",
+          "frontier": "{}",
+          "phase": "\"init\"",
+          "pc": "[traversal |-> \"Seed\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Seed",
+        "vars": {
+          "depth": "0",
+          "visited": "{\"A\"}",
+          "frontier": "{\"A\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Expand",
+        "vars": {
+          "depth": "1",
+          "visited": "{\"A\", \"B\"}",
+          "frontier": "{\"B\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Expand",
+        "vars": {
+          "depth": "2",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{\"C\"}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Expand\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Expand",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"expanding\"",
+          "pc": "[traversal |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "depth": "3",
+          "visited": "{\"A\", \"B\", \"C\"}",
+          "frontier": "{}",
+          "phase": "\"complete\"",
+          "pc": "[traversal |-> \"Done\"]"
+        }
+      }
+    ]
+  ]
+}

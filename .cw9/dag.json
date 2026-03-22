@@ -779,105 +779,225 @@
       "when": "cw9 register is called again with the same criterion_id",
       "then": "the previously allocated gwt_id is returned without calling dag.register_gwt() again \u2014 the bindings file provides stable ID allocation across invocations"
     },
-    "gwt-0036": {
-      "id": "gwt-0036",
+    "gwt-0046": {
+      "id": "gwt-0046",
       "kind": "behavior",
-      "name": "projectcontext_self_hosting_engine_root",
+      "name": "scanner_python_line_ranges",
       "description": "",
       "version": 1,
-      "given": "the engine_root directory contains templates/ and python/ subdirectories",
-      "when": "ProjectContext.self_hosting(engine_root) is called",
-      "then": "engine_root, target_root, and state_root all resolve to the same directory, and spec_dir is templates/pluscal/instances/ within that root"
+      "given": "a Python source file with functions defined at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its def/async def keyword"
     },
-    "gwt-0037": {
-      "id": "gwt-0037",
+    "gwt-0047": {
+      "id": "gwt-0047",
       "kind": "behavior",
-      "name": "projectcontext_from_target_target_root_i",
+      "name": "scanner_python_nested_depth",
       "description": "",
       "version": 1,
-      "given": "a target directory with .cw9/config.toml containing [engine].root pointing to a valid directory",
-      "when": "ProjectContext.from_target(target_root) is called without explicit engine_root",
-      "then": "engine_root is resolved from config.toml and the correct mode (self_hosting or external) is selected based on whether engine_root equals target_root"
+      "given": "a Python source file with nested functions inside classes at varying indent levels",
+      "when": "scan_file is called",
+      "then": "nested functions have class_name set to the enclosing class based on indent depth, and top-level functions have class_name=None"
     },
-    "gwt-0038": {
-      "id": "gwt-0038",
+    "gwt-0048": {
+      "id": "gwt-0048",
       "kind": "behavior",
-      "name": "projectcontext_external_engine_root_targ",
+      "name": "scanner_typescript_line_ranges",
       "description": "",
       "version": 1,
-      "given": "engine_root and target_root are different directories",
-      "when": "ProjectContext.external(engine_root, target_root) is called",
-      "then": "state_root is target_root/.cw9, schema_dir and spec_dir are under state_root, and template_dir and tools_dir come from engine_root"
+      "given": "a TypeScript source file with functions and methods at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its function/method declaration"
     },
-    "gwt-0039": {
-      "id": "gwt-0039",
+    "gwt-0049": {
+      "id": "gwt-0049",
       "kind": "behavior",
-      "name": "build_retry_prompt_constructs_the_next_a",
+      "name": "scanner_typescript_nested_depth",
       "description": "",
       "version": 1,
-      "given": "a TLC verification attempt that fails with an identifiable error class (syntax_error, parse_error, type_error, invariant_violation, deadlock, constant_mismatch)",
-      "when": "build_retry_prompt constructs the next attempt prompt",
-      "then": "the retry prompt includes the classified error instruction block specific to that error class, the full previous LLM output, and the complete initial prompt"
+      "given": "a TypeScript source file with methods inside classes tracked by brace depth",
+      "when": "scan_file is called",
+      "then": "methods inside classes have class_name set to the enclosing class, and functions outside classes have class_name=None"
     },
-    "gwt-0040": {
-      "id": "gwt-0040",
+    "gwt-0050": {
+      "id": "gwt-0050",
       "kind": "behavior",
-      "name": "the_test_generation_pipeline_executes_it",
+      "name": "scanner_go_line_ranges",
       "description": "",
       "version": 1,
-      "given": "bridge artifacts containing verifiers and a language profile",
-      "when": "the test generation pipeline executes its three passes (plan, review, codegen)",
-      "then": "each pass consumes the prior pass output in strict sequence, and the final code passes compile, collect, and run stages of verification"
+      "given": "a Go source file with func declarations at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its func keyword"
     },
-    "gwt-0041": {
-      "id": "gwt-0041",
+    "gwt-0051": {
+      "id": "gwt-0051",
       "kind": "behavior",
-      "name": "the_test_plan_prompt_is_assembled",
+      "name": "scanner_go_nested_depth",
       "description": "",
       "version": 1,
-      "given": "a context bundle with simulation traces, API source, and GWT text",
-      "when": "the test plan prompt is assembled",
-      "then": "simulation traces appear first (rank 1), API context second (rank 2), verifiers and compiler hints third (rank 3), TLA+ spec text fourth (rank 4), and structural patterns last (rank 5)"
+      "given": "a Go source file with receiver methods on struct types",
+      "when": "scan_file is called",
+      "then": "receiver methods have class_name set to the receiver type, and package-level functions have class_name=None"
     },
-    "gwt-0042": {
-      "id": "gwt-0042",
+    "gwt-0052": {
+      "id": "gwt-0052",
       "kind": "behavior",
-      "name": "extract_db_path_is_called",
+      "name": "scanner_rust_line_ranges",
       "description": "",
       "version": 1,
-      "given": "a CW7 SQLite database with a single session containing requirements and GWT-format acceptance criteria",
-      "when": "extract(db_path) is called",
-      "then": "the output is a dict with requirements list (each having id and text) and gwts list (each having criterion_id of form cw7-crit-N, given, when, then, and parent_req)"
+      "given": "a Rust source file with fn declarations at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its fn keyword"
     },
-    "gwt-0043": {
-      "id": "gwt-0043",
+    "gwt-0053": {
+      "id": "gwt-0053",
       "kind": "behavior",
-      "name": "validate_depends_on_checks_the_authored",
+      "name": "scanner_rust_nested_depth",
       "description": "",
       "version": 1,
-      "given": "research notes mentioning functions that exist in crawl.db and an LLM response containing depends_on UUIDs",
-      "when": "validate_depends_on checks the authored GWTs against crawl.db",
-      "then": "only UUIDs that exist in crawl.db records table are retained in depends_on, and invalid UUIDs are removed with warnings (not exceptions)"
+      "given": "a Rust source file with fn declarations inside impl blocks",
+      "when": "scan_file is called",
+      "then": "methods inside impl blocks have class_name set to the impl type, and free functions have class_name=None"
     },
-    "gwt-0044": {
-      "id": "gwt-0044",
+    "gwt-0054": {
+      "id": "gwt-0054",
       "kind": "behavior",
-      "name": "bridge_crawl_to_dag_creates_resource_nod",
+      "name": "scanner_javascript_line_ranges",
       "description": "",
       "version": 1,
-      "given": "a crawl.db containing non-external function records with deterministic UUID5 identifiers",
-      "when": "bridge_crawl_to_dag creates RESOURCE nodes from crawl.db records",
-      "then": "every non-external record produces exactly one RESOURCE node in the DAG with id matching the record UUID, and the node count equals the record count"
+      "given": "a JavaScript source file with functions at known line positions",
+      "when": "scan_file is called",
+      "then": "each Skeleton.line_number equals the 1-indexed line of its function declaration"
     },
-    "gwt-0045": {
-      "id": "gwt-0045",
+    "gwt-0055": {
+      "id": "gwt-0055",
       "kind": "behavior",
-      "name": "the_orphan_cleanup_phase_runs_after_node",
+      "name": "scanner_javascript_nested_depth",
       "description": "",
       "version": 1,
-      "given": "a DAG containing RESOURCE nodes with UUID-format IDs and a crawl.db that no longer contains some of those UUIDs",
-      "when": "the orphan cleanup phase runs after node creation",
-      "then": "RESOURCE nodes with UUID-format IDs not found in crawl.db are removed from the DAG, while non-RESOURCE nodes and non-UUID-format nodes are preserved"
+      "given": "a JavaScript source file with methods inside classes tracked by brace depth",
+      "when": "scan_file is called",
+      "then": "methods inside classes have class_name set to the enclosing class, and functions outside classes have class_name=None"
+    },
+    "gwt-0056": {
+      "id": "gwt-0056",
+      "kind": "behavior",
+      "name": "python_profile_condition_compile",
+      "description": "",
+      "version": 1,
+      "given": "a TLA+ expression with standard operators (\\in, /\\, \\/, =, #, \\A, \\E, Len, Cardinality)",
+      "when": "PythonProfile.compile_condition is called",
+      "then": "a CompiledExpression is returned with a valid Python boolean expression using correct operator mapping (in, and, or, ==, !=, all, any, len)"
+    },
+    "gwt-0057": {
+      "id": "gwt-0057",
+      "kind": "behavior",
+      "name": "python_profile_file_validity",
+      "description": "",
+      "version": 1,
+      "given": "a PythonProfile and bridge artifacts with verifier conditions",
+      "when": "compile_assertions is called and the resulting expressions are embedded in a test file",
+      "then": "the test file passes Python syntax check via compile() and pytest --collect-only succeeds"
+    },
+    "gwt-0058": {
+      "id": "gwt-0058",
+      "kind": "behavior",
+      "name": "typescript_profile_condition_compile",
+      "description": "",
+      "version": 1,
+      "given": "a TLA+ expression with standard operators",
+      "when": "TypeScriptProfile.compile_condition is called",
+      "then": "a CompiledExpression is returned with a valid TypeScript expression using correct operator mapping (\\in \u2192 .includes(), = \u2192 ===, # \u2192 !==, quantifiers \u2192 .every/.some)"
+    },
+    "gwt-0059": {
+      "id": "gwt-0059",
+      "kind": "behavior",
+      "name": "typescript_profile_file_validity",
+      "description": "",
+      "version": 1,
+      "given": "a TypeScriptProfile and bridge artifacts with verifier conditions",
+      "when": "compile_assertions is called and the resulting expressions are embedded in a test file",
+      "then": "the test file passes TypeScript type-checking via tsc --noEmit"
+    },
+    "gwt-0060": {
+      "id": "gwt-0060",
+      "kind": "behavior",
+      "name": "go_profile_condition_compile",
+      "description": "",
+      "version": 1,
+      "given": "a TLA+ expression with standard operators",
+      "when": "GoProfile.compile_condition is called",
+      "then": "a CompiledExpression is returned with a valid Go expression (\\in \u2192 slices.Contains, quantifiers emit helper_defs with allSatisfy/anySatisfy functions)"
+    },
+    "gwt-0061": {
+      "id": "gwt-0061",
+      "kind": "behavior",
+      "name": "go_profile_file_validity",
+      "description": "",
+      "version": 1,
+      "given": "a GoProfile and bridge artifacts with verifier conditions",
+      "when": "compile_assertions is called and the resulting expressions are embedded in a test file",
+      "then": "the test file passes go vet ./... and go test -list . ./..."
+    },
+    "gwt-0062": {
+      "id": "gwt-0062",
+      "kind": "behavior",
+      "name": "rust_profile_condition_compile",
+      "description": "",
+      "version": 1,
+      "given": "a TLA+ expression with standard operators",
+      "when": "RustProfile.compile_condition is called",
+      "then": "a CompiledExpression is returned with a valid Rust expression (\\in \u2192 .contains(&x), quantifiers \u2192 .iter().all/.any, tuples \u2192 ())"
+    },
+    "gwt-0063": {
+      "id": "gwt-0063",
+      "kind": "behavior",
+      "name": "rust_profile_file_validity",
+      "description": "",
+      "version": 1,
+      "given": "a RustProfile and bridge artifacts with verifier conditions",
+      "when": "compile_assertions is called and the resulting expressions are embedded in a test file",
+      "then": "the test file passes cargo check (Rust compiler type-checking)"
+    },
+    "gwt-0064": {
+      "id": "gwt-0064",
+      "kind": "behavior",
+      "name": "check_seam_a_uuid_b_uuid_is_called",
+      "description": "",
+      "version": 1,
+      "given": "crawl.db has caller A with outs [{ok, Dict[str, Any]}] and callee B with ins [{name: config, type_str: Config, source: internal_call, source_uuid: A.uuid}]",
+      "when": "check_seam(A.uuid, B.uuid) is called",
+      "then": "a SeamMismatch is reported with severity type_mismatch because B expects Config but A provides Dict[str, Any]"
+    },
+    "gwt-0065": {
+      "id": "gwt-0065",
+      "kind": "behavior",
+      "name": "check_seam_a_uuid_b_uuid_is_called",
+      "description": "",
+      "version": 1,
+      "given": "crawl.db has caller A with outs [{ok, list[FnRecord]}] and callee B with ins [{name: records, type_str: list[FnRecord], source: internal_call, source_uuid: A.uuid}]",
+      "when": "check_seam(A.uuid, B.uuid) is called",
+      "then": "no SeamMismatch is reported because the type contract is satisfied via exact match"
+    },
+    "gwt-0066": {
+      "id": "gwt-0066",
+      "kind": "behavior",
+      "name": "check_all_seams_iterates_the_deps_view_a",
+      "description": "",
+      "version": 1,
+      "given": "crawl.db has callee B with ins [{name: data, source: internal_call, source_uuid: NULL}]",
+      "when": "check_all_seams() iterates the deps view and unresolved ins",
+      "then": "an UnresolvedSeam is reported for B.ins[data] because source_uuid is NULL and the seam cannot be verified"
+    },
+    "gwt-0067": {
+      "id": "gwt-0067",
+      "kind": "behavior",
+      "name": "check_all_seams_runs_to_completion",
+      "description": "",
+      "version": 1,
+      "given": "crawl.db with N dependency edges, M type mismatches, K unresolved, and (N-M-K) satisfied seams",
+      "when": "check_all_seams() runs to completion",
+      "then": "SeamReport contains exactly M mismatches plus K unresolved plus (N-M-K) satisfied and total_edges equals N so every edge is accounted for"
     },
     "impact-0001": {
       "id": "impact-0001",
@@ -1069,37 +1189,29 @@
       "version": 1,
       "text": "CLI pipeline (cw9 command) needs formal invariants on its core operations: extract preserving registered GWT nodes, loop persisting verified specs, pipeline step ordering with early exit, and register idempotency via criterion-ID bindings"
     },
-    "req-0011": {
-      "id": "req-0011",
+    "req-0015": {
+      "id": "req-0015",
       "kind": "requirement",
-      "name": "projectcontext_factory_methods_must_reso",
+      "name": "",
       "description": "",
       "version": 1,
-      "text": "ProjectContext factory methods must resolve paths correctly for self-hosting, external, and installed modes"
+      "text": "Language-specific scanners must produce Skeleton objects with correct 1-indexed line numbers and correct class_name assignment for nested functions/methods"
     },
-    "req-0012": {
-      "id": "req-0012",
+    "req-0016": {
+      "id": "req-0016",
       "kind": "requirement",
-      "name": "llm_integration_must_classify_errors_for",
+      "name": "",
       "description": "",
       "version": 1,
-      "text": "LLM integration must classify errors for targeted retry prompts and generate compilable tests through a multi-pass pipeline"
+      "text": "Language profiles must compile TLA+ conditions to valid target-language boolean expressions and generate test files that pass target compiler/interpreter verification"
     },
-    "req-0013": {
-      "id": "req-0013",
+    "req-0017": {
+      "id": "req-0017",
       "kind": "requirement",
-      "name": "cw7_database_extraction_must_produce_reg",
+      "name": "system_needs_seam_verification:_given_tw",
       "description": "",
       "version": 1,
-      "text": "CW7 database extraction must produce register-compatible JSON and GWT authoring must validate depends_on UUIDs against crawl.db"
-    },
-    "req-0014": {
-      "id": "req-0014",
-      "kind": "requirement",
-      "name": "crawl_bridge_must_synchronize_crawl.db_r",
-      "description": "",
-      "version": 1,
-      "text": "Crawl bridge must synchronize crawl.db records to DAG RESOURCE nodes and remove orphaned nodes"
+      "text": "System needs seam verification: given two connected functions in crawl.db, detect when the caller output contract does not satisfy the callee input contract"
     },
     "res-0001": {
       "id": "res-0001",
@@ -2397,6 +2509,96 @@
       "from": "req-0010",
       "to": "gwt-0035",
       "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0046",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0047",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0048",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0049",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0050",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0051",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0052",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0053",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0054",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0015",
+      "to": "gwt-0055",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0056",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0057",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0058",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0059",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0060",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0061",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0062",
+      "edge_type": "decomposes"
+    },
+    {
+      "from": "req-0016",
+      "to": "gwt-0063",
+      "edge_type": "decomposes"
     }
   ],
   "closure": {
@@ -2930,16 +3132,28 @@
     "gwt-0033": [],
     "gwt-0034": [],
     "gwt-0035": [],
-    "gwt-0036": [],
-    "gwt-0037": [],
-    "gwt-0038": [],
-    "gwt-0039": [],
-    "gwt-0040": [],
-    "gwt-0041": [],
-    "gwt-0042": [],
-    "gwt-0043": [],
-    "gwt-0044": [],
-    "gwt-0045": [],
+    "gwt-0046": [],
+    "gwt-0047": [],
+    "gwt-0048": [],
+    "gwt-0049": [],
+    "gwt-0050": [],
+    "gwt-0051": [],
+    "gwt-0052": [],
+    "gwt-0053": [],
+    "gwt-0054": [],
+    "gwt-0055": [],
+    "gwt-0056": [],
+    "gwt-0057": [],
+    "gwt-0058": [],
+    "gwt-0059": [],
+    "gwt-0060": [],
+    "gwt-0061": [],
+    "gwt-0062": [],
+    "gwt-0063": [],
+    "gwt-0064": [],
+    "gwt-0065": [],
+    "gwt-0066": [],
+    "gwt-0067": [],
     "impact-0001": [
       "gwt-0012",
       "gwt-0013",
@@ -3178,10 +3392,29 @@
       "gwt-0034",
       "gwt-0035"
     ],
-    "req-0011": [],
-    "req-0012": [],
-    "req-0013": [],
-    "req-0014": [],
+    "req-0015": [
+      "gwt-0046",
+      "gwt-0047",
+      "gwt-0048",
+      "gwt-0049",
+      "gwt-0050",
+      "gwt-0051",
+      "gwt-0052",
+      "gwt-0053",
+      "gwt-0054",
+      "gwt-0055"
+    ],
+    "req-0016": [
+      "gwt-0056",
+      "gwt-0057",
+      "gwt-0058",
+      "gwt-0059",
+      "gwt-0060",
+      "gwt-0061",
+      "gwt-0062",
+      "gwt-0063"
+    ],
+    "req-0017": [],
     "res-0001": [],
     "res-0002": [],
     "res-0003": [],
@@ -3434,49 +3667,46 @@
       "req-0010"
     ],
     "component-12": [
-      "gwt-0036"
+      "gwt-0046",
+      "gwt-0047",
+      "gwt-0048",
+      "gwt-0049",
+      "gwt-0050",
+      "gwt-0051",
+      "gwt-0052",
+      "gwt-0053",
+      "gwt-0054",
+      "gwt-0055",
+      "req-0015"
     ],
     "component-13": [
-      "gwt-0037"
+      "gwt-0056",
+      "gwt-0057",
+      "gwt-0058",
+      "gwt-0059",
+      "gwt-0060",
+      "gwt-0061",
+      "gwt-0062",
+      "gwt-0063",
+      "req-0016"
     ],
     "component-14": [
-      "gwt-0038"
+      "gwt-0064"
     ],
     "component-15": [
-      "gwt-0039"
+      "gwt-0065"
     ],
     "component-16": [
-      "gwt-0040"
+      "gwt-0066"
     ],
     "component-17": [
-      "gwt-0041"
+      "gwt-0067"
     ],
     "component-18": [
-      "gwt-0042"
-    ],
-    "component-19": [
-      "gwt-0043"
+      "req-0017"
     ],
     "component-2": [
       "cfg-l8y1"
-    ],
-    "component-20": [
-      "gwt-0044"
-    ],
-    "component-21": [
-      "gwt-0045"
-    ],
-    "component-22": [
-      "req-0011"
-    ],
-    "component-23": [
-      "req-0012"
-    ],
-    "component-24": [
-      "req-0013"
-    ],
-    "component-25": [
-      "req-0014"
     ],
     "component-3": [
       "cfg-m2z6"
@@ -3509,6 +3739,7 @@
   },
   "test_artifacts": {
     "chgprop-0001": "tests/generated/test_change_propagation.py",
+    "cli-0001": "tests/generated/test_gwt_0032.py",
     "crawlstore-0001": "tests/generated/test_gwt_0024.py",
     "depval-0001": "tests/generated/test_dep_validation.py",
     "impact-0001": "tests/generated/test_impact_analysis.py",

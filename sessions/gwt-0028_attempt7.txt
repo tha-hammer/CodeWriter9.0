@@ -1,0 +1,172 @@
+The root issue is twofold: the response system is duplicating my output (causing the second `---- MODULE` to be parsed), and the empty `\* BEGIN TRANSLATION` markers may be confusing pcal.trans into skipping the translation, leaving `Init`/`Next`/`vars` undefined when `Spec` is evaluated. The fix is to drop the markers and the `Spec` definition entirely, letting pcal.trans append its translation naturally inside the module boundary before `====`, with no post-translation TLA+ that depends on undefined operators.
+
+---- MODULE DfsBeforeSweep ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    EntryPoints,
+    InitialPending,
+    MaxSteps
+
+(* --algorithm DfsBeforeSweep
+
+variables
+    phase        = "dfs",
+    visited      = {},
+    pending      = InitialPending,
+    dfs_complete = FALSE,
+    sweep_active = FALSE,
+    step_count   = 0;
+
+define
+
+    TypeOK ==
+        /\ phase        \in {"dfs", "sweep", "done"}
+        /\ visited      \subseteq EntryPoints
+        /\ pending      \subseteq InitialPending
+        /\ dfs_complete \in BOOLEAN
+        /\ sweep_active \in BOOLEAN
+        /\ step_count   \in 0..MaxSteps
+
+    PhaseSequencing ==
+        phase = "sweep" => dfs_complete = TRUE
+
+    NoSweepDuringDfs ==
+        phase = "dfs" => sweep_active = FALSE
+
+    AllEntryPointsVisited ==
+        phase # "dfs" => EntryPoints \subseteq visited
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    DfsPrecedesSweep ==
+        /\ TypeOK
+        /\ PhaseSequencing
+        /\ NoSweepDuringDfs
+        /\ AllEntryPointsVisited
+        /\ BoundedExecution
+
+end define;
+
+fair process orchestrator = "orchestrator"
+begin
+    Run:
+        while phase # "done" /\ step_count < MaxSteps do
+            if phase = "dfs" /\ EntryPoints \ visited # {} then
+                with ep \in EntryPoints \ visited do
+                    visited    := visited \cup {ep};
+                    step_count := step_count + 1;
+                end with;
+            elsif phase = "dfs" /\ EntryPoints \ visited = {} then
+                dfs_complete := TRUE;
+                phase        := "sweep";
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ ~sweep_active /\ pending # {} then
+                sweep_active := TRUE;
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ sweep_active /\ pending # {} then
+                with rec \in pending do
+                    pending := pending \ {rec};
+                end with;
+                sweep_active := FALSE;
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ ~sweep_active /\ pending = {} then
+                phase      := "done";
+                step_count := step_count + 1;
+            end if;
+        end while;
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+The root issue is twofold: the response system is duplicating my output (causing the second `---- MODULE` to be parsed), and the empty `\* BEGIN TRANSLATION` markers may be confusing pcal.trans into skipping the translation, leaving `Init`/`Next`/`vars` undefined when `Spec` is evaluated. The fix is to drop the markers and the `Spec` definition entirely, letting pcal.trans append its translation naturally inside the module boundary before `====`, with no post-translation TLA+ that depends on undefined operators.
+
+---- MODULE DfsBeforeSweep ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    EntryPoints,
+    InitialPending,
+    MaxSteps
+
+(* --algorithm DfsBeforeSweep
+
+variables
+    phase        = "dfs",
+    visited      = {},
+    pending      = InitialPending,
+    dfs_complete = FALSE,
+    sweep_active = FALSE,
+    step_count   = 0;
+
+define
+
+    TypeOK ==
+        /\ phase        \in {"dfs", "sweep", "done"}
+        /\ visited      \subseteq EntryPoints
+        /\ pending      \subseteq InitialPending
+        /\ dfs_complete \in BOOLEAN
+        /\ sweep_active \in BOOLEAN
+        /\ step_count   \in 0..MaxSteps
+
+    PhaseSequencing ==
+        phase = "sweep" => dfs_complete = TRUE
+
+    NoSweepDuringDfs ==
+        phase = "dfs" => sweep_active = FALSE
+
+    AllEntryPointsVisited ==
+        phase # "dfs" => EntryPoints \subseteq visited
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    DfsPrecedesSweep ==
+        /\ TypeOK
+        /\ PhaseSequencing
+        /\ NoSweepDuringDfs
+        /\ AllEntryPointsVisited
+        /\ BoundedExecution
+
+end define;
+
+fair process orchestrator = "orchestrator"
+begin
+    Run:
+        while phase # "done" /\ step_count < MaxSteps do
+            if phase = "dfs" /\ EntryPoints \ visited # {} then
+                with ep \in EntryPoints \ visited do
+                    visited    := visited \cup {ep};
+                    step_count := step_count + 1;
+                end with;
+            elsif phase = "dfs" /\ EntryPoints \ visited = {} then
+                dfs_complete := TRUE;
+                phase        := "sweep";
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ ~sweep_active /\ pending # {} then
+                sweep_active := TRUE;
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ sweep_active /\ pending # {} then
+                with rec \in pending do
+                    pending := pending \ {rec};
+                end with;
+                sweep_active := FALSE;
+                step_count   := step_count + 1;
+            elsif phase = "sweep" /\ ~sweep_active /\ pending = {} then
+                phase      := "done";
+                step_count := step_count + 1;
+            end if;
+        end while;
+    Terminate:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

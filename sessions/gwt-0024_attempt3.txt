@@ -1,0 +1,292 @@
+---- MODULE UpsertAtomicity ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    UUIDs,
+    MaxSteps
+
+ASSUME Cardinality(UUIDs) >= 2
+
+TargetUUID == CHOOSE u \in UUIDs : TRUE
+OtherUUID  == CHOOSE u \in UUIDs : u /= TargetUUID
+
+(* --algorithm UpsertAtomicity
+
+variables
+    c_records = {TargetUUID, OtherUUID},
+    c_ins  = [u \in UUIDs |->
+                IF u = TargetUUID THEN {"old_in"}
+                ELSE IF u = OtherUUID THEN {"other_in"}
+                ELSE {}],
+    c_outs = [u \in UUIDs |->
+                IF u = TargetUUID THEN {"old_out"}
+                ELSE {}],
+    c_refs = [u \in UUIDs |->
+                IF u = TargetUUID THEN {OtherUUID}
+                ELSE {}],
+    w_records = {TargetUUID, OtherUUID},
+    w_ins  = [u \in UUIDs |->
+                IF u = TargetUUID THEN {"old_in"}
+                ELSE IF u = OtherUUID THEN {"other_in"}
+                ELSE {}],
+    w_outs = [u \in UUIDs |->
+                IF u = TargetUUID THEN {"old_out"}
+                ELSE {}],
+    w_refs = [u \in UUIDs |->
+                IF u = TargetUUID THEN {OtherUUID}
+                ELSE {}],
+    txn_state = "idle",
+    reader_saw_partial = FALSE,
+    step_count = 0;
+
+define
+
+    NoOrphanedIns ==
+        \A u \in UUIDs : c_ins[u] /= {} => u \in c_records
+
+    NoOrphanedOuts ==
+        \A u \in UUIDs : c_outs[u] /= {} => u \in c_records
+
+    RefIntegrity ==
+        \A u \in UUIDs :
+            \A src \in c_refs[u] : src \in c_records
+
+    AtomicityHolds == reader_saw_partial = FALSE
+
+    BoundedExecution == step_count <= MaxSteps
+
+    CommitCompleteness ==
+        txn_state = "committed" =>
+            /\ TargetUUID \in c_records
+            /\ c_ins[TargetUUID]  = {"new_in"}
+            /\ c_outs[TargetUUID] = {"new_out"}
+            /\ c_refs[TargetUUID] = {}
+
+    RollbackPreservation ==
+        txn_state = "rolled_back" =>
+            /\ TargetUUID \in c_records
+            /\ c_ins[TargetUUID]  = {"old_in"}
+            /\ c_outs[TargetUUID] = {"old_out"}
+            /\ c_refs[TargetUUID] = {OtherUUID}
+
+    OtherUUIDUnaffected ==
+        c_ins[OtherUUID] = {"other_in"}
+
+end define;
+
+fair process upsert = "upsert"
+begin
+    BeginUpsert:
+        w_records := c_records;
+        w_ins     := c_ins;
+        w_outs    := c_outs;
+        w_refs    := c_refs;
+        txn_state := "begun";
+        step_count := step_count + 1;
+
+    NullifyRefs:
+        w_refs    := [w_refs EXCEPT ![TargetUUID] = {}];
+        txn_state := "nullified";
+        step_count := step_count + 1;
+
+    DeleteOld:
+        w_records := w_records \ {TargetUUID};
+        w_ins     := [w_ins  EXCEPT ![TargetUUID] = {}];
+        w_outs    := [w_outs EXCEPT ![TargetUUID] = {}];
+        txn_state := "deleted";
+        step_count := step_count + 1;
+
+    InsertNew:
+        w_records := w_records \union {TargetUUID};
+        w_ins     := [w_ins  EXCEPT ![TargetUUID] = {"new_in"}];
+        w_outs    := [w_outs EXCEPT ![TargetUUID] = {"new_out"}];
+        txn_state := "inserted";
+        step_count := step_count + 1;
+
+    DecideOutcome:
+        either
+            Commit:
+                c_records := w_records;
+                c_ins     := w_ins;
+                c_outs    := w_outs;
+                c_refs    := w_refs;
+                txn_state := "committed";
+                step_count := step_count + 1;
+        or
+            RollbackOp:
+                txn_state := "rolled_back";
+                step_count := step_count + 1;
+        end either;
+
+    UpsertDone:
+        skip;
+end process;
+
+fair process reader = "reader"
+begin
+    ReadLoop:
+        while txn_state \notin {"committed", "rolled_back"} /\ step_count < MaxSteps do
+            if TargetUUID \in c_records then
+                if c_ins[TargetUUID] = {} /\ c_outs[TargetUUID] = {} then
+                    reader_saw_partial := TRUE;
+                end if;
+            else
+                if c_ins[TargetUUID] /= {} \/ c_outs[TargetUUID] /= {} then
+                    reader_saw_partial := TRUE;
+                end if;
+            end if;
+        end while;
+    ReaderDone:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE UpsertAtomicity ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    UUIDs,
+    MaxSteps
+
+ASSUME Cardinality(UUIDs) >= 2
+
+TargetUUID == CHOOSE u \in UUIDs : TRUE
+OtherUUID  == CHOOSE u \in UUIDs : u /= TargetUUID
+
+(* --algorithm UpsertAtomicity
+
+variables
+    c_records = {TargetUUID, OtherUUID},
+    c_ins  = [u \in UUIDs |->
+                IF u = TargetUUID THEN {"old_in"}
+                ELSE IF u = OtherUUID THEN {"other_in"}
+                ELSE {}],
+    c_outs = [u \in UUIDs |->
+                IF u = TargetUUID THEN {"old_out"}
+                ELSE {}],
+    c_refs = [u \in UUIDs |->
+                IF u = TargetUUID THEN {OtherUUID}
+                ELSE {}],
+    w_records = {TargetUUID, OtherUUID},
+    w_ins  = [u \in UUIDs |->
+                IF u = TargetUUID THEN {"old_in"}
+                ELSE IF u = OtherUUID THEN {"other_in"}
+                ELSE {}],
+    w_outs = [u \in UUIDs |->
+                IF u = TargetUUID THEN {"old_out"}
+                ELSE {}],
+    w_refs = [u \in UUIDs |->
+                IF u = TargetUUID THEN {OtherUUID}
+                ELSE {}],
+    txn_state = "idle",
+    reader_saw_partial = FALSE,
+    step_count = 0;
+
+define
+
+    NoOrphanedIns ==
+        \A u \in UUIDs : c_ins[u] /= {} => u \in c_records
+
+    NoOrphanedOuts ==
+        \A u \in UUIDs : c_outs[u] /= {} => u \in c_records
+
+    RefIntegrity ==
+        \A u \in UUIDs :
+            \A src \in c_refs[u] : src \in c_records
+
+    AtomicityHolds == reader_saw_partial = FALSE
+
+    BoundedExecution == step_count <= MaxSteps
+
+    CommitCompleteness ==
+        txn_state = "committed" =>
+            /\ TargetUUID \in c_records
+            /\ c_ins[TargetUUID]  = {"new_in"}
+            /\ c_outs[TargetUUID] = {"new_out"}
+            /\ c_refs[TargetUUID] = {}
+
+    RollbackPreservation ==
+        txn_state = "rolled_back" =>
+            /\ TargetUUID \in c_records
+            /\ c_ins[TargetUUID]  = {"old_in"}
+            /\ c_outs[TargetUUID] = {"old_out"}
+            /\ c_refs[TargetUUID] = {OtherUUID}
+
+    OtherUUIDUnaffected ==
+        c_ins[OtherUUID] = {"other_in"}
+
+end define;
+
+fair process upsert = "upsert"
+begin
+    BeginUpsert:
+        w_records := c_records;
+        w_ins     := c_ins;
+        w_outs    := c_outs;
+        w_refs    := c_refs;
+        txn_state := "begun";
+        step_count := step_count + 1;
+
+    NullifyRefs:
+        w_refs    := [w_refs EXCEPT ![TargetUUID] = {}];
+        txn_state := "nullified";
+        step_count := step_count + 1;
+
+    DeleteOld:
+        w_records := w_records \ {TargetUUID};
+        w_ins     := [w_ins  EXCEPT ![TargetUUID] = {}];
+        w_outs    := [w_outs EXCEPT ![TargetUUID] = {}];
+        txn_state := "deleted";
+        step_count := step_count + 1;
+
+    InsertNew:
+        w_records := w_records \union {TargetUUID};
+        w_ins     := [w_ins  EXCEPT ![TargetUUID] = {"new_in"}];
+        w_outs    := [w_outs EXCEPT ![TargetUUID] = {"new_out"}];
+        txn_state := "inserted";
+        step_count := step_count + 1;
+
+    DecideOutcome:
+        either
+            Commit:
+                c_records := w_records;
+                c_ins     := w_ins;
+                c_outs    := w_outs;
+                c_refs    := w_refs;
+                txn_state := "committed";
+                step_count := step_count + 1;
+        or
+            RollbackOp:
+                txn_state := "rolled_back";
+                step_count := step_count + 1;
+        end either;
+
+    UpsertDone:
+        skip;
+end process;
+
+fair process reader = "reader"
+begin
+    ReadLoop:
+        while txn_state \notin {"committed", "rolled_back"} /\ step_count < MaxSteps do
+            if TargetUUID \in c_records then
+                if c_ins[TargetUUID] = {} /\ c_outs[TargetUUID] = {} then
+                    reader_saw_partial := TRUE;
+                end if;
+            else
+                if c_ins[TargetUUID] /= {} \/ c_outs[TargetUUID] /= {} then
+                    reader_saw_partial := TRUE;
+                end if;
+            end if;
+        end while;
+    ReaderDone:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

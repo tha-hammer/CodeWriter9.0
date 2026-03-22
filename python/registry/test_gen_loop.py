@@ -349,19 +349,27 @@ async def run_test_gen_loop(
     # Use target-language system prompt from profile
     sys_prompt = profile.build_system_prompt()
 
+    log = lambda msg: print(f"[gen-tests:{ctx.gwt_id}] {msg}", file=sys.stderr, flush=True)
+
     # Pass 1: Generate test plan
+    log("Pass 1/3: generating test plan...")
     plan_prompt = build_test_plan_prompt(ctx)
     test_plan = await call_llm(plan_prompt, system_prompt=sys_prompt)
+    log("Pass 1/3: done")
 
     # Pass 2: Review
+    log("Pass 2/3: reviewing test plan...")
     review_prompt = build_review_prompt(test_plan, ctx)
     reviewed_plan = await call_llm(review_prompt, system_prompt=sys_prompt)
+    log("Pass 2/3: done")
 
     # Pass 3: Generate code
+    log("Pass 3/3: generating test code...")
     codegen_prompt = build_codegen_prompt(reviewed_plan, ctx)
     code_response = await call_llm(codegen_prompt, system_prompt=sys_prompt)
     test_code = profile.extract_code_from_response(code_response)
     test_path.write_text(test_code)
+    log("Pass 3/3: done")
 
     if session_dir:
         session_dir.mkdir(parents=True, exist_ok=True)
@@ -369,12 +377,14 @@ async def run_test_gen_loop(
         (session_dir / f"{ctx.gwt_id}_review.txt").write_text(reviewed_plan)
 
     # Verify using profile
+    log("Verifying generated tests (attempt 1)...")
     result = profile.verify_test_file(test_path, ctx.source_dir)
     attempt = 1
 
     # Retry loop
     while not result.passed and attempt < max_attempts:
         attempt += 1
+        log(f"Attempt {attempt}/{max_attempts}: retrying (failed at '{result.stage}')...")
         retry_prompt = build_retry_prompt(test_code, result, ctx)
         code_response = await call_llm(retry_prompt, system_prompt=sys_prompt)
         test_code = profile.extract_code_from_response(code_response)
@@ -386,6 +396,7 @@ async def run_test_gen_loop(
                 "\n".join(result.errors) + "\n" + result.stderr
             )
 
+        log(f"Verifying generated tests (attempt {attempt})...")
         result = profile.verify_test_file(test_path, ctx.source_dir)
 
     result.attempt = attempt

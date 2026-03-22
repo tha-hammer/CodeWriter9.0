@@ -1,0 +1,208 @@
+---- MODULE RegisterIdempotent ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    InputCriteria,
+    MaxSteps
+
+ASSUME InputCriteria # {}
+
+(* --algorithm RegisterIdempotent
+
+variables
+  bindings        = [c \in {} |-> 0],
+  dag_nodes       = {},
+  next_id         = 1,
+  to_process      = {},
+  registered      = {},
+  phase           = "first_inv",
+  call_count      = 0,
+  call_count_at_save = 0,
+  bindings_at_save = [c \in {} |-> 0],
+  step_count      = 0;
+
+define
+
+  IdempotentAllocation ==
+    phase = "done" =>
+      (\A c \in InputCriteria : bindings[c] = bindings_at_save[c])
+
+  NoDuplicateNodes ==
+    Cardinality(dag_nodes) = Cardinality(DOMAIN bindings)
+
+  BindingStable ==
+    \A c \in DOMAIN bindings_at_save :
+      (c \in DOMAIN bindings) => (bindings[c] = bindings_at_save[c])
+
+  SecondCallSkipsAllocate ==
+    phase = "done" => call_count = call_count_at_save
+
+  BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process actor = "main"
+begin
+  StartFirst:
+    to_process := InputCriteria;
+    registered := {};
+    phase      := "first_inv";
+    step_count := step_count + 1;
+
+  ProcessFirstLoop:
+    while to_process # {} do
+      with c \in to_process do
+        if c \in DOMAIN bindings then
+          registered := registered \cup {c};
+          to_process := to_process \ {c};
+        else
+          bindings   := bindings @@ (c :> next_id);
+          dag_nodes  := dag_nodes \cup {next_id};
+          next_id    := next_id + 1;
+          call_count := call_count + 1;
+          registered := registered \cup {c};
+          to_process := to_process \ {c};
+        end if;
+      end with;
+      step_count := step_count + 1;
+    end while;
+
+  SaveFirst:
+    bindings_at_save   := bindings;
+    call_count_at_save := call_count;
+    phase              := "second_inv";
+    to_process         := InputCriteria;
+    registered         := {};
+    step_count         := step_count + 1;
+
+  ProcessSecondLoop:
+    while to_process # {} do
+      with c \in to_process do
+        if c \in DOMAIN bindings then
+          registered := registered \cup {c};
+          to_process := to_process \ {c};
+        else
+          bindings   := bindings @@ (c :> next_id);
+          dag_nodes  := dag_nodes \cup {next_id};
+          next_id    := next_id + 1;
+          call_count := call_count + 1;
+          registered := registered \cup {c};
+          to_process := to_process \ {c};
+        end if;
+      end with;
+      step_count := step_count + 1;
+    end while;
+
+  Finish:
+    phase      := "done";
+    step_count := step_count + 1;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE RegisterIdempotent ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    InputCriteria,
+    MaxSteps
+
+ASSUME InputCriteria # {}
+
+(* --algorithm RegisterIdempotent
+
+variables
+  bindings        = [c \in {} |-> 0],
+  dag_nodes       = {},
+  next_id         = 1,
+  to_process      = {},
+  registered      = {},
+  phase           = "first_inv",
+  call_count      = 0,
+  call_count_at_save = 0,
+  bindings_at_save = [c \in {} |-> 0],
+  step_count      = 0;
+
+define
+
+  IdempotentAllocation ==
+    phase = "done" =>
+      (\A c \in InputCriteria : bindings[c] = bindings_at_save[c])
+
+  NoDuplicateNodes ==
+    Cardinality(dag_nodes) = Cardinality(DOMAIN bindings)
+
+  BindingStable ==
+    \A c \in DOMAIN bindings_at_save :
+      (c \in DOMAIN bindings) => (bindings[c] = bindings_at_save[c])
+
+  SecondCallSkipsAllocate ==
+    phase = "done" => call_count = call_count_at_save
+
+  BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process actor = "main"
+begin
+  StartFirst:
+    to_process := InputCriteria;
+    registered := {};
+    phase      := "first_inv";
+    step_count := step_count + 1;
+
+  ProcessFirstLoop:
+    while to_process # {} do
+      with c \in to_process do
+        if c \in DOMAIN bindings then
+          registered := registered \cup {c};
+          to_process := to_process \ {c};
+        else
+          bindings   := bindings @@ (c :> next_id);
+          dag_nodes  := dag_nodes \cup {next_id};
+          next_id    := next_id + 1;
+          call_count := call_count + 1;
+          registered := registered \cup {c};
+          to_process := to_process \ {c};
+        end if;
+      end with;
+      step_count := step_count + 1;
+    end while;
+
+  SaveFirst:
+    bindings_at_save   := bindings;
+    call_count_at_save := call_count;
+    phase              := "second_inv";
+    to_process         := InputCriteria;
+    registered         := {};
+    step_count         := step_count + 1;
+
+  ProcessSecondLoop:
+    while to_process # {} do
+      with c \in to_process do
+        if c \in DOMAIN bindings then
+          registered := registered \cup {c};
+          to_process := to_process \ {c};
+        else
+          bindings   := bindings @@ (c :> next_id);
+          dag_nodes  := dag_nodes \cup {next_id};
+          next_id    := next_id + 1;
+          call_count := call_count + 1;
+          registered := registered \cup {c};
+          to_process := to_process \ {c};
+        end if;
+      end with;
+      step_count := step_count + 1;
+    end while;
+
+  Finish:
+    phase      := "done";
+    step_count := step_count + 1;
+
+end process;
+
+end algorithm; *)
+
+====

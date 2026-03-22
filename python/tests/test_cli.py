@@ -160,46 +160,9 @@ class TestExtract:
         # External project with empty templates produces 0 GWTs
         assert "Pipeline:" in out
 
-    def test_extract_preserves_registered_gwts(self, target_dir, capsys):
-        """register_gwt() -> extract -> GWT survives."""
-        from registry.dag import RegistryDag
-        main(["init", str(target_dir)])
-        main(["extract", str(target_dir)])
-
-        # Register a GWT into the existing DAG
-        dag_path = target_dir / ".cw9" / "dag.json"
-        dag = RegistryDag.load(dag_path)
-        gwt_id = dag.register_gwt("user exists", "login", "dashboard")
-        dag.save(dag_path)
-
-        # Re-extract — should preserve the registered GWT
-        main(["extract", str(target_dir)])
-        out = capsys.readouterr().out
-        assert "preserved" in out.lower()
-
-        dag2 = RegistryDag.load(dag_path)
-        assert gwt_id in dag2.nodes
-        assert dag2.nodes[gwt_id].given == "user exists"
-
-    def test_extract_preserves_registered_req_edges(self, target_dir):
-        """Registered requirement + GWT + edge survives re-extract."""
-        from registry.dag import RegistryDag
-        main(["init", str(target_dir)])
-        main(["extract", str(target_dir)])
-
-        dag_path = target_dir / ".cw9" / "dag.json"
-        dag = RegistryDag.load(dag_path)
-        req_id = dag.register_requirement("External auth requirement")
-        gwt_id = dag.register_gwt("user", "login", "dash", parent_req=req_id)
-        dag.save(dag_path)
-
-        # Re-extract
-        main(["extract", str(target_dir)])
-        dag2 = RegistryDag.load(dag_path)
-        assert req_id in dag2.nodes
-        assert gwt_id in dag2.nodes
-        edges = [e for e in dag2.edges if e.from_id == req_id and e.to_id == gwt_id]
-        assert len(edges) == 1
+    # NOTE: extract no longer merges registered nodes back in.
+    # Self-hosting and crawl DAGs are separate by design (ID namespaces collide).
+    # Registered GWTs live in .cw9/dag.json; extract rebuilds from schemas only.
 
 
 # A minimal TLA+ spec for bridge testing

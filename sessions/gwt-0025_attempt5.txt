@@ -1,0 +1,170 @@
+The root cause is that `Edges` is instantiated by the test harness as a set of plain model values, so `e[1]` / `e[2]` tuple-indexing triggers "non-function applied as a function." The fix is to replace the set-of-pairs `Edges` constant with a proper adjacency function `Succs : Nodes -> SUBSET Nodes`, and guard all function applications with `DOMAIN` checks so the spec is robust to any model configuration where `StartNode` may fall outside `Nodes`.
+
+---- MODULE ForwardSubgraphComplete ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Nodes,
+    StartNode,
+    Succs,
+    MaxDepth
+
+RECURSIVE Reach(_, _)
+Reach(S, boundary) ==
+    IF boundary = {} THEN S
+    ELSE
+        LET next == ( UNION { IF n \in DOMAIN Succs THEN Succs[n] ELSE {}
+                              : n \in boundary } ) \ S
+        IN Reach(S \cup next, next)
+
+Reachable == Reach({StartNode}, {StartNode})
+
+(* --algorithm ForwardSubgraphComplete
+
+variables
+    visited  = {},
+    frontier = {},
+    phase    = "init",
+    depth    = 0;
+
+define
+
+    SeedAlwaysIncluded ==
+        phase /= "init" => StartNode \in visited
+
+    VisitedSubsetReachable ==
+        visited \subseteq Reachable
+
+    CompletenessInvariant ==
+        phase = "complete" => Reachable \subseteq visited
+
+    FrontierSubsetVisited ==
+        frontier \subseteq visited
+
+    BoundedDepth ==
+        depth <= MaxDepth
+
+    ValidPhase ==
+        phase \in {"init", "expanding", "complete", "partial"}
+
+end define;
+
+fair process traversal = "traversal"
+begin
+    Seed:
+        visited  := {StartNode};
+        frontier := {StartNode};
+        phase    := "expanding";
+        depth    := 0;
+
+    Expand:
+        while frontier /= {} /\ depth < MaxDepth do
+            with node \in frontier do
+                with newCallees =
+                    ( IF node \in DOMAIN Succs THEN Succs[node] ELSE {} ) \ visited
+                do
+                    visited  := visited \cup newCallees;
+                    frontier := (frontier \ {node}) \cup newCallees;
+                    depth    := depth + 1;
+                end with;
+            end with;
+        end while;
+
+    Terminate:
+        if frontier = {} then
+            phase := "complete";
+        else
+            phase := "partial";
+        end if;
+
+end process;
+
+end algorithm; *)
+
+====
+The root cause is that `Edges` is instantiated by the test harness as a set of plain model values, so `e[1]` / `e[2]` tuple-indexing triggers "non-function applied as a function." The fix is to replace the set-of-pairs `Edges` constant with a proper adjacency function `Succs : Nodes -> SUBSET Nodes`, and guard all function applications with `DOMAIN` checks so the spec is robust to any model configuration where `StartNode` may fall outside `Nodes`.
+
+---- MODULE ForwardSubgraphComplete ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Nodes,
+    StartNode,
+    Succs,
+    MaxDepth
+
+RECURSIVE Reach(_, _)
+Reach(S, boundary) ==
+    IF boundary = {} THEN S
+    ELSE
+        LET next == ( UNION { IF n \in DOMAIN Succs THEN Succs[n] ELSE {}
+                              : n \in boundary } ) \ S
+        IN Reach(S \cup next, next)
+
+Reachable == Reach({StartNode}, {StartNode})
+
+(* --algorithm ForwardSubgraphComplete
+
+variables
+    visited  = {},
+    frontier = {},
+    phase    = "init",
+    depth    = 0;
+
+define
+
+    SeedAlwaysIncluded ==
+        phase /= "init" => StartNode \in visited
+
+    VisitedSubsetReachable ==
+        visited \subseteq Reachable
+
+    CompletenessInvariant ==
+        phase = "complete" => Reachable \subseteq visited
+
+    FrontierSubsetVisited ==
+        frontier \subseteq visited
+
+    BoundedDepth ==
+        depth <= MaxDepth
+
+    ValidPhase ==
+        phase \in {"init", "expanding", "complete", "partial"}
+
+end define;
+
+fair process traversal = "traversal"
+begin
+    Seed:
+        visited  := {StartNode};
+        frontier := {StartNode};
+        phase    := "expanding";
+        depth    := 0;
+
+    Expand:
+        while frontier /= {} /\ depth < MaxDepth do
+            with node \in frontier do
+                with newCallees =
+                    ( IF node \in DOMAIN Succs THEN Succs[node] ELSE {} ) \ visited
+                do
+                    visited  := visited \cup newCallees;
+                    frontier := (frontier \ {node}) \cup newCallees;
+                    depth    := depth + 1;
+                end with;
+            end with;
+        end while;
+
+    Terminate:
+        if frontier = {} then
+            phase := "complete";
+        else
+            phase := "partial";
+        end if;
+
+end process;
+
+end algorithm; *)
+
+====

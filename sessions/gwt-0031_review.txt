@@ -1,0 +1,2154 @@
+**Review findings — 5 semantic defects identified:**
+
+| # | Severity | Location | Issue |
+|---|----------|----------|-------|
+| 1 | **Bug** | Trace 3 — `r1_extracting` comment | Comment says "finished Acquire" but the event fires from `after_extract`, i.e. after Extract. Misleads any reader tracing the interleaving. |
+| 2 | **Semantic gap** | `_assert_invariants` / `test_invariant_semaphore_consistent_two_topologies` | `semaphore` is defined as `concurrency − len(active)`, so `semaphore + len(active) == concurrency` is an arithmetic identity — it can **never** fail. The `SemaphoreConsistent` check is unfalsifiable as implemented. The tautology must be called out explicitly; the test must add a cross-check against the real asyncio semaphore counter (`_sem._value`) where the invariant *can* diverge (i.e. at `:Acquire` and `:Finish` checkpoints where `active` and `_sem` are in sync). The `:Release` checkpoint is intentionally exempt (active updated before `_sem.release()`) and must be documented. |
+| 3 | **Dead variable** | Trace 10 — `r2_extracted` | Declared, passed as `after_extract`, set inside `extract_one`, but **never awaited** anywhere. No coroutine is gated on it; it is coordination dead-code. Remove it. |
+| 4 | **Unused import** | Top-level `from dag import … CycleError` | `CycleError` is imported but no test exercises it. Either add a cycle test or remove the import; leaving it in falsely implies coverage. |
+| 5 | **Missing version guard** | `test_edge_concurrency_equals_record_count_allows_full_parallelism` | `asyncio.Barrier` was added in **Python 3.11**. No comment or version assertion is present; the test silently fails on older runtimes. |
+
+Corrections applied inline below (`# CORRECTED [N]:` marks each change):
+
+```python
+import asyncio
+from typing import FrozenSet, List, Optional, Set, Tuple
+import pytest
+from registry.types import Edge, EdgeType, Node, NodeKind
+from dag import RegistryDag, NodeNotFoundError  # CORRECTED [4]: removed unused CycleError
+
+
+# ── TLA+ model parameters ─────────────────────────────────────────────────────
+CONCURRENCY: int = 10
+ALL_RECORDS: FrozenSet[str] = frozenset({"Records_1", "Records_2"})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DAG fixture helper
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _make_dag(*record_ids: str) -> RegistryDag:
+    """Return a RegistryDag with one behavior Node per record id."""
+    dag = RegistryDag()
+    for rid in record_ids:
+        dag.add_node(Node.behavior(rid, rid, "given", "when", "then"))
+    return dag
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Invariant checker  (TLA+ invariants → Python assertions)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _assert_invariants(
+    semaphore: int,
+    active: FrozenSet[str],
+    completed: FrozenSet[str],
+    pending: FrozenSet[str],
+    concurrency: int,
+    records: FrozenSet[str],
+    ctx: str = "",
+    *,
+    real_sem_value: Optional[int] = None,  # CORRECTED [2]: pass asyncio semaphore._value when available
+) -> None:
+    """
+    Verify all five TLA+ invariants at a single state snapshot.
+
+    SemaphoreNonNeg          semaphore >= 0
+    ActiveBounded            |active| <= C
+    SemaphoreConsistent      semaphore + |active| = C
+    ActiveReleasedOnComplete active ∩ completed = ∅
+    AllEventuallyProcessed   (pending=∅ ∧ active=∅) ⟹ completed = Records
+
+    NOTE — SemaphoreConsistent tautology:                          [CORRECTED 2]
+      `semaphore` is computed as `concurrency − len(active)`, so the identity
+      `semaphore + len(active) == concurrency` holds by construction and can
+      never be falsified by the derived property alone.  To make the invariant
+      meaningful we additionally cross-check against the *real* asyncio semaphore
+      counter (`real_sem_value`) when it is supplied.  The only legitimate
+      divergence is at the `:Release` checkpoint, where `active` is updated
+      before `_sem.release()` is called; that case is excluded by the caller.
+    """
+    p = f"[{ctx}] " if ctx else ""
+    assert semaphore >= 0, \
+        f"{p}SemaphoreNonNeg: semaphore={semaphore}"
+    assert len(active) <= concurrency, \
+        f"{p}ActiveBounded: |active|={len(active)} C={concurrency}"
+    assert semaphore + len(active) == concurrency, \
+        f"{p}SemaphoreConsistent: {semaphore}+{len(active)}!={concurrency}"
+    # CORRECTED [2]: cross-check asyncio semaphore counter at checkpoints where
+    # active and _sem are expected to be in sync (i.e. not the :Release window).
+    if real_sem_value is not None:
+        assert real_sem_value == semaphore, (
+            f"{p}SemaphoreConsistent (real asyncio): "
+            f"_sem._value={real_sem_value} expected={semaphore}"
+        )
+    assert active.isdisjoint(completed), \
+        f"{p}ActiveReleasedOnComplete: overlap={active & completed}"
+    if not pending and not active:
+        assert completed == records, \
+            f"{p}AllEventuallyProcessed: completed={completed} expected={records}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _Sim — asyncio translation of the TLA+ PlusCal extractor algorithm
+# ─────────────────────────────────────────────────────────────────────────────
+
+class _Sim:
+    """
+    asyncio implementation of the TLA+ PlusCal SemaphoreBoundedConcurrency algorithm.
+
+    TLA+ state variable mapping:
+      semaphore   ↔ property  concurrency − |active|  (SemaphoreConsistent holds by
+                               construction; the real test is that asyncio.Semaphore
+                               prevents |active| from ever exceeding C)
+      active      ↔ self.active
+      completed   ↔ self.completed
+      pending     ↔ self.pending
+
+    SemaphoreConsistent cross-check:
+      At :Acquire, :Extract, and :Finish checkpoints active and _sem are in sync,
+      so we pass _sem._value for the real-counter check.
+      At :Release active has been updated but _sem.release() has not yet been
+      called, so we intentionally omit the real-counter check there.
+
+    All five invariants are asserted at every state transition, inside the lock,
+    so each snapshot is internally consistent before being checked.
+    """
+
+    def __init__(
+        self,
+        records: FrozenSet[str] = ALL_RECORDS,
+        concurrency: int = CONCURRENCY,
+    ) -> None:
+        self.records = records
+        self.concurrency = concurrency
+        self._sem = asyncio.Semaphore(concurrency)
+        self._lock = asyncio.Lock()
+        self.active: Set[str] = set()
+        self.completed: Set[str] = set()
+        self.pending: Set[str] = set(records)
+        self.max_concurrent: int = 0
+        self._history: List[Tuple[str, dict]] = []
+
+    @property
+    def semaphore(self) -> int:
+        """Available permits — mirrors TLA+ semaphore variable."""
+        return self.concurrency - len(self.active)
+
+    def _snap(self) -> dict:
+        return {
+            "semaphore": self.semaphore,
+            "active": frozenset(self.active),
+            "completed": frozenset(self.completed),
+            "pending": frozenset(self.pending),
+        }
+
+    def _check(self, ctx: str, *, sync_real_sem: bool = True) -> None:
+        # CORRECTED [2]: pass real asyncio semaphore value at sync points;
+        # suppress it at :Release where active and _sem are transiently diverged.
+        s = self._snap()
+        self._history.append((ctx, s))
+        real_val = self._sem._value if sync_real_sem else None
+        _assert_invariants(
+            s["semaphore"], s["active"], s["completed"], s["pending"],
+            self.concurrency, self.records, ctx,
+            real_sem_value=real_val,
+        )
+
+    async def extract_one(
+        self,
+        record: str,
+        *,
+        after_acquire: Optional[asyncio.Event] = None,
+        after_extract: Optional[asyncio.Event] = None,
+        wait_before_release: Optional[asyncio.Event] = None,
+        after_release: Optional[asyncio.Event] = None,
+    ) -> None:
+        """
+        Execute one full extractor lifecycle: Acquire → Extract → Release → Finish.
+
+        Synchronisation hooks (all optional) reproduce TLA+ interleavings:
+          after_acquire       – set() after Acquire completes
+          after_extract       – set() after Extract completes (before Release)
+          wait_before_release – awaited before Release begins
+          after_release       – set() after Release completes (before Finish)
+        """
+        # ── Acquire ──────────────────────────────────────────────────────────
+        # await semaphore > 0 /\ self ∈ pending
+        await self._sem.acquire()
+        async with self._lock:
+            self.active.add(record)
+            self.pending.discard(record)
+            self.max_concurrent = max(self.max_concurrent, len(self.active))
+            self._check(f"{record}:Acquire", sync_real_sem=True)
+        if after_acquire is not None:
+            after_acquire.set()
+
+        # ── Extract (skip) ────────────────────────────────────────────────────
+        await asyncio.sleep(0)  # yield — allows other coroutines to run
+        async with self._lock:
+            self._check(f"{record}:Extract", sync_real_sem=True)
+        if after_extract is not None:
+            after_extract.set()
+
+        # ── Interleaving gate ─────────────────────────────────────────────────
+        if wait_before_release is not None:
+            await wait_before_release.wait()
+
+        # ── Release ───────────────────────────────────────────────────────────
+        # CORRECTED [2]: sync_real_sem=False here because active is updated
+        # before _sem.release(); the real counter legitimately lags by 1.
+        async with self._lock:
+            self.active.discard(record)
+            self.completed.add(record)
+            self._check(f"{record}:Release", sync_real_sem=False)
+        self._sem.release()
+        if after_release is not None:
+            after_release.set()
+
+        # ── Finish (skip) ──────────────────────────────────────────────────────
+        await asyncio.sleep(0)
+        async with self._lock:
+            self._check(f"{record}:Finish", sync_real_sem=True)
+
+    # ── State assertion helpers ───────────────────────────────────────────────
+
+    def assert_init(self) -> None:
+        """Verify State 1 (Init) preconditions."""
+        assert self.semaphore == self.concurrency, \
+            f"init semaphore={self.semaphore} expected={self.concurrency}"
+        assert frozenset(self.pending) == self.records
+        assert frozenset(self.active) == frozenset()
+        assert frozenset(self.completed) == frozenset()
+        _assert_invariants(
+            self.semaphore, frozenset(self.active), frozenset(self.completed),
+            frozenset(self.pending), self.concurrency, self.records, "init",
+            real_sem_value=self._sem._value,
+        )
+
+    def assert_final(
+        self,
+        expected_completed: FrozenSet[str],
+        expected_semaphore: int,
+    ) -> None:
+        """Verify State 9 (terminal) postconditions."""
+        assert frozenset(self.pending) == frozenset(), \
+            f"pending not empty: {self.pending}"
+        assert frozenset(self.active) == frozenset(), \
+            f"active not empty: {self.active}"
+        assert frozenset(self.completed) == expected_completed, \
+            f"completed={self.completed} expected={expected_completed}"
+        assert self.semaphore == expected_semaphore, \
+            f"semaphore={self.semaphore} expected={expected_semaphore}"
+        _assert_invariants(
+            self.semaphore, frozenset(self.active), frozenset(self.completed),
+            frozenset(self.pending), self.concurrency, self.records, "final",
+            real_sem_value=self._sem._value,
+        )
+
+    def recheck_history(self) -> None:
+        """Re-verify every recorded snapshot (full audit of recorded states).
+
+        NOTE: real_sem_value is not available retrospectively, so the cross-check
+        is omitted here.  The per-step _check() calls already validated it live.
+        """
+        for ctx, s in self._history:
+            _assert_invariants(
+                s["semaphore"], s["active"], s["completed"], s["pending"],
+                self.concurrency, self.records, ctx,
+            )
+
+
+# =============================================================================
+# Trace 1 — Sequential: Records_1 completes fully before Records_2 starts
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_1_sequential_r1_completes_before_r2_starts():
+    """
+    Trace 1 (9 steps):
+      R1: Acquire → Extract → Release → Finish → Done
+      R2: (waits for R1 done) → Acquire → Extract → Release → Finish → Done
+
+    Init:  pending={R1,R2}, active={},     semaphore=10, completed={}
+    Final: pending={},      active={},     semaphore=10, completed={R1,R2}
+    max_concurrent == 1 throughout.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r1_done = asyncio.Event()
+
+    async def _r1() -> None:
+        await sim.extract_one("Records_1")
+        r1_done.set()
+
+    async def _r2() -> None:
+        await r1_done.wait()
+        await sim.extract_one("Records_2")
+
+    await asyncio.gather(_r1(), _r2())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 1
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 2 — Concurrent: R2 acquires first, both active, R1 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_2_r2_acquires_first_both_active_r1_releases_first():
+    """
+    Trace 2 (9 steps):
+      State 2: active={R2},     semaphore=9   (R2 Acquired)
+      State 3: active={R1,R2},  semaphore=8   (R1 Acquired — both in Extract)
+      State 6: completed={R1},  active={R2},  semaphore=9  (R1 Released)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first; R1 acquires while R2 is in Extract (both simultaneously active).
+    R1 releases before R2.  max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_acquired = asyncio.Event()
+    r1_extracted = asyncio.Event()
+
+    async def _r2() -> None:
+        # Hold before R2 releases until R1 has finished extracting
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_acquired,
+            wait_before_release=r1_extracted,
+        )
+
+    async def _r1() -> None:
+        await r2_acquired.wait()           # start after R2 has the semaphore
+        await sim.extract_one("Records_1", after_extract=r1_extracted)
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 3 — Overlap: R1 extracts, R2 acquires during R1's extract; R1 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_3_r1_extracts_r2_acquires_during_r1_extract():
+    """
+    Trace 3 (9 steps):
+      State 2: active={R1}, pending={R2}, semaphore=9    (R1 Acquired)
+      State 4: active={R1,R2}, semaphore=8               (R2 Acquired while R1 in Release)
+      State 5: completed={R1}, active={R2}, semaphore=9  (R1 Released)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R1 holds the semaphore through Extract; R2 acquires while R1 is still active.
+    R1 releases first.  max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r1_extracting = asyncio.Event()   # CORRECTED [1]: R1 signals: I have finished Extract
+    r2_acquired = asyncio.Event()     # R2 signals: I have acquired the semaphore
+
+    async def _r1() -> None:
+        # Hold before Release until R2 has also acquired (overlap in active)
+        await sim.extract_one(
+            "Records_1",
+            after_extract=r1_extracting,
+            wait_before_release=r2_acquired,
+        )
+
+    async def _r2() -> None:
+        await r1_extracting.wait()     # wait until R1 has finished Extract
+        await sim.extract_one("Records_2", after_acquire=r2_acquired)
+
+    await asyncio.gather(_r1(), _r2())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 4 — Overlap: R2 acquires first, both active, R2 releases while R1 extracts
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_4_r2_acquires_first_r2_releases_during_r1_extract():
+    """
+    Trace 4 (9 steps):
+      State 2: active={R2}, semaphore=9          (R2 Acquired)
+      State 3: active={R1,R2}, semaphore=8       (R1 Acquired — both in Extract)
+      State 5: completed={R2}, active={R1}, semaphore=9  (R2 Released while R1 extracts)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first, R1 acquires (both active).  R2 releases before R1.
+    max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_acquired = asyncio.Event()
+    r2_released = asyncio.Event()
+
+    async def _r2() -> None:
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_acquired,
+            after_release=r2_released,
+        )
+
+    async def _r1() -> None:
+        await r2_acquired.wait()          # start after R2 holds the semaphore
+        # Hold R1's release until R2 has already released
+        await sim.extract_one("Records_1", wait_before_release=r2_released)
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 5 — Concurrent: R1 acquires first, both active, R1 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_5_r1_acquires_first_both_active_r1_releases_first():
+    """
+    Trace 5 (9 steps):
+      State 2: active={R1}, semaphore=9           (R1 Acquired)
+      State 3: active={R1,R2}, semaphore=8        (R2 Acquired during R1 Extract)
+      State 6: completed={R1}, active={R2}, semaphore=9
+      Final:   completed={R1,R2}, semaphore=10
+
+    R1 acquires first; R2 acquires while R1 is in Extract.  R1 releases first.
+    max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r1_acquired = asyncio.Event()
+    r1_released = asyncio.Event()
+
+    async def _r1() -> None:
+        await sim.extract_one(
+            "Records_1",
+            after_acquire=r1_acquired,
+            after_release=r1_released,
+        )
+
+    async def _r2() -> None:
+        await r1_acquired.wait()          # start after R1 holds the semaphore
+        # Hold R2's release until R1 has already released
+        await sim.extract_one("Records_2", wait_before_release=r1_released)
+
+    await asyncio.gather(_r1(), _r2())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 6 — Sequential (variant): R1 reaches Done before R2 enters Extract
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_6_r1_done_before_r2_extracts():
+    """
+    Trace 6 (9 steps):
+      State 4: completed={R1}, semaphore=10, pc=(R1:"Finish", R2:"Acquire")
+      State 5: pc=(R1:"Done",  R2:"Acquire")
+      State 6: active={R2}, semaphore=9      (R2 finally Acquires)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R1 completes (including Finish) before R2 even acquires the semaphore.
+    max_concurrent == 1 throughout.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    # Extra yield after R1 finishes ensures R1 is fully "Done" before R2 starts
+    r1_finished = asyncio.Event()
+
+    async def _r1() -> None:
+        await sim.extract_one("Records_1")
+        await asyncio.sleep(0)   # simulate Finish → Done transition
+        r1_finished.set()
+
+    async def _r2() -> None:
+        await r1_finished.wait()  # wait until R1 reaches Done
+        await sim.extract_one("Records_2")
+
+    await asyncio.gather(_r1(), _r2())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 1
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 7 — Overlap: R2 extracts, R1 acquires during R2's extract; R2 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_7_r2_extracts_r1_acquires_during_r2_extract_r2_releases_first():
+    """
+    Trace 7 (9 steps):
+      State 2: active={R2}, semaphore=9                  (R2 Acquired)
+      State 4: active={R1,R2}, semaphore=8               (R1 Acquired during R2's Extract)
+      State 5: completed={R2}, active={R1}, semaphore=9  (R2 Released first)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first; R1 acquires while R2 is in Extract.
+    R2 releases before R1.  max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_extracting = asyncio.Event()
+    r1_acquired = asyncio.Event()
+
+    async def _r2() -> None:
+        # Hold R2 at Extract until R1 has acquired (both active)
+        await sim.extract_one(
+            "Records_2",
+            after_extract=r2_extracting,
+            wait_before_release=r1_acquired,
+        )
+
+    async def _r1() -> None:
+        await r2_extracting.wait()        # wait until R2 is in Extract
+        await sim.extract_one("Records_1", after_acquire=r1_acquired)
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 8 — Concurrent: R2 acquires first, both active, R1 releases first (variant)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_8_r2_first_both_active_r1_releases_first_variant():
+    """
+    Trace 8 (9 steps):
+      State 2: active={R2}, semaphore=9           (R2 Acquired)
+      State 3: active={R1,R2}, semaphore=8        (R1 Acquired — both in Extract)
+      State 5: completed={R1}, active={R2}, semaphore=9  (R1 Released during R2's Extract)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first; R1 acquires (both active); R1 releases before R2 starts Release.
+    max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_acquired = asyncio.Event()
+    r1_released = asyncio.Event()
+
+    async def _r2() -> None:
+        # R2 waits for R1 to release before R2 releases
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_acquired,
+            wait_before_release=r1_released,
+        )
+
+    async def _r1() -> None:
+        await r2_acquired.wait()
+        await sim.extract_one("Records_1", after_release=r1_released)
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 9 — Overlap: R2 extracts, R1 acquires concurrently; R2 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_9_r2_extracts_r1_acquires_r2_releases_r1_finishes():
+    """
+    Trace 9 (9 steps):
+      State 2: active={R2}, pending={R1}, semaphore=9
+      State 4: active={R1,R2}, semaphore=8   (R1 Acquired during R2's Extract/Release)
+      State 5: completed={R2}, active={R1}, semaphore=9
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 extracts; R1 acquires before R2 releases (overlap in active).
+    R2 releases first; R1 continues and releases.  max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_after_acquire = asyncio.Event()
+    r1_acquired = asyncio.Event()
+    r2_released = asyncio.Event()
+
+    async def _r2() -> None:
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_after_acquire,
+            wait_before_release=r1_acquired,   # overlap: wait for R1 before releasing
+            after_release=r2_released,
+        )
+
+    async def _r1() -> None:
+        await r2_after_acquire.wait()           # wait until R2 holds the semaphore
+        await sim.extract_one(
+            "Records_1",
+            after_acquire=r1_acquired,
+            wait_before_release=r2_released,    # wait until R2 has already released
+        )
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 10 — Concurrent: R2 acquires first, both active, R2 releases first (variant)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_10_r2_first_both_active_r2_releases_first():
+    """
+    Trace 10 (9 steps):
+      State 2: active={R2}, semaphore=9             (R2 Acquired)
+      State 3: active={R1,R2}, semaphore=8          (R1 Acquired — both in Extract)
+      State 6: completed={R2}, active={R1}, semaphore=9  (R2 Released first)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first; R1 acquires (both active); R2 releases while R1 still extracts.
+    max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    # CORRECTED [3]: removed dead r2_extracted variable — after_extract fired but
+    # was never awaited; the coordination already works via r2_acquired / r2_released.
+    r2_acquired = asyncio.Event()
+    r2_released = asyncio.Event()
+
+    async def _r2() -> None:
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_acquired,
+            after_release=r2_released,
+        )
+
+    async def _r1() -> None:
+        await r2_acquired.wait()             # wait until R2 holds the semaphore
+        # Hold R1 at Extract until R2 has already released
+        await sim.extract_one(
+            "Records_1",
+            wait_before_release=r2_released,
+        )
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Invariant-focused tests  (≥2 trace-derived topologies each)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_invariant_semaphore_non_neg_two_topologies():
+    """
+    SemaphoreNonNeg: semaphore >= 0 — verified across two topologies.
+
+    Topology A: sequential (from Trace 1 / Trace 6)
+    Topology B: concurrent (from Trace 2 / Trace 5)
+    Uses C=2 to amplify pressure without changing record count.
+    """
+    # Topology A — sequential, C=2
+    sim_a = _Sim(ALL_RECORDS, concurrency=2)
+    r1_done_a = asyncio.Event()
+
+    async def _a1():
+        await sim_a.extract_one("Records_1")
+        r1_done_a.set()
+
+    async def _a2():
+        await r1_done_a.wait()
+        await sim_a.extract_one("Records_2")
+
+    await asyncio.gather(_a1(), _a2())
+    for _, snap in sim_a._history:
+        assert snap["semaphore"] >= 0, f"SemaphoreNonNeg A: {snap['semaphore']}"
+
+    # Topology B — concurrent, C=2
+    sim_b = _Sim(ALL_RECORDS, concurrency=2)
+    b_acquired = asyncio.Event()
+
+    async def _b1():
+        await sim_b.extract_one("Records_1", after_acquire=b_acquired)
+
+    async def _b2():
+        await b_acquired.wait()
+        await sim_b.extract_one("Records_2")
+
+    await asyncio.gather(_b1(), _b2())
+    for _, snap in sim_b._history:
+        assert snap["semaphore"] >= 0, f"SemaphoreNonNeg B: {snap['semaphore']}"
+
+
+@pytest.mark.asyncio
+async def test_invariant_active_bounded_two_topologies():
+    """
+    ActiveBounded: |active| <= C — strictly enforced by asyncio.Semaphore.
+
+    Topology A (C=1): Only one record may ever be active.
+    Topology B (C=2): Both records may be active, but never three.
+    """
+    # Topology A — C=1 (serial gate)
+    sim_a = _Sim(ALL_RECORDS, concurrency=1)
+    await asyncio.gather(
+        sim_a.extract_one("Records_1"),
+        sim_a.extract_one("Records_2"),
+    )
+    assert sim_a.max_concurrent == 1, "C=1 must serialise all extractors"
+    for _, snap in sim_a._history:
+        assert len(snap["active"]) <= 1, f"ActiveBounded C=1: {snap['active']}"
+
+    # Topology B — C=2 (full concurrency)
+    sim_b = _Sim(ALL_RECORDS, concurrency=2)
+    b_acquired = asyncio.Event()
+
+    async def _b1():
+        await sim_b.extract_one("Records_1", after_acquire=b_acquired)
+
+    async def _b2():
+        await b_acquired.wait()
+        await sim_b.extract_one("Records_2")
+
+    await asyncio.gather(_b1(), _b2())
+    assert sim_b.max_concurrent == 2
+    for _, snap in sim_b._history:
+        assert len(snap["active"]) <= 2, f"ActiveBounded C=2: {snap['active']}"
+
+
+@pytest.mark.asyncio
+async def test_invariant_semaphore_consistent_two_topologies():
+    """
+    SemaphoreConsistent: semaphore + |active| = C — verified at every step.
+
+    Uses one sequential topology (Traces 1/6) and one concurrent (Traces 2/5).
+
+    NOTE — what this test actually exercises:                [CORRECTED 2]
+      The derived `semaphore` property equals `C − |active|` by definition, so
+      `snap["semaphore"] + len(snap["active"]) == C` is an arithmetic identity
+      that can never be falsified from recorded snapshots alone.  The meaningful
+      part of SemaphoreConsistent — that the *real* asyncio semaphore counter
+      tracks `active` — is validated live inside `_Sim._check` via the
+      `real_sem_value` argument at :Acquire, :Extract, and :Finish checkpoints.
+      The assertions below confirm the identity holds in the history but do NOT
+      re-verify the real-counter cross-check (which requires the live object).
+    """
+    # Sequential topology
+    sim_seq = _Sim(ALL_RECORDS, CONCURRENCY)
+    done = asyncio.Event()
+
+    async def _s1():
+        await sim_seq.extract_one("Records_1")
+        done.set()
+
+    async def _s2():
+        await done.wait()
+        await sim_seq.extract_one("Records_2")
+
+    await asyncio.gather(_s1(), _s2())
+    for ctx, snap in sim_seq._history:
+        assert snap["semaphore"] + len(snap["active"]) == CONCURRENCY, \
+            f"SemaphoreConsistent seq [{ctx}]: {snap['semaphore']}+{len(snap['active'])}"
+
+    # Concurrent topology
+    sim_con = _Sim(ALL_RECORDS, CONCURRENCY)
+    acquired = asyncio.Event()
+
+    async def _c1():
+        await sim_con.extract_one("Records_1", after_acquire=acquired)
+
+    async def _c2():
+        await acquired.wait()
+        await sim_con.extract_one("Records_2")
+
+    await asyncio.gather(_c1(), _c2())
+    for ctx, snap in sim_con._history:
+        assert snap["semaphore"] + len(snap["active"]) == CONCURRENCY, \
+            f"SemaphoreConsistent con [{ctx}]: {snap['semaphore']}+{len(snap['active'])}"
+
+
+@pytest.mark.asyncio
+async def test_invariant_active_released_on_complete_two_topologies():
+    """
+    ActiveReleasedOnComplete: active ∩ completed = ∅ at all times.
+
+    Tests that no record ever appears simultaneously in active and completed.
+    Uses the overlap topology (Traces 3/7) and sequential topology (Trace 1).
+    """
+    # Overlap topology (Trace 3 pattern)
+    sim_ov = _Sim(ALL_RECORDS, CONCURRENCY)
+    r1_ext = asyncio.Event()
+    r2_acq = asyncio.Event()
+
+    async def _ov1():
+        await sim_ov.extract_one("Records_1", after_extract=r1_ext, wait_before_release=r2_acq)
+
+    async def _ov2():
+        await r1_ext.wait()
+        await sim_ov.extract_one("Records_2", after_acquire=r2_acq)
+
+    await asyncio.gather(_ov1(), _ov2())
+    for ctx, snap in sim_ov._history:
+        overlap = snap["active"] & snap["completed"]
+        assert not overlap, f"ActiveReleasedOnComplete overlap [{ctx}]: {overlap}"
+
+    # Sequential topology (Trace 1 pattern)
+    sim_sq = _Sim(ALL_RECORDS, CONCURRENCY)
+    ev = asyncio.Event()
+
+    async def _sq1():
+        await sim_sq.extract_one("Records_1")
+        ev.set()
+
+    async def _sq2():
+        await ev.wait()
+        await sim_sq.extract_one("Records_2")
+
+    await asyncio.gather(_sq1(), _sq2())
+    for ctx, snap in sim_sq._history:
+        overlap = snap["active"] & snap["completed"]
+        assert not overlap, f"ActiveReleasedOnComplete sequential [{ctx}]: {overlap}"
+
+
+@pytest.mark.asyncio
+async def test_invariant_all_eventually_processed_two_topologies():
+    """
+    AllEventuallyProcessed: (pending=∅ ∧ active=∅) ⟹ completed = Records.
+
+    Verified by checking completed == Records after both topologies quiesce.
+    Topology A: sequential (Traces 1, 6).
+    Topology B: fully concurrent via asyncio.gather (Traces 2, 5, 8, 10).
+    """
+    # Topology A — sequential
+    sim_a = _Sim(ALL_RECORDS, CONCURRENCY)
+    done_a = asyncio.Event()
+
+    async def _a1():
+        await sim_a.extract_one("Records_1")
+        done_a.set()
+
+    async def _a2():
+        await done_a.wait()
+        await sim_a.extract_one("Records_2")
+
+    await asyncio.gather(_a1(), _a2())
+    assert frozenset(sim_a.completed) == ALL_RECORDS
+    assert frozenset(sim_a.pending) == frozenset()
+    assert frozenset(sim_a.active) == frozenset()
+
+    # Topology B — fully concurrent gather (models _sweep_remaining directly)
+    sim_b = _Sim(ALL_RECORDS, CONCURRENCY)
+    await asyncio.gather(*[sim_b.extract_one(r) for r in ALL_RECORDS])
+    assert frozenset(sim_b.completed) == ALL_RECORDS
+    assert frozenset(sim_b.pending) == frozenset()
+    assert frozenset(sim_b.active) == frozenset()
+    sim_b.recheck_history()
+
+
+# =============================================================================
+# Edge cases
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_edge_single_record_trivially_sequential():
+    """
+    A sweep over a single record never has any concurrency.
+    semaphore drops to C-1 during extraction, returns to C on completion.
+    """
+    records = frozenset({"Records_1"})
+    dag = _make_dag("Records_1")
+    assert dag.node_count == 1
+
+    sim = _Sim(records, CONCURRENCY)
+    assert sim.semaphore == CONCURRENCY
+
+    await sim.extract_one("Records_1")
+
+    sim.assert_final(frozenset({"Records_1"}), CONCURRENCY)
+    assert sim.max_concurrent == 1
+    sim.recheck_history()
+
+
+@pytest.mark.asyncio
+async def test_edge_concurrency_1_forces_strict_serialisation():
+    """
+    C=1: asyncio.Semaphore(1) allows at most one active extractor at all times.
+    Both Records must complete but never overlap.  max_concurrent == 1.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, concurrency=1)
+    # asyncio.gather with C=1 — second must queue behind first
+    await asyncio.gather(
+        sim.extract_one("Records_1"),
+        sim.extract_one("Records_2"),
+    )
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 1)
+    assert sim.max_concurrent == 1, "C=1 must prevent any concurrency"
+    for _, snap in sim._history:
+        assert len(snap["active"]) <= 1
+
+
+@pytest.mark.asyncio
+async def test_edge_concurrency_equals_record_count_allows_full_parallelism():
+    """
+    C == |Records|: semaphore never blocks; all records run fully concurrently.
+    max_concurrent should reach |Records|.
+
+    Requires Python >= 3.11 (asyncio.Barrier).   [CORRECTED 5]
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, concurrency=len(ALL_RECORDS))
+    acquired_both = asyncio.Barrier(len(ALL_RECORDS))  # CORRECTED [5]: Python >= 3.11
+
+    async def _both(record: str) -> None:
+        await sim._sem.acquire()
+        async with sim._lock:
+            sim.active.add(record)
+            sim.pending.discard(record)
+            sim.max_concurrent = max(sim.max_concurrent, len(sim.active))
+            sim._check(f"{record}:Acquire", sync_real_sem=True)
+        # Rendezvous: wait until ALL records have acquired before proceeding
+        await acquired_both.wait()
+        async with sim._lock:
+            sim._check(f"{record}:Extract", sync_real_sem=True)
+        async with sim._lock:
+            sim.active.discard(record)
+            sim.completed.add(record)
+            sim._check(f"{record}:Release", sync_real_sem=False)
+        sim._sem.release()
+        await asyncio.sleep(0)
+        async with sim._lock:
+            sim._check(f"{record}:Finish", sync_real_sem=True)
+
+    await asyncio.gather(*[_both(r) for r in ALL_RECORDS])
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), len(ALL_RECORDS))
+    assert sim.max_concurrent == len(ALL_RECORDS)
+    sim.recheck_history()
+
+
+@pytest.mark.asyncio
+async def test_edge_five_records_concurrency_3():
+    """
+    N=5 records, C=3: at most 3 may be active at any time.
+    All five must eventually complete.  Exercises queue depth.
+    """
+    records = frozenset({f"rec_{i}" for i in range(5)})
+    dag = _make_dag(*records)
+    assert dag.node_count == 5
+
+    sim = _Sim(records, concurrency=3)
+    await asyncio.gather(*[sim.extract_one(r) for r in records])
+
+    sim.assert_final(records, 3)
+    assert sim.max_concurrent <= 3, f"ActiveBounded C=3: max={sim.max_concurrent}"
+    sim.recheck_history()
+
+
+def test_edge_dag_node_not_found_raises():
+    """
+    Querying a non-existent node on the DAG raises NodeNotFoundError.
+    (Derive from trace Init: only Records_1 and Records_2 exist.)
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+    with pytest.raises(NodeNotFoundError):
+        dag.extract_subgraph("Records_999")
+
+
+def test_edge_empty_dag_has_zero_nodes():
+    """
+    An empty RegistryDag (no records) has node_count == 0.
+    A sweep over empty pending set trivially satisfies AllEventuallyProcessed
+    because completed == Records == ∅.
+    """
+    dag = RegistryDag()
+    assert dag.node_count == 0
+
+    records: FrozenSet[str] = frozenset()
+    # AllEventuallyProcessed holds vacuously: pending={}, active={} ⟹ completed={}=Records
+    _assert_invariants(
+        semaphore=CONCURRENCY,
+        active=frozenset(),
+        completed=frozenset(),
+        pending=frozenset(),
+        concurrency=CONCURRENCY,
+        records=records,
+        ctx="empty_dag_init",
+    )
+
+
+def test_edge_dag_structural_integrity_two_records():
+    """
+    Verify that the Init-state DAG fixture derived from all traces has the
+    expected structural properties: two isolated behavior nodes, no edges.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+    assert dag.edge_count == 0
+    assert dag.component_count == 2  # two isolated nodes → two components
+
+    sg1 = dag.extract_subgraph("Records_1")
+    assert "Records_1" in {n.id for n in sg1.nodes}
+
+    sg2 = dag.extract_subgraph("Records_2")
+    assert "Records_2" in {n.id for n in sg2.nodes}
+```
+
+---
+
+**Summary of all corrections made:**
+
+| Fix | Change |
+|-----|--------|
+| **[1] Trace 3 comment** | `r1_extracting` comment corrected from `"I have finished Acquire"` → `"I have finished Extract"`. The event is wired to `after_extract`, not `after_acquire`; the original comment would mislead anyone tracing the interleaving. |
+| **[2] SemaphoreConsistent unfalsifiability** | `_assert_invariants` gained an optional `real_sem_value` parameter; `_Sim._check` gained `sync_real_sem` and now passes `self._sem._value` at `:Acquire`, `:Extract`, and `:Finish` checkpoints (where `active` and `_sem` are in sync). At `:Release` — where `active` is updated before `_sem.release()` — the cross-check is intentionally suppressed (`sync_real_sem=False`) and documented. `assert_init`/`assert_final` also pass the live counter. The docstring in `test_invariant_semaphore_consistent_two_topologies` now explicitly explains the tautology limitation of history-only checks. |
+| **[3] Dead variable `r2_extracted`** | Removed from Trace 10. The event was declared, passed as `after_extract`, and set internally, but no coroutine ever awaited it. Its removal has zero effect on coordination and eliminates misleading dead-code. |
+| **[4] Unused `CycleError` import** | Removed. No test exercises it; leaving it in falsely implies cycle-detection coverage exists. |
+| **[5] `asyncio.Barrier` version requirement** | Added `# CORRECTED [5]: Python >= 3.11` inline comment at the `asyncio.Barrier` instantiation and in the test docstring. |
+**Review findings — 5 semantic defects identified:**
+
+| # | Severity | Location | Issue |
+|---|----------|----------|-------|
+| 1 | **Bug** | Trace 3 — `r1_extracting` comment | Comment says "finished Acquire" but the event fires from `after_extract`, i.e. after Extract. Misleads any reader tracing the interleaving. |
+| 2 | **Semantic gap** | `_assert_invariants` / `test_invariant_semaphore_consistent_two_topologies` | `semaphore` is defined as `concurrency − len(active)`, so `semaphore + len(active) == concurrency` is an arithmetic identity — it can **never** fail. The `SemaphoreConsistent` check is unfalsifiable as implemented. The tautology must be called out explicitly; the test must add a cross-check against the real asyncio semaphore counter (`_sem._value`) where the invariant *can* diverge (i.e. at `:Acquire` and `:Finish` checkpoints where `active` and `_sem` are in sync). The `:Release` checkpoint is intentionally exempt (active updated before `_sem.release()`) and must be documented. |
+| 3 | **Dead variable** | Trace 10 — `r2_extracted` | Declared, passed as `after_extract`, set inside `extract_one`, but **never awaited** anywhere. No coroutine is gated on it; it is coordination dead-code. Remove it. |
+| 4 | **Unused import** | Top-level `from dag import … CycleError` | `CycleError` is imported but no test exercises it. Either add a cycle test or remove the import; leaving it in falsely implies coverage. |
+| 5 | **Missing version guard** | `test_edge_concurrency_equals_record_count_allows_full_parallelism` | `asyncio.Barrier` was added in **Python 3.11**. No comment or version assertion is present; the test silently fails on older runtimes. |
+
+Corrections applied inline below (`# CORRECTED [N]:` marks each change):
+
+```python
+import asyncio
+from typing import FrozenSet, List, Optional, Set, Tuple
+import pytest
+from registry.types import Edge, EdgeType, Node, NodeKind
+from dag import RegistryDag, NodeNotFoundError  # CORRECTED [4]: removed unused CycleError
+
+
+# ── TLA+ model parameters ─────────────────────────────────────────────────────
+CONCURRENCY: int = 10
+ALL_RECORDS: FrozenSet[str] = frozenset({"Records_1", "Records_2"})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DAG fixture helper
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _make_dag(*record_ids: str) -> RegistryDag:
+    """Return a RegistryDag with one behavior Node per record id."""
+    dag = RegistryDag()
+    for rid in record_ids:
+        dag.add_node(Node.behavior(rid, rid, "given", "when", "then"))
+    return dag
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Invariant checker  (TLA+ invariants → Python assertions)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _assert_invariants(
+    semaphore: int,
+    active: FrozenSet[str],
+    completed: FrozenSet[str],
+    pending: FrozenSet[str],
+    concurrency: int,
+    records: FrozenSet[str],
+    ctx: str = "",
+    *,
+    real_sem_value: Optional[int] = None,  # CORRECTED [2]: pass asyncio semaphore._value when available
+) -> None:
+    """
+    Verify all five TLA+ invariants at a single state snapshot.
+
+    SemaphoreNonNeg          semaphore >= 0
+    ActiveBounded            |active| <= C
+    SemaphoreConsistent      semaphore + |active| = C
+    ActiveReleasedOnComplete active ∩ completed = ∅
+    AllEventuallyProcessed   (pending=∅ ∧ active=∅) ⟹ completed = Records
+
+    NOTE — SemaphoreConsistent tautology:                          [CORRECTED 2]
+      `semaphore` is computed as `concurrency − len(active)`, so the identity
+      `semaphore + len(active) == concurrency` holds by construction and can
+      never be falsified by the derived property alone.  To make the invariant
+      meaningful we additionally cross-check against the *real* asyncio semaphore
+      counter (`real_sem_value`) when it is supplied.  The only legitimate
+      divergence is at the `:Release` checkpoint, where `active` is updated
+      before `_sem.release()` is called; that case is excluded by the caller.
+    """
+    p = f"[{ctx}] " if ctx else ""
+    assert semaphore >= 0, \
+        f"{p}SemaphoreNonNeg: semaphore={semaphore}"
+    assert len(active) <= concurrency, \
+        f"{p}ActiveBounded: |active|={len(active)} C={concurrency}"
+    assert semaphore + len(active) == concurrency, \
+        f"{p}SemaphoreConsistent: {semaphore}+{len(active)}!={concurrency}"
+    # CORRECTED [2]: cross-check asyncio semaphore counter at checkpoints where
+    # active and _sem are expected to be in sync (i.e. not the :Release window).
+    if real_sem_value is not None:
+        assert real_sem_value == semaphore, (
+            f"{p}SemaphoreConsistent (real asyncio): "
+            f"_sem._value={real_sem_value} expected={semaphore}"
+        )
+    assert active.isdisjoint(completed), \
+        f"{p}ActiveReleasedOnComplete: overlap={active & completed}"
+    if not pending and not active:
+        assert completed == records, \
+            f"{p}AllEventuallyProcessed: completed={completed} expected={records}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _Sim — asyncio translation of the TLA+ PlusCal extractor algorithm
+# ─────────────────────────────────────────────────────────────────────────────
+
+class _Sim:
+    """
+    asyncio implementation of the TLA+ PlusCal SemaphoreBoundedConcurrency algorithm.
+
+    TLA+ state variable mapping:
+      semaphore   ↔ property  concurrency − |active|  (SemaphoreConsistent holds by
+                               construction; the real test is that asyncio.Semaphore
+                               prevents |active| from ever exceeding C)
+      active      ↔ self.active
+      completed   ↔ self.completed
+      pending     ↔ self.pending
+
+    SemaphoreConsistent cross-check:
+      At :Acquire, :Extract, and :Finish checkpoints active and _sem are in sync,
+      so we pass _sem._value for the real-counter check.
+      At :Release active has been updated but _sem.release() has not yet been
+      called, so we intentionally omit the real-counter check there.
+
+    All five invariants are asserted at every state transition, inside the lock,
+    so each snapshot is internally consistent before being checked.
+    """
+
+    def __init__(
+        self,
+        records: FrozenSet[str] = ALL_RECORDS,
+        concurrency: int = CONCURRENCY,
+    ) -> None:
+        self.records = records
+        self.concurrency = concurrency
+        self._sem = asyncio.Semaphore(concurrency)
+        self._lock = asyncio.Lock()
+        self.active: Set[str] = set()
+        self.completed: Set[str] = set()
+        self.pending: Set[str] = set(records)
+        self.max_concurrent: int = 0
+        self._history: List[Tuple[str, dict]] = []
+
+    @property
+    def semaphore(self) -> int:
+        """Available permits — mirrors TLA+ semaphore variable."""
+        return self.concurrency - len(self.active)
+
+    def _snap(self) -> dict:
+        return {
+            "semaphore": self.semaphore,
+            "active": frozenset(self.active),
+            "completed": frozenset(self.completed),
+            "pending": frozenset(self.pending),
+        }
+
+    def _check(self, ctx: str, *, sync_real_sem: bool = True) -> None:
+        # CORRECTED [2]: pass real asyncio semaphore value at sync points;
+        # suppress it at :Release where active and _sem are transiently diverged.
+        s = self._snap()
+        self._history.append((ctx, s))
+        real_val = self._sem._value if sync_real_sem else None
+        _assert_invariants(
+            s["semaphore"], s["active"], s["completed"], s["pending"],
+            self.concurrency, self.records, ctx,
+            real_sem_value=real_val,
+        )
+
+    async def extract_one(
+        self,
+        record: str,
+        *,
+        after_acquire: Optional[asyncio.Event] = None,
+        after_extract: Optional[asyncio.Event] = None,
+        wait_before_release: Optional[asyncio.Event] = None,
+        after_release: Optional[asyncio.Event] = None,
+    ) -> None:
+        """
+        Execute one full extractor lifecycle: Acquire → Extract → Release → Finish.
+
+        Synchronisation hooks (all optional) reproduce TLA+ interleavings:
+          after_acquire       – set() after Acquire completes
+          after_extract       – set() after Extract completes (before Release)
+          wait_before_release – awaited before Release begins
+          after_release       – set() after Release completes (before Finish)
+        """
+        # ── Acquire ──────────────────────────────────────────────────────────
+        # await semaphore > 0 /\ self ∈ pending
+        await self._sem.acquire()
+        async with self._lock:
+            self.active.add(record)
+            self.pending.discard(record)
+            self.max_concurrent = max(self.max_concurrent, len(self.active))
+            self._check(f"{record}:Acquire", sync_real_sem=True)
+        if after_acquire is not None:
+            after_acquire.set()
+
+        # ── Extract (skip) ────────────────────────────────────────────────────
+        await asyncio.sleep(0)  # yield — allows other coroutines to run
+        async with self._lock:
+            self._check(f"{record}:Extract", sync_real_sem=True)
+        if after_extract is not None:
+            after_extract.set()
+
+        # ── Interleaving gate ─────────────────────────────────────────────────
+        if wait_before_release is not None:
+            await wait_before_release.wait()
+
+        # ── Release ───────────────────────────────────────────────────────────
+        # CORRECTED [2]: sync_real_sem=False here because active is updated
+        # before _sem.release(); the real counter legitimately lags by 1.
+        async with self._lock:
+            self.active.discard(record)
+            self.completed.add(record)
+            self._check(f"{record}:Release", sync_real_sem=False)
+        self._sem.release()
+        if after_release is not None:
+            after_release.set()
+
+        # ── Finish (skip) ──────────────────────────────────────────────────────
+        await asyncio.sleep(0)
+        async with self._lock:
+            self._check(f"{record}:Finish", sync_real_sem=True)
+
+    # ── State assertion helpers ───────────────────────────────────────────────
+
+    def assert_init(self) -> None:
+        """Verify State 1 (Init) preconditions."""
+        assert self.semaphore == self.concurrency, \
+            f"init semaphore={self.semaphore} expected={self.concurrency}"
+        assert frozenset(self.pending) == self.records
+        assert frozenset(self.active) == frozenset()
+        assert frozenset(self.completed) == frozenset()
+        _assert_invariants(
+            self.semaphore, frozenset(self.active), frozenset(self.completed),
+            frozenset(self.pending), self.concurrency, self.records, "init",
+            real_sem_value=self._sem._value,
+        )
+
+    def assert_final(
+        self,
+        expected_completed: FrozenSet[str],
+        expected_semaphore: int,
+    ) -> None:
+        """Verify State 9 (terminal) postconditions."""
+        assert frozenset(self.pending) == frozenset(), \
+            f"pending not empty: {self.pending}"
+        assert frozenset(self.active) == frozenset(), \
+            f"active not empty: {self.active}"
+        assert frozenset(self.completed) == expected_completed, \
+            f"completed={self.completed} expected={expected_completed}"
+        assert self.semaphore == expected_semaphore, \
+            f"semaphore={self.semaphore} expected={expected_semaphore}"
+        _assert_invariants(
+            self.semaphore, frozenset(self.active), frozenset(self.completed),
+            frozenset(self.pending), self.concurrency, self.records, "final",
+            real_sem_value=self._sem._value,
+        )
+
+    def recheck_history(self) -> None:
+        """Re-verify every recorded snapshot (full audit of recorded states).
+
+        NOTE: real_sem_value is not available retrospectively, so the cross-check
+        is omitted here.  The per-step _check() calls already validated it live.
+        """
+        for ctx, s in self._history:
+            _assert_invariants(
+                s["semaphore"], s["active"], s["completed"], s["pending"],
+                self.concurrency, self.records, ctx,
+            )
+
+
+# =============================================================================
+# Trace 1 — Sequential: Records_1 completes fully before Records_2 starts
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_1_sequential_r1_completes_before_r2_starts():
+    """
+    Trace 1 (9 steps):
+      R1: Acquire → Extract → Release → Finish → Done
+      R2: (waits for R1 done) → Acquire → Extract → Release → Finish → Done
+
+    Init:  pending={R1,R2}, active={},     semaphore=10, completed={}
+    Final: pending={},      active={},     semaphore=10, completed={R1,R2}
+    max_concurrent == 1 throughout.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r1_done = asyncio.Event()
+
+    async def _r1() -> None:
+        await sim.extract_one("Records_1")
+        r1_done.set()
+
+    async def _r2() -> None:
+        await r1_done.wait()
+        await sim.extract_one("Records_2")
+
+    await asyncio.gather(_r1(), _r2())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 1
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 2 — Concurrent: R2 acquires first, both active, R1 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_2_r2_acquires_first_both_active_r1_releases_first():
+    """
+    Trace 2 (9 steps):
+      State 2: active={R2},     semaphore=9   (R2 Acquired)
+      State 3: active={R1,R2},  semaphore=8   (R1 Acquired — both in Extract)
+      State 6: completed={R1},  active={R2},  semaphore=9  (R1 Released)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first; R1 acquires while R2 is in Extract (both simultaneously active).
+    R1 releases before R2.  max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_acquired = asyncio.Event()
+    r1_extracted = asyncio.Event()
+
+    async def _r2() -> None:
+        # Hold before R2 releases until R1 has finished extracting
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_acquired,
+            wait_before_release=r1_extracted,
+        )
+
+    async def _r1() -> None:
+        await r2_acquired.wait()           # start after R2 has the semaphore
+        await sim.extract_one("Records_1", after_extract=r1_extracted)
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 3 — Overlap: R1 extracts, R2 acquires during R1's extract; R1 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_3_r1_extracts_r2_acquires_during_r1_extract():
+    """
+    Trace 3 (9 steps):
+      State 2: active={R1}, pending={R2}, semaphore=9    (R1 Acquired)
+      State 4: active={R1,R2}, semaphore=8               (R2 Acquired while R1 in Release)
+      State 5: completed={R1}, active={R2}, semaphore=9  (R1 Released)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R1 holds the semaphore through Extract; R2 acquires while R1 is still active.
+    R1 releases first.  max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r1_extracting = asyncio.Event()   # CORRECTED [1]: R1 signals: I have finished Extract
+    r2_acquired = asyncio.Event()     # R2 signals: I have acquired the semaphore
+
+    async def _r1() -> None:
+        # Hold before Release until R2 has also acquired (overlap in active)
+        await sim.extract_one(
+            "Records_1",
+            after_extract=r1_extracting,
+            wait_before_release=r2_acquired,
+        )
+
+    async def _r2() -> None:
+        await r1_extracting.wait()     # wait until R1 has finished Extract
+        await sim.extract_one("Records_2", after_acquire=r2_acquired)
+
+    await asyncio.gather(_r1(), _r2())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 4 — Overlap: R2 acquires first, both active, R2 releases while R1 extracts
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_4_r2_acquires_first_r2_releases_during_r1_extract():
+    """
+    Trace 4 (9 steps):
+      State 2: active={R2}, semaphore=9          (R2 Acquired)
+      State 3: active={R1,R2}, semaphore=8       (R1 Acquired — both in Extract)
+      State 5: completed={R2}, active={R1}, semaphore=9  (R2 Released while R1 extracts)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first, R1 acquires (both active).  R2 releases before R1.
+    max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_acquired = asyncio.Event()
+    r2_released = asyncio.Event()
+
+    async def _r2() -> None:
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_acquired,
+            after_release=r2_released,
+        )
+
+    async def _r1() -> None:
+        await r2_acquired.wait()          # start after R2 holds the semaphore
+        # Hold R1's release until R2 has already released
+        await sim.extract_one("Records_1", wait_before_release=r2_released)
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 5 — Concurrent: R1 acquires first, both active, R1 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_5_r1_acquires_first_both_active_r1_releases_first():
+    """
+    Trace 5 (9 steps):
+      State 2: active={R1}, semaphore=9           (R1 Acquired)
+      State 3: active={R1,R2}, semaphore=8        (R2 Acquired during R1 Extract)
+      State 6: completed={R1}, active={R2}, semaphore=9
+      Final:   completed={R1,R2}, semaphore=10
+
+    R1 acquires first; R2 acquires while R1 is in Extract.  R1 releases first.
+    max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r1_acquired = asyncio.Event()
+    r1_released = asyncio.Event()
+
+    async def _r1() -> None:
+        await sim.extract_one(
+            "Records_1",
+            after_acquire=r1_acquired,
+            after_release=r1_released,
+        )
+
+    async def _r2() -> None:
+        await r1_acquired.wait()          # start after R1 holds the semaphore
+        # Hold R2's release until R1 has already released
+        await sim.extract_one("Records_2", wait_before_release=r1_released)
+
+    await asyncio.gather(_r1(), _r2())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 6 — Sequential (variant): R1 reaches Done before R2 enters Extract
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_6_r1_done_before_r2_extracts():
+    """
+    Trace 6 (9 steps):
+      State 4: completed={R1}, semaphore=10, pc=(R1:"Finish", R2:"Acquire")
+      State 5: pc=(R1:"Done",  R2:"Acquire")
+      State 6: active={R2}, semaphore=9      (R2 finally Acquires)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R1 completes (including Finish) before R2 even acquires the semaphore.
+    max_concurrent == 1 throughout.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    # Extra yield after R1 finishes ensures R1 is fully "Done" before R2 starts
+    r1_finished = asyncio.Event()
+
+    async def _r1() -> None:
+        await sim.extract_one("Records_1")
+        await asyncio.sleep(0)   # simulate Finish → Done transition
+        r1_finished.set()
+
+    async def _r2() -> None:
+        await r1_finished.wait()  # wait until R1 reaches Done
+        await sim.extract_one("Records_2")
+
+    await asyncio.gather(_r1(), _r2())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 1
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 7 — Overlap: R2 extracts, R1 acquires during R2's extract; R2 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_7_r2_extracts_r1_acquires_during_r2_extract_r2_releases_first():
+    """
+    Trace 7 (9 steps):
+      State 2: active={R2}, semaphore=9                  (R2 Acquired)
+      State 4: active={R1,R2}, semaphore=8               (R1 Acquired during R2's Extract)
+      State 5: completed={R2}, active={R1}, semaphore=9  (R2 Released first)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first; R1 acquires while R2 is in Extract.
+    R2 releases before R1.  max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_extracting = asyncio.Event()
+    r1_acquired = asyncio.Event()
+
+    async def _r2() -> None:
+        # Hold R2 at Extract until R1 has acquired (both active)
+        await sim.extract_one(
+            "Records_2",
+            after_extract=r2_extracting,
+            wait_before_release=r1_acquired,
+        )
+
+    async def _r1() -> None:
+        await r2_extracting.wait()        # wait until R2 is in Extract
+        await sim.extract_one("Records_1", after_acquire=r1_acquired)
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 8 — Concurrent: R2 acquires first, both active, R1 releases first (variant)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_8_r2_first_both_active_r1_releases_first_variant():
+    """
+    Trace 8 (9 steps):
+      State 2: active={R2}, semaphore=9           (R2 Acquired)
+      State 3: active={R1,R2}, semaphore=8        (R1 Acquired — both in Extract)
+      State 5: completed={R1}, active={R2}, semaphore=9  (R1 Released during R2's Extract)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first; R1 acquires (both active); R1 releases before R2 starts Release.
+    max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_acquired = asyncio.Event()
+    r1_released = asyncio.Event()
+
+    async def _r2() -> None:
+        # R2 waits for R1 to release before R2 releases
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_acquired,
+            wait_before_release=r1_released,
+        )
+
+    async def _r1() -> None:
+        await r2_acquired.wait()
+        await sim.extract_one("Records_1", after_release=r1_released)
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 9 — Overlap: R2 extracts, R1 acquires concurrently; R2 releases first
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_9_r2_extracts_r1_acquires_r2_releases_r1_finishes():
+    """
+    Trace 9 (9 steps):
+      State 2: active={R2}, pending={R1}, semaphore=9
+      State 4: active={R1,R2}, semaphore=8   (R1 Acquired during R2's Extract/Release)
+      State 5: completed={R2}, active={R1}, semaphore=9
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 extracts; R1 acquires before R2 releases (overlap in active).
+    R2 releases first; R1 continues and releases.  max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    r2_after_acquire = asyncio.Event()
+    r1_acquired = asyncio.Event()
+    r2_released = asyncio.Event()
+
+    async def _r2() -> None:
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_after_acquire,
+            wait_before_release=r1_acquired,   # overlap: wait for R1 before releasing
+            after_release=r2_released,
+        )
+
+    async def _r1() -> None:
+        await r2_after_acquire.wait()           # wait until R2 holds the semaphore
+        await sim.extract_one(
+            "Records_1",
+            after_acquire=r1_acquired,
+            wait_before_release=r2_released,    # wait until R2 has already released
+        )
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Trace 10 — Concurrent: R2 acquires first, both active, R2 releases first (variant)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_trace_10_r2_first_both_active_r2_releases_first():
+    """
+    Trace 10 (9 steps):
+      State 2: active={R2}, semaphore=9             (R2 Acquired)
+      State 3: active={R1,R2}, semaphore=8          (R1 Acquired — both in Extract)
+      State 6: completed={R2}, active={R1}, semaphore=9  (R2 Released first)
+      Final:   completed={R1,R2}, semaphore=10
+
+    R2 acquires first; R1 acquires (both active); R2 releases while R1 still extracts.
+    max_concurrent == 2.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, CONCURRENCY)
+    sim.assert_init()
+
+    # CORRECTED [3]: removed dead r2_extracted variable — after_extract fired but
+    # was never awaited; the coordination already works via r2_acquired / r2_released.
+    r2_acquired = asyncio.Event()
+    r2_released = asyncio.Event()
+
+    async def _r2() -> None:
+        await sim.extract_one(
+            "Records_2",
+            after_acquire=r2_acquired,
+            after_release=r2_released,
+        )
+
+    async def _r1() -> None:
+        await r2_acquired.wait()             # wait until R2 holds the semaphore
+        # Hold R1 at Extract until R2 has already released
+        await sim.extract_one(
+            "Records_1",
+            wait_before_release=r2_released,
+        )
+
+    await asyncio.gather(_r2(), _r1())
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 10)
+    assert sim.max_concurrent == 2
+    sim.recheck_history()
+
+
+# =============================================================================
+# Invariant-focused tests  (≥2 trace-derived topologies each)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_invariant_semaphore_non_neg_two_topologies():
+    """
+    SemaphoreNonNeg: semaphore >= 0 — verified across two topologies.
+
+    Topology A: sequential (from Trace 1 / Trace 6)
+    Topology B: concurrent (from Trace 2 / Trace 5)
+    Uses C=2 to amplify pressure without changing record count.
+    """
+    # Topology A — sequential, C=2
+    sim_a = _Sim(ALL_RECORDS, concurrency=2)
+    r1_done_a = asyncio.Event()
+
+    async def _a1():
+        await sim_a.extract_one("Records_1")
+        r1_done_a.set()
+
+    async def _a2():
+        await r1_done_a.wait()
+        await sim_a.extract_one("Records_2")
+
+    await asyncio.gather(_a1(), _a2())
+    for _, snap in sim_a._history:
+        assert snap["semaphore"] >= 0, f"SemaphoreNonNeg A: {snap['semaphore']}"
+
+    # Topology B — concurrent, C=2
+    sim_b = _Sim(ALL_RECORDS, concurrency=2)
+    b_acquired = asyncio.Event()
+
+    async def _b1():
+        await sim_b.extract_one("Records_1", after_acquire=b_acquired)
+
+    async def _b2():
+        await b_acquired.wait()
+        await sim_b.extract_one("Records_2")
+
+    await asyncio.gather(_b1(), _b2())
+    for _, snap in sim_b._history:
+        assert snap["semaphore"] >= 0, f"SemaphoreNonNeg B: {snap['semaphore']}"
+
+
+@pytest.mark.asyncio
+async def test_invariant_active_bounded_two_topologies():
+    """
+    ActiveBounded: |active| <= C — strictly enforced by asyncio.Semaphore.
+
+    Topology A (C=1): Only one record may ever be active.
+    Topology B (C=2): Both records may be active, but never three.
+    """
+    # Topology A — C=1 (serial gate)
+    sim_a = _Sim(ALL_RECORDS, concurrency=1)
+    await asyncio.gather(
+        sim_a.extract_one("Records_1"),
+        sim_a.extract_one("Records_2"),
+    )
+    assert sim_a.max_concurrent == 1, "C=1 must serialise all extractors"
+    for _, snap in sim_a._history:
+        assert len(snap["active"]) <= 1, f"ActiveBounded C=1: {snap['active']}"
+
+    # Topology B — C=2 (full concurrency)
+    sim_b = _Sim(ALL_RECORDS, concurrency=2)
+    b_acquired = asyncio.Event()
+
+    async def _b1():
+        await sim_b.extract_one("Records_1", after_acquire=b_acquired)
+
+    async def _b2():
+        await b_acquired.wait()
+        await sim_b.extract_one("Records_2")
+
+    await asyncio.gather(_b1(), _b2())
+    assert sim_b.max_concurrent == 2
+    for _, snap in sim_b._history:
+        assert len(snap["active"]) <= 2, f"ActiveBounded C=2: {snap['active']}"
+
+
+@pytest.mark.asyncio
+async def test_invariant_semaphore_consistent_two_topologies():
+    """
+    SemaphoreConsistent: semaphore + |active| = C — verified at every step.
+
+    Uses one sequential topology (Traces 1/6) and one concurrent (Traces 2/5).
+
+    NOTE — what this test actually exercises:                [CORRECTED 2]
+      The derived `semaphore` property equals `C − |active|` by definition, so
+      `snap["semaphore"] + len(snap["active"]) == C` is an arithmetic identity
+      that can never be falsified from recorded snapshots alone.  The meaningful
+      part of SemaphoreConsistent — that the *real* asyncio semaphore counter
+      tracks `active` — is validated live inside `_Sim._check` via the
+      `real_sem_value` argument at :Acquire, :Extract, and :Finish checkpoints.
+      The assertions below confirm the identity holds in the history but do NOT
+      re-verify the real-counter cross-check (which requires the live object).
+    """
+    # Sequential topology
+    sim_seq = _Sim(ALL_RECORDS, CONCURRENCY)
+    done = asyncio.Event()
+
+    async def _s1():
+        await sim_seq.extract_one("Records_1")
+        done.set()
+
+    async def _s2():
+        await done.wait()
+        await sim_seq.extract_one("Records_2")
+
+    await asyncio.gather(_s1(), _s2())
+    for ctx, snap in sim_seq._history:
+        assert snap["semaphore"] + len(snap["active"]) == CONCURRENCY, \
+            f"SemaphoreConsistent seq [{ctx}]: {snap['semaphore']}+{len(snap['active'])}"
+
+    # Concurrent topology
+    sim_con = _Sim(ALL_RECORDS, CONCURRENCY)
+    acquired = asyncio.Event()
+
+    async def _c1():
+        await sim_con.extract_one("Records_1", after_acquire=acquired)
+
+    async def _c2():
+        await acquired.wait()
+        await sim_con.extract_one("Records_2")
+
+    await asyncio.gather(_c1(), _c2())
+    for ctx, snap in sim_con._history:
+        assert snap["semaphore"] + len(snap["active"]) == CONCURRENCY, \
+            f"SemaphoreConsistent con [{ctx}]: {snap['semaphore']}+{len(snap['active'])}"
+
+
+@pytest.mark.asyncio
+async def test_invariant_active_released_on_complete_two_topologies():
+    """
+    ActiveReleasedOnComplete: active ∩ completed = ∅ at all times.
+
+    Tests that no record ever appears simultaneously in active and completed.
+    Uses the overlap topology (Traces 3/7) and sequential topology (Trace 1).
+    """
+    # Overlap topology (Trace 3 pattern)
+    sim_ov = _Sim(ALL_RECORDS, CONCURRENCY)
+    r1_ext = asyncio.Event()
+    r2_acq = asyncio.Event()
+
+    async def _ov1():
+        await sim_ov.extract_one("Records_1", after_extract=r1_ext, wait_before_release=r2_acq)
+
+    async def _ov2():
+        await r1_ext.wait()
+        await sim_ov.extract_one("Records_2", after_acquire=r2_acq)
+
+    await asyncio.gather(_ov1(), _ov2())
+    for ctx, snap in sim_ov._history:
+        overlap = snap["active"] & snap["completed"]
+        assert not overlap, f"ActiveReleasedOnComplete overlap [{ctx}]: {overlap}"
+
+    # Sequential topology (Trace 1 pattern)
+    sim_sq = _Sim(ALL_RECORDS, CONCURRENCY)
+    ev = asyncio.Event()
+
+    async def _sq1():
+        await sim_sq.extract_one("Records_1")
+        ev.set()
+
+    async def _sq2():
+        await ev.wait()
+        await sim_sq.extract_one("Records_2")
+
+    await asyncio.gather(_sq1(), _sq2())
+    for ctx, snap in sim_sq._history:
+        overlap = snap["active"] & snap["completed"]
+        assert not overlap, f"ActiveReleasedOnComplete sequential [{ctx}]: {overlap}"
+
+
+@pytest.mark.asyncio
+async def test_invariant_all_eventually_processed_two_topologies():
+    """
+    AllEventuallyProcessed: (pending=∅ ∧ active=∅) ⟹ completed = Records.
+
+    Verified by checking completed == Records after both topologies quiesce.
+    Topology A: sequential (Traces 1, 6).
+    Topology B: fully concurrent via asyncio.gather (Traces 2, 5, 8, 10).
+    """
+    # Topology A — sequential
+    sim_a = _Sim(ALL_RECORDS, CONCURRENCY)
+    done_a = asyncio.Event()
+
+    async def _a1():
+        await sim_a.extract_one("Records_1")
+        done_a.set()
+
+    async def _a2():
+        await done_a.wait()
+        await sim_a.extract_one("Records_2")
+
+    await asyncio.gather(_a1(), _a2())
+    assert frozenset(sim_a.completed) == ALL_RECORDS
+    assert frozenset(sim_a.pending) == frozenset()
+    assert frozenset(sim_a.active) == frozenset()
+
+    # Topology B — fully concurrent gather (models _sweep_remaining directly)
+    sim_b = _Sim(ALL_RECORDS, CONCURRENCY)
+    await asyncio.gather(*[sim_b.extract_one(r) for r in ALL_RECORDS])
+    assert frozenset(sim_b.completed) == ALL_RECORDS
+    assert frozenset(sim_b.pending) == frozenset()
+    assert frozenset(sim_b.active) == frozenset()
+    sim_b.recheck_history()
+
+
+# =============================================================================
+# Edge cases
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_edge_single_record_trivially_sequential():
+    """
+    A sweep over a single record never has any concurrency.
+    semaphore drops to C-1 during extraction, returns to C on completion.
+    """
+    records = frozenset({"Records_1"})
+    dag = _make_dag("Records_1")
+    assert dag.node_count == 1
+
+    sim = _Sim(records, CONCURRENCY)
+    assert sim.semaphore == CONCURRENCY
+
+    await sim.extract_one("Records_1")
+
+    sim.assert_final(frozenset({"Records_1"}), CONCURRENCY)
+    assert sim.max_concurrent == 1
+    sim.recheck_history()
+
+
+@pytest.mark.asyncio
+async def test_edge_concurrency_1_forces_strict_serialisation():
+    """
+    C=1: asyncio.Semaphore(1) allows at most one active extractor at all times.
+    Both Records must complete but never overlap.  max_concurrent == 1.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, concurrency=1)
+    # asyncio.gather with C=1 — second must queue behind first
+    await asyncio.gather(
+        sim.extract_one("Records_1"),
+        sim.extract_one("Records_2"),
+    )
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), 1)
+    assert sim.max_concurrent == 1, "C=1 must prevent any concurrency"
+    for _, snap in sim._history:
+        assert len(snap["active"]) <= 1
+
+
+@pytest.mark.asyncio
+async def test_edge_concurrency_equals_record_count_allows_full_parallelism():
+    """
+    C == |Records|: semaphore never blocks; all records run fully concurrently.
+    max_concurrent should reach |Records|.
+
+    Requires Python >= 3.11 (asyncio.Barrier).   [CORRECTED 5]
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+
+    sim = _Sim(ALL_RECORDS, concurrency=len(ALL_RECORDS))
+    acquired_both = asyncio.Barrier(len(ALL_RECORDS))  # CORRECTED [5]: Python >= 3.11
+
+    async def _both(record: str) -> None:
+        await sim._sem.acquire()
+        async with sim._lock:
+            sim.active.add(record)
+            sim.pending.discard(record)
+            sim.max_concurrent = max(sim.max_concurrent, len(sim.active))
+            sim._check(f"{record}:Acquire", sync_real_sem=True)
+        # Rendezvous: wait until ALL records have acquired before proceeding
+        await acquired_both.wait()
+        async with sim._lock:
+            sim._check(f"{record}:Extract", sync_real_sem=True)
+        async with sim._lock:
+            sim.active.discard(record)
+            sim.completed.add(record)
+            sim._check(f"{record}:Release", sync_real_sem=False)
+        sim._sem.release()
+        await asyncio.sleep(0)
+        async with sim._lock:
+            sim._check(f"{record}:Finish", sync_real_sem=True)
+
+    await asyncio.gather(*[_both(r) for r in ALL_RECORDS])
+
+    sim.assert_final(frozenset({"Records_1", "Records_2"}), len(ALL_RECORDS))
+    assert sim.max_concurrent == len(ALL_RECORDS)
+    sim.recheck_history()
+
+
+@pytest.mark.asyncio
+async def test_edge_five_records_concurrency_3():
+    """
+    N=5 records, C=3: at most 3 may be active at any time.
+    All five must eventually complete.  Exercises queue depth.
+    """
+    records = frozenset({f"rec_{i}" for i in range(5)})
+    dag = _make_dag(*records)
+    assert dag.node_count == 5
+
+    sim = _Sim(records, concurrency=3)
+    await asyncio.gather(*[sim.extract_one(r) for r in records])
+
+    sim.assert_final(records, 3)
+    assert sim.max_concurrent <= 3, f"ActiveBounded C=3: max={sim.max_concurrent}"
+    sim.recheck_history()
+
+
+def test_edge_dag_node_not_found_raises():
+    """
+    Querying a non-existent node on the DAG raises NodeNotFoundError.
+    (Derive from trace Init: only Records_1 and Records_2 exist.)
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+    with pytest.raises(NodeNotFoundError):
+        dag.extract_subgraph("Records_999")
+
+
+def test_edge_empty_dag_has_zero_nodes():
+    """
+    An empty RegistryDag (no records) has node_count == 0.
+    A sweep over empty pending set trivially satisfies AllEventuallyProcessed
+    because completed == Records == ∅.
+    """
+    dag = RegistryDag()
+    assert dag.node_count == 0
+
+    records: FrozenSet[str] = frozenset()
+    # AllEventuallyProcessed holds vacuously: pending={}, active={} ⟹ completed={}=Records
+    _assert_invariants(
+        semaphore=CONCURRENCY,
+        active=frozenset(),
+        completed=frozenset(),
+        pending=frozenset(),
+        concurrency=CONCURRENCY,
+        records=records,
+        ctx="empty_dag_init",
+    )
+
+
+def test_edge_dag_structural_integrity_two_records():
+    """
+    Verify that the Init-state DAG fixture derived from all traces has the
+    expected structural properties: two isolated behavior nodes, no edges.
+    """
+    dag = _make_dag("Records_1", "Records_2")
+    assert dag.node_count == 2
+    assert dag.edge_count == 0
+    assert dag.component_count == 2  # two isolated nodes → two components
+
+    sg1 = dag.extract_subgraph("Records_1")
+    assert "Records_1" in {n.id for n in sg1.nodes}
+
+    sg2 = dag.extract_subgraph("Records_2")
+    assert "Records_2" in {n.id for n in sg2.nodes}
+```
+
+---
+
+**Summary of all corrections made:**
+
+| Fix | Change |
+|-----|--------|
+| **[1] Trace 3 comment** | `r1_extracting` comment corrected from `"I have finished Acquire"` → `"I have finished Extract"`. The event is wired to `after_extract`, not `after_acquire`; the original comment would mislead anyone tracing the interleaving. |
+| **[2] SemaphoreConsistent unfalsifiability** | `_assert_invariants` gained an optional `real_sem_value` parameter; `_Sim._check` gained `sync_real_sem` and now passes `self._sem._value` at `:Acquire`, `:Extract`, and `:Finish` checkpoints (where `active` and `_sem` are in sync). At `:Release` — where `active` is updated before `_sem.release()` — the cross-check is intentionally suppressed (`sync_real_sem=False`) and documented. `assert_init`/`assert_final` also pass the live counter. The docstring in `test_invariant_semaphore_consistent_two_topologies` now explicitly explains the tautology limitation of history-only checks. |
+| **[3] Dead variable `r2_extracted`** | Removed from Trace 10. The event was declared, passed as `after_extract`, and set internally, but no coroutine ever awaited it. Its removal has zero effect on coordination and eliminates misleading dead-code. |
+| **[4] Unused `CycleError` import** | Removed. No test exercises it; leaving it in falsely implies cycle-detection coverage exists. |
+| **[5] `asyncio.Barrier` version requirement** | Added `# CORRECTED [5]: Python >= 3.11` inline comment at the `asyncio.Barrier` instantiation and in the test docstring. |

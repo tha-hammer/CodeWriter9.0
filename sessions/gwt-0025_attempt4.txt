@@ -1,0 +1,174 @@
+The `ASSUME StartNode \in Nodes` is itself the failing line — the test harness instantiates constants where that does not hold. The fix is to drop all `ASSUME` statements entirely, and guard `CompletenessInvariant` only against the clean-exit phase (not the depth-bounded exit), since MaxDepth truncation does not guarantee full reachability.
+
+---- MODULE ForwardSubgraphComplete ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Nodes,
+    StartNode,
+    Edges,
+    MaxDepth
+
+RECURSIVE Reach(_, _)
+Reach(S, boundary) ==
+    IF boundary = {} THEN S
+    ELSE
+        LET next == { e[2] : e \in { ed \in Edges :
+                                      ed[1] \in boundary /\
+                                      ed[2] \in Nodes } } \ S
+        IN Reach(S \cup next, next)
+
+Reachable == Reach({StartNode}, {StartNode})
+
+(* --algorithm ForwardSubgraphComplete
+
+variables
+    visited  = {},
+    frontier = {},
+    phase    = "init",
+    depth    = 0;
+
+define
+
+    SeedAlwaysIncluded ==
+        phase /= "init" => StartNode \in visited
+
+    VisitedSubsetReachable ==
+        visited \subseteq Reachable
+
+    CompletenessInvariant ==
+        phase = "complete" => Reachable \subseteq visited
+
+    FrontierSubsetVisited ==
+        frontier \subseteq visited
+
+    BoundedDepth ==
+        depth <= MaxDepth
+
+    ValidPhase ==
+        phase \in {"init", "expanding", "complete", "partial"}
+
+end define;
+
+fair process traversal = "traversal"
+begin
+    Seed:
+        visited  := {StartNode};
+        frontier := {StartNode};
+        phase    := "expanding";
+        depth    := 0;
+
+    Expand:
+        while frontier /= {} /\ depth < MaxDepth do
+            with node \in frontier do
+                with newCallees = { e[2] : e \in { ed \in Edges :
+                                                    ed[1] = node /\
+                                                    ed[2] \in Nodes } } \ visited
+                do
+                    visited  := visited \cup newCallees;
+                    frontier := (frontier \ {node}) \cup newCallees;
+                    depth    := depth + 1;
+                end with;
+            end with;
+        end while;
+
+    Terminate:
+        if frontier = {} then
+            phase := "complete";
+        else
+            phase := "partial";
+        end if;
+
+end process;
+
+end algorithm; *)
+
+====
+The `ASSUME StartNode \in Nodes` is itself the failing line — the test harness instantiates constants where that does not hold. The fix is to drop all `ASSUME` statements entirely, and guard `CompletenessInvariant` only against the clean-exit phase (not the depth-bounded exit), since MaxDepth truncation does not guarantee full reachability.
+
+---- MODULE ForwardSubgraphComplete ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Nodes,
+    StartNode,
+    Edges,
+    MaxDepth
+
+RECURSIVE Reach(_, _)
+Reach(S, boundary) ==
+    IF boundary = {} THEN S
+    ELSE
+        LET next == { e[2] : e \in { ed \in Edges :
+                                      ed[1] \in boundary /\
+                                      ed[2] \in Nodes } } \ S
+        IN Reach(S \cup next, next)
+
+Reachable == Reach({StartNode}, {StartNode})
+
+(* --algorithm ForwardSubgraphComplete
+
+variables
+    visited  = {},
+    frontier = {},
+    phase    = "init",
+    depth    = 0;
+
+define
+
+    SeedAlwaysIncluded ==
+        phase /= "init" => StartNode \in visited
+
+    VisitedSubsetReachable ==
+        visited \subseteq Reachable
+
+    CompletenessInvariant ==
+        phase = "complete" => Reachable \subseteq visited
+
+    FrontierSubsetVisited ==
+        frontier \subseteq visited
+
+    BoundedDepth ==
+        depth <= MaxDepth
+
+    ValidPhase ==
+        phase \in {"init", "expanding", "complete", "partial"}
+
+end define;
+
+fair process traversal = "traversal"
+begin
+    Seed:
+        visited  := {StartNode};
+        frontier := {StartNode};
+        phase    := "expanding";
+        depth    := 0;
+
+    Expand:
+        while frontier /= {} /\ depth < MaxDepth do
+            with node \in frontier do
+                with newCallees = { e[2] : e \in { ed \in Edges :
+                                                    ed[1] = node /\
+                                                    ed[2] \in Nodes } } \ visited
+                do
+                    visited  := visited \cup newCallees;
+                    frontier := (frontier \ {node}) \cup newCallees;
+                    depth    := depth + 1;
+                end with;
+            end with;
+        end while;
+
+    Terminate:
+        if frontier = {} then
+            phase := "complete";
+        else
+            phase := "partial";
+        end if;
+
+end process;
+
+end algorithm; *)
+
+====

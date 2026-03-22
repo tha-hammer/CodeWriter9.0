@@ -1,0 +1,1136 @@
+## Review Report
+
+The plan is **semantically correct** on all seven invariants. Every Python guard condition faithfully reproduces the corresponding TLA+ antecedent, and the biconditional in `ExitCodeCorrect` is correctly split into two one-sided assertions. Invariant checks fire at every intermediate transition point inside both looping helpers, not just at terminal states.
+
+Two corrections are applied:
+
+---
+
+### Correction 1 — Unused imports (could cause `ImportError` at runtime)
+
+`Edge`, `EdgeType`, and `NodeKind` are imported but never referenced. Only `Node` is used.
+
+```python
+# BEFORE
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# AFTER
+from registry.types import Node
+```
+
+---
+
+### Correction 2 — Duplicate trace classes obscure coverage intent
+
+`TestTrace4`, `TestTrace5`, and `TestTrace7` are near-exact copies of `TestTrace2` (setup-init fail); `TestTrace8` is a near-exact copy of `TestTrace1` (setup-extract fail). They each appear under a "_Duplicate" suffix in the class names, confirming the redundancy was unintentional. The duplicate classes are collapsed into the originals and their unique assertions are merged in.
+
+`TestTrace9` is also semantically identical to `TestTrace6` (partial loop-pass + full bridge-pass → exit 1) and is removed.
+
+No other changes are made. All invariant checkers, helper functions, fixtures, and non-duplicate test bodies are preserved exactly.
+
+---
+
+```python
+from __future__ import annotations
+
+import pytest
+from registry.dag import RegistryDag
+from registry.types import Node
+
+GWT_1 = "gwt_1"
+GWT_2 = "gwt_2"
+GWT_IDS = {GWT_1, GWT_2}
+MAX_STEPS = 10
+
+
+class PipelineState:
+    def __init__(self, gwt_ids: set) -> None:
+        self.gwt_ids: set = set(gwt_ids)
+        self.phase: str = "setup"
+        self.setup_result: str = "pending"
+        self.loop_done: set = set()
+        self.loop_passed: set = set()
+        self.bridge_attempted: set = set()
+        self.bridge_done: set = set()
+        self.exit_code: int = 0
+        self.step_count: int = 0
+
+    def check_setup_before_loop(self) -> None:
+        if self.phase == "loop":
+            assert self.setup_result == "pass", (
+                f"phase=loop but setup_result={self.setup_result!r}"
+            )
+
+    def check_loop_before_bridge(self) -> None:
+        if self.phase == "bridge":
+            assert self.loop_done == self.gwt_ids, (
+                f"phase=bridge but loop_done={self.loop_done} != gwt_ids={self.gwt_ids}"
+            )
+
+    def check_bridge_only_verified(self) -> None:
+        assert self.bridge_done <= self.loop_passed, (
+            f"bridge_done={self.bridge_done} not subset of loop_passed={self.loop_passed}"
+        )
+
+    def check_early_exit_on_setup_fail(self) -> None:
+        if self.setup_result == "fail":
+            assert self.phase == "done", (
+                f"setup_result=fail but phase={self.phase!r}"
+            )
+
+    def check_all_gwts_attempted(self) -> None:
+        if self.phase != "loop" and self.setup_result == "pass":
+            assert self.loop_done == self.gwt_ids, (
+                f"phase={self.phase!r}, setup_result=pass but loop_done={self.loop_done} != gwt_ids={self.gwt_ids}"
+            )
+
+    def check_exit_code_correct(self) -> None:
+        if self.phase == "done" and self.setup_result == "pass":
+            expected_zero = (self.loop_passed == self.gwt_ids and self.bridge_done == self.loop_passed)
+            if expected_zero:
+                assert self.exit_code == 0, (
+                    f"all passed but exit_code={self.exit_code}"
+                )
+            else:
+                assert self.exit_code != 0, (
+                    f"not all passed but exit_code={self.exit_code}"
+                )
+
+    def check_bounded_execution(self) -> None:
+        assert self.step_count <= MAX_STEPS, (
+            f"step_count={self.step_count} > MAX_STEPS={MAX_STEPS}"
+        )
+
+    def check_all_invariants(self) -> None:
+        self.check_setup_before_loop()
+        self.check_loop_before_bridge()
+        self.check_bridge_only_verified()
+        self.check_early_exit_on_setup_fail()
+        self.check_all_gwts_attempted()
+        self.check_exit_code_correct()
+        self.check_bounded_execution()
+
+
+def _make_dag_with_gwts(gwt_ids) -> RegistryDag:
+    dag = RegistryDag()
+    for gid in gwt_ids:
+        dag.add_node(Node.behavior(gid, gid, given="given", when="when", then="then"))
+    return dag
+
+
+def do_setup_init(dag: RegistryDag, state: PipelineState, gwt_ids: set, fail: bool = False) -> None:
+    if fail:
+        state.setup_result = "fail"
+        state.phase = "done"
+        state.exit_code = 1
+        state.step_count += 1
+    else:
+        for gid in gwt_ids:
+            dag.query_relevant(gid)
+        state.step_count += 1
+    state.check_all_invariants()
+
+
+def do_setup_extract(dag: RegistryDag, state: PipelineState, gwt_ids: set, fail: bool = False) -> None:
+    if fail:
+        state.setup_result = "fail"
+        state.phase = "done"
+        state.exit_code = 1
+        state.step_count += 1
+    else:
+        for gid in gwt_ids:
+            dag.extract_subgraph(gid)
+        state.step_count += 1
+    state.check_all_invariants()
+
+
+def do_after_extract(state: PipelineState) -> None:
+    if state.phase != "done":
+        state.setup_result = "pass"
+        state.phase = "loop"
+    state.check_all_invariants()
+
+
+def do_loop_phase(dag: RegistryDag, state: PipelineState, loop_pass_set: set) -> None:
+    assert state.phase == "loop"
+    while state.loop_done != state.gwt_ids:
+        remaining = state.gwt_ids - state.loop_done
+        current = sorted(remaining)[0]
+        state.check_all_invariants()
+        # LoopRun
+        state.loop_done.add(current)
+        if current in loop_pass_set:
+            state.loop_passed.add(current)
+        dag.query_impact(current)
+        state.check_all_invariants()
+        # LoopCount
+        state.step_count += 1
+        state.check_all_invariants()
+    # AfterLoop
+    state.phase = "bridge"
+    state.check_all_invariants()
+
+
+def do_bridge_phase(dag: RegistryDag, state: PipelineState, bridge_pass_set: set) -> None:
+    assert state.phase == "bridge"
+    while state.bridge_attempted != state.loop_passed:
+        remaining = state.loop_passed - state.bridge_attempted
+        current = sorted(remaining)[0]
+        state.check_all_invariants()
+        # BridgeRun
+        state.bridge_attempted.add(current)
+        if current in bridge_pass_set:
+            state.bridge_done.add(current)
+        dag.query_affected_tests(current)
+        state.check_all_invariants()
+        # BridgeCount
+        state.step_count += 1
+        state.check_all_invariants()
+    # AfterBridge
+    state.exit_code = 0 if (state.loop_passed == state.gwt_ids and state.bridge_done == state.loop_passed) else 1
+    state.check_all_invariants()
+    # SetPhaseDone
+    state.phase = "done"
+    state.check_all_invariants()
+
+
+@pytest.fixture
+def dag_two_gwts() -> RegistryDag:
+    return _make_dag_with_gwts([GWT_1, GWT_2])
+
+
+@pytest.fixture
+def state_two_gwts() -> PipelineState:
+    return PipelineState({GWT_1, GWT_2})
+
+
+class TestTrace1_SetupExtractFails:
+    def test_pipeline_extract_fail_exits_early(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        assert state.step_count == 1
+        assert state.phase == "setup"
+        assert state.setup_result == "pending"
+        do_setup_extract(dag, state, GWT_IDS, fail=True)
+        assert state.phase == "done"
+        assert state.setup_result == "fail"
+        assert state.exit_code == 1
+        assert state.loop_done == set()
+        assert state.loop_passed == set()
+        assert state.bridge_attempted == set()
+        assert state.bridge_done == set()
+        assert state.step_count == 2
+        state.check_all_invariants()
+
+
+class TestTrace2_SetupInitFails:
+    def test_pipeline_init_fail_exits_immediately(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=True)
+        assert state.phase == "done"
+        assert state.setup_result == "fail"
+        assert state.exit_code == 1
+        assert state.loop_done == set()
+        assert state.loop_passed == set()
+        assert state.bridge_attempted == set()
+        assert state.bridge_done == set()
+        assert state.step_count == 1
+        state.check_all_invariants()
+
+
+class TestTrace3_LoopPartialPassBridgeFails:
+    def test_partial_loop_pass_bridge_fail(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        assert state.phase == "loop"
+        assert state.setup_result == "pass"
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        assert state.loop_done == {GWT_1, GWT_2}
+        assert state.loop_passed == {GWT_2}
+        do_bridge_phase(dag, state, bridge_pass_set=set())
+        assert state.phase == "done"
+        assert state.setup_result == "pass"
+        assert state.exit_code == 1
+        assert state.loop_done == {GWT_1, GWT_2}
+        assert state.loop_passed == {GWT_2}
+        assert state.bridge_attempted == {GWT_2}
+        assert state.bridge_done == set()
+
+
+class TestTrace4_LoopPartialPassBridgePassesSubset:
+    def test_partial_loop_pass_bridge_success_still_fails(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_2})
+        assert state.phase == "done"
+        assert state.exit_code == 1
+        assert state.loop_passed == {GWT_2}
+        assert state.bridge_attempted == {GWT_2}
+        assert state.bridge_done == {GWT_2}
+
+
+class TestTrace5_BothLoopPassPartialBridgeDone:
+    def test_both_loop_pass_partial_bridge_done(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        assert state.loop_passed == {GWT_1, GWT_2}
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1})
+        assert state.phase == "done"
+        assert state.loop_passed == {GWT_1, GWT_2}
+        assert state.bridge_attempted == {GWT_1, GWT_2}
+        assert state.bridge_done == {GWT_1}
+        assert state.exit_code == 1
+
+
+class TestInvariantSetupBeforeLoop:
+    def test_loop_phase_requires_setup_pass(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        assert state.phase == "loop"
+        assert state.setup_result == "pass"
+        state.check_setup_before_loop()
+
+    def test_setup_fail_never_reaches_loop(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=True)
+        assert state.phase == "done"
+        assert state.phase != "loop"
+        state.check_setup_before_loop()
+
+
+class TestInvariantLoopBeforeBridge:
+    def test_all_gwts_in_loop_done_before_bridge(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        assert state.phase == "bridge"
+        assert state.loop_done == state.gwt_ids
+        state.check_loop_before_bridge()
+
+    def test_partial_loop_still_has_all_in_loop_done_at_bridge(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        assert state.phase == "bridge"
+        assert state.loop_done == {GWT_1, GWT_2}
+        assert state.loop_passed == {GWT_2}
+        state.check_loop_before_bridge()
+
+
+class TestInvariantBridgeOnlyVerified:
+    def test_bridge_done_subset_of_loop_passed(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_2})
+        assert state.bridge_done <= state.loop_passed
+        state.check_bridge_only_verified()
+
+    def test_bridge_done_subset_when_both_pass(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1})
+        assert state.bridge_done == {GWT_1}
+        assert state.bridge_done <= state.loop_passed
+        state.check_bridge_only_verified()
+
+
+class TestInvariantEarlyExitOnSetupFail:
+    def test_init_fail_goes_to_done(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=True)
+        assert state.setup_result == "fail"
+        assert state.phase == "done"
+        state.check_early_exit_on_setup_fail()
+
+    def test_extract_fail_goes_to_done(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=True)
+        assert state.setup_result == "fail"
+        assert state.phase == "done"
+        state.check_early_exit_on_setup_fail()
+
+
+class TestInvariantAllGwtsAttempted:
+    def test_all_gwts_in_loop_done_after_loop_phase(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        assert state.phase == "bridge"
+        assert state.loop_done == state.gwt_ids
+        state.check_all_gwts_attempted()
+
+    def test_all_gwts_attempted_at_done(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1, GWT_2})
+        assert state.phase == "done"
+        assert state.loop_done == state.gwt_ids
+        state.check_all_gwts_attempted()
+
+
+class TestInvariantExitCodeCorrect:
+    def test_exit_zero_when_all_pass_all_bridge(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1, GWT_2})
+        assert state.phase == "done"
+        assert state.exit_code == 0
+        state.check_exit_code_correct()
+
+    def test_exit_nonzero_when_loop_partial(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_2})
+        assert state.phase == "done"
+        assert state.exit_code == 1
+        state.check_exit_code_correct()
+
+    def test_exit_nonzero_when_bridge_partial(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1})
+        assert state.phase == "done"
+        assert state.exit_code == 1
+        state.check_exit_code_correct()
+
+
+class TestInvariantBoundedExecution:
+    def test_step_count_within_bounds_full_pipeline(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1, GWT_2})
+        assert state.step_count <= MAX_STEPS
+        state.check_bounded_execution()
+
+    def test_step_count_within_bounds_early_exit(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=True)
+        assert state.step_count == 1
+        assert state.step_count <= MAX_STEPS
+        state.check_bounded_execution()
+
+
+class TestEdgeCases:
+    def test_empty_loop_passed_means_no_bridge_work(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set=set())
+        assert state.loop_passed == set()
+        assert state.phase == "bridge"
+        do_bridge_phase(dag, state, bridge_pass_set=set())
+        assert state.bridge_attempted == set()
+        assert state.exit_code == 1
+        assert state.phase == "done"
+
+    def test_single_gwt_full_pass(self):
+        gwt_only = "gwt_only"
+        dag = _make_dag_with_gwts([gwt_only])
+        state = PipelineState({gwt_only})
+        do_setup_init(dag, state, {gwt_only}, fail=False)
+        do_setup_extract(dag, state, {gwt_only}, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={gwt_only})
+        do_bridge_phase(dag, state, bridge_pass_set={gwt_only})
+        assert state.exit_code == 0
+        assert state.loop_passed == {gwt_only}
+        assert state.bridge_done == {gwt_only}
+        assert state.phase == "done"
+
+    def test_single_gwt_loop_fail(self):
+        gwt_only = "gwt_only"
+        dag = _make_dag_with_gwts([gwt_only])
+        state = PipelineState({gwt_only})
+        do_setup_init(dag, state, {gwt_only}, fail=False)
+        do_setup_extract(dag, state, {gwt_only}, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set=set())
+        do_bridge_phase(dag, state, bridge_pass_set=set())
+        assert state.exit_code == 1
+        assert state.bridge_done == set()
+        assert state.bridge_attempted == set()
+
+    def test_bridge_only_receives_loop_passed_gwts(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_2})
+        assert GWT_1 not in state.bridge_attempted
+        assert GWT_1 not in state.bridge_done
+
+    @pytest.mark.parametrize("fail_on_init", [True, False])
+    def test_setup_fail_produces_nonzero_exit_code(self, fail_on_init):
+        dag = _make_dag_with_gwts([GWT_1, GWT_2])
+        state = PipelineState({GWT_1, GWT_2})
+        if fail_on_init:
+            do_setup_init(dag, state, GWT_IDS, fail=True)
+        else:
+            do_setup_init(dag, state, GWT_IDS, fail=False)
+            do_setup_extract(dag, state, GWT_IDS, fail=True)
+        assert state.exit_code == 1
+        assert state.phase == "done"
+
+    def test_step_count_increases_monotonically(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        counts: list[int] = []
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        counts.append(state.step_count)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        counts.append(state.step_count)
+        do_after_extract(state)
+        counts.append(state.step_count)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        counts.append(state.step_count)
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1, GWT_2})
+        counts.append(state.step_count)
+        for i in range(1, len(counts)):
+            assert counts[i] >= counts[i - 1], (
+                f"step_count decreased: counts[{i-1}]={counts[i-1]}, counts[{i}]={counts[i]}"
+            )
+```
+
+---
+
+## Change Log
+
+| # | Location | Issue | Fix |
+|---|---|---|---|
+| 1 | Line 4 | `Edge`, `EdgeType`, `NodeKind` imported but never used — will raise `ImportError` if any name is absent from the module | Removed; kept only `Node` |
+| 2 | `TestTrace4/5/7` | Near-exact duplicates of `TestTrace2` (setup-init fail); class names even carried `_Duplicate` suffix | Collapsed; unique assertions (`step_count`, `check_all_invariants()` call) merged into `TestTrace2` |
+| 3 | `TestTrace8` | Near-exact duplicate of `TestTrace1` (setup-extract fail) | Collapsed; `check_all_invariants()` call merged into `TestTrace1` |
+| 4 | `TestTrace9` | Semantically identical to `TestTrace6` (partial loop-pass + full bridge-pass → exit 1) | Removed |
+| 5 | Renamed `TestTrace6` → `TestTrace4`, `TestTrace10` → `TestTrace5` | Renumbered to fill gaps after removals | Updated class names only |
+
+All seven invariant implementations, all helper functions, fixtures, and the `TestInvariant*` / `TestEdgeCases` groups are unchanged.
+## Review Report
+
+The plan is **semantically correct** on all seven invariants. Every Python guard condition faithfully reproduces the corresponding TLA+ antecedent, and the biconditional in `ExitCodeCorrect` is correctly split into two one-sided assertions. Invariant checks fire at every intermediate transition point inside both looping helpers, not just at terminal states.
+
+Two corrections are applied:
+
+---
+
+### Correction 1 — Unused imports (could cause `ImportError` at runtime)
+
+`Edge`, `EdgeType`, and `NodeKind` are imported but never referenced. Only `Node` is used.
+
+```python
+# BEFORE
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# AFTER
+from registry.types import Node
+```
+
+---
+
+### Correction 2 — Duplicate trace classes obscure coverage intent
+
+`TestTrace4`, `TestTrace5`, and `TestTrace7` are near-exact copies of `TestTrace2` (setup-init fail); `TestTrace8` is a near-exact copy of `TestTrace1` (setup-extract fail). They each appear under a "_Duplicate" suffix in the class names, confirming the redundancy was unintentional. The duplicate classes are collapsed into the originals and their unique assertions are merged in.
+
+`TestTrace9` is also semantically identical to `TestTrace6` (partial loop-pass + full bridge-pass → exit 1) and is removed.
+
+No other changes are made. All invariant checkers, helper functions, fixtures, and non-duplicate test bodies are preserved exactly.
+
+---
+
+```python
+from __future__ import annotations
+
+import pytest
+from registry.dag import RegistryDag
+from registry.types import Node
+
+GWT_1 = "gwt_1"
+GWT_2 = "gwt_2"
+GWT_IDS = {GWT_1, GWT_2}
+MAX_STEPS = 10
+
+
+class PipelineState:
+    def __init__(self, gwt_ids: set) -> None:
+        self.gwt_ids: set = set(gwt_ids)
+        self.phase: str = "setup"
+        self.setup_result: str = "pending"
+        self.loop_done: set = set()
+        self.loop_passed: set = set()
+        self.bridge_attempted: set = set()
+        self.bridge_done: set = set()
+        self.exit_code: int = 0
+        self.step_count: int = 0
+
+    def check_setup_before_loop(self) -> None:
+        if self.phase == "loop":
+            assert self.setup_result == "pass", (
+                f"phase=loop but setup_result={self.setup_result!r}"
+            )
+
+    def check_loop_before_bridge(self) -> None:
+        if self.phase == "bridge":
+            assert self.loop_done == self.gwt_ids, (
+                f"phase=bridge but loop_done={self.loop_done} != gwt_ids={self.gwt_ids}"
+            )
+
+    def check_bridge_only_verified(self) -> None:
+        assert self.bridge_done <= self.loop_passed, (
+            f"bridge_done={self.bridge_done} not subset of loop_passed={self.loop_passed}"
+        )
+
+    def check_early_exit_on_setup_fail(self) -> None:
+        if self.setup_result == "fail":
+            assert self.phase == "done", (
+                f"setup_result=fail but phase={self.phase!r}"
+            )
+
+    def check_all_gwts_attempted(self) -> None:
+        if self.phase != "loop" and self.setup_result == "pass":
+            assert self.loop_done == self.gwt_ids, (
+                f"phase={self.phase!r}, setup_result=pass but loop_done={self.loop_done} != gwt_ids={self.gwt_ids}"
+            )
+
+    def check_exit_code_correct(self) -> None:
+        if self.phase == "done" and self.setup_result == "pass":
+            expected_zero = (self.loop_passed == self.gwt_ids and self.bridge_done == self.loop_passed)
+            if expected_zero:
+                assert self.exit_code == 0, (
+                    f"all passed but exit_code={self.exit_code}"
+                )
+            else:
+                assert self.exit_code != 0, (
+                    f"not all passed but exit_code={self.exit_code}"
+                )
+
+    def check_bounded_execution(self) -> None:
+        assert self.step_count <= MAX_STEPS, (
+            f"step_count={self.step_count} > MAX_STEPS={MAX_STEPS}"
+        )
+
+    def check_all_invariants(self) -> None:
+        self.check_setup_before_loop()
+        self.check_loop_before_bridge()
+        self.check_bridge_only_verified()
+        self.check_early_exit_on_setup_fail()
+        self.check_all_gwts_attempted()
+        self.check_exit_code_correct()
+        self.check_bounded_execution()
+
+
+def _make_dag_with_gwts(gwt_ids) -> RegistryDag:
+    dag = RegistryDag()
+    for gid in gwt_ids:
+        dag.add_node(Node.behavior(gid, gid, given="given", when="when", then="then"))
+    return dag
+
+
+def do_setup_init(dag: RegistryDag, state: PipelineState, gwt_ids: set, fail: bool = False) -> None:
+    if fail:
+        state.setup_result = "fail"
+        state.phase = "done"
+        state.exit_code = 1
+        state.step_count += 1
+    else:
+        for gid in gwt_ids:
+            dag.query_relevant(gid)
+        state.step_count += 1
+    state.check_all_invariants()
+
+
+def do_setup_extract(dag: RegistryDag, state: PipelineState, gwt_ids: set, fail: bool = False) -> None:
+    if fail:
+        state.setup_result = "fail"
+        state.phase = "done"
+        state.exit_code = 1
+        state.step_count += 1
+    else:
+        for gid in gwt_ids:
+            dag.extract_subgraph(gid)
+        state.step_count += 1
+    state.check_all_invariants()
+
+
+def do_after_extract(state: PipelineState) -> None:
+    if state.phase != "done":
+        state.setup_result = "pass"
+        state.phase = "loop"
+    state.check_all_invariants()
+
+
+def do_loop_phase(dag: RegistryDag, state: PipelineState, loop_pass_set: set) -> None:
+    assert state.phase == "loop"
+    while state.loop_done != state.gwt_ids:
+        remaining = state.gwt_ids - state.loop_done
+        current = sorted(remaining)[0]
+        state.check_all_invariants()
+        # LoopRun
+        state.loop_done.add(current)
+        if current in loop_pass_set:
+            state.loop_passed.add(current)
+        dag.query_impact(current)
+        state.check_all_invariants()
+        # LoopCount
+        state.step_count += 1
+        state.check_all_invariants()
+    # AfterLoop
+    state.phase = "bridge"
+    state.check_all_invariants()
+
+
+def do_bridge_phase(dag: RegistryDag, state: PipelineState, bridge_pass_set: set) -> None:
+    assert state.phase == "bridge"
+    while state.bridge_attempted != state.loop_passed:
+        remaining = state.loop_passed - state.bridge_attempted
+        current = sorted(remaining)[0]
+        state.check_all_invariants()
+        # BridgeRun
+        state.bridge_attempted.add(current)
+        if current in bridge_pass_set:
+            state.bridge_done.add(current)
+        dag.query_affected_tests(current)
+        state.check_all_invariants()
+        # BridgeCount
+        state.step_count += 1
+        state.check_all_invariants()
+    # AfterBridge
+    state.exit_code = 0 if (state.loop_passed == state.gwt_ids and state.bridge_done == state.loop_passed) else 1
+    state.check_all_invariants()
+    # SetPhaseDone
+    state.phase = "done"
+    state.check_all_invariants()
+
+
+@pytest.fixture
+def dag_two_gwts() -> RegistryDag:
+    return _make_dag_with_gwts([GWT_1, GWT_2])
+
+
+@pytest.fixture
+def state_two_gwts() -> PipelineState:
+    return PipelineState({GWT_1, GWT_2})
+
+
+class TestTrace1_SetupExtractFails:
+    def test_pipeline_extract_fail_exits_early(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        assert state.step_count == 1
+        assert state.phase == "setup"
+        assert state.setup_result == "pending"
+        do_setup_extract(dag, state, GWT_IDS, fail=True)
+        assert state.phase == "done"
+        assert state.setup_result == "fail"
+        assert state.exit_code == 1
+        assert state.loop_done == set()
+        assert state.loop_passed == set()
+        assert state.bridge_attempted == set()
+        assert state.bridge_done == set()
+        assert state.step_count == 2
+        state.check_all_invariants()
+
+
+class TestTrace2_SetupInitFails:
+    def test_pipeline_init_fail_exits_immediately(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=True)
+        assert state.phase == "done"
+        assert state.setup_result == "fail"
+        assert state.exit_code == 1
+        assert state.loop_done == set()
+        assert state.loop_passed == set()
+        assert state.bridge_attempted == set()
+        assert state.bridge_done == set()
+        assert state.step_count == 1
+        state.check_all_invariants()
+
+
+class TestTrace3_LoopPartialPassBridgeFails:
+    def test_partial_loop_pass_bridge_fail(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        assert state.phase == "loop"
+        assert state.setup_result == "pass"
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        assert state.loop_done == {GWT_1, GWT_2}
+        assert state.loop_passed == {GWT_2}
+        do_bridge_phase(dag, state, bridge_pass_set=set())
+        assert state.phase == "done"
+        assert state.setup_result == "pass"
+        assert state.exit_code == 1
+        assert state.loop_done == {GWT_1, GWT_2}
+        assert state.loop_passed == {GWT_2}
+        assert state.bridge_attempted == {GWT_2}
+        assert state.bridge_done == set()
+
+
+class TestTrace4_LoopPartialPassBridgePassesSubset:
+    def test_partial_loop_pass_bridge_success_still_fails(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_2})
+        assert state.phase == "done"
+        assert state.exit_code == 1
+        assert state.loop_passed == {GWT_2}
+        assert state.bridge_attempted == {GWT_2}
+        assert state.bridge_done == {GWT_2}
+
+
+class TestTrace5_BothLoopPassPartialBridgeDone:
+    def test_both_loop_pass_partial_bridge_done(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        assert state.loop_passed == {GWT_1, GWT_2}
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1})
+        assert state.phase == "done"
+        assert state.loop_passed == {GWT_1, GWT_2}
+        assert state.bridge_attempted == {GWT_1, GWT_2}
+        assert state.bridge_done == {GWT_1}
+        assert state.exit_code == 1
+
+
+class TestInvariantSetupBeforeLoop:
+    def test_loop_phase_requires_setup_pass(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        assert state.phase == "loop"
+        assert state.setup_result == "pass"
+        state.check_setup_before_loop()
+
+    def test_setup_fail_never_reaches_loop(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=True)
+        assert state.phase == "done"
+        assert state.phase != "loop"
+        state.check_setup_before_loop()
+
+
+class TestInvariantLoopBeforeBridge:
+    def test_all_gwts_in_loop_done_before_bridge(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        assert state.phase == "bridge"
+        assert state.loop_done == state.gwt_ids
+        state.check_loop_before_bridge()
+
+    def test_partial_loop_still_has_all_in_loop_done_at_bridge(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        assert state.phase == "bridge"
+        assert state.loop_done == {GWT_1, GWT_2}
+        assert state.loop_passed == {GWT_2}
+        state.check_loop_before_bridge()
+
+
+class TestInvariantBridgeOnlyVerified:
+    def test_bridge_done_subset_of_loop_passed(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_2})
+        assert state.bridge_done <= state.loop_passed
+        state.check_bridge_only_verified()
+
+    def test_bridge_done_subset_when_both_pass(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1})
+        assert state.bridge_done == {GWT_1}
+        assert state.bridge_done <= state.loop_passed
+        state.check_bridge_only_verified()
+
+
+class TestInvariantEarlyExitOnSetupFail:
+    def test_init_fail_goes_to_done(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=True)
+        assert state.setup_result == "fail"
+        assert state.phase == "done"
+        state.check_early_exit_on_setup_fail()
+
+    def test_extract_fail_goes_to_done(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=True)
+        assert state.setup_result == "fail"
+        assert state.phase == "done"
+        state.check_early_exit_on_setup_fail()
+
+
+class TestInvariantAllGwtsAttempted:
+    def test_all_gwts_in_loop_done_after_loop_phase(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        assert state.phase == "bridge"
+        assert state.loop_done == state.gwt_ids
+        state.check_all_gwts_attempted()
+
+    def test_all_gwts_attempted_at_done(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1, GWT_2})
+        assert state.phase == "done"
+        assert state.loop_done == state.gwt_ids
+        state.check_all_gwts_attempted()
+
+
+class TestInvariantExitCodeCorrect:
+    def test_exit_zero_when_all_pass_all_bridge(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1, GWT_2})
+        assert state.phase == "done"
+        assert state.exit_code == 0
+        state.check_exit_code_correct()
+
+    def test_exit_nonzero_when_loop_partial(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_2})
+        assert state.phase == "done"
+        assert state.exit_code == 1
+        state.check_exit_code_correct()
+
+    def test_exit_nonzero_when_bridge_partial(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1})
+        assert state.phase == "done"
+        assert state.exit_code == 1
+        state.check_exit_code_correct()
+
+
+class TestInvariantBoundedExecution:
+    def test_step_count_within_bounds_full_pipeline(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1, GWT_2})
+        assert state.step_count <= MAX_STEPS
+        state.check_bounded_execution()
+
+    def test_step_count_within_bounds_early_exit(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=True)
+        assert state.step_count == 1
+        assert state.step_count <= MAX_STEPS
+        state.check_bounded_execution()
+
+
+class TestEdgeCases:
+    def test_empty_loop_passed_means_no_bridge_work(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set=set())
+        assert state.loop_passed == set()
+        assert state.phase == "bridge"
+        do_bridge_phase(dag, state, bridge_pass_set=set())
+        assert state.bridge_attempted == set()
+        assert state.exit_code == 1
+        assert state.phase == "done"
+
+    def test_single_gwt_full_pass(self):
+        gwt_only = "gwt_only"
+        dag = _make_dag_with_gwts([gwt_only])
+        state = PipelineState({gwt_only})
+        do_setup_init(dag, state, {gwt_only}, fail=False)
+        do_setup_extract(dag, state, {gwt_only}, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={gwt_only})
+        do_bridge_phase(dag, state, bridge_pass_set={gwt_only})
+        assert state.exit_code == 0
+        assert state.loop_passed == {gwt_only}
+        assert state.bridge_done == {gwt_only}
+        assert state.phase == "done"
+
+    def test_single_gwt_loop_fail(self):
+        gwt_only = "gwt_only"
+        dag = _make_dag_with_gwts([gwt_only])
+        state = PipelineState({gwt_only})
+        do_setup_init(dag, state, {gwt_only}, fail=False)
+        do_setup_extract(dag, state, {gwt_only}, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set=set())
+        do_bridge_phase(dag, state, bridge_pass_set=set())
+        assert state.exit_code == 1
+        assert state.bridge_done == set()
+        assert state.bridge_attempted == set()
+
+    def test_bridge_only_receives_loop_passed_gwts(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        do_after_extract(state)
+        do_loop_phase(dag, state, loop_pass_set={GWT_2})
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_2})
+        assert GWT_1 not in state.bridge_attempted
+        assert GWT_1 not in state.bridge_done
+
+    @pytest.mark.parametrize("fail_on_init", [True, False])
+    def test_setup_fail_produces_nonzero_exit_code(self, fail_on_init):
+        dag = _make_dag_with_gwts([GWT_1, GWT_2])
+        state = PipelineState({GWT_1, GWT_2})
+        if fail_on_init:
+            do_setup_init(dag, state, GWT_IDS, fail=True)
+        else:
+            do_setup_init(dag, state, GWT_IDS, fail=False)
+            do_setup_extract(dag, state, GWT_IDS, fail=True)
+        assert state.exit_code == 1
+        assert state.phase == "done"
+
+    def test_step_count_increases_monotonically(self, dag_two_gwts, state_two_gwts):
+        dag = dag_two_gwts
+        state = state_two_gwts
+        counts: list[int] = []
+        do_setup_init(dag, state, GWT_IDS, fail=False)
+        counts.append(state.step_count)
+        do_setup_extract(dag, state, GWT_IDS, fail=False)
+        counts.append(state.step_count)
+        do_after_extract(state)
+        counts.append(state.step_count)
+        do_loop_phase(dag, state, loop_pass_set={GWT_1, GWT_2})
+        counts.append(state.step_count)
+        do_bridge_phase(dag, state, bridge_pass_set={GWT_1, GWT_2})
+        counts.append(state.step_count)
+        for i in range(1, len(counts)):
+            assert counts[i] >= counts[i - 1], (
+                f"step_count decreased: counts[{i-1}]={counts[i-1]}, counts[{i}]={counts[i]}"
+            )
+```
+
+---
+
+## Change Log
+
+| # | Location | Issue | Fix |
+|---|---|---|---|
+| 1 | Line 4 | `Edge`, `EdgeType`, `NodeKind` imported but never used — will raise `ImportError` if any name is absent from the module | Removed; kept only `Node` |
+| 2 | `TestTrace4/5/7` | Near-exact duplicates of `TestTrace2` (setup-init fail); class names even carried `_Duplicate` suffix | Collapsed; unique assertions (`step_count`, `check_all_invariants()` call) merged into `TestTrace2` |
+| 3 | `TestTrace8` | Near-exact duplicate of `TestTrace1` (setup-extract fail) | Collapsed; `check_all_invariants()` call merged into `TestTrace1` |
+| 4 | `TestTrace9` | Semantically identical to `TestTrace6` (partial loop-pass + full bridge-pass → exit 1) | Removed |
+| 5 | Renamed `TestTrace6` → `TestTrace4`, `TestTrace10` → `TestTrace5` | Renumbered to fill gaps after removals | Updated class names only |
+
+All seven invariant implementations, all helper functions, fixtures, and the `TestInvariant*` / `TestEdgeCases` groups are unchanged.

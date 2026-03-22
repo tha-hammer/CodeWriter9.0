@@ -16,7 +16,7 @@ import claude_agent_sdk
 from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessage, ToolResultBlock, TextBlock, ResultMessage
 
 from registry.context import ProjectContext
-from registry.status import write_result_file
+from registry.status import write_progress, write_result_file
 from registry.one_shot_loop import (
     OneShotLoop, query_context, format_prompt_context,
     LoopResult, LoopStatus, TLCErrorClass, extract_pluscal,
@@ -224,6 +224,7 @@ async def run_loop(
     max_retries: int = 5,
     log_fn=print,
     context_text: str = "",
+    dag_path: Path | None = None,
 ) -> tuple[LoopResult, Path | None]:
     """Run the LLM → PlusCal → TLC loop for a GWT behavior.
 
@@ -232,6 +233,9 @@ async def run_loop(
     Args:
         context_text: Supplementary context (e.g., plan_path content)
             passed verbatim into the LLM prompt.
+        dag_path: Explicit path to the DAG file. Callers should resolve
+            this via _require_cw9() to avoid self-hosting/crawl confusion.
+            Falls back to ctx.state_root / "dag.json" if not provided.
 
     Returns (result, spec_path) where spec_path is the verified .tla
     file path on success, or None on failure.
@@ -239,7 +243,8 @@ async def run_loop(
     from registry.dag import RegistryDag
 
     # Load DAG
-    dag_path = ctx.state_root / "dag.json"
+    if dag_path is None:
+        dag_path = ctx.state_root / "dag.json"
     if not dag_path.exists():
         log_fn(f"Error: No DAG found at {dag_path}. Run: cw9 extract")
         return LoopResult.FAIL, None
@@ -278,14 +283,22 @@ async def run_loop(
 
     # Collect counterexample traces during retries
     collected_traces = []
+    _pid = os.getpid()
+    _progress = lambda attempt, phase, detail="": write_progress(
+        ctx.session_dir, gwt_id, attempt, max_retries, phase,
+        detail=detail, pid=_pid,
+    )
 
     try:
+        _progress(0, "starting")
         for attempt in range(1, max_retries + 1):
             log_fn(f"Attempt {attempt}/{max_retries}")
 
+            _progress(attempt, "llm_call")
             response = await _call_llm_with_client(
                 client, current_prompt, connect=(attempt == 1),
             )
+            _progress(attempt, "llm_done", f"{len(response)} chars")
 
             # Save LLM response
             ctx.session_dir.mkdir(parents=True, exist_ok=True)
@@ -293,6 +306,7 @@ async def run_loop(
             response_path.write_text(response)
 
             # Process through OneShotLoop (compile PlusCal, run TLC)
+            _progress(attempt, "compiling")
             loop = OneShotLoop(dag=dag, ctx=ctx)
             loop.query(gwt_id)
             status = loop.process_response(
@@ -300,6 +314,7 @@ async def run_loop(
                 module_name=module_name,
                 cfg_text=cfg_text,
             )
+            _progress(attempt, "tlc_done", str(status.result.name))
 
             if status.result == LoopResult.PASS:
                 ctx.spec_dir.mkdir(parents=True, exist_ok=True)
@@ -318,6 +333,7 @@ async def run_loop(
                         traces_path.write_text(json.dumps(collected_traces, indent=2))
 
                     # v5: Generate simulation traces from the verified model
+                    _progress(attempt, "sim_traces")
                     from registry.one_shot_loop import run_tlc_simulate
                     try:
                         sim_traces = run_tlc_simulate(
@@ -332,11 +348,13 @@ async def run_loop(
                     except Exception as e:
                         log_fn(f"  Warning: simulation trace generation failed: {e}")
 
+                    _progress(attempt, "complete", "pass")
                     write_result_file(ctx.session_dir, gwt_id, "pass", attempt, None)
                     return LoopResult.PASS, dest_tla
 
             elif status.result == LoopResult.FAIL:
                 log_fn(f"FAIL — {status.error}")
+                _progress(attempt, "complete", f"fail: {status.error}")
                 write_result_file(ctx.session_dir, gwt_id, "fail", attempt, status.error)
                 return LoopResult.FAIL, None
 
@@ -358,6 +376,7 @@ async def run_loop(
                 log_fn(f"RETRY — {status.error}")
 
         log_fn(f"Exhausted {max_retries} attempts")
+        _progress(max_retries, "complete", f"fail: exhausted {max_retries} attempts")
         write_result_file(
             ctx.session_dir, gwt_id, "fail", max_retries,
             f"Exhausted {max_retries} attempts",

@@ -1,0 +1,264 @@
+---- MODULE PipelineStepOrdering ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS GwtIds, MaxSteps
+
+ASSUME GwtIds # {}
+
+(* --algorithm PipelineStepOrdering
+
+variables
+    phase            = "setup",
+    setup_result     = "pending",
+    loop_done        = {},
+    loop_passed      = {},
+    bridge_attempted = {},
+    bridge_done      = {},
+    exit_code        = 0,
+    step_count       = 0,
+    current_gwt      = CHOOSE g \in GwtIds : TRUE;
+
+define
+
+    SetupBeforeLoop ==
+        phase = "loop" => setup_result = "pass"
+
+    LoopBeforeBridge ==
+        phase = "bridge" => loop_done = GwtIds
+
+    BridgeOnlyVerified ==
+        \A g \in bridge_done : g \in loop_passed
+
+    EarlyExitOnSetupFail ==
+        setup_result = "fail" => phase = "done"
+
+    AllGwtsAttempted ==
+        (phase # "loop" /\ setup_result = "pass") => loop_done = GwtIds
+
+    ExitCodeCorrect ==
+        (phase = "done" /\ setup_result = "pass") =>
+            (exit_code = 0 <=> loop_passed = GwtIds /\ bridge_done = loop_passed)
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+end define;
+
+fair process pipeline = "main"
+begin
+
+    SetupInit:
+        either
+            step_count := step_count + 1;
+        or
+            setup_result := "fail";
+            phase        := "done";
+            exit_code    := 1;
+            step_count   := step_count + 1;
+        end either;
+
+    AfterInit:
+        if phase = "done" then
+            goto PipelineDone;
+        end if;
+
+    SetupExtract:
+        either
+            step_count := step_count + 1;
+        or
+            setup_result := "fail";
+            phase        := "done";
+            exit_code    := 1;
+            step_count   := step_count + 1;
+        end either;
+
+    AfterExtract:
+        if phase = "done" then
+            goto PipelineDone;
+        else
+            setup_result := "pass";
+            phase        := "loop";
+        end if;
+
+    LoopPhase:
+        while loop_done # GwtIds do
+            current_gwt := CHOOSE g \in GwtIds \ loop_done : TRUE;
+        LoopRun:
+            either
+                loop_done   := loop_done \cup {current_gwt};
+                loop_passed := loop_passed \cup {current_gwt};
+            or
+                loop_done := loop_done \cup {current_gwt};
+            end either;
+        LoopCount:
+            step_count := step_count + 1;
+        end while;
+
+    AfterLoop:
+        phase := "bridge";
+
+    BridgePhase:
+        while bridge_attempted # loop_passed do
+            current_gwt := CHOOSE g \in loop_passed \ bridge_attempted : TRUE;
+        BridgeRun:
+            either
+                bridge_attempted := bridge_attempted \cup {current_gwt};
+                bridge_done      := bridge_done \cup {current_gwt};
+            or
+                bridge_attempted := bridge_attempted \cup {current_gwt};
+            end either;
+        BridgeCount:
+            step_count := step_count + 1;
+        end while;
+
+    AfterBridge:
+        if loop_passed = GwtIds /\ bridge_done = loop_passed then
+            exit_code := 0;
+        else
+            exit_code := 1;
+        end if;
+
+    SetPhaseDone:
+        phase := "done";
+
+    PipelineDone:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE PipelineStepOrdering ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS GwtIds, MaxSteps
+
+ASSUME GwtIds # {}
+
+(* --algorithm PipelineStepOrdering
+
+variables
+    phase            = "setup",
+    setup_result     = "pending",
+    loop_done        = {},
+    loop_passed      = {},
+    bridge_attempted = {},
+    bridge_done      = {},
+    exit_code        = 0,
+    step_count       = 0,
+    current_gwt      = CHOOSE g \in GwtIds : TRUE;
+
+define
+
+    SetupBeforeLoop ==
+        phase = "loop" => setup_result = "pass"
+
+    LoopBeforeBridge ==
+        phase = "bridge" => loop_done = GwtIds
+
+    BridgeOnlyVerified ==
+        \A g \in bridge_done : g \in loop_passed
+
+    EarlyExitOnSetupFail ==
+        setup_result = "fail" => phase = "done"
+
+    AllGwtsAttempted ==
+        (phase # "loop" /\ setup_result = "pass") => loop_done = GwtIds
+
+    ExitCodeCorrect ==
+        (phase = "done" /\ setup_result = "pass") =>
+            (exit_code = 0 <=> loop_passed = GwtIds /\ bridge_done = loop_passed)
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+end define;
+
+fair process pipeline = "main"
+begin
+
+    SetupInit:
+        either
+            step_count := step_count + 1;
+        or
+            setup_result := "fail";
+            phase        := "done";
+            exit_code    := 1;
+            step_count   := step_count + 1;
+        end either;
+
+    AfterInit:
+        if phase = "done" then
+            goto PipelineDone;
+        end if;
+
+    SetupExtract:
+        either
+            step_count := step_count + 1;
+        or
+            setup_result := "fail";
+            phase        := "done";
+            exit_code    := 1;
+            step_count   := step_count + 1;
+        end either;
+
+    AfterExtract:
+        if phase = "done" then
+            goto PipelineDone;
+        else
+            setup_result := "pass";
+            phase        := "loop";
+        end if;
+
+    LoopPhase:
+        while loop_done # GwtIds do
+            current_gwt := CHOOSE g \in GwtIds \ loop_done : TRUE;
+        LoopRun:
+            either
+                loop_done   := loop_done \cup {current_gwt};
+                loop_passed := loop_passed \cup {current_gwt};
+            or
+                loop_done := loop_done \cup {current_gwt};
+            end either;
+        LoopCount:
+            step_count := step_count + 1;
+        end while;
+
+    AfterLoop:
+        phase := "bridge";
+
+    BridgePhase:
+        while bridge_attempted # loop_passed do
+            current_gwt := CHOOSE g \in loop_passed \ bridge_attempted : TRUE;
+        BridgeRun:
+            either
+                bridge_attempted := bridge_attempted \cup {current_gwt};
+                bridge_done      := bridge_done \cup {current_gwt};
+            or
+                bridge_attempted := bridge_attempted \cup {current_gwt};
+            end either;
+        BridgeCount:
+            step_count := step_count + 1;
+        end while;
+
+    AfterBridge:
+        if loop_passed = GwtIds /\ bridge_done = loop_passed then
+            exit_code := 0;
+        else
+            exit_code := 1;
+        end if;
+
+    SetPhaseDone:
+        phase := "done";
+
+    PipelineDone:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

@@ -1,0 +1,1044 @@
+{
+  "gwt_id": "gwt-0032",
+  "module_name": "ExtractPreservesGwts",
+  "data_structures": {
+    "ExtractPreservesGwtsState": {
+      "function_id": "fn-ExtractPreservesGwts-state",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"LoadOld\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "old_dag_nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "extracted_nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "result_nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "old_gwt_nodes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "load_old",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from ExtractPreservesGwts TLA+ spec"
+    }
+  },
+  "operations": {
+    "LoadOld": {
+      "function_id": "fn-ExtractPreservesGwts-LoadOld",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-LoadOld",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action LoadOld from ExtractPreservesGwts spec"
+    },
+    "Extract": {
+      "function_id": "fn-ExtractPreservesGwts-Extract",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-Extract",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Extract from ExtractPreservesGwts spec"
+    },
+    "Merge": {
+      "function_id": "fn-ExtractPreservesGwts-Merge",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-Merge",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Merge from ExtractPreservesGwts spec"
+    },
+    "Save": {
+      "function_id": "fn-ExtractPreservesGwts-Save",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-Save",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Save from ExtractPreservesGwts spec"
+    },
+    "Finish": {
+      "function_id": "fn-ExtractPreservesGwts-Finish",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from ExtractPreservesGwts spec"
+    }
+  },
+  "verifiers": {
+    "TypeOK": {
+      "function_id": "fn-ExtractPreservesGwts-verify-TypeOK",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-TypeOK",
+      "conditions": [
+        "phase \\in {\"load_old\", \"extract\", \"merge\", \"save\", \"done\"}",
+        "step_count <= MaxSteps"
+      ],
+      "message": "TypeOK violation: /\\ phase \\in {\"load_old\", \"extract\", \"merge\", \"save\", \"done\"}\n    /\\ step_count <= MaxSteps",
+      "applies_to": [
+        "phase",
+        "step_count"
+      ],
+      "description": "Verifier for invariant TypeOK from ExtractPreservesGwts spec"
+    },
+    "GwtPreserved": {
+      "function_id": "fn-ExtractPreservesGwts-verify-GwtPreserved",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-GwtPreserved",
+      "conditions": [
+        "phase = \"done\" => old_gwt_nodes \\subseteq result_nodes"
+      ],
+      "message": "GwtPreserved violation: phase = \"done\" => old_gwt_nodes \\subseteq result_nodes",
+      "applies_to": [
+        "old_gwt_nodes",
+        "phase",
+        "result_nodes"
+      ],
+      "description": "Verifier for invariant GwtPreserved from ExtractPreservesGwts spec"
+    },
+    "SchemaFresh": {
+      "function_id": "fn-ExtractPreservesGwts-verify-SchemaFresh",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-SchemaFresh",
+      "conditions": [
+        "phase = \"done\" => extracted_nodes \\subseteq result_nodes"
+      ],
+      "message": "SchemaFresh violation: phase = \"done\" => extracted_nodes \\subseteq result_nodes",
+      "applies_to": [
+        "extracted_nodes",
+        "phase",
+        "result_nodes"
+      ],
+      "description": "Verifier for invariant SchemaFresh from ExtractPreservesGwts spec"
+    },
+    "NoGwtLoss": {
+      "function_id": "fn-ExtractPreservesGwts-verify-NoGwtLoss",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-NoGwtLoss",
+      "conditions": [
+        "phase = \"done\" => \\A n \\in old_gwt_nodes : n \\in result_nodes"
+      ],
+      "message": "NoGwtLoss violation: phase = \"done\" => \\A n \\in old_gwt_nodes : n \\in result_nodes",
+      "applies_to": [
+        "old_gwt_nodes",
+        "phase",
+        "result_nodes"
+      ],
+      "description": "Verifier for invariant NoGwtLoss from ExtractPreservesGwts spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-ExtractPreservesGwts-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from ExtractPreservesGwts spec"
+    },
+    "MergeCorrect": {
+      "function_id": "fn-ExtractPreservesGwts-verify-MergeCorrect",
+      "acceptance_criteria_id": "ac-ExtractPreservesGwts-MergeCorrect",
+      "conditions": [
+        "phase = \"done\" => result_nodes = extracted_nodes \\union old_gwt_nodes"
+      ],
+      "message": "MergeCorrect violation: phase = \"done\" => result_nodes = extracted_nodes \\union old_gwt_nodes",
+      "applies_to": [
+        "extracted_nodes",
+        "old_gwt_nodes",
+        "phase",
+        "result_nodes"
+      ],
+      "description": "Verifier for invariant MergeCorrect from ExtractPreservesGwts spec"
+    }
+  },
+  "assertions": {
+    "assert_TypeOK": {
+      "condition": "and phase in {\"load_old\", \"extract\", \"merge\", \"save\", \"done\"}\n    and step_count <= MaxSteps",
+      "message": "Assertion failed: TypeOK \u2014 /\\ phase \\in {\"load_old\", \"extract\", \"merge\", \"save\", \"done\"}\n    /\\ step_count <= MaxSteps",
+      "description": "Test assertion for TypeOK from ExtractPreservesGwts spec"
+    },
+    "assert_GwtPreserved": {
+      "condition": "phase = \"done\" implies old_gwt_nodes \\subseteq result_nodes",
+      "message": "Assertion failed: GwtPreserved \u2014 phase = \"done\" => old_gwt_nodes \\subseteq result_nodes",
+      "description": "Test assertion for GwtPreserved from ExtractPreservesGwts spec"
+    },
+    "assert_SchemaFresh": {
+      "condition": "phase = \"done\" implies extracted_nodes \\subseteq result_nodes",
+      "message": "Assertion failed: SchemaFresh \u2014 phase = \"done\" => extracted_nodes \\subseteq result_nodes",
+      "description": "Test assertion for SchemaFresh from ExtractPreservesGwts spec"
+    },
+    "assert_NoGwtLoss": {
+      "condition": "phase = \"done\" implies \\A n in old_gwt_nodes : n in result_nodes",
+      "message": "Assertion failed: NoGwtLoss \u2014 phase = \"done\" => \\A n \\in old_gwt_nodes : n \\in result_nodes",
+      "description": "Test assertion for NoGwtLoss from ExtractPreservesGwts spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from ExtractPreservesGwts spec"
+    },
+    "assert_MergeCorrect": {
+      "condition": "phase = \"done\" implies result_nodes = extracted_nodes \\union old_gwt_nodes",
+      "message": "Assertion failed: MergeCorrect \u2014 phase = \"done\" => result_nodes = extracted_nodes \\union old_gwt_nodes",
+      "description": "Test assertion for MergeCorrect from ExtractPreservesGwts spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{}",
+          "phase": "\"load_old\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"LoadOld\"]",
+          "step_count": "0",
+          "old_dag_nodes": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "LoadOld",
+        "vars": {
+          "extracted_nodes": "{}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"extract\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Extract\"]",
+          "step_count": "1",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Extract",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"merge\"",
+          "result_nodes": "{}",
+          "pc": "[main |-> \"Merge\"]",
+          "step_count": "2",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Merge",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"save\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Save\"]",
+          "step_count": "3",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Save",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Finish\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "extracted_nodes": "{SchemaNodes_1, SchemaNodes_2}",
+          "old_gwt_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}",
+          "phase": "\"done\"",
+          "result_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2, SchemaNodes_1, SchemaNodes_2}",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "4",
+          "old_dag_nodes": "{OldGwts_1, OldGwts_2, OldReqs_1, OldReqs_2}"
+        }
+      }
+    ]
+  ]
+}

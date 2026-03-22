@@ -293,6 +293,7 @@ def extract_pluscal(llm_response: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 _TLA2TOOLS_JAR_NAME = "tla2tools.jar"
+_TLC_TIMEOUT = 300  # seconds — shared by run_tlc and run_tlc_simulate
 
 
 def _find_tla2tools(tools_dir: str | Path | None = None) -> str:
@@ -329,6 +330,26 @@ def _find_tla2tools(tools_dir: str | Path | None = None) -> str:
         f"Cannot find {_TLA2TOOLS_JAR_NAME}. "
         f"Set TLA2TOOLS_JAR env var or install cw9 with bundled tools."
     )
+
+
+def _build_tlc_cmd(
+    jar: str,
+    tla_path: Path,
+    cfg_path: str | Path | None = None,
+    extra_args: list[str] | None = None,
+) -> list[str]:
+    """Build the common TLC command prefix with optional -config and extras."""
+    cmd = [
+        "java", "-XX:+UseParallelGC",
+        "-cp", jar,
+        "tlc2.TLC",
+        str(tla_path),
+    ]
+    if extra_args:
+        cmd.extend(extra_args)
+    if cfg_path:
+        cmd.extend(["-config", str(cfg_path)])
+    return cmd
 
 
 def classify_tlc_error(
@@ -390,24 +411,15 @@ def run_tlc(
     """
     jar = _find_tla2tools(tools_dir)
     tla_path = Path(tla_path)
-
-    cmd = [
-        "java", "-XX:+UseParallelGC",
-        "-cp", jar,
-        "tlc2.TLC",
-        str(tla_path),
-        "-workers", workers,
-        "-nowarning",
-    ]
-    if cfg_path:
-        cmd.extend(["-config", str(cfg_path)])
+    cmd = _build_tlc_cmd(jar, tla_path, cfg_path,
+                         extra_args=["-workers", workers, "-nowarning"])
 
     try:
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=_TLC_TIMEOUT,
         )
     except subprocess.TimeoutExpired as exc:
         return TLCResult(
@@ -524,111 +536,106 @@ def _parse_suggested_constants(tla_text: str) -> dict[str, str]:
     return result
 
 
-def generate_cfg(tla_text: str, default_constant_value: int = 10) -> str:
-    """Generate a TLC .cfg from CONSTANTS and define-block invariants.
+def _generate_constant_lines(
+    tla_text: str,
+    default_constant_value: int = 10,
+) -> list[str]:
+    """Extract CONSTANTS declarations and produce cfg CONSTANT assignment lines.
 
-    Parses the module text to find:
-    - CONSTANTS declarations → classifies each as numeric or set-valued,
-      assigns integer defaults or small model-value sets accordingly
-    - A ``Suggested TLC model constants`` comment block → uses explicit values
-      from the spec author instead of the default, when present
-    - Operator definitions in the PlusCal ``define`` block → adds state-predicate
-      operators as INVARIANT lines, filtering out data definitions and standard
-      TLA+ names (Init, Next, Spec, etc.)
-
-    Constant classification:
-        Numeric (``MaxSteps``, ``MaxRetries``, etc.) — detected by
-        ``ASSUME X \\in Nat`` or as fallback default.  Assigned
-        ``default_constant_value`` (default 10).
-
-        Set-valued (``NodeIds``, ``ChallengeIds``, etc.) — detected by
-        ``ASSUME X /= {}`` or usage as iterator range ``\\in X``.
-        Assigned a small model-value set ``{X_1, X_2}`` for tractable
-        state-space exploration.
-
-    Suggested constants take precedence over both classification heuristics
-    and the default value, allowing spec authors to encode domain-semantic
-    values (e.g. range boundaries) that differ from the generic default.
-
-    Returns a complete cfg string suitable for TLC.
+    Classifies each constant as numeric or set-valued using ASSUME hints and
+    usage patterns (see ``_classify_constants``).  Suggested values from a
+    ``Suggested TLC model constants`` comment block override heuristics.
     """
-    lines = ["SPECIFICATION Spec"]
-
-    # ── Extract suggested constants from spec comments ─────────────────
     suggested = _parse_suggested_constants(tla_text)
 
-    # ── Extract CONSTANTS ──────────────────────────────────────────────
     const_match = re.search(
         r'CONSTANTS?\s+(.*?)(?=\n\s*\n|\nASSUME|\n\(\*|\nvariable)',
         tla_text,
         re.DOTALL,
     )
-    if const_match:
-        raw = const_match.group(1)
-        const_names = [
-            n.strip() for n in re.split(r'[,\n]', raw)
-            if n.strip() and re.match(r'^[A-Za-z]\w*$', n.strip())
-        ]
-        classifications = _classify_constants(const_names, tla_text)
-        for name in const_names:
-            if name in suggested:
-                lines.append(f"CONSTANT {name} = {suggested[name]}")
-            elif classifications.get(name) == "set":
-                vals = ", ".join(f"{name}_{i}" for i in range(1, _DEFAULT_SET_SIZE + 1))
-                lines.append(f"CONSTANT {name} = {{{vals}}}")
-            else:
-                lines.append(f"CONSTANT {name} = {default_constant_value}")
+    if not const_match:
+        return []
 
-    # ── Extract invariants from define block ───────────────────────────
+    raw = const_match.group(1)
+    const_names = [
+        n.strip() for n in re.split(r'[,\n]', raw)
+        if n.strip() and re.match(r'^[A-Za-z]\w*$', n.strip())
+    ]
+    classifications = _classify_constants(const_names, tla_text)
+    lines: list[str] = []
+    for name in const_names:
+        if name in suggested:
+            lines.append(f"CONSTANT {name} = {suggested[name]}")
+        elif classifications.get(name) == "set":
+            vals = ", ".join(f"{name}_{i}" for i in range(1, _DEFAULT_SET_SIZE + 1))
+            lines.append(f"CONSTANT {name} = {{{vals}}}")
+        else:
+            lines.append(f"CONSTANT {name} = {default_constant_value}")
+    return lines
+
+
+def _op_rhs(define_text: str, ops: list[re.Match], index: int) -> str:
+    """Extract the right-hand side of an operator definition at *index*."""
+    start = ops[index].end()
+    end = ops[index + 1].start() if index + 1 < len(ops) else len(define_text)
+    return define_text[start:end].strip()
+
+
+def _extract_invariant_lines(tla_text: str) -> list[str]:
+    """Extract state-predicate operators from the PlusCal ``define`` block.
+
+    Returns cfg INVARIANT lines.  Detects umbrella invariants (a single
+    operator that is a conjunction of 3+ other defined operators) and emits
+    only that operator when found.  Otherwise, filters out standard TLA+
+    names, data definitions, and progress conditions.
+    """
     define_match = re.search(
         r'define\s*\n(.*?)\nend\s+define',
         tla_text,
         re.DOTALL,
     )
-    if define_match:
-        define_text = define_match.group(1)
-        ops = list(re.finditer(r'^\s+(\w+)\s*==\s*', define_text, re.MULTILINE))
+    if not define_match:
+        return []
 
-        # First pass: collect all operator names for cross-reference
-        all_op_names = {m.group(1) for m in ops}
+    define_text = define_match.group(1)
+    ops = list(re.finditer(r'^\s+(\w+)\s*==\s*', define_text, re.MULTILINE))
+    all_op_names = {m.group(1) for m in ops}
 
-        # Check for an umbrella invariant (conjunction of other operators).
-        # If present, use ONLY that instead of individual heuristics.
-        umbrella = None
-        for i, op in enumerate(ops):
-            name = op.group(1)
-            start = op.end()
-            end = ops[i + 1].start() if i + 1 < len(ops) else len(define_text)
-            rhs = define_text[start:end].strip()
-            # Umbrella pattern: /\ A /\ B /\ C where A,B,C are other define ops
-            if rhs.startswith('/\\'):
-                conjuncts = re.findall(r'/\\\s+(\w+)', rhs)
-                if len(conjuncts) >= 3 and all(c in all_op_names for c in conjuncts):
-                    umbrella = name
-                    break
+    # Check for an umbrella invariant (conjunction of 3+ other defined ops).
+    for i, op in enumerate(ops):
+        rhs = _op_rhs(define_text, ops, i)
+        if rhs.startswith('/\\'):
+            conjuncts = re.findall(r'/\\\s+(\w+)', rhs)
+            if len(conjuncts) >= 3 and all(c in all_op_names for c in conjuncts):
+                return [f"INVARIANT {op.group(1)}"]
 
-        if umbrella:
-            lines.append(f"INVARIANT {umbrella}")
-        else:
-            for i, op in enumerate(ops):
-                name = op.group(1)
-                # Skip standard TLA+ operators that are not invariants
-                if name in _NON_INVARIANT_NAMES:
-                    continue
-                # Extract RHS to classify
-                start = op.end()
-                end = ops[i + 1].start() if i + 1 < len(ops) else len(define_text)
-                rhs = define_text[start:end].strip()
-                # Skip empty, set literals, sequence literals, strings, numbers
-                if not rhs:
-                    continue
-                if rhs[0] in ('{', '<', '"') or rhs[0].isdigit():
-                    continue
-                # Skip simple equality (progress conditions like AllProcessed == X = Y)
-                if re.match(r'\w+\s*=\s*\w+\s*$', rhs):
-                    continue
-                lines.append(f"INVARIANT {name}")
+    # No umbrella — classify each operator individually.
+    lines: list[str] = []
+    for i, op in enumerate(ops):
+        name = op.group(1)
+        if name in _NON_INVARIANT_NAMES:
+            continue
+        rhs = _op_rhs(define_text, ops, i)
+        if not rhs:
+            continue
+        if rhs[0] in ('{', '<', '"') or rhs[0].isdigit():
+            continue
+        if re.match(r'\w+\s*=\s*\w+\s*$', rhs):
+            continue
+        lines.append(f"INVARIANT {name}")
+    return lines
 
+
+def generate_cfg(tla_text: str, default_constant_value: int = 10) -> str:
+    """Generate a TLC .cfg from CONSTANTS and define-block invariants.
+
+    Delegates to ``_generate_constant_lines`` (constant extraction and
+    classification) and ``_extract_invariant_lines`` (define-block operator
+    filtering).  Returns a complete cfg string suitable for TLC.
+    """
+    lines = ["SPECIFICATION Spec"]
+    lines.extend(_generate_constant_lines(tla_text, default_constant_value))
+    lines.extend(_extract_invariant_lines(tla_text))
     return "\n".join(lines) + "\n"
 
 
@@ -710,6 +717,20 @@ _TRACE_FILE_STATE_RE = re.compile(r'STATE_(\d+)\s*==')
 _PC_LABEL_RE = re.compile(r'pc\s*=\s*(?:\[.*?"main"\s*\|->\s*)?["\']?(\w+)["\']?')
 
 
+def _make_state(state_num: int, label: str) -> dict[str, Any]:
+    """Create a new state dict with standard structure."""
+    return {"state_num": state_num, "label": label, "vars": {}}
+
+
+def _accumulate_var(state: dict[str, Any], line: str) -> bool:
+    """Try to parse a variable assignment line and add to state. Returns True if matched."""
+    var_m = _VAR_ASSIGN_RE.match(line)
+    if var_m:
+        state["vars"][var_m.group(1)] = var_m.group(2).strip()
+        return True
+    return False
+
+
 def parse_counterexample(raw_trace: str) -> CounterexampleTrace:
     """Parse a TLC counterexample trace into structured states.
 
@@ -732,18 +753,12 @@ def parse_counterexample(raw_trace: str) -> CounterexampleTrace:
         if header_m:
             if current_state is not None:
                 trace.states.append(current_state)
-            current_state = {
-                "state_num": int(header_m.group(1)),
-                "label": header_m.group(2),
-                "vars": {},
-            }
+            current_state = _make_state(int(header_m.group(1)), header_m.group(2))
             continue
 
         # Variable assignment within a state
         if current_state is not None:
-            var_m = _VAR_ASSIGN_RE.match(line)
-            if var_m:
-                current_state["vars"][var_m.group(1)] = var_m.group(2).strip()
+            _accumulate_var(current_state, line)
 
         # Back-to-state (lasso)
         back_m = _BACK_TO_STATE_RE.match(line)
@@ -1014,20 +1029,13 @@ def _parse_trace_file_format(raw: str) -> list[list[dict[str, Any]]]:
         if state_m:
             if current_state is not None:
                 current_trace.append(current_state)
-            state_num = int(state_m.group(1))
-            current_state = {
-                "state_num": state_num,
-                "label": pending_label or "unknown",
-                "vars": {},
-            }
+            current_state = _make_state(int(state_m.group(1)), pending_label or "unknown")
             pending_label = None
             continue
 
         # Variable assignment: /\ var = val
         if current_state is not None:
-            var_m = _VAR_ASSIGN_RE.match(stripped)
-            if var_m:
-                current_state["vars"][var_m.group(1)] = var_m.group(2).strip()
+            _accumulate_var(current_state, stripped)
 
     if current_state is not None:
         current_trace.append(current_state)
@@ -1058,17 +1066,11 @@ def _parse_trace_stdout_format(raw: str) -> list[list[dict[str, Any]]]:
             elif current_state:
                 current_trace.append(current_state)
 
-            current_state = {
-                "state_num": state_num,
-                "label": header_m.group(2),
-                "vars": {},
-            }
+            current_state = _make_state(state_num, header_m.group(2))
             continue
 
         if current_state is not None:
-            var_m = _VAR_ASSIGN_RE.match(line)
-            if var_m:
-                current_state["vars"][var_m.group(1)] = var_m.group(2).strip()
+            _accumulate_var(current_state, line)
 
     if current_state:
         current_trace.append(current_state)
@@ -1119,18 +1121,11 @@ def run_tlc_simulate(
     trace_dir = Path(tempfile.mkdtemp(prefix="cw9_traces_"))
     trace_base = trace_dir / "traces"
 
-    cmd = [
-        "java", "-XX:+UseParallelGC",
-        "-cp", jar,
-        "tlc2.TLC",
-        str(tla_path),
-        "-simulate", f"num={num_traces},file={trace_base}",
-        "-nowarning",
-    ]
-    if cfg_path:
-        cmd.extend(["-config", str(cfg_path)])
-
-    subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    cmd = _build_tlc_cmd(
+        jar, tla_path, cfg_path,
+        extra_args=["-simulate", f"num={num_traces},file={trace_base}", "-nowarning"],
+    )
+    subprocess.run(cmd, capture_output=True, text=True, timeout=_TLC_TIMEOUT)
 
     # TLC writes trace files as <base>_0_0, <base>_0_1, etc.
     trace_files = sorted(trace_dir.glob("traces*"))

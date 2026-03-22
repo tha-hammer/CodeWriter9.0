@@ -1,0 +1,192 @@
+---- MODULE SchemaInitIdempotent ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Tables,
+    Rows,
+    MaxReconnects
+
+ASSUME MaxReconnects >= 1
+ASSUME Tables # {}
+ASSUME Rows # {}
+
+(* --algorithm SchemaInitIdempotent
+
+variables
+    schema_exists = {},
+    data = [t \in Tables |-> {}],
+    connected = FALSE,
+    wal_mode = FALSE,
+    fk_on = FALSE,
+    reconnect_count = 0,
+    op = "idle",
+    data_before = [t \in Tables |-> {}],
+    schema_before = {};
+
+define
+
+    SchemaStable ==
+        connected => (schema_exists = Tables)
+
+    NoPragmaLoss ==
+        connected => (wal_mode = TRUE /\ fk_on = TRUE)
+
+    BoundedReconnects ==
+        reconnect_count <= MaxReconnects
+
+    DataNotLost ==
+        \A t \in Tables : data_before[t] \subseteq data[t]
+
+    IdempotentDDL ==
+        (schema_before = Tables) => (schema_exists = Tables)
+
+end define;
+
+fair process db = "main"
+begin
+    Connect:
+        wal_mode        := TRUE;
+        fk_on           := TRUE;
+        schema_exists   := Tables;
+        connected       := TRUE;
+        op              := "connected";
+
+    WorkLoop:
+        while reconnect_count < MaxReconnects do
+            either
+                InsertRow:
+                    with t \in Tables do
+                        with r \in Rows do
+                            data := [data EXCEPT ![t] = data[t] \union {r}];
+                        end with;
+                    end with;
+                    op := "inserted";
+            or
+                TakeSnapshot:
+                    data_before   := data;
+                    schema_before := schema_exists;
+                    connected     := FALSE;
+                    wal_mode      := FALSE;
+                    fk_on         := FALSE;
+                    op            := "disconnected";
+
+                Reconnect:
+                    wal_mode      := TRUE;
+                    fk_on         := TRUE;
+                    schema_exists := Tables;
+                    connected     := TRUE;
+                    reconnect_count := reconnect_count + 1;
+                    op            := "reconnected";
+
+                VerifyPreservation:
+                    assert schema_exists = schema_before;
+                    assert \A t \in Tables : data[t] = data_before[t];
+                    op := "verified";
+            end either;
+        end while;
+
+    Terminate:
+        op := "done";
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE SchemaInitIdempotent ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Tables,
+    Rows,
+    MaxReconnects
+
+ASSUME MaxReconnects >= 1
+ASSUME Tables # {}
+ASSUME Rows # {}
+
+(* --algorithm SchemaInitIdempotent
+
+variables
+    schema_exists = {},
+    data = [t \in Tables |-> {}],
+    connected = FALSE,
+    wal_mode = FALSE,
+    fk_on = FALSE,
+    reconnect_count = 0,
+    op = "idle",
+    data_before = [t \in Tables |-> {}],
+    schema_before = {};
+
+define
+
+    SchemaStable ==
+        connected => (schema_exists = Tables)
+
+    NoPragmaLoss ==
+        connected => (wal_mode = TRUE /\ fk_on = TRUE)
+
+    BoundedReconnects ==
+        reconnect_count <= MaxReconnects
+
+    DataNotLost ==
+        \A t \in Tables : data_before[t] \subseteq data[t]
+
+    IdempotentDDL ==
+        (schema_before = Tables) => (schema_exists = Tables)
+
+end define;
+
+fair process db = "main"
+begin
+    Connect:
+        wal_mode        := TRUE;
+        fk_on           := TRUE;
+        schema_exists   := Tables;
+        connected       := TRUE;
+        op              := "connected";
+
+    WorkLoop:
+        while reconnect_count < MaxReconnects do
+            either
+                InsertRow:
+                    with t \in Tables do
+                        with r \in Rows do
+                            data := [data EXCEPT ![t] = data[t] \union {r}];
+                        end with;
+                    end with;
+                    op := "inserted";
+            or
+                TakeSnapshot:
+                    data_before   := data;
+                    schema_before := schema_exists;
+                    connected     := FALSE;
+                    wal_mode      := FALSE;
+                    fk_on         := FALSE;
+                    op            := "disconnected";
+
+                Reconnect:
+                    wal_mode      := TRUE;
+                    fk_on         := TRUE;
+                    schema_exists := Tables;
+                    connected     := TRUE;
+                    reconnect_count := reconnect_count + 1;
+                    op            := "reconnected";
+
+                VerifyPreservation:
+                    assert schema_exists = schema_before;
+                    assert \A t \in Tables : data[t] = data_before[t];
+                    op := "verified";
+            end either;
+        end while;
+
+    Terminate:
+        op := "done";
+
+end process;
+
+end algorithm; *)
+
+====

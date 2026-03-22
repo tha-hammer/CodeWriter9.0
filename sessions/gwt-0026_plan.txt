@@ -1,0 +1,2046 @@
+```python
+"""
+Pytest test suite for StalenessPropagation.
+Generated from 10 TLC-verified traces covering all seven TLA+ invariants:
+  DirectlyStale, DirectCorrect, MonotonicGrowth, TransitiveComplete,
+  NoFalseNegatives, AllDependentsIncluded, BoundedExecution.
+"""
+
+import pytest
+from dag import RegistryDag, NodeNotFoundError, CycleError
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# ─── constants ─────────────────────────────────────────────────────────────────
+MAX_STEPS = 10
+
+N1, N2 = "Nodes_1", "Nodes_2"
+H1, H2 = "Hashes_1", "Hashes_2"
+
+# ─── algorithm helpers (mirror TLA+ spec exactly) ──────────────────────────────
+
+def _directly_stale(nodes, stored, current):
+    """TLA+: DirectlyStale == {n ∈ Nodes : stored_hashes[n] ≠ current_hashes[n]}"""
+    return frozenset(n for n in nodes if stored[n] != current[n])
+
+
+def _one_hop_expand(stale, edges):
+    """TLA+: OneHopExpand(S) == S ∪ {e[1] : e ∈ {ep ∈ edges : ep[2] ∈ S}}"""
+    result = set(stale)
+    for src, dst in edges:
+        if dst in stale:
+            result.add(src)
+    return frozenset(result)
+
+
+def _run_propagation(nodes, edges, stored, current, max_steps=MAX_STEPS):
+    """
+    Execute the TLA+ staleness-propagation algorithm and return final state.
+
+    Mirrors:
+      DetectDirect → PropLoop { PropStep → CheckFix } → Finish
+    """
+    # DetectDirect
+    direct    = _directly_stale(nodes, stored, current)
+    transitive = frozenset(direct)
+    prev_size  = 0
+    phase      = "propagate"
+    step_count = 1
+
+    # PropLoop / PropStep / CheckFix
+    while phase == "propagate" and step_count < max_steps:
+        prev_size  = len(transitive)                         # PropStep: snapshot
+        transitive = _one_hop_expand(transitive, edges)      # PropStep: expand
+        step_count += 1
+        if len(transitive) == prev_size:                     # CheckFix
+            phase = "complete"
+
+    # Finish
+    return dict(
+        direct_stale    = direct,
+        transitive_stale= transitive,
+        phase           = phase,
+        step_count      = step_count,
+        prev_size       = prev_size,
+    )
+
+
+# ─── DAG construction ──────────────────────────────────────────────────────────
+
+def _make_dag(node_ids, edge_pairs):
+    """
+    Build a RegistryDag from node IDs and (src, dst) edge pairs.
+    Self-loops and cycle-inducing edges are silently skipped because
+    RegistryDag enforces strict DAG constraints.
+    """
+    dag = RegistryDag()
+    for nid in sorted(node_ids):
+        dag.add_node(Node.behavior(nid, nid, "given", "when", "then"))
+    for src, dst in sorted(edge_pairs):
+        if src == dst:
+            continue                              # skip self-loops
+        try:
+            dag.add_edge(Edge(src, dst, EdgeType.IMPORTS))
+        except CycleError:
+            pass                                  # skip cycle-inducing edges
+    return dag
+
+
+# ─── invariant verifier ────────────────────────────────────────────────────────
+
+def _assert_invariants(nodes, edges, stored, current, result, max_steps=MAX_STEPS):
+    """Assert all seven TLA+ invariants against a propagation result."""
+    d  = result["direct_stale"]
+    t  = result["transitive_stale"]
+    ph = result["phase"]
+    sc = result["step_count"]
+    ps = result["prev_size"]
+
+    # DirectCorrect: after DetectDirect, direct_stale == DirectlyStale
+    assert d == _directly_stale(nodes, stored, current), \
+        f"DirectCorrect violated: direct_stale={d}"
+
+    # MonotonicGrowth: |transitive_stale| >= prev_size
+    assert len(t) >= ps, \
+        f"MonotonicGrowth violated: |t|={len(t)} < prev_size={ps}"
+
+    # BoundedExecution: step_count <= MaxSteps
+    assert sc <= max_steps, \
+        f"BoundedExecution violated: step_count={sc} > max_steps={max_steps}"
+
+    if ph == "complete":
+        # TransitiveComplete – fixed point
+        expanded = _one_hop_expand(t, edges)
+        assert expanded == t, \
+            f"TransitiveComplete(fixed-point) violated: expanded={expanded}, t={t}"
+
+        # TransitiveComplete – direct_stale ⊆ transitive_stale
+        assert d <= t, \
+            f"TransitiveComplete(subset) violated: direct={d} not ⊆ transitive={t}"
+
+        # NoFalseNegatives: ∀ n ∈ direct_stale ⟹ n ∈ transitive_stale
+        for n in nodes:
+            if n in d:
+                assert n in t, \
+                    f"NoFalseNegatives violated: {n} in direct_stale but not transitive_stale"
+
+        # AllDependentsIncluded: ∀ (src,dst) ∈ edges, dst ∈ t ⟹ src ∈ t
+        for src, dst in edges:
+            if dst in t:
+                assert src in t, \
+                    f"AllDependentsIncluded violated: edge ({src},{dst}), {dst} stale but {src} not"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 1  (7 TLA+ steps)
+# edges={(N2,N2)}  stored={N1:H2, N2:H2}  current={N1:H2, N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N2}  transitive={N2}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace1:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N2, N2)])
+    _stored  = {N1: H2, N2: H2}
+    _current = {N1: H2, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n2(self):
+        assert self._result()["direct_stale"] == frozenset({N2})
+
+    def test_transitive_stale_equals_direct_for_self_loop(self):
+        assert self._result()["transitive_stale"] == frozenset({N2})
+
+    def test_n1_not_stale(self):
+        assert N1 not in self._result()["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_node_count(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+
+    def test_dag_self_loop_excluded_from_edge_count(self):
+        # (N2,N2) is a self-loop → skipped → 0 DAG edges
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.edge_count == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 2  (10 TLA+ steps)
+# edges={(N1,N2)}  stored={N1:H2, N2:H1}  current={N1:H2, N2:H2}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop →
+#          PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N2}  transitive={N1,N2}  phase="complete"  sc=3  ps=2
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace2:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N2)])
+    _stored  = {N1: H2, N2: H1}
+    _current = {N1: H2, N2: H2}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n2_only(self):
+        assert self._result()["direct_stale"] == frozenset({N2})
+
+    def test_transitive_stale_includes_n1_via_import_edge(self):
+        assert self._result()["transitive_stale"] == frozenset({N1, N2})
+
+    def test_n1_not_directly_stale_but_transitively_stale(self):
+        r = self._result()
+        assert N1 not in r["direct_stale"]
+        assert N1 in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_3(self):
+        assert self._result()["step_count"] == 3
+
+    def test_prev_size_is_2(self):
+        assert self._result()["prev_size"] == 2
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_node_count(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+
+    def test_dag_edge_count(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.edge_count == 1
+
+    def test_dag_impact_of_n2_includes_n1(self):
+        dag = _make_dag(self._nodes, self._edges)
+        impact = dag.query_impact(N2)
+        assert N1 in impact.affected_ids
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 3  (7 TLA+ steps)
+# edges={(N1,N1),(N2,N1)}  stored={N1:H1,N2:H1}  current={N1:H1,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={}  transitive={}  phase="complete"  sc=2  ps=0
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace3:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N2, N1)])
+    _stored  = {N1: H1, N2: H1}
+    _current = {N1: H1, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_no_directly_stale_nodes(self):
+        assert self._result()["direct_stale"] == frozenset()
+
+    def test_no_transitively_stale_nodes(self):
+        assert self._result()["transitive_stale"] == frozenset()
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_0(self):
+        assert self._result()["prev_size"] == 0
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_node_count(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+
+    def test_dag_edge_count_self_loop_excluded(self):
+        # (N1,N1) self-loop skipped; (N2,N1) added
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.edge_count == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 4  (7 TLA+ steps)
+# edges={(N1,N1),(N2,N2)}  stored={N1:H2,N2:H2}  current={N1:H1,N2:H2}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N1}  transitive={N1}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace4:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N2, N2)])
+    _stored  = {N1: H2, N2: H2}
+    _current = {N1: H1, N2: H2}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n1_only(self):
+        assert self._result()["direct_stale"] == frozenset({N1})
+
+    def test_transitive_stale_is_n1_only(self):
+        assert self._result()["transitive_stale"] == frozenset({N1})
+
+    def test_n2_not_stale_isolated_self_loop(self):
+        r = self._result()
+        assert N2 not in r["direct_stale"]
+        assert N2 not in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_both_self_loops_excluded(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 0  # both (N1,N1) and (N2,N2) are self-loops
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 5  (7 TLA+ steps)
+# edges={(N1,N1),(N1,N2),(N2,N1)}  stored={N1:H2,N2:H1}  current={N1:H2,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={}  transitive={}  phase="complete"  sc=2  ps=0
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace5:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N1, N2), (N2, N1)])
+    _stored  = {N1: H2, N2: H1}
+    _current = {N1: H2, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_no_directly_stale_when_hashes_match(self):
+        assert self._result()["direct_stale"] == frozenset()
+
+    def test_no_transitively_stale_when_nothing_is_directly_stale(self):
+        assert self._result()["transitive_stale"] == frozenset()
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_0(self):
+        assert self._result()["prev_size"] == 0
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_skips_self_loop_and_cycle_edge(self):
+        # (N1,N1) self-loop skipped; (N1,N2) added; (N2,N1) causes cycle → skipped
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 1
+
+    def test_dag_raises_cycle_error_on_mutual_import(self):
+        dag = _make_dag(self._nodes, self._edges)
+        # N1→N2 already added; attempting N2→N1 must raise CycleError
+        with pytest.raises(CycleError):
+            dag.add_edge(Edge(N2, N1, EdgeType.IMPORTS))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 6  (7 TLA+ steps)
+# edges={(N2,N2)}  stored={N1:H1,N2:H1}  current={N1:H1,N2:H2}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N2}  transitive={N2}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace6:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N2, N2)])
+    _stored  = {N1: H1, N2: H1}
+    _current = {N1: H1, N2: H2}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n2(self):
+        assert self._result()["direct_stale"] == frozenset({N2})
+
+    def test_transitive_stale_is_n2(self):
+        assert self._result()["transitive_stale"] == frozenset({N2})
+
+    def test_n1_unchanged_not_stale(self):
+        r = self._result()
+        assert N1 not in r["direct_stale"]
+        assert N1 not in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_self_loop_excluded(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 7  (7 TLA+ steps)
+# edges={(N1,N1),(N2,N2)}  stored={N1:H2,N2:H1}  current={N1:H1,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N1}  transitive={N1}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace7:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N2, N2)])
+    _stored  = {N1: H2, N2: H1}
+    _current = {N1: H1, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n1_only(self):
+        assert self._result()["direct_stale"] == frozenset({N1})
+
+    def test_transitive_stale_is_n1_only(self):
+        assert self._result()["transitive_stale"] == frozenset({N1})
+
+    def test_n2_not_stale_no_reachable_edge(self):
+        r = self._result()
+        assert N2 not in r["direct_stale"]
+        assert N2 not in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_both_self_loops_excluded(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 8  (7 TLA+ steps)
+# edges={(N1,N1),(N1,N2)}  stored={N1:H1,N2:H1}  current={N1:H1,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={}  transitive={}  phase="complete"  sc=2  ps=0
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace8:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N1, N2)])
+    _stored  = {N1: H1, N2: H1}
+    _current = {N1: H1, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_no_directly_stale_nodes(self):
+        assert self._result()["direct_stale"] == frozenset()
+
+    def test_no_transitively_stale_nodes(self):
+        assert self._result()["transitive_stale"] == frozenset()
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_0(self):
+        assert self._result()["prev_size"] == 0
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_structure(self):
+        # (N1,N1) self-loop skipped; (N1,N2) kept
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 9  (10 TLA+ steps)
+# edges={(N1,N2),(N2,N1),(N2,N2)}  stored={N1:H2,N2:H2}  current={N1:H1,N2:H2}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop →
+#          PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N1}  transitive={N1,N2}  phase="complete"  sc=3  ps=2
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace9:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N2), (N2, N1), (N2, N2)])
+    _stored  = {N1: H2, N2: H2}
+    _current = {N1: H1, N2: H2}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n1_only(self):
+        assert self._result()["direct_stale"] == frozenset({N1})
+
+    def test_transitive_stale_is_both_nodes(self):
+        assert self._result()["transitive_stale"] == frozenset({N1, N2})
+
+    def test_n2_stale_via_reverse_edge_not_directly(self):
+        r = self._result()
+        assert N2 not in r["direct_stale"]
+        assert N2 in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_3_two_prop_steps_needed(self):
+        assert self._result()["step_count"] == 3
+
+    def test_prev_size_is_2_after_second_prop_step(self):
+        assert self._result()["prev_size"] == 2
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_structure_mutual_cycle_handled(self):
+        # (N2,N2) self-loop skipped; (N1,N2) added; (N2,N1) causes cycle → skipped
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 10  (7 TLA+ steps)
+# edges={(N1,N1)}  stored={N1:H2,N2:H1}  current={N1:H1,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N1}  transitive={N1}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace10:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1)])
+    _stored  = {N1: H2, N2: H1}
+    _current = {N1: H1, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n1_only(self):
+        assert self._result()["direct_stale"] == frozenset({N1})
+
+    def test_transitive_stale_is_n1_only(self):
+        assert self._result()["transitive_stale"] == frozenset({N1})
+
+    def test_n2_not_stale_no_outgoing_from_n1(self):
+        r = self._result()
+        assert N2 not in r["direct_stale"]
+        assert N2 not in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_self_loop_excluded(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Dedicated invariant verifiers – each exercises ≥2 trace-derived topologies
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestInvariantDirectCorrect:
+    """
+    DirectCorrect: after DetectDirect, direct_stale == DirectlyStale.
+    Exercises Trace 1, Trace 6 (both: only N2 stale, different stored bases).
+    """
+
+    def test_trace1_direct_matches_hash_diff(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H2, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"] == _directly_stale(nodes, stored, current)
+        assert r["direct_stale"] == frozenset({N2})
+
+    def test_trace6_direct_matches_hash_diff(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N2, N2)])
+        stored, current = {N1: H1, N2: H1}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"] == _directly_stale(nodes, stored, current)
+        assert r["direct_stale"] == frozenset({N2})
+
+    def test_trace3_no_direct_stale_when_hashes_equal(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N1)])
+        stored, current = {N1: H1, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"] == frozenset()
+        assert r["direct_stale"] == _directly_stale(nodes, stored, current)
+
+    def test_trace2_only_changed_node_is_directly_stale(self):
+        # N2 changed; N1 did not → only N2 directly stale even though N1 imports N2
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"] == frozenset({N2})
+        assert N1 not in r["direct_stale"]
+
+
+class TestInvariantMonotonicGrowth:
+    """
+    MonotonicGrowth: |transitive_stale| >= prev_size after every PropStep.
+    Exercises Trace 2 and Trace 9 where multiple PropSteps occur.
+    """
+
+    def test_trace2_transitive_grows_monotonically(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H2, N2: H2}
+        # step 1 after DetectDirect: prev_size=0 → size becomes 1 (N2)
+        # step 2 PropStep: prev_size=1 → size becomes 2 (N1,N2)
+        # step 3 PropStep: prev_size=2 → size stays 2 → complete
+        r = _run_propagation(nodes, edges, stored, current)
+        assert len(r["transitive_stale"]) >= r["prev_size"]
+        assert r["step_count"] == 3
+
+    def test_trace9_transitive_grows_across_two_prop_steps(self):
+        nodes = frozenset([N1, N2])
+        edges = frozenset([(N1, N2), (N2, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert len(r["transitive_stale"]) >= r["prev_size"]
+        assert r["transitive_stale"] == frozenset({N1, N2})
+
+    def test_empty_stale_set_satisfies_monotonic_growth(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H1, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert len(r["transitive_stale"]) >= r["prev_size"]
+        assert r["prev_size"] == 0
+
+
+class TestInvariantTransitiveComplete:
+    """
+    TransitiveComplete: when phase="complete",
+      (a) OneHopExpand(transitive_stale) == transitive_stale  [fixed point]
+      (b) direct_stale ⊆ transitive_stale
+    Exercises Traces 1, 2, 4, 9.
+    """
+
+    def test_trace1_fixed_point_self_loop(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H2, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        t = r["transitive_stale"]
+        assert _one_hop_expand(t, edges) == t
+
+    def test_trace2_fixed_point_import_edge(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        t = r["transitive_stale"]
+        assert _one_hop_expand(t, edges) == t
+
+    def test_trace4_direct_subset_of_transitive(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert r["direct_stale"] <= r["transitive_stale"]
+
+    def test_trace9_fixed_point_mutual_dependency(self):
+        nodes = frozenset([N1, N2])
+        edges = frozenset([(N1, N2), (N2, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        t = r["transitive_stale"]
+        assert _one_hop_expand(t, edges) == t
+        assert r["direct_stale"] <= t
+
+
+class TestInvariantNoFalseNegatives:
+    """
+    NoFalseNegatives: when complete, ∀ n ∈ direct_stale ⟹ n ∈ transitive_stale.
+    Exercises Traces 1, 2, 7, 10.
+    """
+
+    def test_trace1_directly_stale_in_transitive(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H2, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        for n in r["direct_stale"]:
+            assert n in r["transitive_stale"]
+
+    def test_trace7_n1_directly_stale_in_transitive(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert N1 in r["direct_stale"]
+        assert N1 in r["transitive_stale"]
+
+    def test_trace10_n1_directly_stale_in_transitive(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1)])
+        stored, current = {N1: H2, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert N1 in r["direct_stale"]
+        assert N1 in r["transitive_stale"]
+
+    def test_trace3_empty_direct_trivially_satisfies_no_false_negatives(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N1)])
+        stored, current = {N1: H1, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert r["direct_stale"] == frozenset()
+        # vacuously true – no directly stale nodes to check
+
+
+class TestInvariantAllDependentsIncluded:
+    """
+    AllDependentsIncluded: when complete, ∀ (src,dst) ∈ edges,
+      dst ∈ transitive_stale ⟹ src ∈ transitive_stale.
+    Exercises Traces 2, 9.
+    """
+
+    def test_trace2_n1_included_because_n2_stale(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert N2 in r["transitive_stale"]
+        assert N1 in r["transitive_stale"]
+
+    def test_trace9_all_dependents_included_via_mutual_edge(self):
+        nodes = frozenset([N1, N2])
+        edges = frozenset([(N1, N2), (N2, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        t = r["transitive_stale"]
+        for src, dst in edges:
+            if dst in t:
+                assert src in t, f"AllDependentsIncluded: ({src},{dst})"
+
+    def test_trace4_no_cross_edge_so_n2_not_pulled_in(self):
+        # Only self-loops → N2 stale set membership determined solely by direct
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert N2 not in r["transitive_stale"]
+        # The AllDependentsIncluded check: for (N2,N2), N2 not in t → no obligation
+        for src, dst in edges:
+            if dst in r["transitive_stale"]:
+                assert src in r["transitive_stale"]
+
+
+class TestInvariantBoundedExecution:
+    """
+    BoundedExecution: step_count <= MaxSteps for all traces.
+    Exercises Traces 1–10 collectively.
+    """
+
+    @pytest.mark.parametrize("nodes,edges,stored,current,expected_sc", [
+        # Trace 1
+        (frozenset([N1,N2]), frozenset([(N2,N2)]),
+         {N1:H2,N2:H2}, {N1:H2,N2:H1}, 2),
+        # Trace 2
+        (frozenset([N1,N2]), frozenset([(N1,N2)]),
+         {N1:H2,N2:H1}, {N1:H2,N2:H2}, 3),
+        # Trace 3
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N2,N1)]),
+         {N1:H1,N2:H1}, {N1:H1,N2:H1}, 2),
+        # Trace 4
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N2,N2)]),
+         {N1:H2,N2:H2}, {N1:H1,N2:H2}, 2),
+        # Trace 5
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N1,N2),(N2,N1)]),
+         {N1:H2,N2:H1}, {N1:H2,N2:H1}, 2),
+        # Trace 6
+        (frozenset([N1,N2]), frozenset([(N2,N2)]),
+         {N1:H1,N2:H1}, {N1:H1,N2:H2}, 2),
+        # Trace 7
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N2,N2)]),
+         {N1:H2,N2:H1}, {N1:H1,N2:H1}, 2),
+        # Trace 8
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N1,N2)]),
+         {N1:H1,N2:H1}, {N1:H1,N2:H1}, 2),
+        # Trace 9
+        (frozenset([N1,N2]), frozenset([(N1,N2),(N2,N1),(N2,N2)]),
+         {N1:H2,N2:H2}, {N1:H1,N2:H2}, 3),
+        # Trace 10
+        (frozenset([N1,N2]), frozenset([(N1,N1)]),
+         {N1:H2,N2:H1}, {N1:H1,N2:H1}, 2),
+    ])
+    def test_step_count_within_max_steps(self, nodes, edges, stored, current, expected_sc):
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["step_count"] == expected_sc
+        assert r["step_count"] <= MAX_STEPS
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Edge-case tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestEdgeCaseIsolatedNodes:
+    """
+    Nodes with no edges and identical hashes – derived from Trace 3/5/8 pattern.
+    Staleness cannot propagate without edges.
+    """
+
+    def test_isolated_nodes_no_hash_change_empty_stale(self):
+        nodes  = frozenset([N1, N2])
+        edges  = frozenset()
+        stored = current = {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset()
+        assert r["transitive_stale"] == frozenset()
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_isolated_nodes_one_changed_stale_does_not_propagate(self):
+        nodes   = frozenset([N1, N2])
+        edges   = frozenset()                          # no edges at all
+        stored  = {N1: H2, N2: H1}
+        current = {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset({N1})
+        assert r["transitive_stale"] == frozenset({N1})   # no edges → no spread
+        assert N2 not in r["transitive_stale"]
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_dag_with_isolated_nodes_no_edges(self):
+        dag = _make_dag([N1, N2], [])
+        assert dag.node_count == 2
+        assert dag.edge_count == 0
+
+
+class TestEdgeCaseAllNodesStale:
+    """Both nodes directly stale – every hash differs."""
+
+    def test_all_nodes_directly_stale_no_edges(self):
+        nodes   = frozenset([N1, N2])
+        edges   = frozenset()
+        stored  = {N1: H1, N2: H1}
+        current = {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset({N1, N2})
+        assert r["transitive_stale"] == frozenset({N1, N2})
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_all_nodes_directly_stale_with_import_edge(self):
+        nodes   = frozenset([N1, N2])
+        edges   = frozenset([(N1, N2)])
+        stored  = {N1: H1, N2: H1}
+        current = {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset({N1, N2})
+        assert r["transitive_stale"] == frozenset({N1, N2})
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+
+class TestEdgeCaseSingleNode:
+    """Single-node degenerate topology."""
+
+    def test_single_node_no_change(self):
+        nodes  = frozenset([N1])
+        edges  = frozenset()
+        stored = current = {N1: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset()
+        assert r["transitive_stale"] == frozenset()
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_single_node_changed(self):
+        nodes   = frozenset([N1])
+        edges   = frozenset()
+        stored  = {N1: H1}
+        current = {N1: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset({N1})
+        assert r["transitive_stale"] == frozenset({N1})
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_single_node_dag(self):
+        dag = _make_dag([N1], [])
+        assert dag.node_count == 1
+        assert dag.edge_count == 0
+
+    def test_single_node_query_impact_empty(self):
+        dag = _make_dag([N1], [])
+        impact = dag.query_impact(N1)
+        # N1 has no downstream importers → nothing impacted beyond itself
+        assert N1 not in impact.affected_ids
+
+
+class TestEdgeCaseDiamondPattern:
+    """
+    Diamond topology – minimally invented (4 nodes not in traces).
+    A imports B and C; B and C both import D.
+    If D changes: direct={D}, transitive={D, B, C, A} after 3 PropSteps.
+    """
+
+    A, B, C, D = "Node_A", "Node_B", "Node_C", "Node_D"
+    _nodes  = frozenset([A, B, C, D])
+    _edges  = frozenset([(A, B), (A, C), (B, D), (C, D)])
+    _stored  = {A: H1, B: H1, C: H1, D: H2}  # D was H2 stored
+    _current = {A: H1, B: H1, C: H1, D: H1}  # D now H1 → D directly stale
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_only_d_is_directly_stale(self):
+        r = self._result()
+        assert r["direct_stale"] == frozenset({self.D})
+
+    def test_all_nodes_transitively_stale(self):
+        r = self._result()
+        assert r["transitive_stale"] == frozenset({self.A, self.B, self.C, self.D})
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_bounded(self):
+        r = self._result()
+        assert r["step_count"] <= MAX_STEPS
+
+    def test_all_invariants(self):
+        r = self._result()
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, r)
+
+    def test_dag_diamond_structure(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 4
+        assert dag.edge_count == 4
+
+    def test_dag_impact_of_d_includes_all(self):
+        dag = _make_dag(self._nodes, self._edges)
+        impact = dag.query_impact(self.D)
+        assert self.B in impact.affected_ids
+        assert self.C in impact.affected_ids
+        assert self.A in impact.affected_ids
+
+
+class TestEdgeCaseDAGAPIErrors:
+    """RegistryDag structural error cases."""
+
+    def test_query_impact_nonexistent_node_raises(self):
+        dag = _make_dag([N1], [])
+        with pytest.raises(NodeNotFoundError):
+            dag.query_impact("ghost_node")
+
+    def test_query_relevant_nonexistent_node_raises(self):
+        dag = _make_dag([N1], [])
+        with pytest.raises(NodeNotFoundError):
+            dag.query_relevant("ghost_node")
+
+    def test_extract_subgraph_nonexistent_node_raises(self):
+        dag = _make_dag([N1], [])
+        with pytest.raises(NodeNotFoundError):
+            dag.extract_subgraph("ghost_node")
+
+    def test_add_edge_both_nodes_unknown_raises(self):
+        dag = RegistryDag()
+        with pytest.raises(NodeNotFoundError):
+            dag.add_edge(Edge("x", "y", EdgeType.IMPORTS))
+
+    def test_add_self_loop_raises_cycle_error(self):
+        dag = _make_dag([N1], [])
+        with pytest.raises(CycleError):
+            dag.add_edge(Edge(N1, N1, EdgeType.IMPORTS))
+
+    def test_add_cycle_raises_cycle_error(self):
+        dag = _make_dag([N1, N2], [(N1, N2)])
+        with pytest.raises(CycleError):
+            dag.add_edge(Edge(N2, N1, EdgeType.IMPORTS))
+
+
+class TestEdgeCaseEmptyDAG:
+    """Empty RegistryDag – no nodes, no edges."""
+
+    def test_empty_dag_zero_nodes_and_edges(self):
+        dag = RegistryDag()
+        assert dag.node_count == 0
+        assert dag.edge_count == 0
+
+    def test_empty_dag_component_count_zero(self):
+        dag = RegistryDag()
+        assert dag.component_count == 0
+
+    def test_single_node_propagation_no_hash_change(self):
+        # edge case: single-node algo with no stale nodes
+        nodes  = frozenset([N1])
+        edges  = frozenset()
+        stored = current = {N1: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset()
+        assert r["transitive_stale"] == frozenset()
+        assert r["phase"] == "complete"
+        assert r["step_count"] <= MAX_STEPS
+```
+```python
+"""
+Pytest test suite for StalenessPropagation.
+Generated from 10 TLC-verified traces covering all seven TLA+ invariants:
+  DirectlyStale, DirectCorrect, MonotonicGrowth, TransitiveComplete,
+  NoFalseNegatives, AllDependentsIncluded, BoundedExecution.
+"""
+
+import pytest
+from dag import RegistryDag, NodeNotFoundError, CycleError
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# ─── constants ─────────────────────────────────────────────────────────────────
+MAX_STEPS = 10
+
+N1, N2 = "Nodes_1", "Nodes_2"
+H1, H2 = "Hashes_1", "Hashes_2"
+
+# ─── algorithm helpers (mirror TLA+ spec exactly) ──────────────────────────────
+
+def _directly_stale(nodes, stored, current):
+    """TLA+: DirectlyStale == {n ∈ Nodes : stored_hashes[n] ≠ current_hashes[n]}"""
+    return frozenset(n for n in nodes if stored[n] != current[n])
+
+
+def _one_hop_expand(stale, edges):
+    """TLA+: OneHopExpand(S) == S ∪ {e[1] : e ∈ {ep ∈ edges : ep[2] ∈ S}}"""
+    result = set(stale)
+    for src, dst in edges:
+        if dst in stale:
+            result.add(src)
+    return frozenset(result)
+
+
+def _run_propagation(nodes, edges, stored, current, max_steps=MAX_STEPS):
+    """
+    Execute the TLA+ staleness-propagation algorithm and return final state.
+
+    Mirrors:
+      DetectDirect → PropLoop { PropStep → CheckFix } → Finish
+    """
+    # DetectDirect
+    direct    = _directly_stale(nodes, stored, current)
+    transitive = frozenset(direct)
+    prev_size  = 0
+    phase      = "propagate"
+    step_count = 1
+
+    # PropLoop / PropStep / CheckFix
+    while phase == "propagate" and step_count < max_steps:
+        prev_size  = len(transitive)                         # PropStep: snapshot
+        transitive = _one_hop_expand(transitive, edges)      # PropStep: expand
+        step_count += 1
+        if len(transitive) == prev_size:                     # CheckFix
+            phase = "complete"
+
+    # Finish
+    return dict(
+        direct_stale    = direct,
+        transitive_stale= transitive,
+        phase           = phase,
+        step_count      = step_count,
+        prev_size       = prev_size,
+    )
+
+
+# ─── DAG construction ──────────────────────────────────────────────────────────
+
+def _make_dag(node_ids, edge_pairs):
+    """
+    Build a RegistryDag from node IDs and (src, dst) edge pairs.
+    Self-loops and cycle-inducing edges are silently skipped because
+    RegistryDag enforces strict DAG constraints.
+    """
+    dag = RegistryDag()
+    for nid in sorted(node_ids):
+        dag.add_node(Node.behavior(nid, nid, "given", "when", "then"))
+    for src, dst in sorted(edge_pairs):
+        if src == dst:
+            continue                              # skip self-loops
+        try:
+            dag.add_edge(Edge(src, dst, EdgeType.IMPORTS))
+        except CycleError:
+            pass                                  # skip cycle-inducing edges
+    return dag
+
+
+# ─── invariant verifier ────────────────────────────────────────────────────────
+
+def _assert_invariants(nodes, edges, stored, current, result, max_steps=MAX_STEPS):
+    """Assert all seven TLA+ invariants against a propagation result."""
+    d  = result["direct_stale"]
+    t  = result["transitive_stale"]
+    ph = result["phase"]
+    sc = result["step_count"]
+    ps = result["prev_size"]
+
+    # DirectCorrect: after DetectDirect, direct_stale == DirectlyStale
+    assert d == _directly_stale(nodes, stored, current), \
+        f"DirectCorrect violated: direct_stale={d}"
+
+    # MonotonicGrowth: |transitive_stale| >= prev_size
+    assert len(t) >= ps, \
+        f"MonotonicGrowth violated: |t|={len(t)} < prev_size={ps}"
+
+    # BoundedExecution: step_count <= MaxSteps
+    assert sc <= max_steps, \
+        f"BoundedExecution violated: step_count={sc} > max_steps={max_steps}"
+
+    if ph == "complete":
+        # TransitiveComplete – fixed point
+        expanded = _one_hop_expand(t, edges)
+        assert expanded == t, \
+            f"TransitiveComplete(fixed-point) violated: expanded={expanded}, t={t}"
+
+        # TransitiveComplete – direct_stale ⊆ transitive_stale
+        assert d <= t, \
+            f"TransitiveComplete(subset) violated: direct={d} not ⊆ transitive={t}"
+
+        # NoFalseNegatives: ∀ n ∈ direct_stale ⟹ n ∈ transitive_stale
+        for n in nodes:
+            if n in d:
+                assert n in t, \
+                    f"NoFalseNegatives violated: {n} in direct_stale but not transitive_stale"
+
+        # AllDependentsIncluded: ∀ (src,dst) ∈ edges, dst ∈ t ⟹ src ∈ t
+        for src, dst in edges:
+            if dst in t:
+                assert src in t, \
+                    f"AllDependentsIncluded violated: edge ({src},{dst}), {dst} stale but {src} not"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 1  (7 TLA+ steps)
+# edges={(N2,N2)}  stored={N1:H2, N2:H2}  current={N1:H2, N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N2}  transitive={N2}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace1:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N2, N2)])
+    _stored  = {N1: H2, N2: H2}
+    _current = {N1: H2, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n2(self):
+        assert self._result()["direct_stale"] == frozenset({N2})
+
+    def test_transitive_stale_equals_direct_for_self_loop(self):
+        assert self._result()["transitive_stale"] == frozenset({N2})
+
+    def test_n1_not_stale(self):
+        assert N1 not in self._result()["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_node_count(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+
+    def test_dag_self_loop_excluded_from_edge_count(self):
+        # (N2,N2) is a self-loop → skipped → 0 DAG edges
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.edge_count == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 2  (10 TLA+ steps)
+# edges={(N1,N2)}  stored={N1:H2, N2:H1}  current={N1:H2, N2:H2}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop →
+#          PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N2}  transitive={N1,N2}  phase="complete"  sc=3  ps=2
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace2:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N2)])
+    _stored  = {N1: H2, N2: H1}
+    _current = {N1: H2, N2: H2}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n2_only(self):
+        assert self._result()["direct_stale"] == frozenset({N2})
+
+    def test_transitive_stale_includes_n1_via_import_edge(self):
+        assert self._result()["transitive_stale"] == frozenset({N1, N2})
+
+    def test_n1_not_directly_stale_but_transitively_stale(self):
+        r = self._result()
+        assert N1 not in r["direct_stale"]
+        assert N1 in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_3(self):
+        assert self._result()["step_count"] == 3
+
+    def test_prev_size_is_2(self):
+        assert self._result()["prev_size"] == 2
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_node_count(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+
+    def test_dag_edge_count(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.edge_count == 1
+
+    def test_dag_impact_of_n2_includes_n1(self):
+        dag = _make_dag(self._nodes, self._edges)
+        impact = dag.query_impact(N2)
+        assert N1 in impact.affected_ids
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 3  (7 TLA+ steps)
+# edges={(N1,N1),(N2,N1)}  stored={N1:H1,N2:H1}  current={N1:H1,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={}  transitive={}  phase="complete"  sc=2  ps=0
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace3:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N2, N1)])
+    _stored  = {N1: H1, N2: H1}
+    _current = {N1: H1, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_no_directly_stale_nodes(self):
+        assert self._result()["direct_stale"] == frozenset()
+
+    def test_no_transitively_stale_nodes(self):
+        assert self._result()["transitive_stale"] == frozenset()
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_0(self):
+        assert self._result()["prev_size"] == 0
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_node_count(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+
+    def test_dag_edge_count_self_loop_excluded(self):
+        # (N1,N1) self-loop skipped; (N2,N1) added
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.edge_count == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 4  (7 TLA+ steps)
+# edges={(N1,N1),(N2,N2)}  stored={N1:H2,N2:H2}  current={N1:H1,N2:H2}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N1}  transitive={N1}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace4:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N2, N2)])
+    _stored  = {N1: H2, N2: H2}
+    _current = {N1: H1, N2: H2}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n1_only(self):
+        assert self._result()["direct_stale"] == frozenset({N1})
+
+    def test_transitive_stale_is_n1_only(self):
+        assert self._result()["transitive_stale"] == frozenset({N1})
+
+    def test_n2_not_stale_isolated_self_loop(self):
+        r = self._result()
+        assert N2 not in r["direct_stale"]
+        assert N2 not in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_both_self_loops_excluded(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 0  # both (N1,N1) and (N2,N2) are self-loops
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 5  (7 TLA+ steps)
+# edges={(N1,N1),(N1,N2),(N2,N1)}  stored={N1:H2,N2:H1}  current={N1:H2,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={}  transitive={}  phase="complete"  sc=2  ps=0
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace5:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N1, N2), (N2, N1)])
+    _stored  = {N1: H2, N2: H1}
+    _current = {N1: H2, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_no_directly_stale_when_hashes_match(self):
+        assert self._result()["direct_stale"] == frozenset()
+
+    def test_no_transitively_stale_when_nothing_is_directly_stale(self):
+        assert self._result()["transitive_stale"] == frozenset()
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_0(self):
+        assert self._result()["prev_size"] == 0
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_skips_self_loop_and_cycle_edge(self):
+        # (N1,N1) self-loop skipped; (N1,N2) added; (N2,N1) causes cycle → skipped
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 1
+
+    def test_dag_raises_cycle_error_on_mutual_import(self):
+        dag = _make_dag(self._nodes, self._edges)
+        # N1→N2 already added; attempting N2→N1 must raise CycleError
+        with pytest.raises(CycleError):
+            dag.add_edge(Edge(N2, N1, EdgeType.IMPORTS))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 6  (7 TLA+ steps)
+# edges={(N2,N2)}  stored={N1:H1,N2:H1}  current={N1:H1,N2:H2}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N2}  transitive={N2}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace6:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N2, N2)])
+    _stored  = {N1: H1, N2: H1}
+    _current = {N1: H1, N2: H2}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n2(self):
+        assert self._result()["direct_stale"] == frozenset({N2})
+
+    def test_transitive_stale_is_n2(self):
+        assert self._result()["transitive_stale"] == frozenset({N2})
+
+    def test_n1_unchanged_not_stale(self):
+        r = self._result()
+        assert N1 not in r["direct_stale"]
+        assert N1 not in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_self_loop_excluded(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 7  (7 TLA+ steps)
+# edges={(N1,N1),(N2,N2)}  stored={N1:H2,N2:H1}  current={N1:H1,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N1}  transitive={N1}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace7:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N2, N2)])
+    _stored  = {N1: H2, N2: H1}
+    _current = {N1: H1, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n1_only(self):
+        assert self._result()["direct_stale"] == frozenset({N1})
+
+    def test_transitive_stale_is_n1_only(self):
+        assert self._result()["transitive_stale"] == frozenset({N1})
+
+    def test_n2_not_stale_no_reachable_edge(self):
+        r = self._result()
+        assert N2 not in r["direct_stale"]
+        assert N2 not in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_both_self_loops_excluded(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 8  (7 TLA+ steps)
+# edges={(N1,N1),(N1,N2)}  stored={N1:H1,N2:H1}  current={N1:H1,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={}  transitive={}  phase="complete"  sc=2  ps=0
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace8:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1), (N1, N2)])
+    _stored  = {N1: H1, N2: H1}
+    _current = {N1: H1, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_no_directly_stale_nodes(self):
+        assert self._result()["direct_stale"] == frozenset()
+
+    def test_no_transitively_stale_nodes(self):
+        assert self._result()["transitive_stale"] == frozenset()
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_0(self):
+        assert self._result()["prev_size"] == 0
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_structure(self):
+        # (N1,N1) self-loop skipped; (N1,N2) kept
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 9  (10 TLA+ steps)
+# edges={(N1,N2),(N2,N1),(N2,N2)}  stored={N1:H2,N2:H2}  current={N1:H1,N2:H2}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop →
+#          PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N1}  transitive={N1,N2}  phase="complete"  sc=3  ps=2
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace9:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N2), (N2, N1), (N2, N2)])
+    _stored  = {N1: H2, N2: H2}
+    _current = {N1: H1, N2: H2}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n1_only(self):
+        assert self._result()["direct_stale"] == frozenset({N1})
+
+    def test_transitive_stale_is_both_nodes(self):
+        assert self._result()["transitive_stale"] == frozenset({N1, N2})
+
+    def test_n2_stale_via_reverse_edge_not_directly(self):
+        r = self._result()
+        assert N2 not in r["direct_stale"]
+        assert N2 in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_3_two_prop_steps_needed(self):
+        assert self._result()["step_count"] == 3
+
+    def test_prev_size_is_2_after_second_prop_step(self):
+        assert self._result()["prev_size"] == 2
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_structure_mutual_cycle_handled(self):
+        # (N2,N2) self-loop skipped; (N1,N2) added; (N2,N1) causes cycle → skipped
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Trace 10  (7 TLA+ steps)
+# edges={(N1,N1)}  stored={N1:H2,N2:H1}  current={N1:H1,N2:H1}
+# Actions: DetectDirect → PropLoop → PropStep → CheckFix → PropLoop → Finish
+# Expected: direct={N1}  transitive={N1}  phase="complete"  sc=2  ps=1
+# ═══════════════════════════════════════════════════════════════════════════════
+class TestTrace10:
+    _nodes   = frozenset([N1, N2])
+    _edges   = frozenset([(N1, N1)])
+    _stored  = {N1: H2, N2: H1}
+    _current = {N1: H1, N2: H1}
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_direct_stale_is_n1_only(self):
+        assert self._result()["direct_stale"] == frozenset({N1})
+
+    def test_transitive_stale_is_n1_only(self):
+        assert self._result()["transitive_stale"] == frozenset({N1})
+
+    def test_n2_not_stale_no_outgoing_from_n1(self):
+        r = self._result()
+        assert N2 not in r["direct_stale"]
+        assert N2 not in r["transitive_stale"]
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_is_2(self):
+        assert self._result()["step_count"] == 2
+
+    def test_prev_size_is_1(self):
+        assert self._result()["prev_size"] == 1
+
+    def test_all_invariants(self):
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, self._result())
+
+    def test_dag_self_loop_excluded(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 2
+        assert dag.edge_count == 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Dedicated invariant verifiers – each exercises ≥2 trace-derived topologies
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestInvariantDirectCorrect:
+    """
+    DirectCorrect: after DetectDirect, direct_stale == DirectlyStale.
+    Exercises Trace 1, Trace 6 (both: only N2 stale, different stored bases).
+    """
+
+    def test_trace1_direct_matches_hash_diff(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H2, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"] == _directly_stale(nodes, stored, current)
+        assert r["direct_stale"] == frozenset({N2})
+
+    def test_trace6_direct_matches_hash_diff(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N2, N2)])
+        stored, current = {N1: H1, N2: H1}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"] == _directly_stale(nodes, stored, current)
+        assert r["direct_stale"] == frozenset({N2})
+
+    def test_trace3_no_direct_stale_when_hashes_equal(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N1)])
+        stored, current = {N1: H1, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"] == frozenset()
+        assert r["direct_stale"] == _directly_stale(nodes, stored, current)
+
+    def test_trace2_only_changed_node_is_directly_stale(self):
+        # N2 changed; N1 did not → only N2 directly stale even though N1 imports N2
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"] == frozenset({N2})
+        assert N1 not in r["direct_stale"]
+
+
+class TestInvariantMonotonicGrowth:
+    """
+    MonotonicGrowth: |transitive_stale| >= prev_size after every PropStep.
+    Exercises Trace 2 and Trace 9 where multiple PropSteps occur.
+    """
+
+    def test_trace2_transitive_grows_monotonically(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H2, N2: H2}
+        # step 1 after DetectDirect: prev_size=0 → size becomes 1 (N2)
+        # step 2 PropStep: prev_size=1 → size becomes 2 (N1,N2)
+        # step 3 PropStep: prev_size=2 → size stays 2 → complete
+        r = _run_propagation(nodes, edges, stored, current)
+        assert len(r["transitive_stale"]) >= r["prev_size"]
+        assert r["step_count"] == 3
+
+    def test_trace9_transitive_grows_across_two_prop_steps(self):
+        nodes = frozenset([N1, N2])
+        edges = frozenset([(N1, N2), (N2, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert len(r["transitive_stale"]) >= r["prev_size"]
+        assert r["transitive_stale"] == frozenset({N1, N2})
+
+    def test_empty_stale_set_satisfies_monotonic_growth(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H1, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert len(r["transitive_stale"]) >= r["prev_size"]
+        assert r["prev_size"] == 0
+
+
+class TestInvariantTransitiveComplete:
+    """
+    TransitiveComplete: when phase="complete",
+      (a) OneHopExpand(transitive_stale) == transitive_stale  [fixed point]
+      (b) direct_stale ⊆ transitive_stale
+    Exercises Traces 1, 2, 4, 9.
+    """
+
+    def test_trace1_fixed_point_self_loop(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H2, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        t = r["transitive_stale"]
+        assert _one_hop_expand(t, edges) == t
+
+    def test_trace2_fixed_point_import_edge(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        t = r["transitive_stale"]
+        assert _one_hop_expand(t, edges) == t
+
+    def test_trace4_direct_subset_of_transitive(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert r["direct_stale"] <= r["transitive_stale"]
+
+    def test_trace9_fixed_point_mutual_dependency(self):
+        nodes = frozenset([N1, N2])
+        edges = frozenset([(N1, N2), (N2, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        t = r["transitive_stale"]
+        assert _one_hop_expand(t, edges) == t
+        assert r["direct_stale"] <= t
+
+
+class TestInvariantNoFalseNegatives:
+    """
+    NoFalseNegatives: when complete, ∀ n ∈ direct_stale ⟹ n ∈ transitive_stale.
+    Exercises Traces 1, 2, 7, 10.
+    """
+
+    def test_trace1_directly_stale_in_transitive(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H2, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        for n in r["direct_stale"]:
+            assert n in r["transitive_stale"]
+
+    def test_trace7_n1_directly_stale_in_transitive(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert N1 in r["direct_stale"]
+        assert N1 in r["transitive_stale"]
+
+    def test_trace10_n1_directly_stale_in_transitive(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1)])
+        stored, current = {N1: H2, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert N1 in r["direct_stale"]
+        assert N1 in r["transitive_stale"]
+
+    def test_trace3_empty_direct_trivially_satisfies_no_false_negatives(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N1)])
+        stored, current = {N1: H1, N2: H1}, {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert r["direct_stale"] == frozenset()
+        # vacuously true – no directly stale nodes to check
+
+
+class TestInvariantAllDependentsIncluded:
+    """
+    AllDependentsIncluded: when complete, ∀ (src,dst) ∈ edges,
+      dst ∈ transitive_stale ⟹ src ∈ transitive_stale.
+    Exercises Traces 2, 9.
+    """
+
+    def test_trace2_n1_included_because_n2_stale(self):
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N2)])
+        stored, current = {N1: H2, N2: H1}, {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert N2 in r["transitive_stale"]
+        assert N1 in r["transitive_stale"]
+
+    def test_trace9_all_dependents_included_via_mutual_edge(self):
+        nodes = frozenset([N1, N2])
+        edges = frozenset([(N1, N2), (N2, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        t = r["transitive_stale"]
+        for src, dst in edges:
+            if dst in t:
+                assert src in t, f"AllDependentsIncluded: ({src},{dst})"
+
+    def test_trace4_no_cross_edge_so_n2_not_pulled_in(self):
+        # Only self-loops → N2 stale set membership determined solely by direct
+        nodes, edges = frozenset([N1, N2]), frozenset([(N1, N1), (N2, N2)])
+        stored, current = {N1: H2, N2: H2}, {N1: H1, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["phase"] == "complete"
+        assert N2 not in r["transitive_stale"]
+        # The AllDependentsIncluded check: for (N2,N2), N2 not in t → no obligation
+        for src, dst in edges:
+            if dst in r["transitive_stale"]:
+                assert src in r["transitive_stale"]
+
+
+class TestInvariantBoundedExecution:
+    """
+    BoundedExecution: step_count <= MaxSteps for all traces.
+    Exercises Traces 1–10 collectively.
+    """
+
+    @pytest.mark.parametrize("nodes,edges,stored,current,expected_sc", [
+        # Trace 1
+        (frozenset([N1,N2]), frozenset([(N2,N2)]),
+         {N1:H2,N2:H2}, {N1:H2,N2:H1}, 2),
+        # Trace 2
+        (frozenset([N1,N2]), frozenset([(N1,N2)]),
+         {N1:H2,N2:H1}, {N1:H2,N2:H2}, 3),
+        # Trace 3
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N2,N1)]),
+         {N1:H1,N2:H1}, {N1:H1,N2:H1}, 2),
+        # Trace 4
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N2,N2)]),
+         {N1:H2,N2:H2}, {N1:H1,N2:H2}, 2),
+        # Trace 5
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N1,N2),(N2,N1)]),
+         {N1:H2,N2:H1}, {N1:H2,N2:H1}, 2),
+        # Trace 6
+        (frozenset([N1,N2]), frozenset([(N2,N2)]),
+         {N1:H1,N2:H1}, {N1:H1,N2:H2}, 2),
+        # Trace 7
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N2,N2)]),
+         {N1:H2,N2:H1}, {N1:H1,N2:H1}, 2),
+        # Trace 8
+        (frozenset([N1,N2]), frozenset([(N1,N1),(N1,N2)]),
+         {N1:H1,N2:H1}, {N1:H1,N2:H1}, 2),
+        # Trace 9
+        (frozenset([N1,N2]), frozenset([(N1,N2),(N2,N1),(N2,N2)]),
+         {N1:H2,N2:H2}, {N1:H1,N2:H2}, 3),
+        # Trace 10
+        (frozenset([N1,N2]), frozenset([(N1,N1)]),
+         {N1:H2,N2:H1}, {N1:H1,N2:H1}, 2),
+    ])
+    def test_step_count_within_max_steps(self, nodes, edges, stored, current, expected_sc):
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["step_count"] == expected_sc
+        assert r["step_count"] <= MAX_STEPS
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Edge-case tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestEdgeCaseIsolatedNodes:
+    """
+    Nodes with no edges and identical hashes – derived from Trace 3/5/8 pattern.
+    Staleness cannot propagate without edges.
+    """
+
+    def test_isolated_nodes_no_hash_change_empty_stale(self):
+        nodes  = frozenset([N1, N2])
+        edges  = frozenset()
+        stored = current = {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset()
+        assert r["transitive_stale"] == frozenset()
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_isolated_nodes_one_changed_stale_does_not_propagate(self):
+        nodes   = frozenset([N1, N2])
+        edges   = frozenset()                          # no edges at all
+        stored  = {N1: H2, N2: H1}
+        current = {N1: H1, N2: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset({N1})
+        assert r["transitive_stale"] == frozenset({N1})   # no edges → no spread
+        assert N2 not in r["transitive_stale"]
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_dag_with_isolated_nodes_no_edges(self):
+        dag = _make_dag([N1, N2], [])
+        assert dag.node_count == 2
+        assert dag.edge_count == 0
+
+
+class TestEdgeCaseAllNodesStale:
+    """Both nodes directly stale – every hash differs."""
+
+    def test_all_nodes_directly_stale_no_edges(self):
+        nodes   = frozenset([N1, N2])
+        edges   = frozenset()
+        stored  = {N1: H1, N2: H1}
+        current = {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset({N1, N2})
+        assert r["transitive_stale"] == frozenset({N1, N2})
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_all_nodes_directly_stale_with_import_edge(self):
+        nodes   = frozenset([N1, N2])
+        edges   = frozenset([(N1, N2)])
+        stored  = {N1: H1, N2: H1}
+        current = {N1: H2, N2: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset({N1, N2})
+        assert r["transitive_stale"] == frozenset({N1, N2})
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+
+class TestEdgeCaseSingleNode:
+    """Single-node degenerate topology."""
+
+    def test_single_node_no_change(self):
+        nodes  = frozenset([N1])
+        edges  = frozenset()
+        stored = current = {N1: H1}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset()
+        assert r["transitive_stale"] == frozenset()
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_single_node_changed(self):
+        nodes   = frozenset([N1])
+        edges   = frozenset()
+        stored  = {N1: H1}
+        current = {N1: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset({N1})
+        assert r["transitive_stale"] == frozenset({N1})
+        assert r["phase"] == "complete"
+        _assert_invariants(nodes, edges, stored, current, r)
+
+    def test_single_node_dag(self):
+        dag = _make_dag([N1], [])
+        assert dag.node_count == 1
+        assert dag.edge_count == 0
+
+    def test_single_node_query_impact_empty(self):
+        dag = _make_dag([N1], [])
+        impact = dag.query_impact(N1)
+        # N1 has no downstream importers → nothing impacted beyond itself
+        assert N1 not in impact.affected_ids
+
+
+class TestEdgeCaseDiamondPattern:
+    """
+    Diamond topology – minimally invented (4 nodes not in traces).
+    A imports B and C; B and C both import D.
+    If D changes: direct={D}, transitive={D, B, C, A} after 3 PropSteps.
+    """
+
+    A, B, C, D = "Node_A", "Node_B", "Node_C", "Node_D"
+    _nodes  = frozenset([A, B, C, D])
+    _edges  = frozenset([(A, B), (A, C), (B, D), (C, D)])
+    _stored  = {A: H1, B: H1, C: H1, D: H2}  # D was H2 stored
+    _current = {A: H1, B: H1, C: H1, D: H1}  # D now H1 → D directly stale
+
+    def _result(self):
+        return _run_propagation(self._nodes, self._edges, self._stored, self._current)
+
+    def test_only_d_is_directly_stale(self):
+        r = self._result()
+        assert r["direct_stale"] == frozenset({self.D})
+
+    def test_all_nodes_transitively_stale(self):
+        r = self._result()
+        assert r["transitive_stale"] == frozenset({self.A, self.B, self.C, self.D})
+
+    def test_phase_is_complete(self):
+        assert self._result()["phase"] == "complete"
+
+    def test_step_count_bounded(self):
+        r = self._result()
+        assert r["step_count"] <= MAX_STEPS
+
+    def test_all_invariants(self):
+        r = self._result()
+        _assert_invariants(self._nodes, self._edges, self._stored, self._current, r)
+
+    def test_dag_diamond_structure(self):
+        dag = _make_dag(self._nodes, self._edges)
+        assert dag.node_count == 4
+        assert dag.edge_count == 4
+
+    def test_dag_impact_of_d_includes_all(self):
+        dag = _make_dag(self._nodes, self._edges)
+        impact = dag.query_impact(self.D)
+        assert self.B in impact.affected_ids
+        assert self.C in impact.affected_ids
+        assert self.A in impact.affected_ids
+
+
+class TestEdgeCaseDAGAPIErrors:
+    """RegistryDag structural error cases."""
+
+    def test_query_impact_nonexistent_node_raises(self):
+        dag = _make_dag([N1], [])
+        with pytest.raises(NodeNotFoundError):
+            dag.query_impact("ghost_node")
+
+    def test_query_relevant_nonexistent_node_raises(self):
+        dag = _make_dag([N1], [])
+        with pytest.raises(NodeNotFoundError):
+            dag.query_relevant("ghost_node")
+
+    def test_extract_subgraph_nonexistent_node_raises(self):
+        dag = _make_dag([N1], [])
+        with pytest.raises(NodeNotFoundError):
+            dag.extract_subgraph("ghost_node")
+
+    def test_add_edge_both_nodes_unknown_raises(self):
+        dag = RegistryDag()
+        with pytest.raises(NodeNotFoundError):
+            dag.add_edge(Edge("x", "y", EdgeType.IMPORTS))
+
+    def test_add_self_loop_raises_cycle_error(self):
+        dag = _make_dag([N1], [])
+        with pytest.raises(CycleError):
+            dag.add_edge(Edge(N1, N1, EdgeType.IMPORTS))
+
+    def test_add_cycle_raises_cycle_error(self):
+        dag = _make_dag([N1, N2], [(N1, N2)])
+        with pytest.raises(CycleError):
+            dag.add_edge(Edge(N2, N1, EdgeType.IMPORTS))
+
+
+class TestEdgeCaseEmptyDAG:
+    """Empty RegistryDag – no nodes, no edges."""
+
+    def test_empty_dag_zero_nodes_and_edges(self):
+        dag = RegistryDag()
+        assert dag.node_count == 0
+        assert dag.edge_count == 0
+
+    def test_empty_dag_component_count_zero(self):
+        dag = RegistryDag()
+        assert dag.component_count == 0
+
+    def test_single_node_propagation_no_hash_change(self):
+        # edge case: single-node algo with no stale nodes
+        nodes  = frozenset([N1])
+        edges  = frozenset()
+        stored = current = {N1: H2}
+        r = _run_propagation(nodes, edges, stored, current)
+        assert r["direct_stale"]    == frozenset()
+        assert r["transitive_stale"] == frozenset()
+        assert r["phase"] == "complete"
+        assert r["step_count"] <= MAX_STEPS
+```

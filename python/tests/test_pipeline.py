@@ -82,7 +82,7 @@ class TestPipelineDbRequired:
         project.mkdir()
         main(["init", str(project)])
         main(["extract", str(project)])
-        with patch("registry.cli.cmd_loop") as mock_loop:
+        with patch("registry.cli._run_loop_core") as mock_loop:
             mock_loop.return_value = 0
             rc = main(["pipeline", str(project),
                         "--skip-setup", "--gwt", "gwt-0001", "--loop-only"])
@@ -96,7 +96,7 @@ class TestPipelineDbRequired:
         specs_dir = project / ".cw9" / "specs"
         specs_dir.mkdir(exist_ok=True)
         (specs_dir / "gwt-0001.tla").write_text("---- MODULE T ----\n====")
-        with patch("registry.cli.cmd_bridge") as mock_bridge:
+        with patch("registry.cli._run_bridge_core") as mock_bridge:
             mock_bridge.return_value = 0
             rc = main(["pipeline", str(project),
                         "--bridge-only", "--gwt", "gwt-0001"])
@@ -112,23 +112,21 @@ class TestPipelineFullRun:
         project = tmp_path / "proj"
         project.mkdir()
 
-        def fake_loop(args):
-            t = Path(args.target_dir).resolve()
-            specs = t / ".cw9" / "specs"
+        def fake_loop(target, gwt_id, **kw):
+            specs = target / ".cw9" / "specs"
             specs.mkdir(parents=True, exist_ok=True)
-            (specs / f"{args.gwt_id}.tla").write_text("---- MODULE T ----\n====")
+            (specs / f"{gwt_id}.tla").write_text("---- MODULE T ----\n====")
             return 0
 
-        def fake_bridge(args):
-            t = Path(args.target_dir).resolve()
-            bd = t / ".cw9" / "bridge"
+        def fake_bridge(target, gwt_id):
+            bd = target / ".cw9" / "bridge"
             bd.mkdir(parents=True, exist_ok=True)
-            (bd / f"{args.gwt_id}_bridge_artifacts.json").write_text(
-                json.dumps(_make_bridge_artifacts(args.gwt_id)))
+            (bd / f"{gwt_id}_bridge_artifacts.json").write_text(
+                json.dumps(_make_bridge_artifacts(gwt_id)))
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop), \
-             patch("registry.cli.cmd_bridge", fake_bridge):
+        with patch("registry.cli._run_loop_core", fake_loop), \
+             patch("registry.cli._run_bridge_core", fake_bridge):
             rc = main(["pipeline", str(project),
                         "--db", str(db), "--session", "session-test"])
 
@@ -145,24 +143,22 @@ class TestPipelineFullRun:
 
         loop_gwts = []
 
-        def fake_loop(args):
-            loop_gwts.append(args.gwt_id)
-            t = Path(args.target_dir).resolve()
-            specs = t / ".cw9" / "specs"
+        def fake_loop(target, gwt_id, **kw):
+            loop_gwts.append(gwt_id)
+            specs = target / ".cw9" / "specs"
             specs.mkdir(parents=True, exist_ok=True)
-            (specs / f"{args.gwt_id}.tla").write_text("---- MODULE T ----\n====")
+            (specs / f"{gwt_id}.tla").write_text("---- MODULE T ----\n====")
             return 0
 
-        def fake_bridge(args):
-            t = Path(args.target_dir).resolve()
-            bd = t / ".cw9" / "bridge"
+        def fake_bridge(target, gwt_id):
+            bd = target / ".cw9" / "bridge"
             bd.mkdir(parents=True, exist_ok=True)
-            (bd / f"{args.gwt_id}_bridge_artifacts.json").write_text(
-                json.dumps(_make_bridge_artifacts(args.gwt_id)))
+            (bd / f"{gwt_id}_bridge_artifacts.json").write_text(
+                json.dumps(_make_bridge_artifacts(gwt_id)))
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop), \
-             patch("registry.cli.cmd_bridge", fake_bridge):
+        with patch("registry.cli._run_loop_core", fake_loop), \
+             patch("registry.cli._run_bridge_core", fake_bridge):
             main(["pipeline", str(project),
                   "--db", str(db), "--session", "session-test"])
 
@@ -179,15 +175,15 @@ class TestPipelineModeFlags:
         project.mkdir()
         bridge_called = []
 
-        def fake_loop(args):
+        def fake_loop(target, gwt_id, **kw):
             return 0
 
-        def fake_bridge(args):
-            bridge_called.append(args.gwt_id)
+        def fake_bridge(target, gwt_id):
+            bridge_called.append(gwt_id)
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop), \
-             patch("registry.cli.cmd_bridge", fake_bridge):
+        with patch("registry.cli._run_loop_core", fake_loop), \
+             patch("registry.cli._run_bridge_core", fake_bridge):
             rc = main(["pipeline", str(project),
                         "--db", str(db), "--session", "session-test",
                         "--loop-only"])
@@ -205,17 +201,16 @@ class TestPipelineModeFlags:
 
         loop_called = []
 
-        def fake_bridge(args):
-            t = Path(args.target_dir).resolve()
-            bd = t / ".cw9" / "bridge"
+        def fake_bridge(target, gwt_id):
+            bd = target / ".cw9" / "bridge"
             bd.mkdir(parents=True, exist_ok=True)
-            (bd / f"{args.gwt_id}_bridge_artifacts.json").write_text(
-                json.dumps(_make_bridge_artifacts(args.gwt_id)))
+            (bd / f"{gwt_id}_bridge_artifacts.json").write_text(
+                json.dumps(_make_bridge_artifacts(gwt_id)))
             return 0
 
-        with patch("registry.cli.cmd_loop") as mock_loop, \
-             patch("registry.cli.cmd_bridge", fake_bridge):
-            mock_loop.side_effect = lambda a: loop_called.append(1) or 0
+        with patch("registry.cli._run_loop_core") as mock_loop, \
+             patch("registry.cli._run_bridge_core", fake_bridge):
+            mock_loop.side_effect = lambda target, gwt_id, **kw: loop_called.append(1) or 0
             rc = main(["pipeline", str(project),
                         "--bridge-only", "--gwt", "gwt-0001"])
         assert rc == 0
@@ -227,10 +222,10 @@ class TestPipelineModeFlags:
         main(["init", str(project)])
         main(["extract", str(project)])
 
-        def fake_loop(args):
+        def fake_loop(target, gwt_id, **kw):
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop):
+        with patch("registry.cli._run_loop_core", fake_loop):
             rc = main(["pipeline", str(project),
                         "--skip-setup", "--gwt", "gwt-0001", "--loop-only"])
         assert rc == 0
@@ -246,11 +241,11 @@ class TestPipelineGwtTargeting:
         project.mkdir()
         loop_gwts = []
 
-        def fake_loop(args):
-            loop_gwts.append(args.gwt_id)
+        def fake_loop(target, gwt_id, **kw):
+            loop_gwts.append(gwt_id)
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop):
+        with patch("registry.cli._run_loop_core", fake_loop):
             main(["pipeline", str(project), "--db", str(db),
                   "--session", "session-test",
                   "--gwt", "gwt-0001", "--loop-only"])
@@ -265,10 +260,10 @@ class TestPipelineGwtTargeting:
         pp_dir.mkdir()
         (pp_dir / "1001-counter.md").write_text("# plan context")
 
-        def fake_loop(args):
+        def fake_loop(target, gwt_id, **kw):
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop):
+        with patch("registry.cli._run_loop_core", fake_loop):
             main(["pipeline", str(project), "--db", str(db),
                   "--session", "session-test",
                   "--plan-path-dir", str(pp_dir), "--loop-only"])
@@ -285,18 +280,18 @@ class TestPipelineGwtTargeting:
         pp_dir.mkdir()
         (pp_dir / "1001-counter.md").write_text("# plan")
 
-        loop_args_captured = []
+        loop_kwargs_captured = []
 
-        def fake_loop(args):
-            loop_args_captured.append(args)
+        def fake_loop(target, gwt_id, **kw):
+            loop_kwargs_captured.append(kw)
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop):
+        with patch("registry.cli._run_loop_core", fake_loop):
             main(["pipeline", str(project), "--db", str(db),
                   "--session", "session-test",
                   "--plan-path-dir", str(pp_dir), "--loop-only"])
 
-        ctx_files = [a.context_file for a in loop_args_captured if a.context_file]
+        ctx_files = [kw.get("context_file") for kw in loop_kwargs_captured if kw.get("context_file")]
         assert len(ctx_files) >= 1
 
 
@@ -311,10 +306,10 @@ class TestPipelineSessionInference:
         pp_dir = tmp_path / "session-xyz789"
         pp_dir.mkdir()
 
-        def fake_loop(args):
+        def fake_loop(target, gwt_id, **kw):
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop):
+        with patch("registry.cli._run_loop_core", fake_loop):
             rc = main(["pipeline", str(project), "--db", str(db),
                         "--plan-path-dir", str(pp_dir), "--loop-only"])
         assert rc == 0
@@ -326,10 +321,10 @@ class TestPipelineSessionInference:
         pp_dir = tmp_path / "session-wrong"
         pp_dir.mkdir()
 
-        def fake_loop(args):
+        def fake_loop(target, gwt_id, **kw):
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop):
+        with patch("registry.cli._run_loop_core", fake_loop):
             rc = main(["pipeline", str(project), "--db", str(db),
                         "--session", "session-explicit",
                         "--plan-path-dir", str(pp_dir), "--loop-only"])
@@ -345,23 +340,21 @@ class TestPipelineExitCodes:
         project = tmp_path / "proj"
         project.mkdir()
 
-        def fake_loop(args):
-            t = Path(args.target_dir).resolve()
-            s = t / ".cw9" / "specs"
+        def fake_loop(target, gwt_id, **kw):
+            s = target / ".cw9" / "specs"
             s.mkdir(parents=True, exist_ok=True)
-            (s / f"{args.gwt_id}.tla").write_text("---- MODULE T ----\n====")
+            (s / f"{gwt_id}.tla").write_text("---- MODULE T ----\n====")
             return 0
 
-        def fake_bridge(args):
-            t = Path(args.target_dir).resolve()
-            bd = t / ".cw9" / "bridge"
+        def fake_bridge(target, gwt_id):
+            bd = target / ".cw9" / "bridge"
             bd.mkdir(parents=True, exist_ok=True)
-            (bd / f"{args.gwt_id}_bridge_artifacts.json").write_text(
-                json.dumps(_make_bridge_artifacts(args.gwt_id)))
+            (bd / f"{gwt_id}_bridge_artifacts.json").write_text(
+                json.dumps(_make_bridge_artifacts(gwt_id)))
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop), \
-             patch("registry.cli.cmd_bridge", fake_bridge):
+        with patch("registry.cli._run_loop_core", fake_loop), \
+             patch("registry.cli._run_bridge_core", fake_bridge):
             rc = main(["pipeline", str(project),
                         "--db", str(db), "--session", "session-test"])
         assert rc == 0
@@ -371,7 +364,7 @@ class TestPipelineExitCodes:
         project = tmp_path / "proj"
         project.mkdir()
 
-        with patch("registry.cli.cmd_loop", return_value=1):
+        with patch("registry.cli._run_loop_core", return_value=1):
             rc = main(["pipeline", str(project),
                         "--db", str(db), "--session", "session-test",
                         "--loop-only"])
@@ -386,7 +379,7 @@ class TestPipelineExitCodes:
         specs.mkdir(exist_ok=True)
         (specs / "gwt-0001.tla").write_text("---- MODULE T ----\n====")
 
-        with patch("registry.cli.cmd_bridge", return_value=1):
+        with patch("registry.cli._run_bridge_core", return_value=1):
             rc = main(["pipeline", str(project),
                         "--bridge-only", "--gwt", "gwt-0001"])
         assert rc == 1
@@ -398,27 +391,25 @@ class TestPipelineExitCodes:
         bridge_gwts = []
         call_count = [0]
 
-        def fake_loop(args):
+        def fake_loop(target, gwt_id, **kw):
             call_count[0] += 1
-            t = Path(args.target_dir).resolve()
             if call_count[0] == 1:
-                s = t / ".cw9" / "specs"
+                s = target / ".cw9" / "specs"
                 s.mkdir(parents=True, exist_ok=True)
-                (s / f"{args.gwt_id}.tla").write_text("---- MODULE T ----\n====")
+                (s / f"{gwt_id}.tla").write_text("---- MODULE T ----\n====")
                 return 0
             return 1
 
-        def fake_bridge(args):
-            bridge_gwts.append(args.gwt_id)
-            t = Path(args.target_dir).resolve()
-            bd = t / ".cw9" / "bridge"
+        def fake_bridge(target, gwt_id):
+            bridge_gwts.append(gwt_id)
+            bd = target / ".cw9" / "bridge"
             bd.mkdir(parents=True, exist_ok=True)
-            (bd / f"{args.gwt_id}_bridge_artifacts.json").write_text(
-                json.dumps(_make_bridge_artifacts(args.gwt_id)))
+            (bd / f"{gwt_id}_bridge_artifacts.json").write_text(
+                json.dumps(_make_bridge_artifacts(gwt_id)))
             return 0
 
-        with patch("registry.cli.cmd_loop", fake_loop), \
-             patch("registry.cli.cmd_bridge", fake_bridge):
+        with patch("registry.cli._run_loop_core", fake_loop), \
+             patch("registry.cli._run_bridge_core", fake_bridge):
             rc = main(["pipeline", str(project),
                         "--db", str(db), "--session", "session-test"])
 

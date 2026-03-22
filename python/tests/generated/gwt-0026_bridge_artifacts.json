@@ -1,0 +1,1440 @@
+{
+  "gwt_id": "gwt-0026",
+  "module_name": "StalenessPropagation",
+  "data_structures": {
+    "StalenessPropagationState": {
+      "function_id": "fn-StalenessPropagation-state",
+      "acceptance_criteria_id": "ac-StalenessPropagation-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"DetectDirect\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "stored_hashes": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "current_hashes": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "edges": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "direct_stale": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "transitive_stale": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "detect",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "prev_size": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from StalenessPropagation TLA+ spec"
+    }
+  },
+  "operations": {
+    "DetectDirect": {
+      "function_id": "fn-StalenessPropagation-DetectDirect",
+      "acceptance_criteria_id": "ac-StalenessPropagation-DetectDirect",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action DetectDirect from StalenessPropagation spec"
+    },
+    "PropLoop": {
+      "function_id": "fn-StalenessPropagation-PropLoop",
+      "acceptance_criteria_id": "ac-StalenessPropagation-PropLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action PropLoop from StalenessPropagation spec"
+    },
+    "PropStep": {
+      "function_id": "fn-StalenessPropagation-PropStep",
+      "acceptance_criteria_id": "ac-StalenessPropagation-PropStep",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action PropStep from StalenessPropagation spec"
+    },
+    "CheckFix": {
+      "function_id": "fn-StalenessPropagation-CheckFix",
+      "acceptance_criteria_id": "ac-StalenessPropagation-CheckFix",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckFix from StalenessPropagation spec"
+    },
+    "Finish": {
+      "function_id": "fn-StalenessPropagation-Finish",
+      "acceptance_criteria_id": "ac-StalenessPropagation-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from StalenessPropagation spec"
+    }
+  },
+  "verifiers": {
+    "DirectlyStale": {
+      "function_id": "fn-StalenessPropagation-verify-DirectlyStale",
+      "acceptance_criteria_id": "ac-StalenessPropagation-DirectlyStale",
+      "conditions": [
+        "{n \\in Nodes : stored_hashes[n] /= current_hashes[n]}\n\nOneHopExpand(S) ==\n    S \\cup {e[1] : e \\in {ep \\in edges : ep[2] \\in S}}"
+      ],
+      "message": "DirectlyStale violation: {n \\in Nodes : stored_hashes[n] /= current_hashes[n]}\n\nOneHopExpand(S) ==\n    S \\cup {e[1] : e \\in {ep \\in edges : ep...",
+      "applies_to": [
+        "current_hashes",
+        "edges",
+        "stored_hashes"
+      ],
+      "description": "Verifier for invariant DirectlyStale from StalenessPropagation spec"
+    },
+    "DirectCorrect": {
+      "function_id": "fn-StalenessPropagation-verify-DirectCorrect",
+      "acceptance_criteria_id": "ac-StalenessPropagation-DirectCorrect",
+      "conditions": [
+        "phase /= \"detect\" => direct_stale = DirectlyStale"
+      ],
+      "message": "DirectCorrect violation: phase /= \"detect\" => direct_stale = DirectlyStale",
+      "applies_to": [
+        "direct_stale",
+        "phase"
+      ],
+      "description": "Verifier for invariant DirectCorrect from StalenessPropagation spec"
+    },
+    "MonotonicGrowth": {
+      "function_id": "fn-StalenessPropagation-verify-MonotonicGrowth",
+      "acceptance_criteria_id": "ac-StalenessPropagation-MonotonicGrowth",
+      "conditions": [
+        "Cardinality(transitive_stale) >= prev_size"
+      ],
+      "message": "MonotonicGrowth violation: Cardinality(transitive_stale) >= prev_size",
+      "applies_to": [
+        "prev_size",
+        "transitive_stale"
+      ],
+      "description": "Verifier for invariant MonotonicGrowth from StalenessPropagation spec"
+    },
+    "TransitiveComplete": {
+      "function_id": "fn-StalenessPropagation-verify-TransitiveComplete",
+      "acceptance_criteria_id": "ac-StalenessPropagation-TransitiveComplete",
+      "conditions": [
+        "phase = \"complete\" =>",
+        "OneHopExpand(transitive_stale) = transitive_stale",
+        "direct_stale \\subseteq transitive_stale"
+      ],
+      "message": "TransitiveComplete violation: phase = \"complete\" =>\n        /\\ OneHopExpand(transitive_stale) = transitive_stale\n        /\\ direct_stale \\subseteq ...",
+      "applies_to": [
+        "direct_stale",
+        "phase",
+        "transitive_stale"
+      ],
+      "description": "Verifier for invariant TransitiveComplete from StalenessPropagation spec"
+    },
+    "NoFalseNegatives": {
+      "function_id": "fn-StalenessPropagation-verify-NoFalseNegatives",
+      "acceptance_criteria_id": "ac-StalenessPropagation-NoFalseNegatives",
+      "conditions": [
+        "phase = \"complete\" =>\n        \\A n \\in Nodes : n \\in direct_stale => n \\in transitive_stale"
+      ],
+      "message": "NoFalseNegatives violation: phase = \"complete\" =>\n        \\A n \\in Nodes : n \\in direct_stale => n \\in transitive_stale",
+      "applies_to": [
+        "direct_stale",
+        "phase",
+        "transitive_stale"
+      ],
+      "description": "Verifier for invariant NoFalseNegatives from StalenessPropagation spec"
+    },
+    "AllDependentsIncluded": {
+      "function_id": "fn-StalenessPropagation-verify-AllDependentsIncluded",
+      "acceptance_criteria_id": "ac-StalenessPropagation-AllDependentsIncluded",
+      "conditions": [
+        "phase = \"complete\" =>\n        \\A e \\in edges :\n            e[2] \\in transitive_stale => e[1] \\in transitive_stale"
+      ],
+      "message": "AllDependentsIncluded violation: phase = \"complete\" =>\n        \\A e \\in edges :\n            e[2] \\in transitive_stale => e[1] \\in transitive_stale",
+      "applies_to": [
+        "edges",
+        "phase",
+        "transitive_stale"
+      ],
+      "description": "Verifier for invariant AllDependentsIncluded from StalenessPropagation spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-StalenessPropagation-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-StalenessPropagation-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from StalenessPropagation spec"
+    }
+  },
+  "assertions": {
+    "assert_DirectlyStale": {
+      "condition": "{n in Nodes : stored_hashes[n] /= current_hashes[n]}\n\nOneHopExpand(S) ==\n    S \\cup {e[1] : e in {ep in edges : ep[2] in S}}",
+      "message": "Assertion failed: DirectlyStale \u2014 {n \\in Nodes : stored_hashes[n] /= current_hashes[n]}\n\nOneHopExpand(S) ==\n    S \\cup {e[1] : e \\in {ep \\in edges : ep...",
+      "description": "Test assertion for DirectlyStale from StalenessPropagation spec"
+    },
+    "assert_DirectCorrect": {
+      "condition": "phase /= \"detect\" implies direct_stale = DirectlyStale",
+      "message": "Assertion failed: DirectCorrect \u2014 phase /= \"detect\" => direct_stale = DirectlyStale",
+      "description": "Test assertion for DirectCorrect from StalenessPropagation spec"
+    },
+    "assert_MonotonicGrowth": {
+      "condition": "Cardinality(transitive_stale) >= prev_size",
+      "message": "Assertion failed: MonotonicGrowth \u2014 Cardinality(transitive_stale) >= prev_size",
+      "description": "Test assertion for MonotonicGrowth from StalenessPropagation spec"
+    },
+    "assert_TransitiveComplete": {
+      "condition": "phase = \"complete\" implies\n        and OneHopExpand(transitive_stale) = transitive_stale\n        and direct_stale \\subseteq transitive_stale",
+      "message": "Assertion failed: TransitiveComplete \u2014 phase = \"complete\" =>\n        /\\ OneHopExpand(transitive_stale) = transitive_stale\n        /\\ direct_stale \\subseteq ...",
+      "description": "Test assertion for TransitiveComplete from StalenessPropagation spec"
+    },
+    "assert_NoFalseNegatives": {
+      "condition": "phase = \"complete\" implies\n        \\A n in Nodes : n in direct_stale implies n in transitive_stale",
+      "message": "Assertion failed: NoFalseNegatives \u2014 phase = \"complete\" =>\n        \\A n \\in Nodes : n \\in direct_stale => n \\in transitive_stale",
+      "description": "Test assertion for NoFalseNegatives from StalenessPropagation spec"
+    },
+    "assert_AllDependentsIncluded": {
+      "condition": "phase = \"complete\" implies\n        \\A e in edges :\n            e[2] in transitive_stale implies e[1] in transitive_stale",
+      "message": "Assertion failed: AllDependentsIncluded \u2014 phase = \"complete\" =>\n        \\A e \\in edges :\n            e[2] \\in transitive_stale => e[1] \\in transitive_stale",
+      "description": "Test assertion for AllDependentsIncluded from StalenessPropagation spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from StalenessPropagation spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "2",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "3",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "2",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "3",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "2",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "3",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "2",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "3",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_2}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>, <<Nodes_1, Nodes_2>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "2",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "3",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "2",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "3",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "2",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "3",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_2)",
+          "transitive_stale": "{Nodes_1, Nodes_2}",
+          "prev_size": "2",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_2>>, <<Nodes_2, Nodes_1>>, <<Nodes_2, Nodes_2>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "3",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_2)"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{}",
+          "prev_size": "0",
+          "direct_stale": "{}",
+          "phase": "\"detect\"",
+          "edges": "{<<Nodes_1, Nodes_1>>}",
+          "pc": "[detector |-> \"DetectDirect\"]",
+          "step_count": "0",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetectDirect",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "0",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>}",
+          "pc": "[detector |-> \"PropStep\"]",
+          "step_count": "1",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "PropStep",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"propagate\"",
+          "edges": "{<<Nodes_1, Nodes_1>>}",
+          "pc": "[detector |-> \"CheckFix\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckFix",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>}",
+          "pc": "[detector |-> \"PropLoop\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PropLoop",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>}",
+          "pc": "[detector |-> \"Finish\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "current_hashes": "(Nodes_1 :> Hashes_1 @@ Nodes_2 :> Hashes_1)",
+          "transitive_stale": "{Nodes_1}",
+          "prev_size": "1",
+          "direct_stale": "{Nodes_1}",
+          "phase": "\"complete\"",
+          "edges": "{<<Nodes_1, Nodes_1>>}",
+          "pc": "[detector |-> \"Done\"]",
+          "step_count": "2",
+          "stored_hashes": "(Nodes_1 :> Hashes_2 @@ Nodes_2 :> Hashes_1)"
+        }
+      }
+    ]
+  ]
+}

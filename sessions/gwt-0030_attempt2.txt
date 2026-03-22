@@ -1,0 +1,190 @@
+---- MODULE IncrementalSkip ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    UUIDs,
+    TerminalDescriptions,
+    NonTerminalDescriptions,
+    Hashes
+
+ASSUME
+    /\ UUIDs # {}
+    /\ TerminalDescriptions # {}
+    /\ NonTerminalDescriptions # {}
+    /\ Hashes # {}
+    /\ TerminalDescriptions \cap NonTerminalDescriptions = {}
+
+(* --algorithm IncrementalSkip
+
+variables
+    incremental \in {TRUE, FALSE},
+    records \in [UUIDs -> [do_description : TerminalDescriptions \cup NonTerminalDescriptions,
+                            src_hash : Hashes]],
+    current_hashes \in [UUIDs -> Hashes],
+    skipped = {},
+    extracted = {},
+    remaining = UUIDs,
+    uuid = CHOOSE u \in UUIDs : TRUE;
+
+define
+
+    IsTerminal(u) ==
+        records[u].do_description \in TerminalDescriptions
+
+    HashMatches(u) ==
+        records[u].src_hash = current_hashes[u]
+
+    ShouldSkip(u) ==
+        incremental /\ IsTerminal(u) /\ HashMatches(u)
+
+    SkipOnlyWhenIncremental ==
+        skipped # {} => incremental = TRUE
+
+    SkipOnlyWhenHashMatch ==
+        \A u \in skipped : records[u].src_hash = current_hashes[u]
+
+    SkipNeverExtracted ==
+        skipped \cap extracted = {}
+
+    UnchangedNeverExtracted ==
+        \A u \in UUIDs \ remaining :
+            (incremental /\ IsTerminal(u) /\ HashMatches(u)) =>
+            u \in skipped
+
+    ProcessedPartition ==
+        \A u \in UUIDs \ remaining :
+            u \in skipped \/ u \in extracted
+
+    BoundedSkipped ==
+        skipped \subseteq UUIDs
+
+    BoundedExtracted ==
+        extracted \subseteq UUIDs
+
+end define;
+
+fair process Processor = "processor"
+begin
+    ProcessLoop:
+        while remaining # {} do
+            CheckSkip:
+                uuid := CHOOSE u \in remaining : TRUE;
+                remaining := remaining \ {uuid};
+                if incremental /\ IsTerminal(uuid) /\ HashMatches(uuid) then
+                    skipped := skipped \cup {uuid};
+                else
+                    extracted := extracted \cup {uuid};
+                end if;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+THEOREM IncrementalSkipCorrect ==
+    []SkipOnlyWhenIncremental
+    /\ []SkipOnlyWhenHashMatch
+    /\ []SkipNeverExtracted
+    /\ []UnchangedNeverExtracted
+    /\ []ProcessedPartition
+    /\ []BoundedSkipped
+    /\ []BoundedExtracted
+
+====
+---- MODULE IncrementalSkip ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    UUIDs,
+    TerminalDescriptions,
+    NonTerminalDescriptions,
+    Hashes
+
+ASSUME
+    /\ UUIDs # {}
+    /\ TerminalDescriptions # {}
+    /\ NonTerminalDescriptions # {}
+    /\ Hashes # {}
+    /\ TerminalDescriptions \cap NonTerminalDescriptions = {}
+
+(* --algorithm IncrementalSkip
+
+variables
+    incremental \in {TRUE, FALSE},
+    records \in [UUIDs -> [do_description : TerminalDescriptions \cup NonTerminalDescriptions,
+                            src_hash : Hashes]],
+    current_hashes \in [UUIDs -> Hashes],
+    skipped = {},
+    extracted = {},
+    remaining = UUIDs,
+    uuid = CHOOSE u \in UUIDs : TRUE;
+
+define
+
+    IsTerminal(u) ==
+        records[u].do_description \in TerminalDescriptions
+
+    HashMatches(u) ==
+        records[u].src_hash = current_hashes[u]
+
+    ShouldSkip(u) ==
+        incremental /\ IsTerminal(u) /\ HashMatches(u)
+
+    SkipOnlyWhenIncremental ==
+        skipped # {} => incremental = TRUE
+
+    SkipOnlyWhenHashMatch ==
+        \A u \in skipped : records[u].src_hash = current_hashes[u]
+
+    SkipNeverExtracted ==
+        skipped \cap extracted = {}
+
+    UnchangedNeverExtracted ==
+        \A u \in UUIDs \ remaining :
+            (incremental /\ IsTerminal(u) /\ HashMatches(u)) =>
+            u \in skipped
+
+    ProcessedPartition ==
+        \A u \in UUIDs \ remaining :
+            u \in skipped \/ u \in extracted
+
+    BoundedSkipped ==
+        skipped \subseteq UUIDs
+
+    BoundedExtracted ==
+        extracted \subseteq UUIDs
+
+end define;
+
+fair process Processor = "processor"
+begin
+    ProcessLoop:
+        while remaining # {} do
+            CheckSkip:
+                uuid := CHOOSE u \in remaining : TRUE;
+                remaining := remaining \ {uuid};
+                if incremental /\ IsTerminal(uuid) /\ HashMatches(uuid) then
+                    skipped := skipped \cup {uuid};
+                else
+                    extracted := extracted \cup {uuid};
+                end if;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+THEOREM IncrementalSkipCorrect ==
+    []SkipOnlyWhenIncremental
+    /\ []SkipOnlyWhenHashMatch
+    /\ []SkipNeverExtracted
+    /\ []UnchangedNeverExtracted
+    /\ []ProcessedPartition
+    /\ []BoundedSkipped
+    /\ []BoundedExtracted
+
+====
