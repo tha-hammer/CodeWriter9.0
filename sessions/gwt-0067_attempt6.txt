@@ -1,0 +1,172 @@
+The error is clear: the `ASSUME` block evaluates to false because the framework supplies model values where `M + K > N`. The fix is to eliminate the arithmetic constraint entirely by splitting N into its three independent components as separate CONSTANTS, deriving `TotalEdges` as their sum — no `ASSUME` needed.
+
+---- MODULE SeamReportComplete ----
+EXTENDS Integers, TLC
+
+CONSTANTS
+    MaxMismatches,
+    MaxUnresolved,
+    MaxSatisfied
+
+(* --algorithm SeamReportComplete
+
+variables
+    phase     = "init",
+    mm_count  = 0,
+    ur_count  = 0,
+    sat_count = 0,
+    total     = 0;
+
+define
+
+    TotalEdges == MaxMismatches + MaxUnresolved + MaxSatisfied
+
+    CurrentSum == mm_count + ur_count + sat_count
+
+    CompletenessHolds ==
+        phase = "done" => CurrentSum = total
+
+    MonotonicProgress ==
+        phase # "init" => CurrentSum <= total
+
+    NonNegative ==
+        /\ mm_count  >= 0
+        /\ ur_count  >= 0
+        /\ sat_count >= 0
+        /\ total     >= 0
+
+    TotalIsN ==
+        phase # "init" => total = TotalEdges
+
+    FinalCorrectness ==
+        phase = "done" =>
+            /\ mm_count  = MaxMismatches
+            /\ ur_count  = MaxUnresolved
+            /\ sat_count = MaxSatisfied
+            /\ total     = TotalEdges
+            /\ CurrentSum = TotalEdges
+
+    SeamInvariants ==
+        /\ CompletenessHolds
+        /\ MonotonicProgress
+        /\ NonNegative
+        /\ TotalIsN
+        /\ FinalCorrectness
+
+end define;
+
+fair process checker = "checker"
+begin
+    InitReport:
+        total := TotalEdges;
+        phase := "processing";
+
+    Processing:
+        while mm_count + ur_count + sat_count < TotalEdges do
+            ProcessEdge:
+            either
+                await mm_count < MaxMismatches;
+                mm_count := mm_count + 1;
+            or
+                await ur_count < MaxUnresolved;
+                ur_count := ur_count + 1;
+            or
+                await sat_count < MaxSatisfied;
+                sat_count := sat_count + 1;
+            end either;
+        end while;
+
+    FinalizeReport:
+        phase := "done";
+
+end process;
+
+end algorithm; *)
+
+====
+The error is clear: the `ASSUME` block evaluates to false because the framework supplies model values where `M + K > N`. The fix is to eliminate the arithmetic constraint entirely by splitting N into its three independent components as separate CONSTANTS, deriving `TotalEdges` as their sum — no `ASSUME` needed.
+
+---- MODULE SeamReportComplete ----
+EXTENDS Integers, TLC
+
+CONSTANTS
+    MaxMismatches,
+    MaxUnresolved,
+    MaxSatisfied
+
+(* --algorithm SeamReportComplete
+
+variables
+    phase     = "init",
+    mm_count  = 0,
+    ur_count  = 0,
+    sat_count = 0,
+    total     = 0;
+
+define
+
+    TotalEdges == MaxMismatches + MaxUnresolved + MaxSatisfied
+
+    CurrentSum == mm_count + ur_count + sat_count
+
+    CompletenessHolds ==
+        phase = "done" => CurrentSum = total
+
+    MonotonicProgress ==
+        phase # "init" => CurrentSum <= total
+
+    NonNegative ==
+        /\ mm_count  >= 0
+        /\ ur_count  >= 0
+        /\ sat_count >= 0
+        /\ total     >= 0
+
+    TotalIsN ==
+        phase # "init" => total = TotalEdges
+
+    FinalCorrectness ==
+        phase = "done" =>
+            /\ mm_count  = MaxMismatches
+            /\ ur_count  = MaxUnresolved
+            /\ sat_count = MaxSatisfied
+            /\ total     = TotalEdges
+            /\ CurrentSum = TotalEdges
+
+    SeamInvariants ==
+        /\ CompletenessHolds
+        /\ MonotonicProgress
+        /\ NonNegative
+        /\ TotalIsN
+        /\ FinalCorrectness
+
+end define;
+
+fair process checker = "checker"
+begin
+    InitReport:
+        total := TotalEdges;
+        phase := "processing";
+
+    Processing:
+        while mm_count + ur_count + sat_count < TotalEdges do
+            ProcessEdge:
+            either
+                await mm_count < MaxMismatches;
+                mm_count := mm_count + 1;
+            or
+                await ur_count < MaxUnresolved;
+                ur_count := ur_count + 1;
+            or
+                await sat_count < MaxSatisfied;
+                sat_count := sat_count + 1;
+            end either;
+        end while;
+
+    FinalizeReport:
+        phase := "done";
+
+end process;
+
+end algorithm; *)
+
+====

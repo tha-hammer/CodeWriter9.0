@@ -1,0 +1,806 @@
+{
+  "gwt_id": "gwt-0065",
+  "module_name": "SeamSatisfiedNoReport",
+  "data_structures": {
+    "SeamSatisfiedNoReportState": {
+      "function_id": "fn-SeamSatisfiedNoReport-state",
+      "acceptance_criteria_id": "ac-SeamSatisfiedNoReport-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Start\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "provided_type": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "CallerOkType",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "expected_type": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "CalleeInType",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "compatible": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "result": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "init",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from SeamSatisfiedNoReport TLA+ spec"
+    }
+  },
+  "operations": {
+    "Start": {
+      "function_id": "fn-SeamSatisfiedNoReport-Start",
+      "acceptance_criteria_id": "ac-SeamSatisfiedNoReport-Start",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Start from SeamSatisfiedNoReport spec"
+    },
+    "CheckSeam": {
+      "function_id": "fn-SeamSatisfiedNoReport-CheckSeam",
+      "acceptance_criteria_id": "ac-SeamSatisfiedNoReport-CheckSeam",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckSeam from SeamSatisfiedNoReport spec"
+    },
+    "ConfirmCompatible": {
+      "function_id": "fn-SeamSatisfiedNoReport-ConfirmCompatible",
+      "acceptance_criteria_id": "ac-SeamSatisfiedNoReport-ConfirmCompatible",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ConfirmCompatible from SeamSatisfiedNoReport spec"
+    },
+    "Finish": {
+      "function_id": "fn-SeamSatisfiedNoReport-Finish",
+      "acceptance_criteria_id": "ac-SeamSatisfiedNoReport-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from SeamSatisfiedNoReport spec"
+    }
+  },
+  "verifiers": {
+    "PhaseValid": {
+      "function_id": "fn-SeamSatisfiedNoReport-verify-PhaseValid",
+      "acceptance_criteria_id": "ac-SeamSatisfiedNoReport-PhaseValid",
+      "conditions": [
+        "phase \\in {\"init\", \"checking\", \"confirming\", \"done\"}"
+      ],
+      "message": "PhaseValid violation: phase \\in {\"init\", \"checking\", \"confirming\", \"done\"}",
+      "applies_to": [
+        "phase"
+      ],
+      "description": "Verifier for invariant PhaseValid from SeamSatisfiedNoReport spec"
+    },
+    "ReflexiveCompatPairs": {
+      "function_id": "fn-SeamSatisfiedNoReport-verify-ReflexiveCompatPairs",
+      "acceptance_criteria_id": "ac-SeamSatisfiedNoReport-ReflexiveCompatPairs",
+      "conditions": [
+        "\\A t \\in TypeValues : <<t, t>> \\in CompatPairs"
+      ],
+      "message": "ReflexiveCompatPairs violation: \\A t \\in TypeValues : <<t, t>> \\in CompatPairs",
+      "applies_to": [
+        "SeamSatisfiedNoReport"
+      ],
+      "description": "Verifier for invariant ReflexiveCompatPairs from SeamSatisfiedNoReport spec"
+    },
+    "NoFalsePositive": {
+      "function_id": "fn-SeamSatisfiedNoReport-verify-NoFalsePositive",
+      "acceptance_criteria_id": "ac-SeamSatisfiedNoReport-NoFalsePositive",
+      "conditions": [
+        "phase = \"done\"",
+        "<<provided_type, expected_type>> \\in CompatPairs)\n        => result = {}"
+      ],
+      "message": "NoFalsePositive violation: (phase = \"done\" /\\ <<provided_type, expected_type>> \\in CompatPairs)\n        => result = {}",
+      "applies_to": [
+        "expected_type",
+        "phase",
+        "provided_type",
+        "result"
+      ],
+      "description": "Verifier for invariant NoFalsePositive from SeamSatisfiedNoReport spec"
+    },
+    "SeamSatisfied": {
+      "function_id": "fn-SeamSatisfiedNoReport-verify-SeamSatisfied",
+      "acceptance_criteria_id": "ac-SeamSatisfiedNoReport-SeamSatisfied",
+      "conditions": [
+        "phase = \"done\" => result = {}"
+      ],
+      "message": "SeamSatisfied violation: phase = \"done\" => result = {}",
+      "applies_to": [
+        "phase",
+        "result"
+      ],
+      "description": "Verifier for invariant SeamSatisfied from SeamSatisfiedNoReport spec"
+    }
+  },
+  "assertions": {
+    "assert_PhaseValid": {
+      "condition": "phase in {\"init\", \"checking\", \"confirming\", \"done\"}",
+      "message": "Assertion failed: PhaseValid \u2014 phase \\in {\"init\", \"checking\", \"confirming\", \"done\"}",
+      "description": "Test assertion for PhaseValid from SeamSatisfiedNoReport spec"
+    },
+    "assert_ReflexiveCompatPairs": {
+      "condition": "\\A t in TypeValues : <<t, t>> in CompatPairs",
+      "message": "Assertion failed: ReflexiveCompatPairs \u2014 \\A t \\in TypeValues : <<t, t>> \\in CompatPairs",
+      "description": "Test assertion for ReflexiveCompatPairs from SeamSatisfiedNoReport spec"
+    },
+    "assert_NoFalsePositive": {
+      "condition": "(phase = \"done\" and <<provided_type, expected_type>> in CompatPairs)\n        implies result = {}",
+      "message": "Assertion failed: NoFalsePositive \u2014 (phase = \"done\" /\\ <<provided_type, expected_type>> \\in CompatPairs)\n        => result = {}",
+      "description": "Test assertion for NoFalsePositive from SeamSatisfiedNoReport spec"
+    },
+    "assert_SeamSatisfied": {
+      "condition": "phase = \"done\" implies result = {}",
+      "message": "Assertion failed: SeamSatisfied \u2014 phase = \"done\" => result = {}",
+      "description": "Test assertion for SeamSatisfied from SeamSatisfiedNoReport spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"init\"",
+          "pc": "[seam_checker |-> \"Start\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Start",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"checking\"",
+          "pc": "[seam_checker |-> \"CheckSeam\"]",
+          "compatible": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckSeam",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"confirming\"",
+          "pc": "[seam_checker |-> \"ConfirmCompatible\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConfirmCompatible",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Finish\"]",
+          "compatible": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "result": "{}",
+          "provided_type": "\"listFnRecord\"",
+          "expected_type": "\"listFnRecord\"",
+          "phase": "\"done\"",
+          "pc": "[seam_checker |-> \"Done\"]",
+          "compatible": "TRUE"
+        }
+      }
+    ]
+  ]
+}

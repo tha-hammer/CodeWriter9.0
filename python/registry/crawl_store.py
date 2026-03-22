@@ -589,6 +589,27 @@ class CrawlStore:
             for r in rows
         ]
 
+    # ── Seam analysis queries ────────────────────────────────────
+
+    def get_dependency_edges(self) -> list[tuple[str, str, str, str | None]]:
+        """All (dependent_uuid, dependency_uuid, dispatch, dispatch_candidates) from deps view."""
+        rows = self.conn.execute("SELECT * FROM deps").fetchall()
+        return [
+            (r["dependent_uuid"], r["dependency_uuid"], r["dispatch"], r["dispatch_candidates"])
+            for r in rows
+        ]
+
+    def get_unresolved_internal_calls(self) -> list[dict]:
+        """ins with source='internal_call' and source_uuid IS NULL."""
+        rows = self.conn.execute(
+            """SELECT i.record_uuid, i.name, i.type_str, i.source_function,
+                      i.dispatch, r.function_name, r.file_path
+               FROM ins i
+               JOIN records r ON i.record_uuid = r.uuid
+               WHERE i.source = 'internal_call' AND i.source_uuid IS NULL"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     # ── Crawl run tracking ────────────────────────────────────────
 
     def start_crawl_run(

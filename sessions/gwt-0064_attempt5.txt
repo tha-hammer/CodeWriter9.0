@@ -1,0 +1,254 @@
+MODULE SeamMismatchDetected
+
+EXTENDS Integers, FiniteSets, TLC
+
+(*--algorithm SeamMismatchDetected
+
+variables
+    caller_outs = {[name |-> "ok", type_str |-> "DictStrAny"]},
+    callee_ins  = {[name        |-> "config",
+                    type_str    |-> "Config",
+                    source      |-> "internal_call",
+                    source_uuid |-> "aaaa1111"]},
+    caller_uuid = "aaaa1111",
+    callee_uuid = "bbbb2222",
+    caller_fn   = "get_config",
+    callee_fn   = "process",
+    checked     = {},
+    result      = {},
+    phase       = "idle";
+
+define
+
+    CompatPairs ==
+        { <<"Str",       "Str">>,
+          <<"StrOrNone", "StrOrNone">>,
+          <<"Config",    "Config">> }
+
+    LinkedInputs ==
+        { i \in callee_ins :
+            i.source = "internal_call" /\ i.source_uuid = caller_uuid }
+
+    OkOutputs ==
+        { o \in caller_outs : o.name = "ok" }
+
+    TypeCompatible(provided, expected) ==
+        <<provided, expected>> \in CompatPairs
+
+    AllInputsChecked ==
+        phase = "done" => checked = LinkedInputs
+
+    MismatchCorrect ==
+        phase = "done" =>
+            \A i \in LinkedInputs :
+                \A o \in OkOutputs :
+                    ~TypeCompatible(o.type_str, i.type_str) =>
+                        \E m \in result :
+                            /\ m.callee_input_name = i.name
+                            /\ m.expected_type     = i.type_str
+                            /\ m.provided_type     = o.type_str
+                            /\ m.severity          = "type_mismatch"
+
+    NoSpuriousMismatches ==
+        phase = "done" =>
+            \A m \in result :
+                \E i \in LinkedInputs :
+                \E o \in OkOutputs :
+                    /\ m.callee_input_name = i.name
+                    /\ m.expected_type     = i.type_str
+                    /\ m.provided_type     = o.type_str
+                    /\ ~TypeCompatible(o.type_str, i.type_str)
+                    /\ m.severity          = "type_mismatch"
+
+    SeverityCorrect ==
+        \A m \in result : m.severity = "type_mismatch"
+
+    MismatchDetected ==
+        phase = "done" =>
+            ( \E i \in LinkedInputs :
+              \E o \in OkOutputs :
+                ~TypeCompatible(o.type_str, i.type_str) ) =>
+            result /= {}
+
+    CallerOutputMatched ==
+        phase = "done" =>
+            \A i \in LinkedInputs : i \in checked
+
+end define;
+
+fair process checker = "checker"
+variables
+    pending = {},
+    has_ok  = FALSE,
+    cur_in  = [name |-> "", type_str |-> "", source |-> "", source_uuid |-> ""],
+    cur_ok  = [name |-> "", type_str |-> ""];
+begin
+    StartCheck:
+        await phase = "idle";
+        pending := LinkedInputs;
+        phase   := "checking";
+
+    ProcessInputs:
+        while pending /= {} do
+            PickInput:
+                cur_in  := CHOOSE i \in pending : TRUE;
+                pending := pending \ {cur_in};
+                if OkOutputs /= {} then
+                    cur_ok := CHOOSE o \in OkOutputs : TRUE;
+                    has_ok := TRUE;
+                else
+                    cur_ok := [name |-> "", type_str |-> ""];
+                    has_ok := FALSE;
+                end if;
+
+            EvalCompat:
+                if has_ok /\ ~TypeCompatible(cur_ok.type_str, cur_in.type_str) then
+                    result := result \union {
+                        [caller_uuid       |-> caller_uuid,
+                         callee_uuid       |-> callee_uuid,
+                         caller_function   |-> caller_fn,
+                         callee_function   |-> callee_fn,
+                         callee_input_name |-> cur_in.name,
+                         expected_type     |-> cur_in.type_str,
+                         provided_type     |-> cur_ok.type_str,
+                         severity          |-> "type_mismatch"]};
+                end if;
+                checked := checked \union {cur_in};
+
+        end while;
+
+    Finish:
+        phase := "done";
+
+end process;
+
+end algorithm; *)
+
+====
+MODULE SeamMismatchDetected
+
+EXTENDS Integers, FiniteSets, TLC
+
+(*--algorithm SeamMismatchDetected
+
+variables
+    caller_outs = {[name |-> "ok", type_str |-> "DictStrAny"]},
+    callee_ins  = {[name        |-> "config",
+                    type_str    |-> "Config",
+                    source      |-> "internal_call",
+                    source_uuid |-> "aaaa1111"]},
+    caller_uuid = "aaaa1111",
+    callee_uuid = "bbbb2222",
+    caller_fn   = "get_config",
+    callee_fn   = "process",
+    checked     = {},
+    result      = {},
+    phase       = "idle";
+
+define
+
+    CompatPairs ==
+        { <<"Str",       "Str">>,
+          <<"StrOrNone", "StrOrNone">>,
+          <<"Config",    "Config">> }
+
+    LinkedInputs ==
+        { i \in callee_ins :
+            i.source = "internal_call" /\ i.source_uuid = caller_uuid }
+
+    OkOutputs ==
+        { o \in caller_outs : o.name = "ok" }
+
+    TypeCompatible(provided, expected) ==
+        <<provided, expected>> \in CompatPairs
+
+    AllInputsChecked ==
+        phase = "done" => checked = LinkedInputs
+
+    MismatchCorrect ==
+        phase = "done" =>
+            \A i \in LinkedInputs :
+                \A o \in OkOutputs :
+                    ~TypeCompatible(o.type_str, i.type_str) =>
+                        \E m \in result :
+                            /\ m.callee_input_name = i.name
+                            /\ m.expected_type     = i.type_str
+                            /\ m.provided_type     = o.type_str
+                            /\ m.severity          = "type_mismatch"
+
+    NoSpuriousMismatches ==
+        phase = "done" =>
+            \A m \in result :
+                \E i \in LinkedInputs :
+                \E o \in OkOutputs :
+                    /\ m.callee_input_name = i.name
+                    /\ m.expected_type     = i.type_str
+                    /\ m.provided_type     = o.type_str
+                    /\ ~TypeCompatible(o.type_str, i.type_str)
+                    /\ m.severity          = "type_mismatch"
+
+    SeverityCorrect ==
+        \A m \in result : m.severity = "type_mismatch"
+
+    MismatchDetected ==
+        phase = "done" =>
+            ( \E i \in LinkedInputs :
+              \E o \in OkOutputs :
+                ~TypeCompatible(o.type_str, i.type_str) ) =>
+            result /= {}
+
+    CallerOutputMatched ==
+        phase = "done" =>
+            \A i \in LinkedInputs : i \in checked
+
+end define;
+
+fair process checker = "checker"
+variables
+    pending = {},
+    has_ok  = FALSE,
+    cur_in  = [name |-> "", type_str |-> "", source |-> "", source_uuid |-> ""],
+    cur_ok  = [name |-> "", type_str |-> ""];
+begin
+    StartCheck:
+        await phase = "idle";
+        pending := LinkedInputs;
+        phase   := "checking";
+
+    ProcessInputs:
+        while pending /= {} do
+            PickInput:
+                cur_in  := CHOOSE i \in pending : TRUE;
+                pending := pending \ {cur_in};
+                if OkOutputs /= {} then
+                    cur_ok := CHOOSE o \in OkOutputs : TRUE;
+                    has_ok := TRUE;
+                else
+                    cur_ok := [name |-> "", type_str |-> ""];
+                    has_ok := FALSE;
+                end if;
+
+            EvalCompat:
+                if has_ok /\ ~TypeCompatible(cur_ok.type_str, cur_in.type_str) then
+                    result := result \union {
+                        [caller_uuid       |-> caller_uuid,
+                         callee_uuid       |-> callee_uuid,
+                         caller_function   |-> caller_fn,
+                         callee_function   |-> callee_fn,
+                         callee_input_name |-> cur_in.name,
+                         expected_type     |-> cur_in.type_str,
+                         provided_type     |-> cur_ok.type_str,
+                         severity          |-> "type_mismatch"]};
+                end if;
+                checked := checked \union {cur_in};
+
+        end while;
+
+    Finish:
+        phase := "done";
+
+end process;
+
+end algorithm; *)
+
+====

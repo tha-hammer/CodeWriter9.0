@@ -213,3 +213,26 @@ class TestReference:
     inputs_observed: list[str] = field(default_factory=list)
     outputs_asserted: list[str] = field(default_factory=list)
     covers_error_path: bool = False
+
+
+@dataclass
+class SeamMismatch:
+    """A detected mismatch or unresolved edge at a function boundary."""
+    caller_uuid: str          # empty string for unresolved
+    callee_uuid: str
+    caller_function: str      # empty string for unresolved
+    callee_function: str
+    callee_input_name: str
+    expected_type: str        # callee's InField.type_str
+    provided_type: str        # caller's OutField.type_str (empty for unresolved)
+    dispatch: DispatchKind
+    severity: str             # "type_mismatch" | "unresolved" | "no_ok_output"
+
+
+@dataclass
+class SeamReport:
+    """Complete seam analysis across all dependency edges."""
+    mismatches: list[SeamMismatch]    # severity in {"type_mismatch", "no_ok_output"}
+    unresolved: list[SeamMismatch]    # severity == "unresolved"
+    satisfied: int                     # count of compatible seams
+    total_edges: int                   # = len(mismatches) + len(unresolved) + satisfied

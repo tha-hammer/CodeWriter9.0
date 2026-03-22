@@ -1,0 +1,852 @@
+{
+  "gwt_id": "gwt-0064",
+  "module_name": "SeamMismatchDetected",
+  "data_structures": {
+    "SeamMismatchDetectedState": {
+      "function_id": "fn-SeamMismatchDetected-state",
+      "acceptance_criteria_id": "ac-SeamMismatchDetected-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"StartCheck\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "caller_ok_type": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "DictStrAny",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "callee_exp_type": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Config",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "caller_uuid": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "aaaa1111",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "callee_uuid": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "bbbb2222",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "caller_fn": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "get_config",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "callee_fn": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "process",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "result": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from SeamMismatchDetected TLA+ spec"
+    }
+  },
+  "operations": {
+    "StartCheck": {
+      "function_id": "fn-SeamMismatchDetected-StartCheck",
+      "acceptance_criteria_id": "ac-SeamMismatchDetected-StartCheck",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartCheck from SeamMismatchDetected spec"
+    },
+    "CheckTypes": {
+      "function_id": "fn-SeamMismatchDetected-CheckTypes",
+      "acceptance_criteria_id": "ac-SeamMismatchDetected-CheckTypes",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckTypes from SeamMismatchDetected spec"
+    },
+    "Finish": {
+      "function_id": "fn-SeamMismatchDetected-Finish",
+      "acceptance_criteria_id": "ac-SeamMismatchDetected-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from SeamMismatchDetected spec"
+    }
+  },
+  "verifiers": {
+    "CompatPairs": {
+      "function_id": "fn-SeamMismatchDetected-verify-CompatPairs",
+      "acceptance_criteria_id": "ac-SeamMismatchDetected-CompatPairs",
+      "conditions": [
+        "{ <<\"Str\",       \"Str\">>,\n    <<\"StrOrNone\", \"StrOrNone\">>,\n    <<\"Config\",    \"Config\">> }\nTypeCompatible(p, e) == <<p, e>> \\in CompatPairs"
+      ],
+      "message": "CompatPairs violation: { <<\"Str\",       \"Str\">>,\n    <<\"StrOrNone\", \"StrOrNone\">>,\n    <<\"Config\",    \"Config\">> }\nTypeCompatible(p, e) == <...",
+      "applies_to": [
+        "SeamMismatchDetected"
+      ],
+      "description": "Verifier for invariant CompatPairs from SeamMismatchDetected spec"
+    },
+    "SeverityCorrect": {
+      "function_id": "fn-SeamMismatchDetected-verify-SeverityCorrect",
+      "acceptance_criteria_id": "ac-SeamMismatchDetected-SeverityCorrect",
+      "conditions": [
+        "\\A m \\in result : m.severity = \"type_mismatch\""
+      ],
+      "message": "SeverityCorrect violation: \\A m \\in result : m.severity = \"type_mismatch\"",
+      "applies_to": [
+        "result"
+      ],
+      "description": "Verifier for invariant SeverityCorrect from SeamMismatchDetected spec"
+    },
+    "MismatchDetected": {
+      "function_id": "fn-SeamMismatchDetected-verify-MismatchDetected",
+      "acceptance_criteria_id": "ac-SeamMismatchDetected-MismatchDetected",
+      "conditions": [
+        "phase = \"done\" =>\n    (~TypeCompatible(caller_ok_type, callee_exp_type) => result /= {}"
+      ],
+      "message": "MismatchDetected violation: phase = \"done\" =>\n    (~TypeCompatible(caller_ok_type, callee_exp_type) => result /= {})",
+      "applies_to": [
+        "callee_exp_type",
+        "caller_ok_type",
+        "phase",
+        "result"
+      ],
+      "description": "Verifier for invariant MismatchDetected from SeamMismatchDetected spec"
+    },
+    "MismatchCorrect": {
+      "function_id": "fn-SeamMismatchDetected-verify-MismatchCorrect",
+      "acceptance_criteria_id": "ac-SeamMismatchDetected-MismatchCorrect",
+      "conditions": [
+        "phase = \"done\" =>\n    (~TypeCompatible(caller_ok_type, callee_exp_type) =>\n      \\E m \\in result :",
+        "m.expected_type = callee_exp_type",
+        "m.provided_type = caller_ok_type",
+        "m.severity      = \"type_mismatch\""
+      ],
+      "message": "MismatchCorrect violation: phase = \"done\" =>\n    (~TypeCompatible(caller_ok_type, callee_exp_type) =>\n      \\E m \\in result :\n        /\\ m.expec...",
+      "applies_to": [
+        "callee_exp_type",
+        "caller_ok_type",
+        "phase",
+        "result"
+      ],
+      "description": "Verifier for invariant MismatchCorrect from SeamMismatchDetected spec"
+    },
+    "NoSpuriousMismatches": {
+      "function_id": "fn-SeamMismatchDetected-verify-NoSpuriousMismatches",
+      "acceptance_criteria_id": "ac-SeamMismatchDetected-NoSpuriousMismatches",
+      "conditions": [
+        "phase = \"done\" =>\n    \\A m \\in result :",
+        "m.expected_type = callee_exp_type",
+        "m.provided_type = caller_ok_type",
+        "~TypeCompatible(caller_ok_type, callee_exp_type",
+        "m.severity = \"type_mismatch\""
+      ],
+      "message": "NoSpuriousMismatches violation: phase = \"done\" =>\n    \\A m \\in result :\n      /\\ m.expected_type = callee_exp_type\n      /\\ m.provided_type = caller_...",
+      "applies_to": [
+        "callee_exp_type",
+        "caller_ok_type",
+        "phase",
+        "result"
+      ],
+      "description": "Verifier for invariant NoSpuriousMismatches from SeamMismatchDetected spec"
+    }
+  },
+  "assertions": {
+    "assert_CompatPairs": {
+      "condition": "{ <<\"Str\",       \"Str\">>,\n    <<\"StrOrNone\", \"StrOrNone\">>,\n    <<\"Config\",    \"Config\">> }\nTypeCompatible(p, e) == <<p, e>> in CompatPairs",
+      "message": "Assertion failed: CompatPairs \u2014 { <<\"Str\",       \"Str\">>,\n    <<\"StrOrNone\", \"StrOrNone\">>,\n    <<\"Config\",    \"Config\">> }\nTypeCompatible(p, e) == <...",
+      "description": "Test assertion for CompatPairs from SeamMismatchDetected spec"
+    },
+    "assert_SeverityCorrect": {
+      "condition": "\\A m in result : m.severity = \"type_mismatch\"",
+      "message": "Assertion failed: SeverityCorrect \u2014 \\A m \\in result : m.severity = \"type_mismatch\"",
+      "description": "Test assertion for SeverityCorrect from SeamMismatchDetected spec"
+    },
+    "assert_MismatchDetected": {
+      "condition": "phase = \"done\" implies\n    (~TypeCompatible(caller_ok_type, callee_exp_type) implies result /= {})",
+      "message": "Assertion failed: MismatchDetected \u2014 phase = \"done\" =>\n    (~TypeCompatible(caller_ok_type, callee_exp_type) => result /= {})",
+      "description": "Test assertion for MismatchDetected from SeamMismatchDetected spec"
+    },
+    "assert_MismatchCorrect": {
+      "condition": "phase = \"done\" implies\n    (~TypeCompatible(caller_ok_type, callee_exp_type) implies\n      \\E m in result :\n        and m.expected_type = callee_exp_type\n        and m.provided_type = caller_ok_type\n        and m.severity      = \"type_mismatch\")",
+      "message": "Assertion failed: MismatchCorrect \u2014 phase = \"done\" =>\n    (~TypeCompatible(caller_ok_type, callee_exp_type) =>\n      \\E m \\in result :\n        /\\ m.expec...",
+      "description": "Test assertion for MismatchCorrect from SeamMismatchDetected spec"
+    },
+    "assert_NoSpuriousMismatches": {
+      "condition": "phase = \"done\" implies\n    \\A m in result :\n      and m.expected_type = callee_exp_type\n      and m.provided_type = caller_ok_type\n      and ~TypeCompatible(caller_ok_type, callee_exp_type)\n      and m.severity = \"type_mismatch\"",
+      "message": "Assertion failed: NoSpuriousMismatches \u2014 phase = \"done\" =>\n    \\A m \\in result :\n      /\\ m.expected_type = callee_exp_type\n      /\\ m.provided_type = caller_...",
+      "description": "Test assertion for NoSpuriousMismatches from SeamMismatchDetected spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"idle\"",
+          "pc": "[checker |-> \"StartCheck\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "StartCheck",
+        "vars": {
+          "result": "{}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"CheckTypes\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckTypes",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"checking\"",
+          "pc": "[checker |-> \"Finish\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "result": "{[caller_uuid |-> \"aaaa1111\", callee_uuid |-> \"bbbb2222\", severity |-> \"type_mismatch\", expected_type |-> \"Config\", provided_type |-> \"DictStrAny\", caller_function |-> \"get_config\", callee_function |-> \"process\", callee_input_name |-> \"config\"]}",
+          "caller_ok_type": "\"DictStrAny\"",
+          "callee_fn": "\"process\"",
+          "callee_exp_type": "\"Config\"",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "caller_fn": "\"get_config\"",
+          "caller_uuid": "\"aaaa1111\"",
+          "callee_uuid": "\"bbbb2222\""
+        }
+      }
+    ]
+  ]
+}

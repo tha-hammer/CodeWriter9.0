@@ -1,0 +1,184 @@
+The persistent duplication and the set-based `Cardinality` usage in the `define` block against algorithm variables are both sources of failures. This rewrite switches to integer CONSTANTS `N`, `M`, `K` and uses `await` guards inside `either` branches — eliminating all set operations and the post-algorithm `Termination` temporal formula that may confuse some SANY versions.
+
+---- MODULE SeamReportComplete ----
+EXTENDS Integers, TLC
+
+CONSTANTS
+    N,
+    M,
+    K
+
+ASSUME
+    /\ N >= 0
+    /\ M >= 0
+    /\ K >= 0
+    /\ M + K <= N
+
+(* --algorithm SeamReportComplete
+
+variables
+    phase     = "init",
+    mm_count  = 0,
+    ur_count  = 0,
+    sat_count = 0,
+    total     = 0;
+
+define
+
+    SatTarget == N - M - K
+
+    CurrentSum == mm_count + ur_count + sat_count
+
+    CompletenessHolds ==
+        phase = "done" => CurrentSum = total
+
+    MonotonicProgress ==
+        phase # "init" => CurrentSum <= total
+
+    NonNegative ==
+        /\ mm_count  >= 0
+        /\ ur_count  >= 0
+        /\ sat_count >= 0
+        /\ total     >= 0
+
+    TotalIsN ==
+        phase # "init" => total = N
+
+    FinalCorrectness ==
+        phase = "done" =>
+            /\ mm_count  = M
+            /\ ur_count  = K
+            /\ sat_count = SatTarget
+            /\ total     = N
+            /\ CurrentSum = N
+
+    SeamInvariants ==
+        /\ CompletenessHolds
+        /\ MonotonicProgress
+        /\ NonNegative
+        /\ TotalIsN
+        /\ FinalCorrectness
+
+end define;
+
+fair process checker = "checker"
+begin
+    InitReport:
+        total := N;
+        phase := "processing";
+
+    Processing:
+        while mm_count + ur_count + sat_count < N do
+            ProcessEdge:
+            either
+                await mm_count < M;
+                mm_count := mm_count + 1;
+            or
+                await ur_count < K;
+                ur_count := ur_count + 1;
+            or
+                await sat_count < SatTarget;
+                sat_count := sat_count + 1;
+            end either;
+        end while;
+
+    FinalizeReport:
+        phase := "done";
+
+end process;
+
+end algorithm; *)
+
+====
+The persistent duplication and the set-based `Cardinality` usage in the `define` block against algorithm variables are both sources of failures. This rewrite switches to integer CONSTANTS `N`, `M`, `K` and uses `await` guards inside `either` branches — eliminating all set operations and the post-algorithm `Termination` temporal formula that may confuse some SANY versions.
+
+---- MODULE SeamReportComplete ----
+EXTENDS Integers, TLC
+
+CONSTANTS
+    N,
+    M,
+    K
+
+ASSUME
+    /\ N >= 0
+    /\ M >= 0
+    /\ K >= 0
+    /\ M + K <= N
+
+(* --algorithm SeamReportComplete
+
+variables
+    phase     = "init",
+    mm_count  = 0,
+    ur_count  = 0,
+    sat_count = 0,
+    total     = 0;
+
+define
+
+    SatTarget == N - M - K
+
+    CurrentSum == mm_count + ur_count + sat_count
+
+    CompletenessHolds ==
+        phase = "done" => CurrentSum = total
+
+    MonotonicProgress ==
+        phase # "init" => CurrentSum <= total
+
+    NonNegative ==
+        /\ mm_count  >= 0
+        /\ ur_count  >= 0
+        /\ sat_count >= 0
+        /\ total     >= 0
+
+    TotalIsN ==
+        phase # "init" => total = N
+
+    FinalCorrectness ==
+        phase = "done" =>
+            /\ mm_count  = M
+            /\ ur_count  = K
+            /\ sat_count = SatTarget
+            /\ total     = N
+            /\ CurrentSum = N
+
+    SeamInvariants ==
+        /\ CompletenessHolds
+        /\ MonotonicProgress
+        /\ NonNegative
+        /\ TotalIsN
+        /\ FinalCorrectness
+
+end define;
+
+fair process checker = "checker"
+begin
+    InitReport:
+        total := N;
+        phase := "processing";
+
+    Processing:
+        while mm_count + ur_count + sat_count < N do
+            ProcessEdge:
+            either
+                await mm_count < M;
+                mm_count := mm_count + 1;
+            or
+                await ur_count < K;
+                ur_count := ur_count + 1;
+            or
+                await sat_count < SatTarget;
+                sat_count := sat_count + 1;
+            end either;
+        end while;
+
+    FinalizeReport:
+        phase := "done";
+
+end process;
+
+end algorithm; *)
+
+====

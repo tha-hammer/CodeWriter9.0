@@ -1,0 +1,148 @@
+---- MODULE SeamSatisfiedNoReport ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+TypeValues == {"listFnRecord", "str", "strOrNone"}
+
+CompatPairs == { <<"listFnRecord", "listFnRecord">>,
+                 <<"str",          "str">>,
+                 <<"str",          "strOrNone">>,
+                 <<"strOrNone",    "strOrNone">> }
+
+CallerOkType == "listFnRecord"
+CalleeInType  == "listFnRecord"
+
+(*--algorithm SeamSatisfiedNoReport
+
+variables
+    provided_type = CallerOkType,
+    expected_type = CalleeInType,
+    compatible    = FALSE,
+    result        = {},
+    phase         = "init";
+
+define
+
+    PhaseValid ==
+        phase \in {"init", "checking", "confirming", "done"}
+
+    ReflexiveCompatPairs ==
+        \A t \in TypeValues : <<t, t>> \in CompatPairs
+
+    NoFalsePositive ==
+        (phase = "done" /\ <<provided_type, expected_type>> \in CompatPairs)
+            => result = {}
+
+    SeamSatisfied ==
+        phase = "done" => result = {}
+
+end define;
+
+fair process checker = "seam_checker"
+begin
+    Start:
+        phase := "checking";
+
+    CheckSeam:
+        if <<provided_type, expected_type>> \in CompatPairs then
+            compatible := TRUE;
+            phase := "confirming";
+        else
+            compatible := FALSE;
+            phase := "confirming";
+        end if;
+
+    ConfirmCompatible:
+        if compatible = TRUE then
+            result := {};
+            phase := "done";
+        else
+            result := { [ provided_type |-> provided_type,
+                          expected_type |-> expected_type,
+                          severity      |-> "type_mismatch" ] };
+            phase := "done";
+        end if;
+
+    Finish:
+        assert result = {};
+        assert compatible = TRUE;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE SeamSatisfiedNoReport ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+TypeValues == {"listFnRecord", "str", "strOrNone"}
+
+CompatPairs == { <<"listFnRecord", "listFnRecord">>,
+                 <<"str",          "str">>,
+                 <<"str",          "strOrNone">>,
+                 <<"strOrNone",    "strOrNone">> }
+
+CallerOkType == "listFnRecord"
+CalleeInType  == "listFnRecord"
+
+(*--algorithm SeamSatisfiedNoReport
+
+variables
+    provided_type = CallerOkType,
+    expected_type = CalleeInType,
+    compatible    = FALSE,
+    result        = {},
+    phase         = "init";
+
+define
+
+    PhaseValid ==
+        phase \in {"init", "checking", "confirming", "done"}
+
+    ReflexiveCompatPairs ==
+        \A t \in TypeValues : <<t, t>> \in CompatPairs
+
+    NoFalsePositive ==
+        (phase = "done" /\ <<provided_type, expected_type>> \in CompatPairs)
+            => result = {}
+
+    SeamSatisfied ==
+        phase = "done" => result = {}
+
+end define;
+
+fair process checker = "seam_checker"
+begin
+    Start:
+        phase := "checking";
+
+    CheckSeam:
+        if <<provided_type, expected_type>> \in CompatPairs then
+            compatible := TRUE;
+            phase := "confirming";
+        else
+            compatible := FALSE;
+            phase := "confirming";
+        end if;
+
+    ConfirmCompatible:
+        if compatible = TRUE then
+            result := {};
+            phase := "done";
+        else
+            result := { [ provided_type |-> provided_type,
+                          expected_type |-> expected_type,
+                          severity      |-> "type_mismatch" ] };
+            phase := "done";
+        end if;
+
+    Finish:
+        assert result = {};
+        assert compatible = TRUE;
+
+end process;
+
+end algorithm; *)
+
+====

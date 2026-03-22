@@ -1,0 +1,156 @@
+---- MODULE SeamUnresolvedFlagged ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Inputs,
+    InternalCallInputs,
+    NullUuidInputs,
+    MaxInputs
+
+ASSUME MaxInputs \in Nat /\ MaxInputs > 0
+ASSUME InternalCallInputs \subseteq Inputs
+ASSUME NullUuidInputs \subseteq Inputs
+ASSUME Cardinality(Inputs) <= MaxInputs
+
+UnresolvedInputs == InternalCallInputs \cap NullUuidInputs
+
+(* --algorithm SeamUnresolvedFlagged
+
+variables
+    inputs_checked   = {},
+    unresolved_found = {},
+    mismatches       = {},
+    phase            = "scanning",
+    current_input    = "none";
+
+define
+
+    AllScanned ==
+        phase = "done" => inputs_checked = Inputs
+
+    UnresolvedCorrect ==
+        phase = "done" =>
+            unresolved_found = UnresolvedInputs
+
+    NoFalseUnresolved ==
+        unresolved_found \subseteq UnresolvedInputs
+
+    UnresolvedNotInMismatches ==
+        mismatches \cap unresolved_found = {}
+
+    BoundedCheck ==
+        Cardinality(inputs_checked) <= MaxInputs
+
+end define;
+
+fair process checker = "checker"
+begin
+    Iterate:
+        while inputs_checked /= Inputs do
+            PickInput:
+                with i \in (Inputs \ inputs_checked) do
+                    current_input := i;
+                end with;
+            CheckInput:
+                if current_input \in InternalCallInputs
+                        /\ current_input \in NullUuidInputs then
+                    unresolved_found := unresolved_found \cup {current_input};
+                    inputs_checked   := inputs_checked   \cup {current_input};
+                    current_input    := "none";
+                else
+                    inputs_checked := inputs_checked \cup {current_input};
+                    current_input  := "none";
+                end if;
+        end while;
+    Terminate:
+        phase := "done";
+end process;
+
+end algorithm; *)
+
+TypeInvariant ==
+    /\ inputs_checked   \subseteq Inputs
+    /\ unresolved_found \subseteq Inputs
+    /\ mismatches       \subseteq Inputs
+    /\ phase            \in {"scanning", "done"}
+    /\ current_input    \in (Inputs \cup {"none"})
+
+====
+---- MODULE SeamUnresolvedFlagged ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Inputs,
+    InternalCallInputs,
+    NullUuidInputs,
+    MaxInputs
+
+ASSUME MaxInputs \in Nat /\ MaxInputs > 0
+ASSUME InternalCallInputs \subseteq Inputs
+ASSUME NullUuidInputs \subseteq Inputs
+ASSUME Cardinality(Inputs) <= MaxInputs
+
+UnresolvedInputs == InternalCallInputs \cap NullUuidInputs
+
+(* --algorithm SeamUnresolvedFlagged
+
+variables
+    inputs_checked   = {},
+    unresolved_found = {},
+    mismatches       = {},
+    phase            = "scanning",
+    current_input    = "none";
+
+define
+
+    AllScanned ==
+        phase = "done" => inputs_checked = Inputs
+
+    UnresolvedCorrect ==
+        phase = "done" =>
+            unresolved_found = UnresolvedInputs
+
+    NoFalseUnresolved ==
+        unresolved_found \subseteq UnresolvedInputs
+
+    UnresolvedNotInMismatches ==
+        mismatches \cap unresolved_found = {}
+
+    BoundedCheck ==
+        Cardinality(inputs_checked) <= MaxInputs
+
+end define;
+
+fair process checker = "checker"
+begin
+    Iterate:
+        while inputs_checked /= Inputs do
+            PickInput:
+                with i \in (Inputs \ inputs_checked) do
+                    current_input := i;
+                end with;
+            CheckInput:
+                if current_input \in InternalCallInputs
+                        /\ current_input \in NullUuidInputs then
+                    unresolved_found := unresolved_found \cup {current_input};
+                    inputs_checked   := inputs_checked   \cup {current_input};
+                    current_input    := "none";
+                else
+                    inputs_checked := inputs_checked \cup {current_input};
+                    current_input  := "none";
+                end if;
+        end while;
+    Terminate:
+        phase := "done";
+end process;
+
+end algorithm; *)
+
+TypeInvariant ==
+    /\ inputs_checked   \subseteq Inputs
+    /\ unresolved_found \subseteq Inputs
+    /\ mismatches       \subseteq Inputs
+    /\ phase            \in {"scanning", "done"}
+    /\ current_input    \in (Inputs \cup {"none"})
+
+====

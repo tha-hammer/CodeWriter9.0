@@ -218,8 +218,7 @@ def cmd_extract(args: argparse.Namespace) -> int:
     ctx = ProjectContext.from_target(target)
     dag_path = state_root / "dag.json"
 
-    # Load old DAG for diff summary AND GWT preservation
-    old_dag = None
+    # Load old DAG for diff summary
     old_nodes, old_edges = 0, 0
     if dag_path.exists():
         from registry.dag import RegistryDag
@@ -232,19 +231,6 @@ def cmd_extract(args: argparse.Namespace) -> int:
     extractor = SchemaExtractor(schema_dir=str(ctx.schema_dir), self_host=ctx.is_self_hosting)
     dag = extractor.extract()
 
-    # Check for crawl.db to preserve crawl-originated RESOURCE nodes
-    crawl_uuids = None
-    crawl_db_path = state_root / "crawl.db"
-    if crawl_db_path.exists():
-        from registry.crawl_store import CrawlStore
-        with CrawlStore(crawl_db_path) as store:
-            crawl_uuids = store.get_all_uuids()
-
-    # Merge registered GWTs (and crawl nodes) from old DAG back in
-    merged = 0
-    if old_dag is not None:
-        merged = dag.merge_registered_nodes(old_dag, crawl_uuids=crawl_uuids)
-
     # Save
     dag.save(dag_path)
 
@@ -255,31 +241,37 @@ def cmd_extract(args: argparse.Namespace) -> int:
     de = new_edges - old_edges
     sign = lambda x: f"+{x}" if x > 0 else str(x)
     print(f"DAG updated: {new_nodes} nodes ({sign(dn)}), {new_edges} edges ({sign(de)})")
-    if merged > 0:
-        print(f"  (preserved {merged} registered node(s) from previous DAG)")
 
     return 0
 
 
-def cmd_loop(args: argparse.Namespace) -> int:
+def _run_loop_core(
+    target: Path,
+    gwt_id: str,
+    max_retries: int = 4,
+    context_file: Path | None = None,
+) -> int:
+    """Core loop logic with explicit parameters (no argparse.Namespace)."""
     import asyncio
 
-    target = Path(args.target_dir).resolve()
-    if _require_cw9(target) is None:
+    state_root = _require_cw9(target)
+    if state_root is None:
         return 1
 
     from registry.loop_runner import run_loop
     from registry.one_shot_loop import LoopResult
 
     ctx = ProjectContext.from_target(target)
+    dag_path = state_root / "dag.json"
     context_text = ""
-    if args.context_file and args.context_file.exists():
-        context_text = args.context_file.read_text()
+    if context_file and context_file.exists():
+        context_text = context_file.read_text()
     result, spec_path = asyncio.run(run_loop(
         ctx=ctx,
-        gwt_id=args.gwt_id,
-        max_retries=args.max_retries,
+        gwt_id=gwt_id,
+        max_retries=max_retries,
         context_text=context_text,
+        dag_path=dag_path,
     ))
 
     if result == LoopResult.PASS:
@@ -290,13 +282,21 @@ def cmd_loop(args: argparse.Namespace) -> int:
         return 1
 
 
-def cmd_bridge(args: argparse.Namespace) -> int:
-    target = Path(args.target_dir).resolve()
+def cmd_loop(args: argparse.Namespace) -> int:
+    return _run_loop_core(
+        target=Path(args.target_dir).resolve(),
+        gwt_id=args.gwt_id,
+        max_retries=args.max_retries,
+        context_file=args.context_file,
+    )
+
+
+def _run_bridge_core(target: Path, gwt_id: str) -> int:
+    """Core bridge logic with explicit parameters (no argparse.Namespace)."""
     if _require_cw9(target) is None:
         return 1
 
     ctx = ProjectContext.from_target(target)
-    gwt_id = args.gwt_id
 
     spec_path = ctx.spec_dir / f"{gwt_id}.tla"
     if not spec_path.exists():
@@ -350,11 +350,19 @@ def cmd_bridge(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_bridge(args: argparse.Namespace) -> int:
+    return _run_bridge_core(
+        target=Path(args.target_dir).resolve(),
+        gwt_id=args.gwt_id,
+    )
+
+
 def cmd_gen_tests(args: argparse.Namespace) -> int:
     import asyncio
 
     target = Path(args.target_dir).resolve()
-    if _require_cw9(target) is None:
+    state_root = _require_cw9(target)
+    if state_root is None:
         return 1
 
     ctx = ProjectContext.from_target(target)
@@ -372,7 +380,7 @@ def cmd_gen_tests(args: argparse.Namespace) -> int:
 
     # Load GWT text from DAG
     from registry.dag import RegistryDag
-    dag_path = ctx.state_root / "dag.json"
+    dag_path = state_root / "dag.json"
     gwt_text = {"given": "", "when": "", "then": ""}
     if dag_path.exists():
         dag = RegistryDag.load(dag_path)
@@ -455,10 +463,11 @@ def _register_payload(target: Path, payload: dict) -> dict:
     from registry.dag import RegistryDag
     from registry.bindings import load_bindings, save_bindings
 
+    state_root = target / ".cw9"
     ctx = ProjectContext.from_target(target)
-    dag_path = ctx.state_root / "dag.json"
+    dag_path = state_root / "dag.json"
     dag = RegistryDag.load(dag_path)
-    bindings = load_bindings(ctx.state_root)
+    bindings = load_bindings(state_root)
 
     requirements = payload.get("requirements", [])
     gwts = payload.get("gwts", [])
@@ -526,7 +535,7 @@ def _register_payload(target: Path, payload: dict) -> dict:
 
     # Save
     dag.save(dag_path)
-    save_bindings(ctx.state_root, bindings)
+    save_bindings(state_root, bindings)
 
     return {"requirements": req_output, "gwts": gwt_output}
 
@@ -673,13 +682,12 @@ def cmd_pipeline(args: argparse.Namespace) -> int:
     if not args.bridge_only:
         for gwt_id in gwt_ids:
             ctx_file_path = _find_context_file(target, gwt_id, gwt_to_criterion)
-            loop_ns = argparse.Namespace(
+            rc = _run_loop_core(
+                target=target,
                 gwt_id=gwt_id,
-                target_dir=str(target),
                 max_retries=args.max_retries,
                 context_file=ctx_file_path,
             )
-            rc = cmd_loop(loop_ns)
             loop_results[gwt_id] = (rc == 0)
 
     # Determine which GWTs to bridge
@@ -698,11 +706,7 @@ def cmd_pipeline(args: argparse.Namespace) -> int:
             spec_path = target / ".cw9" / "specs" / f"{gwt_id}.tla"
             if not spec_path.exists():
                 continue
-            bridge_ns = argparse.Namespace(
-                gwt_id=gwt_id,
-                target_dir=str(target),
-            )
-            rc = cmd_bridge(bridge_ns)
+            rc = _run_bridge_core(target=target, gwt_id=gwt_id)
             bridge_results[gwt_id] = (rc == 0)
 
     # Exit code: 0 if all attempted steps passed
@@ -718,7 +722,8 @@ def cmd_test(args: argparse.Namespace) -> int:
     import subprocess as sp
 
     target = Path(args.target_dir).resolve()
-    if _require_cw9(target) is None:
+    state_root = _require_cw9(target)
+    if state_root is None:
         return 1
 
     ctx = ProjectContext.from_target(target)
@@ -733,7 +738,7 @@ def cmd_test(args: argparse.Namespace) -> int:
 
     if args.node_id:
         from registry.dag import RegistryDag
-        dag_path = ctx.state_root / "dag.json"
+        dag_path = state_root / "dag.json"
         if not dag_path.exists():
             print("No DAG found. Run: cw9 extract", file=sys.stderr)
             return 1
@@ -1689,6 +1694,33 @@ def cmd_stale(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_seams(args: argparse.Namespace) -> int:
+    """Check seam compatibility across function boundaries in crawl.db."""
+    target = Path(args.target_dir).resolve()
+    state_root = _require_cw9(target)
+    if state_root is None:
+        return 1
+
+    crawl_db_path = state_root / "crawl.db"
+    if not crawl_db_path.exists():
+        print("No crawl.db found. Run: cw9 ingest", file=sys.stderr)
+        return 1
+
+    from registry.crawl_store import CrawlStore
+    from registry.seam_checker import check_all_seams, render_seam_report, seam_report_to_json
+
+    with CrawlStore(crawl_db_path) as store:
+        report = check_all_seams(store)
+
+    if getattr(args, "output_json", False):
+        import json
+        print(json.dumps(seam_report_to_json(report), indent=2))
+    else:
+        print(render_seam_report(report, verbose=getattr(args, "verbose", False)))
+
+    return 1 if report.mismatches else 0
+
+
 def cmd_show(args: argparse.Namespace) -> int:
     """Show information about a node. With --card, show IN:DO:OUT card."""
     target = Path(args.target_dir).resolve()
@@ -1870,18 +1902,120 @@ def _add_crawl_commands(sub: argparse._SubParsersAction) -> None:
     p_show.add_argument("target_dir", nargs="?", default=".")
     p_show.add_argument("--card", action="store_true", help="Show IN:DO:OUT card from crawl.db")
 
+    p_seams = sub.add_parser("seams", help="Check seam compatibility across function boundaries")
+    p_seams.add_argument("target_dir", nargs="?", default=".")
+    p_seams.add_argument("--json", action="store_true", dest="output_json")
+    p_seams.add_argument("--verbose", action="store_true")
+    p_seams.add_argument("--file", default=None, help="Filter to functions in this file")
+    p_seams.add_argument("--function", default=None, help="Filter to this function name")
+
     p_gwt_author = sub.add_parser("gwt-author", help="Generate GWT specs from research notes + crawl.db")
     p_gwt_author.add_argument("target_dir", nargs="?", default=".", help="Target project directory (default: .)")
     p_gwt_author.add_argument("--research", required=True, help="Path to research notes file")
 
 
+def cmd_loop_status(args: argparse.Namespace) -> int:
+    """Show live progress of running cw9 loop processes."""
+    import time as _time
+
+    target = Path(args.target_dir).resolve()
+    ctx = ProjectContext.from_target(target)
+    session_dir = ctx.session_dir
+
+    if not session_dir.exists():
+        print("No sessions directory found.", file=sys.stderr)
+        return 1
+
+    progress_files = sorted(session_dir.glob("*_progress.json"))
+    if not progress_files:
+        print("No running loops detected (no progress files).")
+        return 0
+
+    now = _time.time()
+    output = {"loops": []}
+
+    for pf in progress_files:
+        try:
+            data = json.loads(pf.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+
+        gwt_id = data.get("gwt_id", pf.stem.replace("_progress", ""))
+        phase = data.get("phase", "unknown")
+        attempt = data.get("attempt", 0)
+        max_attempts = data.get("max_attempts", 0)
+        detail = data.get("detail", "")
+        pid = data.get("pid", 0)
+        updated_at = data.get("updated_at", 0)
+        elapsed = int(now - updated_at) if updated_at else 0
+
+        # Check if the process is still alive
+        alive = False
+        if pid:
+            try:
+                os.kill(pid, 0)
+                alive = True
+            except (OSError, ProcessLookupError):
+                pass
+
+        # Check for result file (loop finished)
+        result_path = session_dir / f"{gwt_id}_result.json"
+        finished = result_path.exists()
+
+        entry = {
+            "gwt_id": gwt_id,
+            "attempt": f"{attempt}/{max_attempts}",
+            "phase": phase,
+            "detail": detail,
+            "elapsed_seconds": elapsed,
+            "pid": pid,
+            "alive": alive,
+            "finished": finished,
+        }
+        output["loops"].append(entry)
+
+    if getattr(args, "json_output", False):
+        print(json.dumps(output, indent=2))
+    else:
+        for entry in output["loops"]:
+            status_icon = "." if entry["finished"] else (">" if entry["alive"] else "?")
+            elapsed_str = f"{entry['elapsed_seconds']}s ago"
+            print(
+                f"  {status_icon} {entry['gwt_id']}  "
+                f"attempt {entry['attempt']}  "
+                f"phase={entry['phase']}  "
+                f"{elapsed_str}"
+                f"{'  ' + entry['detail'] if entry['detail'] else ''}"
+            )
+        # Legend
+        running = sum(1 for e in output["loops"] if e["alive"] and not e["finished"])
+        done = sum(1 for e in output["loops"] if e["finished"])
+        stale = sum(1 for e in output["loops"] if not e["alive"] and not e["finished"])
+        parts = []
+        if running:
+            parts.append(f"{running} running")
+        if done:
+            parts.append(f"{done} done")
+        if stale:
+            parts.append(f"{stale} stale (process dead, no result)")
+        if parts:
+            print(f"\n  {', '.join(parts)}")
+
+    return 0
+
+
 def _add_utility_commands(sub: argparse._SubParsersAction) -> None:
-    """Add utility subcommands: cleanup."""
+    """Add utility subcommands: cleanup, loop-status."""
     p_cleanup = sub.add_parser("cleanup", help="Remove stale cw9 temp directories from /tmp")
     p_cleanup.add_argument("--max-age", type=int, default=24,
                            help="Remove dirs older than N hours (default: 24, use 0 for all)")
     p_cleanup.add_argument("--dry-run", action="store_true",
                            help="Show what would be removed without deleting")
+
+    p_loop_status = sub.add_parser("loop-status", help="Show live progress of running loops")
+    p_loop_status.add_argument("target_dir", nargs="?", default=".")
+    p_loop_status.add_argument("--json", dest="json_output", action="store_true",
+                               help="Output as JSON")
 
 
 # Dispatch table mapping subcommand names to handler functions.
@@ -1898,9 +2032,11 @@ _DISPATCH: dict[str, Callable[[argparse.Namespace], int]] = {
     "ingest": cmd_ingest,
     "crawl": cmd_crawl,
     "stale": cmd_stale,
+    "seams": cmd_seams,
     "show": cmd_show,
     "gwt-author": cmd_gwt_author,
     "cleanup": cmd_cleanup,
+    "loop-status": cmd_loop_status,
 }
 
 

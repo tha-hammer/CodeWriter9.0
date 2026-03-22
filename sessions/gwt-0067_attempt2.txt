@@ -1,0 +1,228 @@
+---- MODULE SeamReportComplete ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Edges,
+    MismatchEdges,
+    UnresolvedEdges
+
+ASSUME
+    /\ MismatchEdges \subseteq Edges
+    /\ UnresolvedEdges \subseteq Edges
+    /\ MismatchEdges \cap UnresolvedEdges = {}
+
+(* --algorithm SeamReportComplete
+
+variables
+    phase = "init",
+    processed = {},
+    mismatches = {},
+    unresolved_set = {},
+    satisfied = 0,
+    total = 0;
+
+define
+
+    ResolvedEdges == Edges \ UnresolvedEdges
+
+    SatisfiedEdges == ResolvedEdges \ MismatchEdges
+
+    CompletenessHolds ==
+        phase = "done" =>
+            Cardinality(mismatches) + Cardinality(unresolved_set) + satisfied = total
+
+    PartitionCorrect ==
+        /\ mismatches \cap unresolved_set = {}
+        /\ processed \subseteq Edges
+        /\ mismatches \subseteq processed
+        /\ unresolved_set \subseteq processed
+
+    MonotonicProgress ==
+        phase # "init" =>
+            Cardinality(mismatches) + Cardinality(unresolved_set) + satisfied <= total
+
+    NonNegative ==
+        /\ satisfied >= 0
+        /\ total >= 0
+
+    TotalIsN ==
+        phase # "init" => total = Cardinality(Edges)
+
+    NoDoubleCount ==
+        Cardinality(mismatches \cup unresolved_set) =
+            Cardinality(mismatches) + Cardinality(unresolved_set)
+
+    FinalCorrectness ==
+        phase = "done" =>
+            /\ mismatches = MismatchEdges
+            /\ unresolved_set = UnresolvedEdges
+            /\ satisfied = Cardinality(SatisfiedEdges)
+            /\ total = Cardinality(Edges)
+            /\ Cardinality(mismatches) + Cardinality(unresolved_set) + satisfied = total
+
+    AllEdgesAccountedFor ==
+        phase = "done" => processed = Edges
+
+    SeamInvariants ==
+        /\ CompletenessHolds
+        /\ PartitionCorrect
+        /\ MonotonicProgress
+        /\ NonNegative
+        /\ TotalIsN
+        /\ NoDoubleCount
+        /\ FinalCorrectness
+        /\ AllEdgesAccountedFor
+
+    Termination == <>(phase = "done")
+
+end define;
+
+fair process checker = "checker"
+begin
+    InitReport:
+        total := Cardinality(Edges);
+        phase := "processing";
+
+    Processing:
+        while processed # Edges do
+            ProcessEdge:
+            either
+                with e \in (UnresolvedEdges \ processed) do
+                    unresolved_set := unresolved_set \cup {e};
+                    processed      := processed \cup {e};
+                end with;
+            or
+                with e \in (MismatchEdges \ processed) do
+                    mismatches := mismatches \cup {e};
+                    processed  := processed \cup {e};
+                end with;
+            or
+                with e \in (SatisfiedEdges \ processed) do
+                    satisfied := satisfied + 1;
+                    processed := processed \cup {e};
+                end with;
+            end either;
+        end while;
+
+    FinalizeReport:
+        phase := "done";
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE SeamReportComplete ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Edges,
+    MismatchEdges,
+    UnresolvedEdges
+
+ASSUME
+    /\ MismatchEdges \subseteq Edges
+    /\ UnresolvedEdges \subseteq Edges
+    /\ MismatchEdges \cap UnresolvedEdges = {}
+
+(* --algorithm SeamReportComplete
+
+variables
+    phase = "init",
+    processed = {},
+    mismatches = {},
+    unresolved_set = {},
+    satisfied = 0,
+    total = 0;
+
+define
+
+    ResolvedEdges == Edges \ UnresolvedEdges
+
+    SatisfiedEdges == ResolvedEdges \ MismatchEdges
+
+    CompletenessHolds ==
+        phase = "done" =>
+            Cardinality(mismatches) + Cardinality(unresolved_set) + satisfied = total
+
+    PartitionCorrect ==
+        /\ mismatches \cap unresolved_set = {}
+        /\ processed \subseteq Edges
+        /\ mismatches \subseteq processed
+        /\ unresolved_set \subseteq processed
+
+    MonotonicProgress ==
+        phase # "init" =>
+            Cardinality(mismatches) + Cardinality(unresolved_set) + satisfied <= total
+
+    NonNegative ==
+        /\ satisfied >= 0
+        /\ total >= 0
+
+    TotalIsN ==
+        phase # "init" => total = Cardinality(Edges)
+
+    NoDoubleCount ==
+        Cardinality(mismatches \cup unresolved_set) =
+            Cardinality(mismatches) + Cardinality(unresolved_set)
+
+    FinalCorrectness ==
+        phase = "done" =>
+            /\ mismatches = MismatchEdges
+            /\ unresolved_set = UnresolvedEdges
+            /\ satisfied = Cardinality(SatisfiedEdges)
+            /\ total = Cardinality(Edges)
+            /\ Cardinality(mismatches) + Cardinality(unresolved_set) + satisfied = total
+
+    AllEdgesAccountedFor ==
+        phase = "done" => processed = Edges
+
+    SeamInvariants ==
+        /\ CompletenessHolds
+        /\ PartitionCorrect
+        /\ MonotonicProgress
+        /\ NonNegative
+        /\ TotalIsN
+        /\ NoDoubleCount
+        /\ FinalCorrectness
+        /\ AllEdgesAccountedFor
+
+    Termination == <>(phase = "done")
+
+end define;
+
+fair process checker = "checker"
+begin
+    InitReport:
+        total := Cardinality(Edges);
+        phase := "processing";
+
+    Processing:
+        while processed # Edges do
+            ProcessEdge:
+            either
+                with e \in (UnresolvedEdges \ processed) do
+                    unresolved_set := unresolved_set \cup {e};
+                    processed      := processed \cup {e};
+                end with;
+            or
+                with e \in (MismatchEdges \ processed) do
+                    mismatches := mismatches \cup {e};
+                    processed  := processed \cup {e};
+                end with;
+            or
+                with e \in (SatisfiedEdges \ processed) do
+                    satisfied := satisfied + 1;
+                    processed := processed \cup {e};
+                end with;
+            end either;
+        end while;
+
+    FinalizeReport:
+        phase := "done";
+
+end process;
+
+end algorithm; *)
+
+====

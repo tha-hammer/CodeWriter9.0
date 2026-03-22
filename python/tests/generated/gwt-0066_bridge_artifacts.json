@@ -1,0 +1,1301 @@
+{
+  "gwt_id": "gwt-0066",
+  "module_name": "SeamUnresolvedFlagged",
+  "data_structures": {
+    "SeamUnresolvedFlaggedState": {
+      "function_id": "fn-SeamUnresolvedFlagged-state",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Iterate\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "inputs_checked": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "unresolved_found": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "mismatches": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "scanning",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "current_input": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from SeamUnresolvedFlagged TLA+ spec"
+    }
+  },
+  "operations": {
+    "Iterate": {
+      "function_id": "fn-SeamUnresolvedFlagged-Iterate",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-Iterate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Iterate from SeamUnresolvedFlagged spec"
+    },
+    "PickInput": {
+      "function_id": "fn-SeamUnresolvedFlagged-PickInput",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-PickInput",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action PickInput from SeamUnresolvedFlagged spec"
+    },
+    "CheckInput": {
+      "function_id": "fn-SeamUnresolvedFlagged-CheckInput",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-CheckInput",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckInput from SeamUnresolvedFlagged spec"
+    },
+    "Terminate": {
+      "function_id": "fn-SeamUnresolvedFlagged-Terminate",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from SeamUnresolvedFlagged spec"
+    }
+  },
+  "verifiers": {
+    "AllScanned": {
+      "function_id": "fn-SeamUnresolvedFlagged-verify-AllScanned",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-AllScanned",
+      "conditions": [
+        "phase = \"done\" => inputs_checked = Inputs"
+      ],
+      "message": "AllScanned violation: phase = \"done\" => inputs_checked = Inputs",
+      "applies_to": [
+        "inputs_checked",
+        "phase"
+      ],
+      "description": "Verifier for invariant AllScanned from SeamUnresolvedFlagged spec"
+    },
+    "UnresolvedCorrect": {
+      "function_id": "fn-SeamUnresolvedFlagged-verify-UnresolvedCorrect",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-UnresolvedCorrect",
+      "conditions": [
+        "phase = \"done\" =>\n        unresolved_found = UnresolvedInputs"
+      ],
+      "message": "UnresolvedCorrect violation: phase = \"done\" =>\n        unresolved_found = UnresolvedInputs",
+      "applies_to": [
+        "phase",
+        "unresolved_found"
+      ],
+      "description": "Verifier for invariant UnresolvedCorrect from SeamUnresolvedFlagged spec"
+    },
+    "NoFalseUnresolved": {
+      "function_id": "fn-SeamUnresolvedFlagged-verify-NoFalseUnresolved",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-NoFalseUnresolved",
+      "conditions": [
+        "unresolved_found \\subseteq UnresolvedInputs"
+      ],
+      "message": "NoFalseUnresolved violation: unresolved_found \\subseteq UnresolvedInputs",
+      "applies_to": [
+        "unresolved_found"
+      ],
+      "description": "Verifier for invariant NoFalseUnresolved from SeamUnresolvedFlagged spec"
+    },
+    "UnresolvedNotInMismatches": {
+      "function_id": "fn-SeamUnresolvedFlagged-verify-UnresolvedNotInMismatches",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-UnresolvedNotInMismatches",
+      "conditions": [
+        "mismatches \\cap unresolved_found = {}"
+      ],
+      "message": "UnresolvedNotInMismatches violation: mismatches \\cap unresolved_found = {}",
+      "applies_to": [
+        "mismatches",
+        "unresolved_found"
+      ],
+      "description": "Verifier for invariant UnresolvedNotInMismatches from SeamUnresolvedFlagged spec"
+    },
+    "BoundedCheck": {
+      "function_id": "fn-SeamUnresolvedFlagged-verify-BoundedCheck",
+      "acceptance_criteria_id": "ac-SeamUnresolvedFlagged-BoundedCheck",
+      "conditions": [
+        "Cardinality(inputs_checked) <= MaxInputs"
+      ],
+      "message": "BoundedCheck violation: Cardinality(inputs_checked) <= MaxInputs",
+      "applies_to": [
+        "inputs_checked"
+      ],
+      "description": "Verifier for invariant BoundedCheck from SeamUnresolvedFlagged spec"
+    }
+  },
+  "assertions": {
+    "assert_AllScanned": {
+      "condition": "phase = \"done\" implies inputs_checked = Inputs",
+      "message": "Assertion failed: AllScanned \u2014 phase = \"done\" => inputs_checked = Inputs",
+      "description": "Test assertion for AllScanned from SeamUnresolvedFlagged spec"
+    },
+    "assert_UnresolvedCorrect": {
+      "condition": "phase = \"done\" implies\n        unresolved_found = UnresolvedInputs",
+      "message": "Assertion failed: UnresolvedCorrect \u2014 phase = \"done\" =>\n        unresolved_found = UnresolvedInputs",
+      "description": "Test assertion for UnresolvedCorrect from SeamUnresolvedFlagged spec"
+    },
+    "assert_NoFalseUnresolved": {
+      "condition": "unresolved_found \\subseteq UnresolvedInputs",
+      "message": "Assertion failed: NoFalseUnresolved \u2014 unresolved_found \\subseteq UnresolvedInputs",
+      "description": "Test assertion for NoFalseUnresolved from SeamUnresolvedFlagged spec"
+    },
+    "assert_UnresolvedNotInMismatches": {
+      "condition": "mismatches \\cap unresolved_found = {}",
+      "message": "Assertion failed: UnresolvedNotInMismatches \u2014 mismatches \\cap unresolved_found = {}",
+      "description": "Test assertion for UnresolvedNotInMismatches from SeamUnresolvedFlagged spec"
+    },
+    "assert_BoundedCheck": {
+      "condition": "Cardinality(inputs_checked) <= MaxInputs",
+      "message": "Assertion failed: BoundedCheck \u2014 Cardinality(inputs_checked) <= MaxInputs",
+      "description": "Test assertion for BoundedCheck from SeamUnresolvedFlagged spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_1}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_2",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"PickInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "PickInput",
+        "vars": {
+          "current_input": "Inputs_1",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"CheckInput\"]",
+          "inputs_checked": "{Inputs_2}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "CheckInput",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Iterate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Iterate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"scanning\"",
+          "pc": "[checker |-> \"Terminate\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "Terminate",
+        "vars": {
+          "current_input": "\"none\"",
+          "unresolved_found": "{}",
+          "mismatches": "{}",
+          "phase": "\"done\"",
+          "pc": "[checker |-> \"Done\"]",
+          "inputs_checked": "{Inputs_1, Inputs_2}"
+        }
+      }
+    ]
+  ]
+}

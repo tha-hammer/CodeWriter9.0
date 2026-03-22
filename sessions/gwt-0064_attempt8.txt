@@ -1,0 +1,116 @@
+---- MODULE SeamMismatchDetected ----
+EXTENDS Integers, FiniteSets, TLC
+(*--algorithm SeamMismatchDetected
+variables
+  caller_ok_type  = "DictStrAny",
+  callee_exp_type = "Config",
+  caller_uuid = "aaaa1111",
+  callee_uuid = "bbbb2222",
+  caller_fn   = "get_config",
+  callee_fn   = "process",
+  result = {},
+  phase  = "idle";
+define
+  CompatPairs ==
+    { <<"Str",       "Str">>,
+      <<"StrOrNone", "StrOrNone">>,
+      <<"Config",    "Config">> }
+  TypeCompatible(p, e) == <<p, e>> \in CompatPairs
+  SeverityCorrect ==
+    \A m \in result : m.severity = "type_mismatch"
+  MismatchDetected ==
+    phase = "done" =>
+      (~TypeCompatible(caller_ok_type, callee_exp_type) => result /= {})
+  MismatchCorrect ==
+    phase = "done" =>
+      (~TypeCompatible(caller_ok_type, callee_exp_type) =>
+        \E m \in result :
+          /\ m.expected_type = callee_exp_type
+          /\ m.provided_type = caller_ok_type
+          /\ m.severity      = "type_mismatch")
+  NoSpuriousMismatches ==
+    phase = "done" =>
+      \A m \in result :
+        /\ m.expected_type = callee_exp_type
+        /\ m.provided_type = caller_ok_type
+        /\ ~TypeCompatible(caller_ok_type, callee_exp_type)
+        /\ m.severity = "type_mismatch"
+end define;
+fair process checker = "checker"
+begin
+  StartCheck:
+    phase := "checking";
+  CheckTypes:
+    if ~TypeCompatible(caller_ok_type, callee_exp_type) then
+      result := { [ caller_uuid       |-> caller_uuid,
+                    callee_uuid       |-> callee_uuid,
+                    caller_function   |-> caller_fn,
+                    callee_function   |-> callee_fn,
+                    callee_input_name |-> "config",
+                    expected_type     |-> callee_exp_type,
+                    provided_type     |-> caller_ok_type,
+                    severity          |-> "type_mismatch" ] };
+    end if;
+  Finish:
+    phase := "done";
+end process;
+end algorithm; *)
+====
+---- MODULE SeamMismatchDetected ----
+EXTENDS Integers, FiniteSets, TLC
+(*--algorithm SeamMismatchDetected
+variables
+  caller_ok_type  = "DictStrAny",
+  callee_exp_type = "Config",
+  caller_uuid = "aaaa1111",
+  callee_uuid = "bbbb2222",
+  caller_fn   = "get_config",
+  callee_fn   = "process",
+  result = {},
+  phase  = "idle";
+define
+  CompatPairs ==
+    { <<"Str",       "Str">>,
+      <<"StrOrNone", "StrOrNone">>,
+      <<"Config",    "Config">> }
+  TypeCompatible(p, e) == <<p, e>> \in CompatPairs
+  SeverityCorrect ==
+    \A m \in result : m.severity = "type_mismatch"
+  MismatchDetected ==
+    phase = "done" =>
+      (~TypeCompatible(caller_ok_type, callee_exp_type) => result /= {})
+  MismatchCorrect ==
+    phase = "done" =>
+      (~TypeCompatible(caller_ok_type, callee_exp_type) =>
+        \E m \in result :
+          /\ m.expected_type = callee_exp_type
+          /\ m.provided_type = caller_ok_type
+          /\ m.severity      = "type_mismatch")
+  NoSpuriousMismatches ==
+    phase = "done" =>
+      \A m \in result :
+        /\ m.expected_type = callee_exp_type
+        /\ m.provided_type = caller_ok_type
+        /\ ~TypeCompatible(caller_ok_type, callee_exp_type)
+        /\ m.severity = "type_mismatch"
+end define;
+fair process checker = "checker"
+begin
+  StartCheck:
+    phase := "checking";
+  CheckTypes:
+    if ~TypeCompatible(caller_ok_type, callee_exp_type) then
+      result := { [ caller_uuid       |-> caller_uuid,
+                    callee_uuid       |-> callee_uuid,
+                    caller_function   |-> caller_fn,
+                    callee_function   |-> callee_fn,
+                    callee_input_name |-> "config",
+                    expected_type     |-> callee_exp_type,
+                    provided_type     |-> caller_ok_type,
+                    severity          |-> "type_mismatch" ] };
+    end if;
+  Finish:
+    phase := "done";
+end process;
+end algorithm; *)
+====
