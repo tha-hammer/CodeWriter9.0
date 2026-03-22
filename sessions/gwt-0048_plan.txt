@@ -1,0 +1,904 @@
+```python
+import os
+import tempfile
+import textwrap
+import pytest
+from scanner_typescript_line_ranges import scan_file
+
+# ---------------------------------------------------------------------------
+# Shared TypeScript source that satisfies the TLA+ model:
+#   Lines == << "Func", "Other", "ClassOpen", "Method", "Arrow", "Other", "Func" >>
+#   N     == 7
+#
+# Expected skeletons (final state of every trace):
+#   {line_num |-> 1, line_num |-> 4, line_num |-> 5, line_num |-> 7}
+# ---------------------------------------------------------------------------
+
+TS_SOURCE_7LINES = textwrap.dedent("""\
+    function alpha(x: number): number {
+      return x;
+    class MyClass {
+      myMethod(): void {
+      const arrowFn = (): void => {
+      }
+    function beta(): string {
+""")
+
+EXPECTED_LINE_NUMBERS = {1, 4, 5, 7}
+N = 7
+FUNC_LINES = {1, 4, 5, 7}   # lines whose declaration type is Func/Method/Arrow
+
+
+@pytest.fixture
+def ts_file(tmp_path):
+    """Write the 7-line TypeScript fixture to a temporary file and return its path."""
+    p = tmp_path / "subject.ts"
+    p.write_text(TS_SOURCE_7LINES)
+    return str(p)
+
+
+# ---------------------------------------------------------------------------
+# Helper: verify all four TLA+ invariants against a list of Skeleton objects
+#   OneIndexed    : every skeleton.line_number >= 1
+#   LineNumberCorrect : every skeleton.line_number in [1..N] and on a func/method/arrow line
+#   NoGaps        : every func/method/arrow line has exactly one corresponding skeleton
+#   CursorBounded : scan completed, so i ended at N+1 = 8 (checked implicitly via count)
+# ---------------------------------------------------------------------------
+
+def _assert_invariants(skeletons, *, n=N, func_lines=FUNC_LINES):
+    line_numbers = {s.line_number for s in skeletons}
+
+    # OneIndexed
+    for s in skeletons:
+        assert s.line_number >= 1, (
+            f"OneIndexed violated: line_number={s.line_number} is < 1"
+        )
+
+    # LineNumberCorrect
+    for s in skeletons:
+        assert 1 <= s.line_number <= n, (
+            f"LineNumberCorrect violated: line_number={s.line_number} outside [1..{n}]"
+        )
+        assert s.line_number in func_lines, (
+            f"LineNumberCorrect violated: line_number={s.line_number} is not a Func/Arrow/Method line"
+        )
+
+    # NoGaps — after scanning, every func/method/arrow line must have a skeleton
+    for k in func_lines:
+        assert k in line_numbers, (
+            f"NoGaps violated: no skeleton found for declaration line {k}"
+        )
+
+    # CursorBounded — scanner must not have overrun N+1
+    # Verified structurally: if NoGaps holds and count matches, cursor stayed in bounds
+    assert len(line_numbers) <= n, (
+        f"CursorBounded sanity: more skeletons ({len(line_numbers)}) than lines ({n})"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — 24 steps, tests OneIndexed, LineNumberCorrect, NoGaps, CursorBounded
+# Init : i=1, skeletons={}, in_sig=FALSE, sig_start=0
+# Final: skeletons={1,4,5,7}, i=8, pc=Done
+# ---------------------------------------------------------------------------
+
+def test_trace_1(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS, (
+        f"Trace 1 final state mismatch: expected {EXPECTED_LINE_NUMBERS}, got {line_numbers}"
+    )
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2 — same model, independent API invocation
+# ---------------------------------------------------------------------------
+
+def test_trace_2(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS, (
+        f"Trace 2 final state mismatch: expected {EXPECTED_LINE_NUMBERS}, got {line_numbers}"
+    )
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3
+# ---------------------------------------------------------------------------
+
+def test_trace_3(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4
+# ---------------------------------------------------------------------------
+
+def test_trace_4(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5
+# ---------------------------------------------------------------------------
+
+def test_trace_5(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6
+# ---------------------------------------------------------------------------
+
+def test_trace_6(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7
+# ---------------------------------------------------------------------------
+
+def test_trace_7(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8
+# ---------------------------------------------------------------------------
+
+def test_trace_8(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9
+# ---------------------------------------------------------------------------
+
+def test_trace_9(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10
+# ---------------------------------------------------------------------------
+
+def test_trace_10(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ===========================================================================
+# Dedicated invariant verifiers — each exercises ≥ 2 trace-derived topologies
+# ===========================================================================
+
+class TestOneIndexed:
+    """OneIndexed: ∀ s ∈ skeletons : s.line_number >= 1"""
+
+    def test_one_indexed_trace_topology(self, tmp_path):
+        """Topology from traces 1-10: Func at line 1, Method at 4, Arrow at 5, Func at 7."""
+        p = tmp_path / "a.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        for s in skeletons:
+            assert s.line_number >= 1, f"OneIndexed violated: {s.line_number}"
+
+    def test_one_indexed_single_func_first_line(self, tmp_path):
+        """Minimal topology: single function on line 1 (the lowest possible 1-indexed value)."""
+        p = tmp_path / "b.ts"
+        p.write_text("function solo(): void {\n}\n")
+        skeletons = scan_file(str(p))
+        assert len(skeletons) >= 1
+        for s in skeletons:
+            assert s.line_number >= 1
+
+    def test_one_indexed_functions_not_on_line_zero(self, tmp_path):
+        """Confirm no skeleton ever carries line_number == 0 (0-indexed would be wrong)."""
+        p = tmp_path / "c.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        line_numbers = [s.line_number for s in skeletons]
+        assert 0 not in line_numbers, "OneIndexed violated: line_number 0 found"
+
+
+class TestLineNumberCorrect:
+    """LineNumberCorrect: every skeleton points to a Func/Arrow/Method line within [1..N]."""
+
+    def test_line_number_correct_trace_topology(self, tmp_path):
+        """All four skeletons must point to lines 1,4,5,7 — the only declaration lines."""
+        p = tmp_path / "a.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        for s in skeletons:
+            assert 1 <= s.line_number <= N
+            assert s.line_number in FUNC_LINES, (
+                f"skeleton at line {s.line_number} does not correspond to a declaration line"
+            )
+
+    def test_line_number_correct_non_declaration_lines_absent(self, tmp_path):
+        """Lines 2 (Other), 3 (ClassOpen), 6 (Other) must produce no skeletons."""
+        p = tmp_path / "b.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        non_decl = {2, 3, 6}
+        line_numbers = {s.line_number for s in skeletons}
+        overlap = line_numbers & non_decl
+        assert not overlap, (
+            f"LineNumberCorrect violated: skeletons found for non-declaration lines {overlap}"
+        )
+
+    def test_line_number_correct_within_bounds(self, tmp_path):
+        """No skeleton may reference a line beyond the file length."""
+        p = tmp_path / "c.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        file_line_count = len(TS_SOURCE_7LINES.splitlines())
+        for s in skeletons:
+            assert s.line_number <= file_line_count, (
+                f"LineNumberCorrect violated: line_number {s.line_number} > file length {file_line_count}"
+            )
+
+
+class TestNoGaps:
+    """NoGaps: after scan completes, every declaration line has a corresponding skeleton."""
+
+    def test_no_gaps_all_four_declarations_present(self, tmp_path):
+        """Traces confirm lines {1,4,5,7} must all appear — none may be missing."""
+        p = tmp_path / "a.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        missing = EXPECTED_LINE_NUMBERS - line_numbers
+        assert not missing, f"NoGaps violated: declaration lines {missing} have no skeleton"
+
+    def test_no_gaps_exact_count(self, tmp_path):
+        """Exactly 4 skeletons must be returned — one per declaration line, no duplicates."""
+        p = tmp_path / "b.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        line_numbers = [s.line_number for s in skeletons]
+        assert len(line_numbers) == len(set(line_numbers)), (
+            f"NoGaps / uniqueness violated: duplicate line_numbers found in {line_numbers}"
+        )
+        assert len(skeletons) == len(EXPECTED_LINE_NUMBERS), (
+            f"NoGaps violated: expected {len(EXPECTED_LINE_NUMBERS)} skeletons, got {len(skeletons)}"
+        )
+
+    def test_no_gaps_second_topology_all_funcs(self, tmp_path):
+        """Alternative topology: every line is a function declaration → N skeletons expected."""
+        source = "\n".join(
+            f"function f{i}(): void {{}}" for i in range(1, 5)
+        ) + "\n"
+        p = tmp_path / "c.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        for k in range(1, 5):
+            assert k in line_numbers, f"NoGaps violated: declaration line {k} missing"
+
+
+class TestCursorBounded:
+    """CursorBounded: i <= N + 1 throughout scanning; verified via correct termination."""
+
+    def test_cursor_bounded_scan_terminates(self, tmp_path):
+        """scan_file must return (i.e. not hang), implying cursor stopped at N+1."""
+        p = tmp_path / "a.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        assert skeletons is not None, "CursorBounded: scan_file did not terminate"
+
+    def test_cursor_bounded_no_extra_skeletons_beyond_file(self, tmp_path):
+        """Skeletons must not reference lines beyond N (which would imply i > N+1)."""
+        p = tmp_path / "b.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        for s in skeletons:
+            assert s.line_number <= N, (
+                f"CursorBounded violated: skeleton at line {s.line_number} > N={N}"
+            )
+
+    def test_cursor_bounded_single_line_file(self, tmp_path):
+        """N=1: cursor must stop at i=2 (N+1). One function → one skeleton."""
+        p = tmp_path / "c.ts"
+        p.write_text("function only(): void {}\n")
+        skeletons = scan_file(str(p))
+        assert len(skeletons) >= 1
+        for s in skeletons:
+            assert s.line_number == 1
+            assert s.line_number <= 1, "CursorBounded violated for N=1"
+
+
+# ===========================================================================
+# Edge-case tests
+# ===========================================================================
+
+class TestEdgeCases:
+
+    def test_empty_file(self, tmp_path):
+        """Empty file: scan_file returns an empty collection without crashing."""
+        p = tmp_path / "empty.ts"
+        p.write_text("")
+        skeletons = scan_file(str(p))
+        assert list(skeletons) == [], f"Expected [] for empty file, got {skeletons}"
+
+    def test_no_declarations(self, tmp_path):
+        """File with only non-declaration lines: skeletons must be empty."""
+        source = "// just a comment\nconst x = 1;\nconst y = 2;\n"
+        p = tmp_path / "nodecl.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        assert list(skeletons) == [], (
+            f"Expected no skeletons for file with no declarations, got {[s.line_number for s in skeletons]}"
+        )
+
+    def test_single_function_at_line_1(self, tmp_path):
+        """Minimal trace: one Func at line 1, everything else Other."""
+        source = "function single(): void {}\nconst x = 1;\n"
+        p = tmp_path / "single.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        assert 1 in line_numbers, "Expected skeleton at line 1"
+        # OneIndexed
+        for s in skeletons:
+            assert s.line_number >= 1
+
+    def test_adjacent_declarations_lines_4_and_5(self, tmp_path):
+        """Mirrors the trace transition at states 12→15: two consecutive declaration lines."""
+        source = textwrap.dedent("""\
+            // line 1 other
+            // line 2 other
+            // line 3 other
+            myMethod(): void {
+            const arrowFn = (): void => {
+            // line 6 other
+            // line 7 other
+        """)
+        p = tmp_path / "adjacent.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        assert 4 in line_numbers, "NoGaps: expected skeleton at line 4"
+        assert 5 in line_numbers, "NoGaps: expected skeleton at line 5"
+
+    def test_declaration_only_at_last_line(self, tmp_path):
+        """Function at the last line tests CursorBounded edge: i reaches N then N+1."""
+        source = "// other\n// other\nfunction last(): void {}\n"
+        p = tmp_path / "last.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        assert 3 in line_numbers, "Expected skeleton at final line 3"
+        for s in skeletons:
+            assert s.line_number >= 1
+
+    def test_all_lines_are_declarations(self, tmp_path):
+        """All N lines are declarations: NoGaps demands a skeleton for each."""
+        source = textwrap.dedent("""\
+            function f1(): void {}
+            function f2(): void {}
+            function f3(): void {}
+        """)
+        p = tmp_path / "alldecl.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        for k in (1, 2, 3):
+            assert k in line_numbers, f"NoGaps violated: line {k} missing"
+
+    def test_idempotent_repeated_calls(self, tmp_path):
+        """Calling scan_file twice on the same file yields identical results."""
+        p = tmp_path / "idem.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        first = {s.line_number for s in scan_file(str(p))}
+        second = {s.line_number for s in scan_file(str(p))}
+        assert first == second, (
+            f"scan_file is not idempotent: first={first}, second={second}"
+        )
+
+    def test_line_numbers_are_integers(self, tmp_path):
+        """line_number must be a plain int (not float, string, etc.)."""
+        p = tmp_path / "types.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        for s in skeletons:
+            assert isinstance(s.line_number, int), (
+                f"Expected int line_number, got {type(s.line_number)} for value {s.line_number}"
+            )
+
+    def test_no_duplicate_line_numbers(self, tmp_path):
+        """Each declaration line must appear at most once in the returned skeletons."""
+        p = tmp_path / "nodup.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        line_numbers = [s.line_number for s in skeletons]
+        assert len(line_numbers) == len(set(line_numbers)), (
+            f"Duplicate line_numbers found: {line_numbers}"
+        )
+```
+```python
+import os
+import tempfile
+import textwrap
+import pytest
+from scanner_typescript_line_ranges import scan_file
+
+# ---------------------------------------------------------------------------
+# Shared TypeScript source that satisfies the TLA+ model:
+#   Lines == << "Func", "Other", "ClassOpen", "Method", "Arrow", "Other", "Func" >>
+#   N     == 7
+#
+# Expected skeletons (final state of every trace):
+#   {line_num |-> 1, line_num |-> 4, line_num |-> 5, line_num |-> 7}
+# ---------------------------------------------------------------------------
+
+TS_SOURCE_7LINES = textwrap.dedent("""\
+    function alpha(x: number): number {
+      return x;
+    class MyClass {
+      myMethod(): void {
+      const arrowFn = (): void => {
+      }
+    function beta(): string {
+""")
+
+EXPECTED_LINE_NUMBERS = {1, 4, 5, 7}
+N = 7
+FUNC_LINES = {1, 4, 5, 7}   # lines whose declaration type is Func/Method/Arrow
+
+
+@pytest.fixture
+def ts_file(tmp_path):
+    """Write the 7-line TypeScript fixture to a temporary file and return its path."""
+    p = tmp_path / "subject.ts"
+    p.write_text(TS_SOURCE_7LINES)
+    return str(p)
+
+
+# ---------------------------------------------------------------------------
+# Helper: verify all four TLA+ invariants against a list of Skeleton objects
+#   OneIndexed    : every skeleton.line_number >= 1
+#   LineNumberCorrect : every skeleton.line_number in [1..N] and on a func/method/arrow line
+#   NoGaps        : every func/method/arrow line has exactly one corresponding skeleton
+#   CursorBounded : scan completed, so i ended at N+1 = 8 (checked implicitly via count)
+# ---------------------------------------------------------------------------
+
+def _assert_invariants(skeletons, *, n=N, func_lines=FUNC_LINES):
+    line_numbers = {s.line_number for s in skeletons}
+
+    # OneIndexed
+    for s in skeletons:
+        assert s.line_number >= 1, (
+            f"OneIndexed violated: line_number={s.line_number} is < 1"
+        )
+
+    # LineNumberCorrect
+    for s in skeletons:
+        assert 1 <= s.line_number <= n, (
+            f"LineNumberCorrect violated: line_number={s.line_number} outside [1..{n}]"
+        )
+        assert s.line_number in func_lines, (
+            f"LineNumberCorrect violated: line_number={s.line_number} is not a Func/Arrow/Method line"
+        )
+
+    # NoGaps — after scanning, every func/method/arrow line must have a skeleton
+    for k in func_lines:
+        assert k in line_numbers, (
+            f"NoGaps violated: no skeleton found for declaration line {k}"
+        )
+
+    # CursorBounded — scanner must not have overrun N+1
+    # Verified structurally: if NoGaps holds and count matches, cursor stayed in bounds
+    assert len(line_numbers) <= n, (
+        f"CursorBounded sanity: more skeletons ({len(line_numbers)}) than lines ({n})"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — 24 steps, tests OneIndexed, LineNumberCorrect, NoGaps, CursorBounded
+# Init : i=1, skeletons={}, in_sig=FALSE, sig_start=0
+# Final: skeletons={1,4,5,7}, i=8, pc=Done
+# ---------------------------------------------------------------------------
+
+def test_trace_1(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS, (
+        f"Trace 1 final state mismatch: expected {EXPECTED_LINE_NUMBERS}, got {line_numbers}"
+    )
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2 — same model, independent API invocation
+# ---------------------------------------------------------------------------
+
+def test_trace_2(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS, (
+        f"Trace 2 final state mismatch: expected {EXPECTED_LINE_NUMBERS}, got {line_numbers}"
+    )
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3
+# ---------------------------------------------------------------------------
+
+def test_trace_3(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4
+# ---------------------------------------------------------------------------
+
+def test_trace_4(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5
+# ---------------------------------------------------------------------------
+
+def test_trace_5(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6
+# ---------------------------------------------------------------------------
+
+def test_trace_6(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7
+# ---------------------------------------------------------------------------
+
+def test_trace_7(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8
+# ---------------------------------------------------------------------------
+
+def test_trace_8(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9
+# ---------------------------------------------------------------------------
+
+def test_trace_9(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10
+# ---------------------------------------------------------------------------
+
+def test_trace_10(ts_file):
+    skeletons = scan_file(ts_file)
+
+    line_numbers = {s.line_number for s in skeletons}
+    assert line_numbers == EXPECTED_LINE_NUMBERS
+    _assert_invariants(skeletons)
+
+
+# ===========================================================================
+# Dedicated invariant verifiers — each exercises ≥ 2 trace-derived topologies
+# ===========================================================================
+
+class TestOneIndexed:
+    """OneIndexed: ∀ s ∈ skeletons : s.line_number >= 1"""
+
+    def test_one_indexed_trace_topology(self, tmp_path):
+        """Topology from traces 1-10: Func at line 1, Method at 4, Arrow at 5, Func at 7."""
+        p = tmp_path / "a.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        for s in skeletons:
+            assert s.line_number >= 1, f"OneIndexed violated: {s.line_number}"
+
+    def test_one_indexed_single_func_first_line(self, tmp_path):
+        """Minimal topology: single function on line 1 (the lowest possible 1-indexed value)."""
+        p = tmp_path / "b.ts"
+        p.write_text("function solo(): void {\n}\n")
+        skeletons = scan_file(str(p))
+        assert len(skeletons) >= 1
+        for s in skeletons:
+            assert s.line_number >= 1
+
+    def test_one_indexed_functions_not_on_line_zero(self, tmp_path):
+        """Confirm no skeleton ever carries line_number == 0 (0-indexed would be wrong)."""
+        p = tmp_path / "c.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        line_numbers = [s.line_number for s in skeletons]
+        assert 0 not in line_numbers, "OneIndexed violated: line_number 0 found"
+
+
+class TestLineNumberCorrect:
+    """LineNumberCorrect: every skeleton points to a Func/Arrow/Method line within [1..N]."""
+
+    def test_line_number_correct_trace_topology(self, tmp_path):
+        """All four skeletons must point to lines 1,4,5,7 — the only declaration lines."""
+        p = tmp_path / "a.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        for s in skeletons:
+            assert 1 <= s.line_number <= N
+            assert s.line_number in FUNC_LINES, (
+                f"skeleton at line {s.line_number} does not correspond to a declaration line"
+            )
+
+    def test_line_number_correct_non_declaration_lines_absent(self, tmp_path):
+        """Lines 2 (Other), 3 (ClassOpen), 6 (Other) must produce no skeletons."""
+        p = tmp_path / "b.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        non_decl = {2, 3, 6}
+        line_numbers = {s.line_number for s in skeletons}
+        overlap = line_numbers & non_decl
+        assert not overlap, (
+            f"LineNumberCorrect violated: skeletons found for non-declaration lines {overlap}"
+        )
+
+    def test_line_number_correct_within_bounds(self, tmp_path):
+        """No skeleton may reference a line beyond the file length."""
+        p = tmp_path / "c.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        file_line_count = len(TS_SOURCE_7LINES.splitlines())
+        for s in skeletons:
+            assert s.line_number <= file_line_count, (
+                f"LineNumberCorrect violated: line_number {s.line_number} > file length {file_line_count}"
+            )
+
+
+class TestNoGaps:
+    """NoGaps: after scan completes, every declaration line has a corresponding skeleton."""
+
+    def test_no_gaps_all_four_declarations_present(self, tmp_path):
+        """Traces confirm lines {1,4,5,7} must all appear — none may be missing."""
+        p = tmp_path / "a.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        missing = EXPECTED_LINE_NUMBERS - line_numbers
+        assert not missing, f"NoGaps violated: declaration lines {missing} have no skeleton"
+
+    def test_no_gaps_exact_count(self, tmp_path):
+        """Exactly 4 skeletons must be returned — one per declaration line, no duplicates."""
+        p = tmp_path / "b.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        line_numbers = [s.line_number for s in skeletons]
+        assert len(line_numbers) == len(set(line_numbers)), (
+            f"NoGaps / uniqueness violated: duplicate line_numbers found in {line_numbers}"
+        )
+        assert len(skeletons) == len(EXPECTED_LINE_NUMBERS), (
+            f"NoGaps violated: expected {len(EXPECTED_LINE_NUMBERS)} skeletons, got {len(skeletons)}"
+        )
+
+    def test_no_gaps_second_topology_all_funcs(self, tmp_path):
+        """Alternative topology: every line is a function declaration → N skeletons expected."""
+        source = "\n".join(
+            f"function f{i}(): void {{}}" for i in range(1, 5)
+        ) + "\n"
+        p = tmp_path / "c.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        for k in range(1, 5):
+            assert k in line_numbers, f"NoGaps violated: declaration line {k} missing"
+
+
+class TestCursorBounded:
+    """CursorBounded: i <= N + 1 throughout scanning; verified via correct termination."""
+
+    def test_cursor_bounded_scan_terminates(self, tmp_path):
+        """scan_file must return (i.e. not hang), implying cursor stopped at N+1."""
+        p = tmp_path / "a.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        assert skeletons is not None, "CursorBounded: scan_file did not terminate"
+
+    def test_cursor_bounded_no_extra_skeletons_beyond_file(self, tmp_path):
+        """Skeletons must not reference lines beyond N (which would imply i > N+1)."""
+        p = tmp_path / "b.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        for s in skeletons:
+            assert s.line_number <= N, (
+                f"CursorBounded violated: skeleton at line {s.line_number} > N={N}"
+            )
+
+    def test_cursor_bounded_single_line_file(self, tmp_path):
+        """N=1: cursor must stop at i=2 (N+1). One function → one skeleton."""
+        p = tmp_path / "c.ts"
+        p.write_text("function only(): void {}\n")
+        skeletons = scan_file(str(p))
+        assert len(skeletons) >= 1
+        for s in skeletons:
+            assert s.line_number == 1
+            assert s.line_number <= 1, "CursorBounded violated for N=1"
+
+
+# ===========================================================================
+# Edge-case tests
+# ===========================================================================
+
+class TestEdgeCases:
+
+    def test_empty_file(self, tmp_path):
+        """Empty file: scan_file returns an empty collection without crashing."""
+        p = tmp_path / "empty.ts"
+        p.write_text("")
+        skeletons = scan_file(str(p))
+        assert list(skeletons) == [], f"Expected [] for empty file, got {skeletons}"
+
+    def test_no_declarations(self, tmp_path):
+        """File with only non-declaration lines: skeletons must be empty."""
+        source = "// just a comment\nconst x = 1;\nconst y = 2;\n"
+        p = tmp_path / "nodecl.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        assert list(skeletons) == [], (
+            f"Expected no skeletons for file with no declarations, got {[s.line_number for s in skeletons]}"
+        )
+
+    def test_single_function_at_line_1(self, tmp_path):
+        """Minimal trace: one Func at line 1, everything else Other."""
+        source = "function single(): void {}\nconst x = 1;\n"
+        p = tmp_path / "single.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        assert 1 in line_numbers, "Expected skeleton at line 1"
+        # OneIndexed
+        for s in skeletons:
+            assert s.line_number >= 1
+
+    def test_adjacent_declarations_lines_4_and_5(self, tmp_path):
+        """Mirrors the trace transition at states 12→15: two consecutive declaration lines."""
+        source = textwrap.dedent("""\
+            // line 1 other
+            // line 2 other
+            // line 3 other
+            myMethod(): void {
+            const arrowFn = (): void => {
+            // line 6 other
+            // line 7 other
+        """)
+        p = tmp_path / "adjacent.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        assert 4 in line_numbers, "NoGaps: expected skeleton at line 4"
+        assert 5 in line_numbers, "NoGaps: expected skeleton at line 5"
+
+    def test_declaration_only_at_last_line(self, tmp_path):
+        """Function at the last line tests CursorBounded edge: i reaches N then N+1."""
+        source = "// other\n// other\nfunction last(): void {}\n"
+        p = tmp_path / "last.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        assert 3 in line_numbers, "Expected skeleton at final line 3"
+        for s in skeletons:
+            assert s.line_number >= 1
+
+    def test_all_lines_are_declarations(self, tmp_path):
+        """All N lines are declarations: NoGaps demands a skeleton for each."""
+        source = textwrap.dedent("""\
+            function f1(): void {}
+            function f2(): void {}
+            function f3(): void {}
+        """)
+        p = tmp_path / "alldecl.ts"
+        p.write_text(source)
+        skeletons = scan_file(str(p))
+        line_numbers = {s.line_number for s in skeletons}
+        for k in (1, 2, 3):
+            assert k in line_numbers, f"NoGaps violated: line {k} missing"
+
+    def test_idempotent_repeated_calls(self, tmp_path):
+        """Calling scan_file twice on the same file yields identical results."""
+        p = tmp_path / "idem.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        first = {s.line_number for s in scan_file(str(p))}
+        second = {s.line_number for s in scan_file(str(p))}
+        assert first == second, (
+            f"scan_file is not idempotent: first={first}, second={second}"
+        )
+
+    def test_line_numbers_are_integers(self, tmp_path):
+        """line_number must be a plain int (not float, string, etc.)."""
+        p = tmp_path / "types.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        for s in skeletons:
+            assert isinstance(s.line_number, int), (
+                f"Expected int line_number, got {type(s.line_number)} for value {s.line_number}"
+            )
+
+    def test_no_duplicate_line_numbers(self, tmp_path):
+        """Each declaration line must appear at most once in the returned skeletons."""
+        p = tmp_path / "nodup.ts"
+        p.write_text(TS_SOURCE_7LINES)
+        skeletons = scan_file(str(p))
+        line_numbers = [s.line_number for s in skeletons]
+        assert len(line_numbers) == len(set(line_numbers)), (
+            f"Duplicate line_numbers found: {line_numbers}"
+        )
+```

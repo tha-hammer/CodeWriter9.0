@@ -1,0 +1,522 @@
+import textwrap
+import pytest
+from pathlib import Path
+
+from scanner_python_nested_depth import scan_file
+
+
+# ---------------------------------------------------------------------------
+# Canonical source file
+# Derived from the TLA+ Events sequence (identical across all 10 traces):
+#   [type="Class", indent=0, name="A"]
+#   [type="Def",   indent=1, name="f"]
+#   [type="Class", indent=1, name="B"]
+#   [type="Def",   indent=2, name="g"]
+#   [type="Def",   indent=0, name="h"]
+# ---------------------------------------------------------------------------
+
+NESTED_SOURCE = textwrap.dedent("""\
+    class A:
+        def f(self):
+            pass
+        class B:
+            def g(self):
+                pass
+
+    def h():
+        pass
+""")
+
+# Final skeletons expected at State 18 in every trace
+EXPECTED_SKELETONS = frozenset([
+    ("f", 1, "A"),
+    ("g", 2, "B"),
+    ("h", 0, None),
+])
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def source_file(tmp_path: Path) -> Path:
+    """Write the canonical nested-class source to a temp .py file."""
+    p = tmp_path / "subject.py"
+    p.write_text(NESTED_SOURCE)
+    return p
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _as_tuples(skeletons):
+    """Normalise scan_file output to (func_name, def_indent, class_name) tuples."""
+    return frozenset(
+        (s.func_name, s.def_indent, s.class_name)
+        for s in skeletons
+    )
+
+
+def _by_name(skeletons, name):
+    return next(s for s in skeletons if s.func_name == name)
+
+
+# ---------------------------------------------------------------------------
+# Invariant helpers (translated from TLA+)
+# ---------------------------------------------------------------------------
+
+def _assert_all_defs_recorded(skeletons, expected_names):
+    """AllDefsRecorded: every Def event must appear in skeletons."""
+    names = {s.func_name for s in skeletons}
+    for n in expected_names:
+        assert n in names, f"Def {n!r} not recorded in skeletons"
+
+
+def _assert_top_level_have_none(skeletons):
+    """TopLevelHaveNone: def_indent == 0  =>  class_name is None."""
+    for s in skeletons:
+        if s.def_indent == 0:
+            assert s.class_name is None, (
+                f"Top-level func {s.func_name!r} must have class_name=None, "
+                f"got {s.class_name!r}"
+            )
+
+
+def _assert_nested_have_class_name(skeletons):
+    """NestedHaveClassName: def_indent > 0  =>  class_name is not None."""
+    for s in skeletons:
+        if s.def_indent > 0:
+            assert s.class_name is not None, (
+                f"Nested func {s.func_name!r} at indent {s.def_indent} "
+                f"must have a non-None class_name"
+            )
+
+
+def _assert_depth_consistency(skeletons):
+    """DepthConsistency: class_name is either None or a non-empty string."""
+    for s in skeletons:
+        if s.class_name is None:
+            assert s.def_indent == 0, (
+                f"func {s.func_name!r}: class_name=None but def_indent={s.def_indent}"
+            )
+        else:
+            assert isinstance(s.class_name, str) and s.class_name, (
+                f"func {s.func_name!r}: class_name must be a non-empty string, "
+                f"got {s.class_name!r}"
+            )
+            assert s.def_indent > 0, (
+                f"func {s.func_name!r}: non-None class_name but def_indent={s.def_indent}"
+            )
+
+
+def _assert_all_invariants(skeletons, expected_def_names=("f", "g", "h")):
+    _assert_all_defs_recorded(skeletons, expected_def_names)
+    _assert_top_level_have_none(skeletons)
+    _assert_nested_have_class_name(skeletons)
+    _assert_depth_consistency(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 – full final-state verification
+# State 18: skeletons = {h/None/0, f/A/1, g/B/2}, class_stack = <<>>
+# ---------------------------------------------------------------------------
+
+def test_trace_1_full_scan_matches_final_state(source_file):
+    skeletons = scan_file(source_file)
+
+    assert len(skeletons) == 3, "Exactly 3 Def events must produce 3 skeletons"
+
+    h = _by_name(skeletons, "h")
+    assert h.def_indent == 0
+    assert h.class_name is None
+
+    f = _by_name(skeletons, "f")
+    assert f.def_indent == 1
+    assert f.class_name == "A"
+
+    g = _by_name(skeletons, "g")
+    assert g.def_indent == 2
+    assert g.class_name == "B"
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2 – AllDefsRecorded
+# State 18: all three Def names appear in skeletons
+# ---------------------------------------------------------------------------
+
+def test_trace_2_all_defs_recorded(source_file):
+    skeletons = scan_file(source_file)
+
+    names = {s.func_name for s in skeletons}
+    assert "f" in names, "Def 'f' must be recorded"
+    assert "g" in names, "Def 'g' must be recorded"
+    assert "h" in names, "Def 'h' must be recorded"
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3 – TopLevelHaveNone
+# State 18: h has def_indent=0 and class_name=None (Python None)
+# ---------------------------------------------------------------------------
+
+def test_trace_3_top_level_function_has_none_class(source_file):
+    skeletons = scan_file(source_file)
+
+    top_level = [s for s in skeletons if s.def_indent == 0]
+    assert len(top_level) == 1
+    assert top_level[0].func_name == "h"
+    assert top_level[0].class_name is None
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4 – NestedHaveClassName
+# State 18: f (indent 1) and g (indent 2) both have non-None class_name
+# ---------------------------------------------------------------------------
+
+def test_trace_4_nested_functions_have_class_name(source_file):
+    skeletons = scan_file(source_file)
+
+    nested = [s for s in skeletons if s.def_indent > 0]
+    assert len(nested) == 2
+
+    for s in nested:
+        assert s.class_name is not None, (
+            f"Nested func {s.func_name!r} must have a class_name"
+        )
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5 – f assigned to class A (enclosing at indent 0)
+# State 6: skeleton {func_name="f", def_indent=1, class_name="A"} inserted
+# ---------------------------------------------------------------------------
+
+def test_trace_5_f_assigned_to_class_A(source_file):
+    skeletons = scan_file(source_file)
+
+    f = _by_name(skeletons, "f")
+    assert f.class_name == "A", (
+        f"'f' is defined inside class A (indent 1); expected class_name='A', got {f.class_name!r}"
+    )
+    assert f.def_indent == 1
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6 – g assigned to class B (innermost enclosing at indent 1)
+# State 12: skeleton {func_name="g", def_indent=2, class_name="B"} inserted
+# ---------------------------------------------------------------------------
+
+def test_trace_6_g_assigned_to_class_B(source_file):
+    skeletons = scan_file(source_file)
+
+    g = _by_name(skeletons, "g")
+    assert g.class_name == "B", (
+        f"'g' is defined inside class B (indent 2); expected class_name='B', got {g.class_name!r}"
+    )
+    assert g.def_indent == 2
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7 – skeleton count matches Def-event count exactly
+# ---------------------------------------------------------------------------
+
+def test_trace_7_skeleton_count_equals_def_count(source_file):
+    skeletons = scan_file(source_file)
+
+    # 5 events; 3 are Def events → 3 skeletons
+    assert len(skeletons) == 3
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8 – class events do NOT produce skeletons
+# ---------------------------------------------------------------------------
+
+def test_trace_8_class_events_not_in_skeletons(source_file):
+    skeletons = scan_file(source_file)
+
+    func_names = {s.func_name for s in skeletons}
+    # "A" and "B" are Class events; they must not appear as func_name entries
+    assert "A" not in func_names, "Class 'A' must not appear as a skeleton func_name"
+    assert "B" not in func_names, "Class 'B' must not appear as a skeleton func_name"
+    assert func_names == {"f", "g", "h"}
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9 – DepthConsistency: class_name is None <=> def_indent == 0
+# ---------------------------------------------------------------------------
+
+def test_trace_9_depth_consistency(source_file):
+    skeletons = scan_file(source_file)
+
+    for s in skeletons:
+        if s.class_name is None:
+            assert s.def_indent == 0, (
+                f"{s.func_name!r}: class_name=None implies def_indent must be 0, "
+                f"got {s.def_indent}"
+            )
+        else:
+            assert s.def_indent > 0, (
+                f"{s.func_name!r}: non-None class_name implies def_indent > 0, "
+                f"got {s.def_indent}"
+            )
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10 – exact mapping of func_name → class_name
+# ---------------------------------------------------------------------------
+
+def test_trace_10_exact_class_name_mapping(source_file):
+    skeletons = scan_file(source_file)
+
+    class_map = {s.func_name: s.class_name for s in skeletons}
+    assert class_map == {"f": "A", "g": "B", "h": None}, (
+        f"Expected exact class_name mapping, got: {class_map}"
+    )
+    assert _as_tuples(skeletons) == EXPECTED_SKELETONS
+
+    _assert_all_invariants(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifiers – each covers ≥2 distinct trace-derived topologies
+# ---------------------------------------------------------------------------
+
+def test_invariant_all_defs_recorded_two_topologies(tmp_path):
+    """AllDefsRecorded across canonical topology and flat-only topology."""
+    # Topology 1: canonical (Traces 1-10)
+    p1 = tmp_path / "canonical.py"
+    p1.write_text(NESTED_SOURCE)
+    s1 = scan_file(p1)
+    _assert_all_defs_recorded(s1, ("f", "g", "h"))
+
+    # Topology 2: two flat top-level functions (no Class events)
+    p2 = tmp_path / "flat.py"
+    p2.write_text(textwrap.dedent("""\
+        def alpha():
+            pass
+        def beta():
+            pass
+    """))
+    s2 = scan_file(p2)
+    _assert_all_defs_recorded(s2, ("alpha", "beta"))
+
+
+def test_invariant_top_level_have_none_two_topologies(tmp_path):
+    """TopLevelHaveNone across canonical topology and a purely flat topology."""
+    p1 = tmp_path / "canonical.py"
+    p1.write_text(NESTED_SOURCE)
+    s1 = scan_file(p1)
+    _assert_top_level_have_none(s1)
+
+    p2 = tmp_path / "flat.py"
+    p2.write_text(textwrap.dedent("""\
+        def standalone_a():
+            pass
+        def standalone_b():
+            pass
+    """))
+    s2 = scan_file(p2)
+    _assert_top_level_have_none(s2)
+    for s in s2:
+        assert s.class_name is None
+
+
+def test_invariant_nested_have_class_name_two_topologies(tmp_path):
+    """NestedHaveClassName across canonical and single-class topologies."""
+    p1 = tmp_path / "canonical.py"
+    p1.write_text(NESTED_SOURCE)
+    s1 = scan_file(p1)
+    _assert_nested_have_class_name(s1)
+
+    p2 = tmp_path / "single_class.py"
+    p2.write_text(textwrap.dedent("""\
+        class Container:
+            def method(self):
+                pass
+    """))
+    s2 = scan_file(p2)
+    _assert_nested_have_class_name(s2)
+    assert len(s2) == 1
+    assert s2[0].class_name == "Container"
+
+
+def test_invariant_depth_consistency_two_topologies(tmp_path):
+    """DepthConsistency across canonical and deep-nesting topologies."""
+    p1 = tmp_path / "canonical.py"
+    p1.write_text(NESTED_SOURCE)
+    s1 = scan_file(p1)
+    _assert_depth_consistency(s1)
+
+    # Deeply nested: class_name must be the *innermost* enclosing class
+    p2 = tmp_path / "deep.py"
+    p2.write_text(textwrap.dedent("""\
+        class Outer:
+            class Inner:
+                def deep_method(self):
+                    pass
+    """))
+    s2 = scan_file(p2)
+    _assert_depth_consistency(s2)
+    assert len(s2) == 1
+    assert s2[0].func_name == "deep_method"
+    assert s2[0].def_indent == 2
+    assert s2[0].class_name == "Inner"   # innermost class wins
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+def test_edge_empty_file(tmp_path):
+    """scan_file on an empty file returns zero skeletons."""
+    p = tmp_path / "empty.py"
+    p.write_text("")
+    skeletons = scan_file(p)
+    assert len(skeletons) == 0
+
+
+def test_edge_only_class_declarations(tmp_path):
+    """File with only class bodies and no def produces zero skeletons."""
+    p = tmp_path / "classes_only.py"
+    p.write_text(textwrap.dedent("""\
+        class A:
+            pass
+        class B:
+            pass
+    """))
+    skeletons = scan_file(p)
+    assert len(skeletons) == 0
+
+
+def test_edge_only_top_level_functions(tmp_path):
+    """All functions at indent 0 get class_name=None (TopLevelHaveNone)."""
+    p = tmp_path / "top_level.py"
+    p.write_text(textwrap.dedent("""\
+        def alpha():
+            pass
+        def beta():
+            pass
+        def gamma():
+            pass
+    """))
+    skeletons = scan_file(p)
+    assert len(skeletons) == 3
+    for s in skeletons:
+        assert s.class_name is None
+        assert s.def_indent == 0
+    _assert_all_invariants(skeletons, ("alpha", "beta", "gamma"))
+
+
+def test_edge_class_stack_resets_after_top_level_def(tmp_path):
+    """After a top-level def the class context clears; subsequent defs are top-level."""
+    p = tmp_path / "reset.py"
+    p.write_text(textwrap.dedent("""\
+        class A:
+            def inside(self):
+                pass
+        def outside():
+            pass
+    """))
+    skeletons = scan_file(p)
+    by_name = {s.func_name: s for s in skeletons}
+    assert by_name["inside"].class_name == "A"
+    assert by_name["outside"].class_name is None
+    _assert_all_invariants(skeletons, ("inside", "outside"))
+
+
+def test_edge_single_class_single_method(tmp_path):
+    """Single class / single method: method's class_name equals the class."""
+    p = tmp_path / "single.py"
+    p.write_text(textwrap.dedent("""\
+        class MyClass:
+            def my_method(self):
+                pass
+    """))
+    skeletons = scan_file(p)
+    assert len(skeletons) == 1
+    s = skeletons[0]
+    assert s.func_name == "my_method"
+    assert s.class_name == "MyClass"
+    assert s.def_indent == 1
+    _assert_all_invariants(skeletons, ("my_method",))
+
+
+def test_edge_mixed_top_level_and_nested(tmp_path):
+    """Mix of top-level and nested functions all satisfy every invariant."""
+    p = tmp_path / "mixed.py"
+    p.write_text(textwrap.dedent("""\
+        def top_one():
+            pass
+        class Container:
+            def method_one(self):
+                pass
+            def method_two(self):
+                pass
+        def top_two():
+            pass
+    """))
+    skeletons = scan_file(p)
+    assert len(skeletons) == 4
+    by_name = {s.func_name: s for s in skeletons}
+    assert by_name["top_one"].class_name is None
+    assert by_name["top_two"].class_name is None
+    assert by_name["method_one"].class_name == "Container"
+    assert by_name["method_two"].class_name == "Container"
+    _assert_all_invariants(skeletons, ("top_one", "top_two", "method_one", "method_two"))
+
+
+def test_edge_deeply_nested_class_assigns_innermost(tmp_path):
+    """def inside doubly-nested class gets class_name of the innermost class (not outer)."""
+    p = tmp_path / "deep.py"
+    p.write_text(textwrap.dedent("""\
+        class Outer:
+            class Inner:
+                def deep_method(self):
+                    pass
+    """))
+    skeletons = scan_file(p)
+    assert len(skeletons) == 1
+    s = skeletons[0]
+    assert s.func_name == "deep_method"
+    assert s.class_name == "Inner", (
+        f"Innermost enclosing class must win; expected 'Inner', got {s.class_name!r}"
+    )
+    assert s.def_indent == 2
+    _assert_all_invariants(skeletons, ("deep_method",))
+
+
+def test_edge_sibling_classes_independent_stacks(tmp_path):
+    """Two sibling classes do not bleed class_name across each other."""
+    p = tmp_path / "siblings.py"
+    p.write_text(textwrap.dedent("""\
+        class First:
+            def first_method(self):
+                pass
+        class Second:
+            def second_method(self):
+                pass
+    """))
+    skeletons = scan_file(p)
+    assert len(skeletons) == 2
+    by_name = {s.func_name: s for s in skeletons}
+    assert by_name["first_method"].class_name == "First"
+    assert by_name["second_method"].class_name == "Second"
+    _assert_all_invariants(skeletons, ("first_method", "second_method"))

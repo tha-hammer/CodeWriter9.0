@@ -148,3 +148,177 @@ For more details, see README.md and docs/QUICKSTART.md.
 - If push fails, resolve and retry until it succeeds
 
 <!-- END BEADS INTEGRATION -->
+
+---
+
+## Multi-Agent Coordination
+
+CW9 development uses up to three concurrent LLM agents. Each has a
+distinct responsibility and distinct failure modes.
+
+### Orchestrator (DustyForge)
+
+Reviews plans, catches drift, verifies exit criteria. Does not write
+production code. Persists state via MCP agent mail.
+
+**Review protocol (same format every batch):**
+1. Verify GWT registrations match the plan (count, IDs, given/when/then quality)
+2. Spot-check context files for Test Interface + Anti-Patterns sections
+3. After gen-tests: run each test file individually, report pass/fail counts
+4. Triage failures into scaffolding vs. spec-reality vs. API mismatch
+5. Approve scaffolding fixes; require bridge artifact review for assertion changes
+6. Full test suite green before bead closure
+
+### Implementation LLM
+
+Registers GWTs, runs the pipeline, writes code, fixes tests.
+
+**Rules:**
+- Follow the pipeline: register → context → loop → bridge → gen-tests → implement
+- Context files MUST include Test Interface and Anti-Patterns sections (see BOOTSTRAP.md)
+- Do not close beads until tests pass — "artifacts generated" is not "complete"
+- Close reasons must be specific to each bead (no copy-paste boilerplate)
+- Report to orchestrator before claiming completion
+- Max 3-4 concurrent `cw9 loop` or `cw9 gen-tests` processes
+
+### Implementation LLM 2 (when needed)
+
+Parallel worker for independent tasks. Same rules as Impl LLM, plus:
+
+- **MUST NOT run `cw9 register`** while Impl LLM 1 has uncommitted DAG writes
+- **MUST NOT modify files** that Impl LLM 1 is actively editing
+- Can work on: context file updates, test fixes, documentation, independent features
+- Must wait for Impl LLM 1 to commit before touching `self_hosting.json` or `dag.json`
+
+---
+
+## Drift Patterns
+
+Recurring failure modes observed across Batches 1-3. The orchestrator
+watches for all of them.
+
+### 1. Premature Bead Closure
+
+Impl LLM closes a bead while tests are still failing, treating
+"artifacts generated" as "complete."
+
+**Detection:** Close reason contains hedging ("needs scaffolding fixes",
+"tests in progress"). Run tests — if any fail, the bead was closed prematurely.
+
+**Rule:** Beads are closed when tests pass, not when artifacts exist.
+
+### 2. Boilerplate Close Reasons
+
+Impl LLM copies the same close reason across multiple beads that had
+different fix profiles.
+
+**Detection:** Compare close reasons across beads in the same batch.
+Identical reasons for different modules = copy-paste.
+
+**Rule:** Each close reason must reflect its specific outcome — which
+GWTs, how many tests, what scaffolding fixes were needed.
+
+### 3. Fix by Merging
+
+When faced with a "not found" error, impl LLM merges separate DAGs or
+data sources instead of routing to the correct one.
+
+**Detection:** New code that combines self-hosting and crawl DAG queries.
+Cross-DAG imports where none existed before.
+
+**Rule:** The two DAGs are separate contexts. Query the right one, don't merge.
+
+### 4. Retroactive Alignment
+
+When tasked with removing hardcoded code, impl LLM adds NEW hardcoded
+code to make the old hardcoded code work differently.
+
+**Detection:** Diff shows new constants or special-case branches in the
+function that was supposed to be simplified.
+
+**Rule:** Removing hardcoded code = data-driven or config-driven, not
+replacing one hardcoded approach with another.
+
+### 5. CWD Sensitivity
+
+`cw9` resolves `.` relative to the working directory. Wrong directory
+produces confusing "not found" errors.
+
+**Detection:** "GWT not found" or "spec not found" but the files exist.
+
+**Rule:** Verify cwd before running `cw9` commands. Use absolute paths
+when in doubt.
+
+---
+
+## Scaffolding Fix Rules
+
+Generated tests frequently need scaffolding fixes — mechanical patches
+to import paths, constructor calls, and field access patterns.
+
+### Allowed (no orchestrator review needed)
+
+- Fixing import paths (`from tla_model import X` → `from registry.module import X`)
+- Fixing field names (`skeleton.func_name` → `skeleton.function_name`)
+- Fixing access patterns (`skeleton["name"]` → `skeleton.name`)
+- Fixing argument types (`scan_file("path")` → `scan_file(Path("path"))`)
+- Fixing constructor signatures (`Profile(arg)` → `Profile()`)
+- Adding missing test helpers or fixtures
+
+### Requires orchestrator review
+
+- Removing test cases entirely
+- Changing assertion values or operators
+- Weakening invariant checks (e.g., `assert x == 5` → `assert x >= 0`)
+- Adding `pytest.mark.skip` or `pytest.mark.xfail`
+- Any change where the bridge artifact's verifier condition is modified
+
+**Decision rule:** Check the bridge artifacts JSON. If the fix changes
+HOW the test calls the API (scaffolding), it's allowed. If the fix
+changes WHAT the test asserts about behavior (weakening), it requires review.
+
+---
+
+## Concurrency Limits
+
+### Pipeline processes
+
+- Max 3-4 concurrent `cw9 loop` processes (Java TLC uses /tmp heavily;
+  17+ concurrent processes exhausted a 40GB tmpfs with silent failures)
+- Max 3-4 concurrent `cw9 gen-tests` processes (each spawns a Claude subprocess)
+- Clean up between batches: `rm -rf /tmp/cw9_* 2>/dev/null`
+
+### DAG writes
+
+- `self_hosting.json` and `dag.json` are NOT safe for concurrent writes
+- Only one agent may run `cw9 register` at a time
+- Second agent must wait until first agent's registrations are committed to git
+- GWT IDs are allocated sequentially — concurrent calls will collide
+
+### Bead operations
+
+- Multiple agents may read beads concurrently (`bd show`, `bd list`)
+- Only one agent should update a given bead at a time
+- `bd close` is idempotent — safe to retry
+
+---
+
+## Communication
+
+Agents coordinate via MCP agent mail (project key: `/home/maceo/Dev/CodeWriter9.0`).
+
+**Required messages:**
+- Session state checkpoint at start and end of each session
+- Batch completion report with exit criteria checklist
+- Drift detection alerts (reference pattern by number)
+
+**Batch completion format:**
+```
+Subject: Batch N status — X GWTs, Y tests
+Body:
+- GWT IDs: gwt-XXXX..gwt-YYYY
+- Tests passing: N/M
+- Scaffolding fixes applied: list
+- Spec-reality mismatches found: list (if any)
+- Beads: <bead-id> status
+```

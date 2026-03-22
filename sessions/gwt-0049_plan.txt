@@ -1,0 +1,1058 @@
+```python
+import pytest
+from scanner_typescript_nested_depth import scan_file
+
+
+# ---------------------------------------------------------------------------
+# Canonical TypeScript source derived from the TLA+ Events sequence:
+#   Events[1]  ClassOpen  "A"       → class A {
+#   Events[2]  Method     "getUser" → getUser() {
+#   Events[3]  CloseBrace ""        → }         (brace_depth 2→1; A not popped: 1 > A.depth=0)
+#   Events[4]  Func       "helper"  → helper() { (class_stack=[A] → helper gets class A)
+#   Events[5]  ClassOpen  "B"       → class B {
+#   Events[6]  Method     "save"    → save() {
+# ---------------------------------------------------------------------------
+CANONICAL_TS_SOURCE = """\
+class A {
+  getUser() {
+  }
+  helper() {
+    class B {
+      save() {
+"""
+
+# Final-state skeletons expected by all 10 TLC traces (State 21):
+#   { func_name: "getUser", class_name: "A", inside_class: True }
+#   { func_name: "helper",  class_name: "A", inside_class: True }
+#   { func_name: "save",    class_name: "B", inside_class: True }
+EXPECTED_FUNC_NAMES = {"getUser", "helper", "save"}
+EXPECTED_BY_NAME = {
+    "getUser": ("A", True),
+    "helper":  ("A", True),
+    "save":    ("B", True),
+}
+
+
+# ---------------------------------------------------------------------------
+# Attribute accessor (handles both dict-like and object-like skeletons)
+# ---------------------------------------------------------------------------
+
+def _get(s, key):
+    return getattr(s, key) if hasattr(s, key) else s[key]
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifiers (TLA+ invariants translated to Python assertions)
+# ---------------------------------------------------------------------------
+
+def assert_depth_consistency(skeletons):
+    """DepthConsistency: class_name is None/"None" iff inside_class is False."""
+    for s in skeletons:
+        cn = _get(s, "class_name")
+        ic = _get(s, "inside_class")
+        if cn is None or cn == "None":
+            assert ic is False, (
+                f"DepthConsistency violated: class_name={cn!r} but inside_class={ic!r}"
+            )
+        else:
+            assert ic is True, (
+                f"DepthConsistency violated: class_name={cn!r} but inside_class={ic!r}"
+            )
+
+
+def assert_methods_have_class(skeletons):
+    """MethodsHaveClass: inside_class is True => class_name is not None/'None'."""
+    for s in skeletons:
+        cn = _get(s, "class_name")
+        ic = _get(s, "inside_class")
+        if ic is True:
+            assert cn is not None and cn != "None", (
+                f"MethodsHaveClass violated: inside_class=True but class_name={cn!r}"
+            )
+
+
+def assert_funcs_outside_have_none(skeletons):
+    """FuncsOutsideHaveNone: inside_class is False => class_name is None/'None'."""
+    for s in skeletons:
+        cn = _get(s, "class_name")
+        ic = _get(s, "inside_class")
+        if ic is False:
+            assert cn is None or cn == "None", (
+                f"FuncsOutsideHaveNone violated: inside_class=False but class_name={cn!r}"
+            )
+
+
+def assert_all_funcs_recorded(skeletons, expected_names):
+    """AllFuncsRecorded: every expected name appears in the skeleton set."""
+    recorded = {_get(s, "func_name") for s in skeletons}
+    for name in expected_names:
+        assert name in recorded, (
+            f"AllFuncsRecorded violated: {name!r} not in {recorded}"
+        )
+
+
+def assert_all_invariants(skeletons):
+    """Run all structural invariants that apply after scan_file returns."""
+    sk = list(skeletons)
+    assert_depth_consistency(sk)
+    assert_methods_have_class(sk)
+    assert_funcs_outside_have_none(sk)
+
+
+# ---------------------------------------------------------------------------
+# Shared final-state assertion used by all 10 trace tests
+# ---------------------------------------------------------------------------
+
+def _assert_final_state(skeletons):
+    """Assert State 21 from all 10 TLC traces."""
+    sk = list(skeletons)
+    found = {_get(s, "func_name") for s in sk}
+    assert found == EXPECTED_FUNC_NAMES, (
+        f"Expected func names {EXPECTED_FUNC_NAMES}, got {found}"
+    )
+    by_name = {_get(s, "func_name"): s for s in sk}
+    for fname, (expected_class, expected_inside) in EXPECTED_BY_NAME.items():
+        s = by_name[fname]
+        assert _get(s, "class_name") == expected_class, (
+            f"{fname}.class_name: expected {expected_class!r}, "
+            f"got {_get(s, 'class_name')!r}"
+        )
+        assert _get(s, "inside_class") is expected_inside, (
+            f"{fname}.inside_class: expected {expected_inside!r}, "
+            f"got {_get(s, 'inside_class')!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def ts_file(tmp_path):
+    """Canonical TS file matching the TLA+ Events sequence."""
+    p = tmp_path / "subject.ts"
+    p.write_text(CANONICAL_TS_SOURCE)
+    return str(p)
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — complete end-to-end: all skeletons, all invariants
+# ---------------------------------------------------------------------------
+
+def test_trace_1_all_skeletons_correct_and_invariants_hold(ts_file):
+    """Trace 1 (21 steps): scan canonical TS; verify final state and all invariants."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    _assert_final_state(sk)
+    assert_all_funcs_recorded(sk, EXPECTED_FUNC_NAMES)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2 — focus: DepthConsistency invariant
+# ---------------------------------------------------------------------------
+
+def test_trace_2_depth_consistency(ts_file):
+    """Trace 2 (21 steps): DepthConsistency — class_name xor None matches inside_class."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    assert_depth_consistency(sk)
+    _assert_final_state(sk)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3 — focus: MethodsHaveClass invariant
+# ---------------------------------------------------------------------------
+
+def test_trace_3_methods_have_class(ts_file):
+    """Trace 3 (21 steps): MethodsHaveClass — inside_class=True implies class_name set."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    assert_methods_have_class(sk)
+    _assert_final_state(sk)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4 — focus: FuncsOutsideHaveNone invariant
+# ---------------------------------------------------------------------------
+
+def test_trace_4_funcs_outside_have_none(ts_file):
+    """Trace 4 (21 steps): FuncsOutsideHaveNone — no bare functions expected here."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    assert_funcs_outside_have_none(sk)
+    _assert_final_state(sk)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5 — focus: AllFuncsRecorded invariant
+# ---------------------------------------------------------------------------
+
+def test_trace_5_all_funcs_recorded(ts_file):
+    """Trace 5 (21 steps): AllFuncsRecorded — getUser, helper, save all present."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    assert_all_funcs_recorded(sk, EXPECTED_FUNC_NAMES)
+    _assert_final_state(sk)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6 — focus: getUser recorded with class A
+# ---------------------------------------------------------------------------
+
+def test_trace_6_getUser_class_A(ts_file):
+    """Trace 6 (21 steps): getUser is recorded with class_name='A'."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "getUser" in by_name, "getUser skeleton missing"
+    assert _get(by_name["getUser"], "class_name") == "A"
+    assert _get(by_name["getUser"], "inside_class") is True
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7 — focus: helper belongs to A even after a CloseBrace event
+#   (brace_depth drops 2→1; A was pushed at depth=0; 1 > 0 so A stays on stack)
+# ---------------------------------------------------------------------------
+
+def test_trace_7_helper_belongs_to_A_after_close_brace(ts_file):
+    """Trace 7 (21 steps): helper's class_name is 'A' — CloseBrace did not pop A."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "helper" in by_name, "helper skeleton missing"
+    assert _get(by_name["helper"], "class_name") == "A", (
+        "helper should belong to class A: CloseBrace (depth 2→1) must not pop A "
+        "(A was pushed at depth=0 and 1 > 0)"
+    )
+    assert _get(by_name["helper"], "inside_class") is True
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8 — focus: save belongs to innermost class B, not outer A
+# ---------------------------------------------------------------------------
+
+def test_trace_8_save_belongs_to_innermost_class_B(ts_file):
+    """Trace 8 (21 steps): save's class_name is 'B' — innermost class wins."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "save" in by_name, "save skeleton missing"
+    assert _get(by_name["save"], "class_name") == "B", (
+        "save should belong to innermost class B, not outer class A"
+    )
+    assert _get(by_name["save"], "inside_class") is True
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9 — focus: skeleton count equals Func+Method event count (3 of 6 events)
+# ---------------------------------------------------------------------------
+
+def test_trace_9_skeleton_count_equals_func_and_method_events(ts_file):
+    """Trace 9 (21 steps): exactly 3 skeletons — one per Func/Method event."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    # Events 2,4,6 are Method/Func; Events 1,3,5 are ClassOpen/CloseBrace
+    assert len(sk) == 3, (
+        f"Expected 3 skeletons (getUser, helper, save), got {len(sk)}: {sk}"
+    )
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10 — focus: all six TLA+ invariants hold simultaneously at final state
+# ---------------------------------------------------------------------------
+
+def test_trace_10_all_six_invariants_simultaneously(ts_file):
+    """Trace 10 (21 steps): DepthConsistency, AllFuncsRecorded, MethodsHaveClass,
+    FuncsOutsideHaveNone, StackDepthNonNeg (proxy), CursorBounded (proxy) all hold."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    # StackDepthNonNegative and CursorBounded are internal; a clean return without
+    # exception and a consistent skeleton set serves as the observable proxy.
+    assert_all_invariants(sk)
+    assert_all_funcs_recorded(sk, EXPECTED_FUNC_NAMES)
+    _assert_final_state(sk)
+    # Proxy for StackDepthNonNegative: no skeleton has a logically impossible state
+    for s in sk:
+        assert _get(s, "inside_class") in (True, False)
+    # Proxy for CursorBounded: all 6 events processed, exactly 3 skeletons emitted
+    assert len(sk) == 3
+
+
+# ---------------------------------------------------------------------------
+# Dedicated invariant verifier tests (each exercises >= 2 source topologies)
+# ---------------------------------------------------------------------------
+
+def test_invariant_depth_consistency_two_topologies(tmp_path):
+    """DepthConsistency holds across two distinct source topologies."""
+    # Topology 1: single class, one method
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("class X {\n  foo() {\n  }\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert_depth_consistency(sk1)
+
+    # Topology 2: canonical nested trace source
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_depth_consistency(sk2)
+
+
+def test_invariant_methods_have_class_two_topologies(tmp_path):
+    """MethodsHaveClass holds for simple and nested class topologies."""
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("class Y {\n  bar() {\n  }\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert_methods_have_class(sk1)
+    assert _get(sk1[0], "class_name") == "Y"
+    assert _get(sk1[0], "inside_class") is True
+
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_methods_have_class(sk2)
+
+
+def test_invariant_funcs_outside_have_none_two_topologies(tmp_path):
+    """FuncsOutsideHaveNone holds for files with top-level standalone functions."""
+    # Topology 1: single top-level function (no class context at all)
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("function standalone() {\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert len(sk1) == 1, f"Expected 1 skeleton, got {len(sk1)}"
+    s = sk1[0]
+    assert _get(s, "func_name") == "standalone"
+    assert _get(s, "class_name") is None or _get(s, "class_name") == "None"
+    assert _get(s, "inside_class") is False
+    assert_funcs_outside_have_none(sk1)
+
+    # Topology 2: canonical source (every function is inside a class)
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_funcs_outside_have_none(sk2)  # trivially: none are outside
+
+
+def test_invariant_all_funcs_recorded_two_topologies(tmp_path):
+    """AllFuncsRecorded: every Func/Method event produces exactly one skeleton."""
+    # Topology 1: two sibling methods
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("class Z {\n  alpha() {\n  }\n  beta() {\n  }\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert_all_funcs_recorded(sk1, ["alpha", "beta"])
+
+    # Topology 2: canonical nested trace source
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_all_funcs_recorded(sk2, ["getUser", "helper", "save"])
+
+
+def test_invariant_stack_depth_nonneg_two_topologies(tmp_path):
+    """StackDepthNonNegative proxy: consistent skeletons imply depth stayed >= 0."""
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("class W {\n  run() {\n  }\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    # A coherent skeleton (no exception, valid class_name) is the observable proxy
+    assert_depth_consistency(sk1)
+    assert len(sk1) == 1
+    assert _get(sk1[0], "class_name") == "W"
+
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_depth_consistency(sk2)
+    assert len(sk2) == 3
+
+
+def test_invariant_cursor_bounded_two_topologies(tmp_path):
+    """CursorBounded proxy: scan_file consumes all events and returns (no overrun)."""
+    # Topology 1: two top-level functions → 2 Func events, cursor must reach N+1=3
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("function a() {\n}\nfunction b() {\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert_all_funcs_recorded(sk1, ["a", "b"])
+
+    # Topology 2: 6-event canonical source → cursor must reach N+1=7
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_all_funcs_recorded(sk2, ["getUser", "helper", "save"])
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+def test_edge_empty_file(tmp_path):
+    """Empty TS file: zero skeletons, all invariants trivially hold."""
+    f = tmp_path / "empty.ts"
+    f.write_text("")
+    sk = list(scan_file(str(f)))
+    assert sk == [], f"Expected no skeletons for empty file, got {sk}"
+    assert_all_invariants(sk)
+
+
+def test_edge_class_with_no_methods(tmp_path):
+    """Class body with no methods: zero skeletons emitted."""
+    f = tmp_path / "nomethod.ts"
+    f.write_text("class Empty {\n}\n")
+    sk = list(scan_file(str(f)))
+    assert sk == [], f"Expected no skeletons for method-less class, got {sk}"
+    assert_all_invariants(sk)
+
+
+def test_edge_function_outside_any_class(tmp_path):
+    """Top-level function: class_name=None, inside_class=False."""
+    f = tmp_path / "toplevel.ts"
+    f.write_text("function topLevel() {\n}\n")
+    sk = list(scan_file(str(f)))
+    assert len(sk) == 1, f"Expected 1 skeleton, got {len(sk)}"
+    s = sk[0]
+    assert _get(s, "func_name") == "topLevel"
+    assert _get(s, "class_name") is None or _get(s, "class_name") == "None"
+    assert _get(s, "inside_class") is False
+    assert_all_invariants(sk)
+
+
+def test_edge_deeply_nested_classes_innermost_wins(tmp_path):
+    """Methods in nested classes receive the innermost enclosing class_name."""
+    src = (
+        "class Outer {\n"
+        "  outerMethod() {\n"
+        "    class Inner {\n"
+        "      innerMethod() {\n"
+    )
+    f = tmp_path / "nested.ts"
+    f.write_text(src)
+    sk = list(scan_file(str(f)))
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "outerMethod" in by_name, "outerMethod skeleton missing"
+    assert "innerMethod" in by_name, "innerMethod skeleton missing"
+    assert _get(by_name["outerMethod"], "class_name") == "Outer"
+    assert _get(by_name["outerMethod"], "inside_class") is True
+    assert _get(by_name["innerMethod"], "class_name") == "Inner"
+    assert _get(by_name["innerMethod"], "inside_class") is True
+    assert_all_invariants(sk)
+
+
+def test_edge_mixed_funcs_and_methods(tmp_path):
+    """Mix of top-level functions and class methods: each gets correct class_name."""
+    src = (
+        "function globalFn() {\n"
+        "}\n"
+        "class MyClass {\n"
+        "  classMethod() {\n"
+        "  }\n"
+        "}\n"
+        "function anotherGlobal() {\n"
+        "}\n"
+    )
+    f = tmp_path / "mixed.ts"
+    f.write_text(src)
+    sk = list(scan_file(str(f)))
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert set(by_name) == {"globalFn", "classMethod", "anotherGlobal"}
+
+    assert _get(by_name["globalFn"], "class_name") is None or \
+           _get(by_name["globalFn"], "class_name") == "None"
+    assert _get(by_name["globalFn"], "inside_class") is False
+
+    assert _get(by_name["classMethod"], "class_name") == "MyClass"
+    assert _get(by_name["classMethod"], "inside_class") is True
+
+    assert _get(by_name["anotherGlobal"], "class_name") is None or \
+           _get(by_name["anotherGlobal"], "class_name") == "None"
+    assert _get(by_name["anotherGlobal"], "inside_class") is False
+
+    assert_all_invariants(sk)
+
+
+def test_edge_class_stack_pops_after_full_class_close(tmp_path):
+    """After a class body is fully closed, subsequent functions have class_name=None."""
+    src = (
+        "class A {\n"
+        "  methodInA() {\n"
+        "  }\n"
+        "}\n"
+        "function afterA() {\n"
+        "}\n"
+    )
+    f = tmp_path / "pop.ts"
+    f.write_text(src)
+    sk = list(scan_file(str(f)))
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert set(by_name) == {"methodInA", "afterA"}
+
+    assert _get(by_name["methodInA"], "class_name") == "A"
+    assert _get(by_name["methodInA"], "inside_class") is True
+
+    assert _get(by_name["afterA"], "class_name") is None or \
+           _get(by_name["afterA"], "class_name") == "None"
+    assert _get(by_name["afterA"], "inside_class") is False
+
+    assert_all_invariants(sk)
+
+
+def test_edge_close_brace_does_not_pop_outer_class_prematurely(tmp_path):
+    """CloseBrace only pops a class when brace_depth falls to its push-depth.
+    This directly tests the TLA+ condition: pop iff brace_depth <= stack_top.depth."""
+    # Mirrors Events[1..4]: ClassOpen A, Method getUser, CloseBrace, Func helper
+    # After CloseBrace brace_depth=1; A was pushed at depth=0; 1 > 0 → A stays.
+    src = (
+        "class A {\n"
+        "  getUser() {\n"
+        "  }\n"
+        "  helper() {\n"
+    )
+    f = tmp_path / "nodepopearly.ts"
+    f.write_text(src)
+    sk = list(scan_file(str(f)))
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "getUser" in by_name
+    assert "helper" in by_name
+    # Both must belong to A — the close brace after getUser must not pop A
+    assert _get(by_name["getUser"], "class_name") == "A"
+    assert _get(by_name["helper"], "class_name") == "A", (
+        "helper must still belong to A: the CloseBrace after getUser() reduced "
+        "brace_depth to 1, which is > A.push_depth=0, so A must remain on the stack"
+    )
+    assert_all_invariants(sk)
+```
+```python
+import pytest
+from scanner_typescript_nested_depth import scan_file
+
+
+# ---------------------------------------------------------------------------
+# Canonical TypeScript source derived from the TLA+ Events sequence:
+#   Events[1]  ClassOpen  "A"       → class A {
+#   Events[2]  Method     "getUser" → getUser() {
+#   Events[3]  CloseBrace ""        → }         (brace_depth 2→1; A not popped: 1 > A.depth=0)
+#   Events[4]  Func       "helper"  → helper() { (class_stack=[A] → helper gets class A)
+#   Events[5]  ClassOpen  "B"       → class B {
+#   Events[6]  Method     "save"    → save() {
+# ---------------------------------------------------------------------------
+CANONICAL_TS_SOURCE = """\
+class A {
+  getUser() {
+  }
+  helper() {
+    class B {
+      save() {
+"""
+
+# Final-state skeletons expected by all 10 TLC traces (State 21):
+#   { func_name: "getUser", class_name: "A", inside_class: True }
+#   { func_name: "helper",  class_name: "A", inside_class: True }
+#   { func_name: "save",    class_name: "B", inside_class: True }
+EXPECTED_FUNC_NAMES = {"getUser", "helper", "save"}
+EXPECTED_BY_NAME = {
+    "getUser": ("A", True),
+    "helper":  ("A", True),
+    "save":    ("B", True),
+}
+
+
+# ---------------------------------------------------------------------------
+# Attribute accessor (handles both dict-like and object-like skeletons)
+# ---------------------------------------------------------------------------
+
+def _get(s, key):
+    return getattr(s, key) if hasattr(s, key) else s[key]
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifiers (TLA+ invariants translated to Python assertions)
+# ---------------------------------------------------------------------------
+
+def assert_depth_consistency(skeletons):
+    """DepthConsistency: class_name is None/"None" iff inside_class is False."""
+    for s in skeletons:
+        cn = _get(s, "class_name")
+        ic = _get(s, "inside_class")
+        if cn is None or cn == "None":
+            assert ic is False, (
+                f"DepthConsistency violated: class_name={cn!r} but inside_class={ic!r}"
+            )
+        else:
+            assert ic is True, (
+                f"DepthConsistency violated: class_name={cn!r} but inside_class={ic!r}"
+            )
+
+
+def assert_methods_have_class(skeletons):
+    """MethodsHaveClass: inside_class is True => class_name is not None/'None'."""
+    for s in skeletons:
+        cn = _get(s, "class_name")
+        ic = _get(s, "inside_class")
+        if ic is True:
+            assert cn is not None and cn != "None", (
+                f"MethodsHaveClass violated: inside_class=True but class_name={cn!r}"
+            )
+
+
+def assert_funcs_outside_have_none(skeletons):
+    """FuncsOutsideHaveNone: inside_class is False => class_name is None/'None'."""
+    for s in skeletons:
+        cn = _get(s, "class_name")
+        ic = _get(s, "inside_class")
+        if ic is False:
+            assert cn is None or cn == "None", (
+                f"FuncsOutsideHaveNone violated: inside_class=False but class_name={cn!r}"
+            )
+
+
+def assert_all_funcs_recorded(skeletons, expected_names):
+    """AllFuncsRecorded: every expected name appears in the skeleton set."""
+    recorded = {_get(s, "func_name") for s in skeletons}
+    for name in expected_names:
+        assert name in recorded, (
+            f"AllFuncsRecorded violated: {name!r} not in {recorded}"
+        )
+
+
+def assert_all_invariants(skeletons):
+    """Run all structural invariants that apply after scan_file returns."""
+    sk = list(skeletons)
+    assert_depth_consistency(sk)
+    assert_methods_have_class(sk)
+    assert_funcs_outside_have_none(sk)
+
+
+# ---------------------------------------------------------------------------
+# Shared final-state assertion used by all 10 trace tests
+# ---------------------------------------------------------------------------
+
+def _assert_final_state(skeletons):
+    """Assert State 21 from all 10 TLC traces."""
+    sk = list(skeletons)
+    found = {_get(s, "func_name") for s in sk}
+    assert found == EXPECTED_FUNC_NAMES, (
+        f"Expected func names {EXPECTED_FUNC_NAMES}, got {found}"
+    )
+    by_name = {_get(s, "func_name"): s for s in sk}
+    for fname, (expected_class, expected_inside) in EXPECTED_BY_NAME.items():
+        s = by_name[fname]
+        assert _get(s, "class_name") == expected_class, (
+            f"{fname}.class_name: expected {expected_class!r}, "
+            f"got {_get(s, 'class_name')!r}"
+        )
+        assert _get(s, "inside_class") is expected_inside, (
+            f"{fname}.inside_class: expected {expected_inside!r}, "
+            f"got {_get(s, 'inside_class')!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def ts_file(tmp_path):
+    """Canonical TS file matching the TLA+ Events sequence."""
+    p = tmp_path / "subject.ts"
+    p.write_text(CANONICAL_TS_SOURCE)
+    return str(p)
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — complete end-to-end: all skeletons, all invariants
+# ---------------------------------------------------------------------------
+
+def test_trace_1_all_skeletons_correct_and_invariants_hold(ts_file):
+    """Trace 1 (21 steps): scan canonical TS; verify final state and all invariants."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    _assert_final_state(sk)
+    assert_all_funcs_recorded(sk, EXPECTED_FUNC_NAMES)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2 — focus: DepthConsistency invariant
+# ---------------------------------------------------------------------------
+
+def test_trace_2_depth_consistency(ts_file):
+    """Trace 2 (21 steps): DepthConsistency — class_name xor None matches inside_class."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    assert_depth_consistency(sk)
+    _assert_final_state(sk)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3 — focus: MethodsHaveClass invariant
+# ---------------------------------------------------------------------------
+
+def test_trace_3_methods_have_class(ts_file):
+    """Trace 3 (21 steps): MethodsHaveClass — inside_class=True implies class_name set."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    assert_methods_have_class(sk)
+    _assert_final_state(sk)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4 — focus: FuncsOutsideHaveNone invariant
+# ---------------------------------------------------------------------------
+
+def test_trace_4_funcs_outside_have_none(ts_file):
+    """Trace 4 (21 steps): FuncsOutsideHaveNone — no bare functions expected here."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    assert_funcs_outside_have_none(sk)
+    _assert_final_state(sk)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5 — focus: AllFuncsRecorded invariant
+# ---------------------------------------------------------------------------
+
+def test_trace_5_all_funcs_recorded(ts_file):
+    """Trace 5 (21 steps): AllFuncsRecorded — getUser, helper, save all present."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    assert_all_funcs_recorded(sk, EXPECTED_FUNC_NAMES)
+    _assert_final_state(sk)
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6 — focus: getUser recorded with class A
+# ---------------------------------------------------------------------------
+
+def test_trace_6_getUser_class_A(ts_file):
+    """Trace 6 (21 steps): getUser is recorded with class_name='A'."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "getUser" in by_name, "getUser skeleton missing"
+    assert _get(by_name["getUser"], "class_name") == "A"
+    assert _get(by_name["getUser"], "inside_class") is True
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7 — focus: helper belongs to A even after a CloseBrace event
+#   (brace_depth drops 2→1; A was pushed at depth=0; 1 > 0 so A stays on stack)
+# ---------------------------------------------------------------------------
+
+def test_trace_7_helper_belongs_to_A_after_close_brace(ts_file):
+    """Trace 7 (21 steps): helper's class_name is 'A' — CloseBrace did not pop A."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "helper" in by_name, "helper skeleton missing"
+    assert _get(by_name["helper"], "class_name") == "A", (
+        "helper should belong to class A: CloseBrace (depth 2→1) must not pop A "
+        "(A was pushed at depth=0 and 1 > 0)"
+    )
+    assert _get(by_name["helper"], "inside_class") is True
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8 — focus: save belongs to innermost class B, not outer A
+# ---------------------------------------------------------------------------
+
+def test_trace_8_save_belongs_to_innermost_class_B(ts_file):
+    """Trace 8 (21 steps): save's class_name is 'B' — innermost class wins."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "save" in by_name, "save skeleton missing"
+    assert _get(by_name["save"], "class_name") == "B", (
+        "save should belong to innermost class B, not outer class A"
+    )
+    assert _get(by_name["save"], "inside_class") is True
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9 — focus: skeleton count equals Func+Method event count (3 of 6 events)
+# ---------------------------------------------------------------------------
+
+def test_trace_9_skeleton_count_equals_func_and_method_events(ts_file):
+    """Trace 9 (21 steps): exactly 3 skeletons — one per Func/Method event."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    # Events 2,4,6 are Method/Func; Events 1,3,5 are ClassOpen/CloseBrace
+    assert len(sk) == 3, (
+        f"Expected 3 skeletons (getUser, helper, save), got {len(sk)}: {sk}"
+    )
+    assert_all_invariants(sk)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10 — focus: all six TLA+ invariants hold simultaneously at final state
+# ---------------------------------------------------------------------------
+
+def test_trace_10_all_six_invariants_simultaneously(ts_file):
+    """Trace 10 (21 steps): DepthConsistency, AllFuncsRecorded, MethodsHaveClass,
+    FuncsOutsideHaveNone, StackDepthNonNeg (proxy), CursorBounded (proxy) all hold."""
+    skeletons = scan_file(ts_file)
+    sk = list(skeletons)
+    # StackDepthNonNegative and CursorBounded are internal; a clean return without
+    # exception and a consistent skeleton set serves as the observable proxy.
+    assert_all_invariants(sk)
+    assert_all_funcs_recorded(sk, EXPECTED_FUNC_NAMES)
+    _assert_final_state(sk)
+    # Proxy for StackDepthNonNegative: no skeleton has a logically impossible state
+    for s in sk:
+        assert _get(s, "inside_class") in (True, False)
+    # Proxy for CursorBounded: all 6 events processed, exactly 3 skeletons emitted
+    assert len(sk) == 3
+
+
+# ---------------------------------------------------------------------------
+# Dedicated invariant verifier tests (each exercises >= 2 source topologies)
+# ---------------------------------------------------------------------------
+
+def test_invariant_depth_consistency_two_topologies(tmp_path):
+    """DepthConsistency holds across two distinct source topologies."""
+    # Topology 1: single class, one method
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("class X {\n  foo() {\n  }\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert_depth_consistency(sk1)
+
+    # Topology 2: canonical nested trace source
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_depth_consistency(sk2)
+
+
+def test_invariant_methods_have_class_two_topologies(tmp_path):
+    """MethodsHaveClass holds for simple and nested class topologies."""
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("class Y {\n  bar() {\n  }\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert_methods_have_class(sk1)
+    assert _get(sk1[0], "class_name") == "Y"
+    assert _get(sk1[0], "inside_class") is True
+
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_methods_have_class(sk2)
+
+
+def test_invariant_funcs_outside_have_none_two_topologies(tmp_path):
+    """FuncsOutsideHaveNone holds for files with top-level standalone functions."""
+    # Topology 1: single top-level function (no class context at all)
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("function standalone() {\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert len(sk1) == 1, f"Expected 1 skeleton, got {len(sk1)}"
+    s = sk1[0]
+    assert _get(s, "func_name") == "standalone"
+    assert _get(s, "class_name") is None or _get(s, "class_name") == "None"
+    assert _get(s, "inside_class") is False
+    assert_funcs_outside_have_none(sk1)
+
+    # Topology 2: canonical source (every function is inside a class)
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_funcs_outside_have_none(sk2)  # trivially: none are outside
+
+
+def test_invariant_all_funcs_recorded_two_topologies(tmp_path):
+    """AllFuncsRecorded: every Func/Method event produces exactly one skeleton."""
+    # Topology 1: two sibling methods
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("class Z {\n  alpha() {\n  }\n  beta() {\n  }\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert_all_funcs_recorded(sk1, ["alpha", "beta"])
+
+    # Topology 2: canonical nested trace source
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_all_funcs_recorded(sk2, ["getUser", "helper", "save"])
+
+
+def test_invariant_stack_depth_nonneg_two_topologies(tmp_path):
+    """StackDepthNonNegative proxy: consistent skeletons imply depth stayed >= 0."""
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("class W {\n  run() {\n  }\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    # A coherent skeleton (no exception, valid class_name) is the observable proxy
+    assert_depth_consistency(sk1)
+    assert len(sk1) == 1
+    assert _get(sk1[0], "class_name") == "W"
+
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_depth_consistency(sk2)
+    assert len(sk2) == 3
+
+
+def test_invariant_cursor_bounded_two_topologies(tmp_path):
+    """CursorBounded proxy: scan_file consumes all events and returns (no overrun)."""
+    # Topology 1: two top-level functions → 2 Func events, cursor must reach N+1=3
+    f1 = tmp_path / "t1.ts"
+    f1.write_text("function a() {\n}\nfunction b() {\n}\n")
+    sk1 = list(scan_file(str(f1)))
+    assert_all_funcs_recorded(sk1, ["a", "b"])
+
+    # Topology 2: 6-event canonical source → cursor must reach N+1=7
+    f2 = tmp_path / "t2.ts"
+    f2.write_text(CANONICAL_TS_SOURCE)
+    sk2 = list(scan_file(str(f2)))
+    assert_all_funcs_recorded(sk2, ["getUser", "helper", "save"])
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+def test_edge_empty_file(tmp_path):
+    """Empty TS file: zero skeletons, all invariants trivially hold."""
+    f = tmp_path / "empty.ts"
+    f.write_text("")
+    sk = list(scan_file(str(f)))
+    assert sk == [], f"Expected no skeletons for empty file, got {sk}"
+    assert_all_invariants(sk)
+
+
+def test_edge_class_with_no_methods(tmp_path):
+    """Class body with no methods: zero skeletons emitted."""
+    f = tmp_path / "nomethod.ts"
+    f.write_text("class Empty {\n}\n")
+    sk = list(scan_file(str(f)))
+    assert sk == [], f"Expected no skeletons for method-less class, got {sk}"
+    assert_all_invariants(sk)
+
+
+def test_edge_function_outside_any_class(tmp_path):
+    """Top-level function: class_name=None, inside_class=False."""
+    f = tmp_path / "toplevel.ts"
+    f.write_text("function topLevel() {\n}\n")
+    sk = list(scan_file(str(f)))
+    assert len(sk) == 1, f"Expected 1 skeleton, got {len(sk)}"
+    s = sk[0]
+    assert _get(s, "func_name") == "topLevel"
+    assert _get(s, "class_name") is None or _get(s, "class_name") == "None"
+    assert _get(s, "inside_class") is False
+    assert_all_invariants(sk)
+
+
+def test_edge_deeply_nested_classes_innermost_wins(tmp_path):
+    """Methods in nested classes receive the innermost enclosing class_name."""
+    src = (
+        "class Outer {\n"
+        "  outerMethod() {\n"
+        "    class Inner {\n"
+        "      innerMethod() {\n"
+    )
+    f = tmp_path / "nested.ts"
+    f.write_text(src)
+    sk = list(scan_file(str(f)))
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "outerMethod" in by_name, "outerMethod skeleton missing"
+    assert "innerMethod" in by_name, "innerMethod skeleton missing"
+    assert _get(by_name["outerMethod"], "class_name") == "Outer"
+    assert _get(by_name["outerMethod"], "inside_class") is True
+    assert _get(by_name["innerMethod"], "class_name") == "Inner"
+    assert _get(by_name["innerMethod"], "inside_class") is True
+    assert_all_invariants(sk)
+
+
+def test_edge_mixed_funcs_and_methods(tmp_path):
+    """Mix of top-level functions and class methods: each gets correct class_name."""
+    src = (
+        "function globalFn() {\n"
+        "}\n"
+        "class MyClass {\n"
+        "  classMethod() {\n"
+        "  }\n"
+        "}\n"
+        "function anotherGlobal() {\n"
+        "}\n"
+    )
+    f = tmp_path / "mixed.ts"
+    f.write_text(src)
+    sk = list(scan_file(str(f)))
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert set(by_name) == {"globalFn", "classMethod", "anotherGlobal"}
+
+    assert _get(by_name["globalFn"], "class_name") is None or \
+           _get(by_name["globalFn"], "class_name") == "None"
+    assert _get(by_name["globalFn"], "inside_class") is False
+
+    assert _get(by_name["classMethod"], "class_name") == "MyClass"
+    assert _get(by_name["classMethod"], "inside_class") is True
+
+    assert _get(by_name["anotherGlobal"], "class_name") is None or \
+           _get(by_name["anotherGlobal"], "class_name") == "None"
+    assert _get(by_name["anotherGlobal"], "inside_class") is False
+
+    assert_all_invariants(sk)
+
+
+def test_edge_class_stack_pops_after_full_class_close(tmp_path):
+    """After a class body is fully closed, subsequent functions have class_name=None."""
+    src = (
+        "class A {\n"
+        "  methodInA() {\n"
+        "  }\n"
+        "}\n"
+        "function afterA() {\n"
+        "}\n"
+    )
+    f = tmp_path / "pop.ts"
+    f.write_text(src)
+    sk = list(scan_file(str(f)))
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert set(by_name) == {"methodInA", "afterA"}
+
+    assert _get(by_name["methodInA"], "class_name") == "A"
+    assert _get(by_name["methodInA"], "inside_class") is True
+
+    assert _get(by_name["afterA"], "class_name") is None or \
+           _get(by_name["afterA"], "class_name") == "None"
+    assert _get(by_name["afterA"], "inside_class") is False
+
+    assert_all_invariants(sk)
+
+
+def test_edge_close_brace_does_not_pop_outer_class_prematurely(tmp_path):
+    """CloseBrace only pops a class when brace_depth falls to its push-depth.
+    This directly tests the TLA+ condition: pop iff brace_depth <= stack_top.depth."""
+    # Mirrors Events[1..4]: ClassOpen A, Method getUser, CloseBrace, Func helper
+    # After CloseBrace brace_depth=1; A was pushed at depth=0; 1 > 0 → A stays.
+    src = (
+        "class A {\n"
+        "  getUser() {\n"
+        "  }\n"
+        "  helper() {\n"
+    )
+    f = tmp_path / "nodepopearly.ts"
+    f.write_text(src)
+    sk = list(scan_file(str(f)))
+    by_name = {_get(s, "func_name"): s for s in sk}
+    assert "getUser" in by_name
+    assert "helper" in by_name
+    # Both must belong to A — the close brace after getUser must not pop A
+    assert _get(by_name["getUser"], "class_name") == "A"
+    assert _get(by_name["helper"], "class_name") == "A", (
+        "helper must still belong to A: the CloseBrace after getUser() reduced "
+        "brace_depth to 1, which is > A.push_depth=0, so A must remain on the stack"
+    )
+    assert_all_invariants(sk)
+```

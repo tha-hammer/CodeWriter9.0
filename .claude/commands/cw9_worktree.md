@@ -1,6 +1,6 @@
-# CW9 Worktree Setup
+# CW9 Worktree Setup (Self-Hosting)
 
-Bootstrap a new git worktree with CW9 crawl data from a parent tree, so extracted IN:DO:OUT cards carry over and only new/changed functions need LLM extraction.
+Set up a git worktree for CW9 self-hosting work. Since CW9 is self-hosting (engine = target = state), a worktree is just a normal git worktree — all paths are relative to repo root.
 
 ## Arguments
 
@@ -10,18 +10,16 @@ $ARGUMENTS = worktree branch name and/or path. If not provided, ask.
 
 ### 1. Resolve Paths
 
-- Identify the **main tree** (current working directory, or the git main working tree)
-- Confirm `.cw9/crawl.db` exists in the main tree. If not, abort with instructions to run `cw9 ingest` first
+- Confirm current directory is the CW9 repo root (has `templates/`, `python/registry/`, `dag.json`)
 - Determine the **worktree branch name** from $ARGUMENTS
-- Determine the **worktree path** — default: `~/Dev/<repo-name>-<branch-name>`
+- Determine the **worktree path** — default: `~/Dev/CodeWriter9.0-<branch-name>`
 
 Confirm with the user:
 
 ```
-Main tree: /path/to/main
-Worktree path: /path/to/worktree
-Branch: feature-name
-crawl.db: N total records (M extracted, K skeletons)
+Main tree: /home/maceo/Dev/CodeWriter9.0
+Worktree path: /home/maceo/Dev/CodeWriter9.0-<branch-name>
+Branch: <branch-name>
 ```
 
 ### 2. Create Worktree
@@ -30,59 +28,36 @@ crawl.db: N total records (M extracted, K skeletons)
 git worktree add <worktree-path> -b <branch-name>
 ```
 
-If `silmari-oracle` is available, prefer:
-```bash
-silmari-oracle worktree create <branch-name>
-```
+### 3. Verify Self-Hosting Layout
 
-### 3. Bootstrap CW9
-
-Copy the `.cw9/` directory from the main tree to the worktree:
+The worktree should have all self-hosting paths intact:
 
 ```bash
-cp -r <main-tree>/.cw9 <worktree-path>/.cw9
+ls <worktree-path>/templates/pluscal/instances/    # verified specs
+ls <worktree-path>/python/tests/generated/          # bridge artifacts + generated tests
+ls <worktree-path>/.cw9/context/                    # context files
+ls <worktree-path>/dag.json                         # self-hosting DAG
+ls <worktree-path>/schema/                          # schema files
 ```
 
-### 4. Re-ingest with Adoption
+### 4. Run Tests in Worktree
 
-Run incremental ingest against the worktree. This converts absolute paths to relative, adopts extraction data from the parent's records where content hasn't changed, and creates skeletons only for genuinely new/changed files:
+Verify the worktree is healthy:
 
 ```bash
-cw9 ingest <worktree-path> <worktree-path> --incremental
+cd <worktree-path>/python && python3 -m pytest tests/ -x
 ```
 
-Check the output for the `adopted` count — this shows how many extracted cards were carried over from the parent tree.
-
-### 5. Verify
-
-Query the resulting DB to confirm the state:
-
-```sql
-SELECT
-  CASE WHEN do_description = 'SKELETON_ONLY' THEN 'skeleton'
-       WHEN do_description = 'EXTRACTION_FAILED' THEN 'failed'
-       ELSE 'extracted' END as status,
-  COUNT(*)
-FROM records
-WHERE is_external = FALSE
-GROUP BY status;
-```
-
-### 6. Report
+### 5. Report
 
 Tell the user:
-- How many records were adopted (saved LLM calls)
-- How many skeletons remain (need `cw9 crawl --incremental`)
-- Estimated crawl time at ~20s per skeleton
-- The command to run next:
-
-```bash
-cd <worktree-path>
-cw9 crawl . --incremental
-```
+- Worktree created at `<path>` on branch `<branch>`
+- Test suite status (passing/failing)
+- Ready for work — all CW9 self-hosting paths are relative, so they work in any worktree
+- Note: `sessions/` may contain large untracked files. These are session logs from pipeline runs and don't need to be in the worktree.
 
 ## Notes
 
-- The re-ingest step is critical. Without it, the copied DB has absolute paths pointing to the main tree, and UUIDs won't match the worktree's files.
-- Adoption matches by `(function_name, class_name, src_hash)`. Files that changed between main and worktree will correctly get new skeletons.
-- Orphan records (extracted with old absolute paths, no matching worktree file) are harmless — the bridge step will clean them up.
+- Self-hosting is simpler than external for worktrees. No `.cw9/crawl.db` to copy or re-ingest — all state paths are relative to repo root.
+- The `dag.json`, `templates/`, `python/`, `schema/` directories are all tracked in git, so they come along with the worktree automatically.
+- If you need crawl data in the worktree, copy `.cw9/crawl.db` manually and run `cw9 ingest python/registry <worktree-path> --incremental`.

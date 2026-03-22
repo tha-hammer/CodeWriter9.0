@@ -1,0 +1,162 @@
+---- MODULE CrawlBridgeResourceNodes ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Records
+
+(* --algorithm CrawlBridgeResourceNodes
+
+variables
+    dag_nodes   = [u \in {} |-> [kind |-> "", name |-> "", description |-> ""]],
+    nodes_added = 0,
+    remaining   = Records;
+
+define
+
+    RESOURCE == "RESOURCE"
+
+    RecordUUIDs == { r.uuid : r \in Records }
+
+    TypeOK ==
+        /\ nodes_added >= 0
+        /\ \A u \in DOMAIN dag_nodes : dag_nodes[u].kind = RESOURCE
+
+    OnlyResourceKinds ==
+        \A u \in DOMAIN dag_nodes : dag_nodes[u].kind = RESOURCE
+
+    NodesAddedMatchesDomainSize ==
+        nodes_added = Cardinality(DOMAIN dag_nodes)
+
+    UUIDDomainSubsetOfRecords ==
+        DOMAIN dag_nodes \subseteq RecordUUIDs
+
+    IdempotentUpsert ==
+        \A r \in Records \ remaining :
+            /\ r.uuid \in DOMAIN dag_nodes
+            /\ dag_nodes[r.uuid].kind = RESOURCE
+
+    TerminalCorrectness ==
+        remaining = {} =>
+            /\ nodes_added = Cardinality(Records)
+            /\ DOMAIN dag_nodes = RecordUUIDs
+            /\ \A r \in Records :
+                /\ r.uuid \in DOMAIN dag_nodes
+                /\ dag_nodes[r.uuid].kind = RESOURCE
+            /\ Cardinality(DOMAIN dag_nodes) = Cardinality(Records)
+
+end define;
+
+fair process bridge = "bridge"
+begin
+    ProcessRecords:
+        while remaining /= {} do
+            with rec \in remaining do
+                dag_nodes   := dag_nodes @@ (rec.uuid :>
+                                    [ kind        |-> RESOURCE,
+                                      name        |-> rec.name,
+                                      description |-> rec.operational_claim ]);
+                nodes_added := nodes_added + 1;
+                remaining   := remaining \ {rec};
+            end with;
+        end while;
+    Finish:
+        assert nodes_added = Cardinality(Records);
+        assert DOMAIN dag_nodes = RecordUUIDs;
+        assert \A r \in Records :
+                   r.uuid \in DOMAIN dag_nodes /\
+                   dag_nodes[r.uuid].kind = RESOURCE;
+        assert Cardinality(DOMAIN dag_nodes) = Cardinality(Records);
+end process;
+
+end algorithm; *)
+
+TypeOKInv              == TypeOK
+OnlyResourceKindsInv   == OnlyResourceKinds
+CountMatchesDomainInv  == NodesAddedMatchesDomainSize
+UUIDDomainSubsetInv    == UUIDDomainSubsetOfRecords
+IdempotentUpsertInv    == IdempotentUpsert
+TerminalCorrectnessInv == TerminalCorrectness
+
+====
+---- MODULE CrawlBridgeResourceNodes ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Records
+
+(* --algorithm CrawlBridgeResourceNodes
+
+variables
+    dag_nodes   = [u \in {} |-> [kind |-> "", name |-> "", description |-> ""]],
+    nodes_added = 0,
+    remaining   = Records;
+
+define
+
+    RESOURCE == "RESOURCE"
+
+    RecordUUIDs == { r.uuid : r \in Records }
+
+    TypeOK ==
+        /\ nodes_added >= 0
+        /\ \A u \in DOMAIN dag_nodes : dag_nodes[u].kind = RESOURCE
+
+    OnlyResourceKinds ==
+        \A u \in DOMAIN dag_nodes : dag_nodes[u].kind = RESOURCE
+
+    NodesAddedMatchesDomainSize ==
+        nodes_added = Cardinality(DOMAIN dag_nodes)
+
+    UUIDDomainSubsetOfRecords ==
+        DOMAIN dag_nodes \subseteq RecordUUIDs
+
+    IdempotentUpsert ==
+        \A r \in Records \ remaining :
+            /\ r.uuid \in DOMAIN dag_nodes
+            /\ dag_nodes[r.uuid].kind = RESOURCE
+
+    TerminalCorrectness ==
+        remaining = {} =>
+            /\ nodes_added = Cardinality(Records)
+            /\ DOMAIN dag_nodes = RecordUUIDs
+            /\ \A r \in Records :
+                /\ r.uuid \in DOMAIN dag_nodes
+                /\ dag_nodes[r.uuid].kind = RESOURCE
+            /\ Cardinality(DOMAIN dag_nodes) = Cardinality(Records)
+
+end define;
+
+fair process bridge = "bridge"
+begin
+    ProcessRecords:
+        while remaining /= {} do
+            with rec \in remaining do
+                dag_nodes   := dag_nodes @@ (rec.uuid :>
+                                    [ kind        |-> RESOURCE,
+                                      name        |-> rec.name,
+                                      description |-> rec.operational_claim ]);
+                nodes_added := nodes_added + 1;
+                remaining   := remaining \ {rec};
+            end with;
+        end while;
+    Finish:
+        assert nodes_added = Cardinality(Records);
+        assert DOMAIN dag_nodes = RecordUUIDs;
+        assert \A r \in Records :
+                   r.uuid \in DOMAIN dag_nodes /\
+                   dag_nodes[r.uuid].kind = RESOURCE;
+        assert Cardinality(DOMAIN dag_nodes) = Cardinality(Records);
+end process;
+
+end algorithm; *)
+
+TypeOKInv              == TypeOK
+OnlyResourceKindsInv   == OnlyResourceKinds
+CountMatchesDomainInv  == NodesAddedMatchesDomainSize
+UUIDDomainSubsetInv    == UUIDDomainSubsetOfRecords
+IdempotentUpsertInv    == IdempotentUpsert
+TerminalCorrectnessInv == TerminalCorrectness
+
+====

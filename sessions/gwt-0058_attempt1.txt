@@ -1,0 +1,170 @@
+---- MODULE typescript_profile_condition_compile ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+Tokens == <<
+    [tla |-> "In",       ts |-> "includes"],
+    [tla |-> "And",      ts |-> "ampamp"],
+    [tla |-> "Or",       ts |-> "pipepipe"],
+    [tla |-> "Eq",       ts |-> "tripleEq"],
+    [tla |-> "Neq",      ts |-> "bangEqEq"],
+    [tla |-> "ForAll",   ts |-> "every"],
+    [tla |-> "Exists",   ts |-> "some"],
+    [tla |-> "Len",      ts |-> "length"],
+    [tla |-> "Card",     ts |-> "size"],
+    [tla |-> "BoolT",    ts |-> "true"],
+    [tla |-> "BoolF",    ts |-> "false"]
+>>
+N == 11
+
+(* --algorithm TSConditionCompile
+
+variables
+    cursor    = 1,
+    results   = {},
+    has_error = FALSE;
+
+define
+    AllMapped ==
+        cursor > N =>
+            \A k \in 1..N :
+                \E r \in results :
+                    /\ r.tla_op = Tokens[k].tla
+                    /\ r.ts_op  = Tokens[k].ts
+
+    StrictEquality ==
+        \A r \in results :
+            r.tla_op = "Eq" => r.ts_op = "tripleEq"
+
+    StrictInequality ==
+        \A r \in results :
+            r.tla_op = "Neq" => r.ts_op = "bangEqEq"
+
+    SetMembershipMapped ==
+        \A r \in results :
+            r.tla_op = "In" => r.ts_op = "includes"
+
+    ForAllMapped ==
+        \A r \in results :
+            r.tla_op = "ForAll" => r.ts_op = "every"
+
+    ExistsMapped ==
+        \A r \in results :
+            r.tla_op = "Exists" => r.ts_op = "some"
+
+    NoError == ~has_error
+
+    ResultsGrow ==
+        cursor > 1 => Cardinality(results) = cursor - 1
+
+end define;
+
+process compiler = "compiler"
+begin
+    CompileLoop:
+        while cursor <= N do
+            ProcessToken:
+                results := results \cup
+                    {[tla_op |-> Tokens[cursor].tla,
+                      ts_op  |-> Tokens[cursor].ts]};
+            Advance:
+                cursor := cursor + 1;
+        end while;
+    Finish:
+        assert AllMapped;
+        assert StrictEquality;
+        assert StrictInequality;
+        assert SetMembershipMapped;
+        assert ForAllMapped;
+        assert ExistsMapped;
+        assert NoError;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE typescript_profile_condition_compile ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+Tokens == <<
+    [tla |-> "In",       ts |-> "includes"],
+    [tla |-> "And",      ts |-> "ampamp"],
+    [tla |-> "Or",       ts |-> "pipepipe"],
+    [tla |-> "Eq",       ts |-> "tripleEq"],
+    [tla |-> "Neq",      ts |-> "bangEqEq"],
+    [tla |-> "ForAll",   ts |-> "every"],
+    [tla |-> "Exists",   ts |-> "some"],
+    [tla |-> "Len",      ts |-> "length"],
+    [tla |-> "Card",     ts |-> "size"],
+    [tla |-> "BoolT",    ts |-> "true"],
+    [tla |-> "BoolF",    ts |-> "false"]
+>>
+N == 11
+
+(* --algorithm TSConditionCompile
+
+variables
+    cursor    = 1,
+    results   = {},
+    has_error = FALSE;
+
+define
+    AllMapped ==
+        cursor > N =>
+            \A k \in 1..N :
+                \E r \in results :
+                    /\ r.tla_op = Tokens[k].tla
+                    /\ r.ts_op  = Tokens[k].ts
+
+    StrictEquality ==
+        \A r \in results :
+            r.tla_op = "Eq" => r.ts_op = "tripleEq"
+
+    StrictInequality ==
+        \A r \in results :
+            r.tla_op = "Neq" => r.ts_op = "bangEqEq"
+
+    SetMembershipMapped ==
+        \A r \in results :
+            r.tla_op = "In" => r.ts_op = "includes"
+
+    ForAllMapped ==
+        \A r \in results :
+            r.tla_op = "ForAll" => r.ts_op = "every"
+
+    ExistsMapped ==
+        \A r \in results :
+            r.tla_op = "Exists" => r.ts_op = "some"
+
+    NoError == ~has_error
+
+    ResultsGrow ==
+        cursor > 1 => Cardinality(results) = cursor - 1
+
+end define;
+
+process compiler = "compiler"
+begin
+    CompileLoop:
+        while cursor <= N do
+            ProcessToken:
+                results := results \cup
+                    {[tla_op |-> Tokens[cursor].tla,
+                      ts_op  |-> Tokens[cursor].ts]};
+            Advance:
+                cursor := cursor + 1;
+        end while;
+    Finish:
+        assert AllMapped;
+        assert StrictEquality;
+        assert StrictInequality;
+        assert SetMembershipMapped;
+        assert ForAllMapped;
+        assert ExistsMapped;
+        assert NoError;
+end process;
+
+end algorithm; *)
+
+====

@@ -1,4 +1,232 @@
-#!Notes
+#! Notes
+
+
+# IN:DO:OUT ERRORS
+---                                                                                    
+  What CW9 captures today                                         
+                                                                                         
+  The toolchain has three layers of traceability:                                        
+                                                                                         
+  1. cw9 ingest → crawl.db + dag.json: Function-level catalog with UUIDs, descriptions,  
+  and calls edges between functions. The DAG knows that handleToolCall calls             
+  processSpreadsheet, but the edges carry no payload — just {from, to, edge_type:        
+  "calls"}. No argument information.                              
+  2. cw9 simulate → TLA+ specs + traces: Each GWT is a self-contained state machine.
+  gwt-0125's ProcessUploadedFileState actually has a filename field (required, type      
+  String, default "none") — the formal model knows filename matters. But gwt-0124's
+  AgentConfigFileUploadToolsState has no filename concept at all. The two specs live in  
+  separate universes.                                             
+  3. Bridge artifacts: Map TLA+ operations to code concepts. Operations have empty
+  parameters: {} — they describe what an operation does ("Action DetermineStrategy from  
+  ProcessUploadedFile spec") but not what data flows in or out.
+                                                                                         
+  The structural gap                                                                     
+  
+  CW9 verifies vertical contracts (each function meets its own spec) but not horizontal  
+  contracts (the seam between two functions preserves data flow). Specifically:
+                                                                                         
+  - The DAG has the edge handleToolCall → processSpreadsheet but doesn't record which    
+  arguments are passed.
+  - gwt-0125's TLA+ spec models filename as a required state variable, but gwt-0124 (the 
+  caller) has no corresponding variable. The model checker can't find the mismatch       
+  because it never composes the two specs.
+  - Bridge operations have parameters: {} — a blank map — even though the TLA+ spec has  
+  rich state fields. The bridge erases the data flow information the spec already        
+  contains.
+                                                                                         
+  This is the same pattern across all four bugs: CW9 knows A calls B, and independently  
+  specifies what A and B do, but never verifies that A's output satisfies B's input 
+  contract.                                                                              
+                                                                  
+  Proposed modifications
+
+  Tier 1: cw9 seams — Static call-site argument checking (catches Bug 4)                 
+  
+  What it does: New command that cross-references crawl.db call edges with the callee's  
+  parameter signature to find missing arguments.                  
+                                                                                         
+  How it works:                                                                          
+  1. cw9 ingest already parses the AST. Extend it to extract, for each calls edge, the
+  argument names/keys at the call site (for JS object destructuring, this is             
+  straightforward — processSpreadsheet({ buffer, mode }) → ["buffer", "mode"]).
+  2. Store these on the edge: {from, to, edge_type: "calls", args_passed: ["buffer",     
+  "mode"], call_line: 309}.                                                          
+  3. cw9 seams compares args_passed against the callee's parameter destructuring to      
+  produce a diff:
+                                                                                         
+  $ cw9 seams .                                                   
+  SEAM handleToolCall:309 → processSpreadsheet                                           
+    args_passed:  [buffer, mode]                                                         
+    args_expected: [buffer, mode, projectId, uploadId, batchIds, options, filename,      
+  userId]                                                                                
+    MISSING:      [projectId, uploadId, batchIds, options, filename, userId]             
+    ⚠ filename has fallback default (filename || '.xlsx') — silent degradation risk      
+                                                                                         
+  SEAM handleToolCall:371 → processSpreadsheet                                           
+    args_passed:  [buffer, mode, projectId, uploadId, options]                           
+    args_expected: [buffer, mode, projectId, uploadId, batchIds, options, filename,      
+  userId]                                                                                
+    MISSING:      [batchIds, filename, userId]                                           
+    ⚠ filename has fallback default (filename || '.xlsx') — silent degradation risk      
+                                                                                         
+  Key insight: The ⚠ fallback default detection is critical. filename || '.xlsx' silently
+   masks the bug — tests pass, the code runs, but the wrong parser is selected. cw9 seams
+   should flag any missing argument where the callee uses a default/fallback, because    
+  those are the most dangerous seams — they don't crash, they quietly misbehave.
+
+  Implementation cost: Low. The AST parsing infrastructure already exists in cw9 ingest. 
+  This is mostly a new traversal pass over existing data.
+                                                                                         
+  Tier 2: Bridge ports — Carry data flow through the bridge (catches Bugs 1, 4)          
+  
+  What it does: Extend bridge artifacts with ports that declare what data crosses the    
+  boundary between two GWTs.                                      
+                                                                                         
+  Current state: Bridge operations have parameters: {}. This erases the information      
+  that's already in the TLA+ spec. gwt-0125's spec knows filename is required, but the
+  bridge for gwt-0125's ReceiveToolCall operation says nothing about what must be        
+  provided.                                                       
+
+  Proposed: When cw9 bridge generates artifacts from a TLA+ spec, it should also generate
+   inbound port declarations from the spec's Init state, and outbound port declarations
+  from the spec's terminal state:                                                        
+                                                                  
+  {                                                                                      
+    "operations": {
+      "ReceiveToolCall": {                                                               
+        "parameters": {},                                         
+        "inbound_port": {                                                                
+          "required_from_caller": {                               
+            "upload_id": { "source_field": "upload_id", "default": "none", "type":       
+  "String" },                                                                            
+            "filename":  { "source_field": "filename",  "default": "none", "type":       
+  "String" },                                                                            
+            "mimetype":  { "source_field": "mimetype",  "default": "none", "type":
+  "String" }                                                                             
+          }                                                       
+        }                                                                                
+      }                                                                                  
+    }                                                                                    
+  }                                                                                      
+                                                                  
+  Then cw9 verify checks: for every calls edge in the DAG where the callee has an inbound
+   port, does the caller actually provide those fields? This is the bridge-level version
+  of cw9 seams — it works even when the call site isn't a simple function call (e.g.,    
+  when data flows through a shared context object or through the Anthropic API's messages
+   array).
+
+  For Bug 1 specifically: The "caller" is the route handler building the messages array, 
+  and the "callee" is the Anthropic API (which requires upload context in the message
+  text for the LLM to know the ID). This isn't a function call — it's a semantic         
+  contract. Port declarations would let you express: "the LLM process requires upload_id
+  values in the conversational context, not just in the tool schema."
+
+  Implementation cost: Medium. Requires extending the bridge generator and adding a new  
+  verification pass.
+                                                                                         
+  Tier 3: cw9 compose — Multi-turn session lifecycle specs (catches Bugs 2, 3)           
+  
+  What it does: Generates composed TLA+ specs that model state across request boundaries.
+                                                                  
+  The problem: Bugs 2 and 3 aren't call-boundary bugs — they're temporal seam bugs. The  
+  state machine doesn't end when the function returns; it ends when the session ends. But
+   each GWT models a single request in isolation.                                        
+                                                                  
+  Proposed: A new spec type, session specs, that model the full lifecycle:               
+  
+  (* Session-level spec: composes Turn1 and Turn2 *)                                     
+  VARIABLES session_messages, turn_number, upload_tools_active                           
+                                                                                         
+  Init ==                                                                                
+    /\ session_messages = <<>>                                                           
+    /\ turn_number = 0                                                                   
+    /\ upload_tools_active = FALSE                                                       
+                                                                                         
+  Turn1_Upload ==                                                                        
+    /\ turn_number = 0                                            
+    /\ (* user uploads file, agent calls process_uploaded_file *)
+    /\ session_messages' = Append(session_messages,                                      
+         [role |-> "assistant", content |-> {tool_use_block}])                           
+    /\ session_messages' = Append(session_messages',                                     
+         [role |-> "user", content |-> {tool_result_block}])                             
+    /\ upload_tools_active' = TRUE                                                       
+    /\ turn_number' = 1                                                                  
+                                                                                         
+  Turn2_FollowUp ==                                                                      
+    /\ turn_number = 1                                            
+    /\ (* user sends text-only follow-up *)                                              
+    /\ (* INVARIANT: upload_tools_active must still be TRUE *)                           
+    /\ (* INVARIANT: session_messages must contain tool_use/tool_result from Turn1 *)    
+                                                                                         
+  SessionInvariant ==                                                                    
+    /\ (upload_tools_active => \E m \in session_messages : m.content has tool_use)       
+    /\ (turn_number > 0 => Len(session_messages) > 0)                                    
+                                                                                         
+  How cw9 compose works:                                                                 
+  1. Detect "session-shaped" functions: those that call both getChatSessionById (load    
+  state) and appendMessage (persist state). This is a reliable heuristic — it appears in 
+  agent.js and nowhere else.                                                            
+  2. For each session-shaped function, identify the state that flows through the database
+   between turns (the messages array).                                                   
+  3. Auto-generate a session spec that models two sequential invocations of the function,
+   with the database as the shared medium.                                               
+  4. Run the model checker on the composed spec. It will find:                           
+    - Bug 2: Turn1's tool_use/tool_result blocks aren't in session_messages after Turn1
+  completes (persistence gap).                                                           
+    - Bug 3: Turn2's upload_tools_active is FALSE because uploadIds is re-derived from   
+  request body, not from session state.                                                  
+                                                                                         
+  Implementation cost: High. Requires composing TLA+ specs, which means understanding the
+   schema of the shared state (the messages array) well enough to generate the inter-turn
+   transitions. But this is also the only mechanism that would have caught Bugs 2 and 3
+  before they shipped.                                                                   
+                                                                  
+  Tier 4: cw9 plan enhancement — Auto-detect when session specs are needed               
+  
+  What it does: During cw9 plan (or cw9 research), when generating GWTs for a function,  
+  automatically detect session-shaped patterns and emit a warning + suggested session
+  GWTs.                                                                                  
+                                                                  
+  Heuristic: If the function being planned:                                              
+  - Loads state from a persistent store (DB query at the start)
+  - Mutates that state (writes at the end)                                               
+  - The GWTs only specify single-invocation behavior              
+                                                                                         
+  Then emit:                                                                             
+  ⚠ Session lifecycle gap detected:
+    handleToolCall loads session via getChatSessionById and persists via appendMessage.  
+    No GWT specifies cross-turn invariants.                                              
+    Suggested GWTs:                                                                      
+    - gwt-XXXX: "Given Turn1 used tool_use, when Turn2 loads session, then messages      
+  include tool_use/tool_result"                                                          
+    - gwt-XXXY: "Given Turn1 activated upload tools, when Turn2 has no upload_ids, then  
+  upload tools still available"                                                        
+                                                                                         
+  This is the cheapest intervention with the highest leverage — it doesn't require
+  composing TLA+ specs, it just flags the gap at planning time so the human (or the      
+  implementing agent) knows to write the cross-turn tests.        
+                                                                                         
+  ---                                                                                    
+  Priority order
+                                                                                         
+  ┌──────┬────────────────────────┬───────────────────────┬────────┬────────────────┐ 
+  │ Tier │          What          │        Catches        │ Effort │      ROI       │    
+  ├──────┼────────────────────────┼───────────────────────┼────────┼────────────────┤    
+  │ 4    │ cw9 plan session-gap   │ Bugs 2, 3 (at         │ Low    │ Highest        │    
+  │      │ detection              │ planning time)        │        │                │    
+  ├──────┼────────────────────────┼───────────────────────┼────────┼────────────────┤    
+  │ 1    │ cw9 seams call-site    │ Bug 4                 │ Low    │ High           │ 
+  │      │ args                   │                       │        │                │    
+  ├──────┼────────────────────────┼───────────────────────┼────────┼────────────────┤ 
+  │ 2    │ Bridge ports           │ Bugs 1, 4             │ Medium │ Medium         │    
+  ├──────┼────────────────────────┼───────────────────────┼────────┼────────────────┤
+  │ 3    │ cw9 compose session    │ Bugs 2, 3 (formally)  │ High   │ High but       │    
+  │      │ specs                  │                       │        │ expensive      │
+  └──────┴────────────────────────┴───────────────────────┴────────┴────────────────┘    
+                                                                  
+  Tier 4 and Tier 1 together cover all four bug classes at low cost and would have       
+  flagged every one of these issues before implementation. Tiers 2-3 make the catches
+  formal and automatic rather than advisory.            
 
 # Database writes
   Root Cause

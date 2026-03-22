@@ -1,0 +1,190 @@
+---- MODULE scanner_python_line_ranges ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+CONSTANTS
+    Lines,
+    MaxLines
+
+LineTypeSet == {"Empty", "Comment", "Def", "AsyncDef", "Continuation", "Other"}
+
+ASSUME MaxLines >= 1
+
+(* --algorithm ScannerPythonLineRanges
+
+variables
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0,
+    sig_name  = "",
+    sig_async = FALSE;
+
+define
+
+    TypeOK ==
+        /\ i \in 1..(MaxLines + 1)
+        /\ in_sig \in BOOLEAN
+        /\ sig_start \in 0..MaxLines
+
+    OneIndexed ==
+        \A s \in skeletons : s.line_num >= 1
+
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= Len(Lines)
+            /\ Lines[s.line_num].name  = s.func_name
+            /\ Lines[s.line_num].ltype \in {"Def", "AsyncDef"}
+
+    MultiLineStable ==
+        \A s \in skeletons :
+            Lines[s.line_num].ltype \in {"Def", "AsyncDef"}
+
+    NoGaps ==
+        (i > Len(Lines) /\ ~in_sig) =>
+            (\A k \in 1..Len(Lines) :
+                Lines[k].ltype \in {"Def", "AsyncDef"} =>
+                    \E s \in skeletons : s.line_num = k)
+
+    SigStartValid ==
+        in_sig =>
+            ( /\ sig_start >= 1
+              /\ sig_start <= Len(Lines)
+              /\ Lines[sig_start].ltype \in {"Def", "AsyncDef"} )
+
+    CursorBounded == i <= Len(Lines) + 1
+
+end define;
+
+fair process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= Len(Lines) do
+            ProcessLine:
+                if Lines[i].ltype \in {"Def", "AsyncDef"} /\ ~in_sig then
+                    sig_start := i;
+                    sig_name  := Lines[i].name;
+                    sig_async := (Lines[i].ltype = "AsyncDef");
+                    if Lines[i].has_continuation then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup
+                            {[ func_name |-> sig_name,
+                               line_num  |-> sig_start,
+                               is_async  |-> sig_async ]};
+                    end if;
+                elsif in_sig then
+                    if ~Lines[i].has_continuation then
+                        skeletons := skeletons \cup
+                            {[ func_name |-> sig_name,
+                               line_num  |-> sig_start,
+                               is_async  |-> sig_async ]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE scanner_python_line_ranges ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+CONSTANTS
+    Lines,
+    MaxLines
+
+LineTypeSet == {"Empty", "Comment", "Def", "AsyncDef", "Continuation", "Other"}
+
+ASSUME MaxLines >= 1
+
+(* --algorithm ScannerPythonLineRanges
+
+variables
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0,
+    sig_name  = "",
+    sig_async = FALSE;
+
+define
+
+    TypeOK ==
+        /\ i \in 1..(MaxLines + 1)
+        /\ in_sig \in BOOLEAN
+        /\ sig_start \in 0..MaxLines
+
+    OneIndexed ==
+        \A s \in skeletons : s.line_num >= 1
+
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= Len(Lines)
+            /\ Lines[s.line_num].name  = s.func_name
+            /\ Lines[s.line_num].ltype \in {"Def", "AsyncDef"}
+
+    MultiLineStable ==
+        \A s \in skeletons :
+            Lines[s.line_num].ltype \in {"Def", "AsyncDef"}
+
+    NoGaps ==
+        (i > Len(Lines) /\ ~in_sig) =>
+            (\A k \in 1..Len(Lines) :
+                Lines[k].ltype \in {"Def", "AsyncDef"} =>
+                    \E s \in skeletons : s.line_num = k)
+
+    SigStartValid ==
+        in_sig =>
+            ( /\ sig_start >= 1
+              /\ sig_start <= Len(Lines)
+              /\ Lines[sig_start].ltype \in {"Def", "AsyncDef"} )
+
+    CursorBounded == i <= Len(Lines) + 1
+
+end define;
+
+fair process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= Len(Lines) do
+            ProcessLine:
+                if Lines[i].ltype \in {"Def", "AsyncDef"} /\ ~in_sig then
+                    sig_start := i;
+                    sig_name  := Lines[i].name;
+                    sig_async := (Lines[i].ltype = "AsyncDef");
+                    if Lines[i].has_continuation then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup
+                            {[ func_name |-> sig_name,
+                               line_num  |-> sig_start,
+                               is_async  |-> sig_async ]};
+                    end if;
+                elsif in_sig then
+                    if ~Lines[i].has_continuation then
+                        skeletons := skeletons \cup
+                            {[ func_name |-> sig_name,
+                               line_num  |-> sig_start,
+                               is_async  |-> sig_async ]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

@@ -1,6 +1,6 @@
-# CW9 Plan Review
+# CW9 Plan Review (Self-Hosting)
 
-Review a CW9 TDD plan BEFORE implementation, validating pipeline artifacts, UUID bindings, test-to-verifier mappings, and status consistency.
+Review a CW9 TDD plan BEFORE implementation, validating pipeline artifacts, test-to-verifier mappings, and status consistency. This is the self-hosting variant — artifacts live at CW9's own paths, not `.cw9/`.
 
 Use Haiku subagents for file searches, grep, ripgrep and other file tasks.
 Use up to 10 Sonnet subagents for researching files, codepaths, and getting line numbers.
@@ -10,7 +10,19 @@ Have subagents write to file to save the main context window.
 
 ## Arguments
 
-$ARGUMENTS = path to CW9 TDD plan. If not provided, search `thoughts/searchable/shared/plans/` for recent `*cw9*` plans.
+$ARGUMENTS = path to CW9 TDD plan. If not provided, search `thoughts/searchable/shared/plans/` for recent plans.
+
+## Self-Hosting Artifact Paths
+
+| Artifact | Path |
+|---|---|
+| Verified specs | `templates/pluscal/instances/<gwt-id>.tla` |
+| Spec configs | `templates/pluscal/instances/<gwt-id>.cfg` |
+| Simulation traces | `templates/pluscal/instances/<gwt-id>_sim_traces.json` |
+| Bridge artifacts | `python/tests/generated/<gwt-id>_bridge_artifacts.json` |
+| Generated tests | `python/tests/generated/test_<gwt-id>.py` |
+| Context files | `.cw9/context/<gwt-id>.md` |
+| Self-hosting DAG | `dag.json` (repo root) |
 
 ## Process
 
@@ -18,21 +30,18 @@ $ARGUMENTS = path to CW9 TDD plan. If not provided, search `thoughts/searchable/
 
 1. **Read the plan FULLY** — no partial reads
 2. **Read the research document** referenced in the plan's frontmatter
-3. **Identify the CW9 project path** from the plan's `cw9_project` field
-4. **Extract all GWT IDs** referenced in the plan (gwt-NNNN)
-5. **Extract all UUIDs** referenced in `depends_on` fields
+3. **Extract all GWT IDs** referenced in the plan (gwt-NNNN)
+4. **Check GWT ID range** — self-hosting IDs gwt-0001..0063 are allocated. New work should be gwt-0064+
 
 ### Step 2: Artifact Existence Check
 
-Run these checks via bash. Every referenced artifact must exist on disk.
+Every referenced artifact must exist on disk at the **self-hosting paths**:
 
 ```bash
-PROJECT="<cw9_project path>"
-
 # For each gwt-id in the plan:
-ls "$PROJECT/.cw9/specs/gwt-NNNN.tla"                    # verified spec
-ls "$PROJECT/.cw9/specs/gwt-NNNN_sim_traces.json"         # simulation traces
-ls "$PROJECT/.cw9/bridge/gwt-NNNN_bridge_artifacts.json"  # bridge artifacts
+ls templates/pluscal/instances/gwt-NNNN.tla                           # verified spec
+ls templates/pluscal/instances/gwt-NNNN_sim_traces.json               # simulation traces
+ls python/tests/generated/gwt-NNNN_bridge_artifacts.json              # bridge artifacts
 ```
 
 For each GWT, record:
@@ -42,41 +51,37 @@ For each GWT, record:
 
 **Flag any GWT the plan references where artifacts are missing.** If the plan says "verified" but the file doesn't exist, that's critical.
 
+**Path mismatch flag**: If the plan references `.cw9/specs/` or `.cw9/bridge/` paths, the plan was written with external-repo paths. Flag this as a cosmetic issue — the CLI routes correctly, but the plan's path references are misleading.
+
 ### Step 3: Status Consistency Check
 
-The plan may contain status claims like "verified, pass", "pending", "blocked by crawl". Cross-reference against actual artifacts:
+Cross-reference plan claims against actual artifacts:
 
-- If `.cw9/specs/gwt-NNNN.tla` exists → the GWT is verified (regardless of what the plan text says)
-- If the plan says "pending" or "blocked" but the artifact exists → **stale status** — flag it
-- If the plan says "verified" but the artifact is missing → **false claim** — flag it as critical
+- If `templates/pluscal/instances/gwt-NNNN.tla` exists → the GWT is verified
+- If the plan says "pending" but the artifact exists → **stale status** — flag it
+- If the plan says "verified" but the artifact is missing → **false claim** — flag as critical
 
-Also check the plan's frontmatter `status` field. If all GWTs are verified and all artifacts exist, the plan should be `review` or `approved`, not `draft`.
+### Step 4: Context File Check
 
-### Step 4: UUID Validity Check
-
-Every `depends_on` UUID in the plan must exist in crawl.db:
+For each GWT, verify the context file exists and has a Test Interface section:
 
 ```bash
-# Collect all UUIDs from the plan (short or full form)
-# Then verify each one:
-sqlite3 "$PROJECT/.cw9/crawl.db" \
-  "SELECT uuid, function_name, file_path FROM records WHERE uuid LIKE 'UUID_PREFIX%';"
+ls .cw9/context/gwt-NNNN.md
+# Check for Test Interface section:
+grep -l "## Test Interface" .cw9/context/gwt-NNNN.md
 ```
 
-For each UUID, verify:
-- Record exists in crawl.db?
-- Function name matches what the plan says?
-- File path matches what the plan says?
-- Is the record a skeleton or fully extracted? (`do_description = 'SKELETON_ONLY'` vs real content)
-
-**Flag any UUID that doesn't exist or points to the wrong function.**
+Flag:
+- Missing context file → test gen will hallucinate (~60% failure rate)
+- Context file without Test Interface section → same problem
+- Test Interface with wrong import paths → check against actual `python/registry/` modules
 
 ### Step 5: Bridge Artifact Validation
 
 For each GWT with bridge artifacts, read the JSON and cross-reference against the plan:
 
 ```bash
-cat "$PROJECT/.cw9/bridge/gwt-NNNN_bridge_artifacts.json" | python3 -m json.tool
+cat python/tests/generated/gwt-NNNN_bridge_artifacts.json | python3 -m json.tool
 ```
 
 Check:
@@ -95,69 +100,54 @@ For each implementation step, check that the test assertions map to bridge verif
 2. **Read the test code** in the plan's Red phase
 3. **Check coverage**: Does each verifier have a corresponding test assertion?
 
-Common patterns:
-- `AtMostOneBAMLCall` → `expect(mock).toHaveBeenCalledTimes(1)`
-- `PromptContainsCandidateData` → `expect(prompt).toContain('...')`
-- `OnDoneNotCalledOnError` → `expect(onDone).not.toHaveBeenCalled()`
-- `ToolCallsAlwaysEmpty` → `expect(result.toolCalls).toEqual([])`
-
-**Flag any verifier that has no corresponding test assertion.** These are formally verified invariants that the tests don't check.
+**Flag any verifier that has no corresponding test assertion.** These are formally verified invariants the tests don't check.
 
 ### Step 7: Simulation Trace Coverage
 
 Read the simulation traces for each GWT:
 
 ```bash
-cat "$PROJECT/.cw9/specs/gwt-NNNN_sim_traces.json" | python3 -m json.tool | head -200
+cat templates/pluscal/instances/gwt-NNNN_sim_traces.json | python3 -m json.tool | head -200
 ```
 
 Check:
-1. **Happy path covered**: Is there at least one test that follows the happy-path trace (all steps succeed)?
-2. **Error paths covered**: Do the traces include failure scenarios? Are those tested?
-3. **Edge cases from traces**: Do any traces show interesting state transitions (retries, partial progress, abort) that aren't in the plan's tests?
+1. **Happy path covered**: At least one test following the happy-path trace?
+2. **Error paths covered**: Traces with failure scenarios tested?
+3. **Edge cases from traces**: Interesting state transitions not in the plan's tests?
 
-**Flag any trace pattern that has no corresponding test in the plan.**
+**Flag any trace pattern with no corresponding test.**
 
 ### Step 8: TLA+ Invariant Review
 
 Read the verified spec's `define` block:
 
 ```bash
-# Extract the define block from the verified spec
-cat "$PROJECT/.cw9/specs/gwt-NNNN.tla"
+cat templates/pluscal/instances/gwt-NNNN.tla
 ```
 
-The `define` block contains invariants that TLC proved hold for ALL reachable states. Check:
-1. **Are all invariants reflected in tests?** Each invariant is a formally verified property — it should map to at least one test assertion.
-2. **Helper predicates vs invariants**: If the spec has predicates that are used inside other invariants (not standalone invariants themselves), they don't need their own test — but make sure the containing invariant is tested.
-3. **Liveness properties**: If the spec has `THEOREM Spec => <>Property` (eventuality), is there a test that verifies the system eventually reaches that state?
+Check:
+1. **Are all invariants reflected in tests?** Each invariant is formally verified — should map to test assertions.
+2. **Helper predicates vs standalone invariants**: Helpers used inside other invariants don't need their own test.
+3. **Liveness properties**: If the spec has `THEOREM Spec => <>Property`, is there a test for eventuality?
 
-### Step 9: Dead Code and Scope Check
+### Step 9: Existing GWT Interaction Check (Self-Hosting Specific)
 
-If the plan includes a delete/refactor step:
-1. **UUID completeness**: Are all functions being deleted listed with their crawl.db UUIDs?
-2. **Caller check**: For each function being deleted, verify no remaining code calls it:
-   ```bash
-   sqlite3 "$PROJECT/.cw9/crawl.db" \
-     "SELECT r.function_name, r.file_path FROM records r JOIN ins i ON r.uuid = i.record_uuid WHERE i.source = 'internal_call' AND i.source_function = 'DELETED_FUNCTION_NAME';"
-   ```
-3. **Import cleanup**: Does the plan address removing imports for deleted functions?
+New GWTs may interact with existing verified behavior. Check:
 
-If the plan has a "What We're NOT Doing" section:
-- Verify the exclusions are consistent with the GWT `depends_on` UUIDs (i.e., excluded code shouldn't appear in depends_on)
+1. **DAG edge conflicts**: Load `dag.json` and check if new GWT nodes connect to existing ones in unexpected ways
+2. **Module overlap**: If the new GWT touches a module already covered by existing GWTs (gwt-0001..0063), verify the new behavior is additive, not contradictory
+3. **Import path conflicts**: New generated tests shouldn't import from modules that existing tests already cover differently
 
 ### Step 10: Generate Review Report
 
-Write to: `thoughts/searchable/shared/plans/YYYY-MM-DD-description-REVIEW.md` (same name as plan + `-REVIEW`)
-
-Use this structure:
+Write to: `thoughts/searchable/shared/plans/YYYY-MM-DD-description-REVIEW.md`
 
 ````markdown
 ---
 date: [ISO timestamp]
 researcher: [name]
 topic: "[Plan Name] — CW9 Review"
-tags: [review, cw9, relevant-tags]
+tags: [review, cw9, self-hosting, relevant-tags]
 status: complete
 reviewed_plan: [path to plan]
 ---
@@ -170,24 +160,27 @@ reviewed_plan: [path to plan]
 |-------|--------|--------|
 | Artifact existence | pass/fail | N |
 | Status consistency | pass/fail | N |
-| UUID validity | pass/fail | N |
+| Context file quality | pass/fail | N |
 | Bridge artifact match | pass/fail | N |
 | Test-to-verifier mapping | pass/fail | N gaps |
 | Simulation trace coverage | pass/fail | N gaps |
 | TLA+ invariant coverage | pass/fail | N gaps |
-| Dead code / scope | pass/fail | N |
+| Existing GWT interaction | pass/fail | N |
+| Path correctness | pass/fail | N (wrong path references?) |
 
 ## Pipeline Artifact Status
 
-| GWT | Spec | Traces | Bridge | Plan Says | Actual |
-|-----|------|--------|--------|-----------|--------|
-| gwt-NNNN | exists/missing | exists/missing | exists/missing | verified/pending | verified/missing |
+| GWT | Spec | Traces | Bridge | Context | Plan Says | Actual |
+|-----|------|--------|--------|---------|-----------|--------|
+| gwt-NNNN | exists/missing | exists/missing | exists/missing | exists/missing | verified/pending | verified/missing |
 
-## UUID Validity
+Note: Self-hosting paths used — spec at `templates/pluscal/instances/`, bridge at `python/tests/generated/`
 
-| UUID (short) | Plan Says | crawl.db Says | Match? |
-|---|---|---|---|
-| `c1164b77` | buildSystemPrompt @ chatAgentService.js:20 | [actual] | yes/no |
+## Context File Quality
+
+| GWT | File Exists | Test Interface | Import Paths Correct |
+|-----|------------|----------------|---------------------|
+| gwt-NNNN | yes/no | yes/no | yes/no |
 
 ## Verifier Coverage
 
@@ -195,8 +188,7 @@ reviewed_plan: [path to plan]
 
 | Verifier | Test Assertion | Covered? |
 |----------|---------------|----------|
-| AtMostOneBAMLCall | `expect(mock).toHaveBeenCalledTimes(1)` | yes |
-| PromptContainsCandidateData | `expect(prompt).toContain('Alice')` | yes |
+| VerifierName | `assert result.field == value` | yes |
 | [MissingVerifier] | — | **NO** |
 
 ## Trace Coverage
@@ -205,19 +197,15 @@ reviewed_plan: [path to plan]
 
 | Trace Pattern | Test? | Notes |
 |---|---|---|
-| Happy path (all succeed) | yes | Step 2 main test |
-| Error during streaming | yes | Step 3 error test |
+| Happy path | yes | Step N main test |
+| Error path | yes | Step N error test |
 | [Uncovered pattern] | **NO** | Trace shows [description] |
 
-## TLA+ Invariant Coverage
+## Existing GWT Interactions
 
-### gwt-NNNN: [name]
-
-| Invariant | Test? | Notes |
-|---|---|---|
-| ValidPhase | implicit | Phase transitions tested via happy/error paths |
-| CompletedImpliesAllDone | yes | onDone assertion |
-| [Uncovered invariant] | **NO** | [what it means] |
+| New GWT | Touches Module | Existing GWTs in Module | Conflict? |
+|---------|---------------|------------------------|-----------|
+| gwt-NNNN | registry/module.py | gwt-00XX, gwt-00YY | no/yes |
 
 ## Issues
 
@@ -228,12 +216,6 @@ reviewed_plan: [path to plan]
    - Fix: [recommendation]
 
 ### Warnings (should fix)
-
-1. **[Category]**: [description]
-   - Impact: [what could go wrong]
-   - Fix: [recommendation]
-
-### Cosmetic (nice to fix)
 
 1. **[Category]**: [description]
    - Fix: [recommendation]
@@ -249,14 +231,13 @@ reviewed_plan: [path to plan]
 ### Step 11: Beads
 
 - If critical issues found: `bd create --title="Plan Review: [name]" --type=task --priority=1`
-- Link to existing plan issue if one exists: `bd dep add <review-id> <plan-id>`
-- Sync: `bd dolt push && bd dolt pull`
+- Link to existing plan issue: `bd dep add <review-id> <plan-id>`
 
 ## Guidelines
 
-- **Most checks are automatable.** Use bash + sqlite3 + file existence checks before doing manual analysis. Don't eyeball what you can verify programmatically.
-- **Bridge verifiers are the gold standard.** Every verifier in the bridge artifacts represents a formally verified invariant. If a test doesn't check it, that's a real gap.
-- **Stale status is common.** Plans are often written while the pipeline is still running. Status claims go stale fast. Always check the actual artifacts.
-- **Short UUIDs are fine.** The plan may use 8-char UUID prefixes (`c1164b77`). Use `LIKE 'prefix%'` in sqlite3 to match.
-- **Simulation traces reveal edge cases the plan author may have missed.** Read at least the first 3 traces for each GWT to see if there are interesting execution paths not covered by tests.
-- **The TLA+ define block is the strongest signal.** If an invariant is in the define block of a verified spec, it holds for ALL reachable states. If no test checks it, that invariant is unguarded in the implementation.
+- **Most checks are automatable.** Use bash + file existence checks before doing manual analysis.
+- **Bridge verifiers are the gold standard.** Every verifier is a formally verified invariant.
+- **Check self-hosting paths, not `.cw9/` paths.** Specs at `templates/pluscal/instances/`, bridge at `python/tests/generated/`.
+- **Context file quality matters.** Bad Test Interface → 60% hallucination rate in gen-tests.
+- **Existing GWT interaction** is self-hosting-specific. External repos don't have 63 pre-existing verified GWTs to worry about.
+- **Test command**: `cd python && python3 -m pytest tests/ -x`

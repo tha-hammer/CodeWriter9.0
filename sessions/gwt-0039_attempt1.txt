@@ -1,0 +1,246 @@
+---- MODULE RetryPromptBuilder ----
+
+EXTENDS FiniteSets, TLC
+
+ErrorClasses == {
+    "syntax_error", "parse_error", "type_error",
+    "invariant_violation", "deadlock", "constant_mismatch",
+    "timeout", "unknown"
+}
+
+InstructionClasses == {
+    "syntax_error", "parse_error", "type_error",
+    "invariant_violation", "deadlock", "constant_mismatch"
+}
+
+PromptSectionUniverse == {
+    "initial_prompt", "retry_header", "classification",
+    "previous_output", "error_message", "counterexample",
+    "tlc_output", "closing"
+}
+
+RequiredCoreSections == {
+    "initial_prompt", "retry_header",
+    "previous_output", "error_message",
+    "tlc_output", "closing"
+}
+
+Phases == {"building", "complete"}
+
+(* --algorithm RetryPromptBuilder
+
+variables
+    error_class \in ErrorClasses,
+    has_counterexample \in {TRUE, FALSE},
+    prompt_sections = {},
+    phase = "building";
+
+define
+    HasInstruction == error_class \in InstructionClasses
+
+    TypeOK ==
+        /\ error_class \in ErrorClasses
+        /\ has_counterexample \in {TRUE, FALSE}
+        /\ prompt_sections \subseteq PromptSectionUniverse
+        /\ phase \in Phases
+
+    RequiredSectionsPresent ==
+        phase = "complete" =>
+            RequiredCoreSections \subseteq prompt_sections
+
+    InitialPromptAlwaysPresent ==
+        phase = "complete" =>
+            "initial_prompt" \in prompt_sections
+
+    PreviousOutputAlwaysPresent ==
+        phase = "complete" =>
+            "previous_output" \in prompt_sections
+
+    ClassificationIncludedWhenExpected ==
+        (phase = "complete" /\ HasInstruction) =>
+            "classification" \in prompt_sections
+
+    ClassificationOmittedWhenNoInstruction ==
+        (phase = "complete" /\ ~HasInstruction) =>
+            "classification" \notin prompt_sections
+
+    CounterexampleIncludedWhenPresent ==
+        (phase = "complete" /\ has_counterexample) =>
+            "counterexample" \in prompt_sections
+
+    CounterexampleOmittedWhenAbsent ==
+        (phase = "complete" /\ ~has_counterexample) =>
+            "counterexample" \notin prompt_sections
+
+    GWTThenCondition ==
+        (phase = "complete" /\ HasInstruction) =>
+            /\ "classification" \in prompt_sections
+            /\ "previous_output" \in prompt_sections
+            /\ "initial_prompt" \in prompt_sections
+
+    OnlyKnownSections ==
+        prompt_sections \subseteq PromptSectionUniverse
+
+end define;
+
+fair process builder = "main"
+begin
+    AddInitialPrompt:
+        prompt_sections := prompt_sections \union {"initial_prompt"};
+
+    AddRetryHeader:
+        prompt_sections := prompt_sections \union {"retry_header"};
+
+    AddClassification:
+        if HasInstruction then
+            prompt_sections := prompt_sections \union {"classification"};
+        end if;
+
+    AddPreviousOutput:
+        prompt_sections := prompt_sections \union {"previous_output"};
+
+    AddErrorMessage:
+        prompt_sections := prompt_sections \union {"error_message"};
+
+    AddCounterexample:
+        if has_counterexample then
+            prompt_sections := prompt_sections \union {"counterexample"};
+        end if;
+
+    AddTLCOutput:
+        prompt_sections := prompt_sections \union {"tlc_output"};
+
+    AddClosing:
+        prompt_sections := prompt_sections \union {"closing"};
+
+    Finish:
+        phase := "complete";
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE RetryPromptBuilder ----
+
+EXTENDS FiniteSets, TLC
+
+ErrorClasses == {
+    "syntax_error", "parse_error", "type_error",
+    "invariant_violation", "deadlock", "constant_mismatch",
+    "timeout", "unknown"
+}
+
+InstructionClasses == {
+    "syntax_error", "parse_error", "type_error",
+    "invariant_violation", "deadlock", "constant_mismatch"
+}
+
+PromptSectionUniverse == {
+    "initial_prompt", "retry_header", "classification",
+    "previous_output", "error_message", "counterexample",
+    "tlc_output", "closing"
+}
+
+RequiredCoreSections == {
+    "initial_prompt", "retry_header",
+    "previous_output", "error_message",
+    "tlc_output", "closing"
+}
+
+Phases == {"building", "complete"}
+
+(* --algorithm RetryPromptBuilder
+
+variables
+    error_class \in ErrorClasses,
+    has_counterexample \in {TRUE, FALSE},
+    prompt_sections = {},
+    phase = "building";
+
+define
+    HasInstruction == error_class \in InstructionClasses
+
+    TypeOK ==
+        /\ error_class \in ErrorClasses
+        /\ has_counterexample \in {TRUE, FALSE}
+        /\ prompt_sections \subseteq PromptSectionUniverse
+        /\ phase \in Phases
+
+    RequiredSectionsPresent ==
+        phase = "complete" =>
+            RequiredCoreSections \subseteq prompt_sections
+
+    InitialPromptAlwaysPresent ==
+        phase = "complete" =>
+            "initial_prompt" \in prompt_sections
+
+    PreviousOutputAlwaysPresent ==
+        phase = "complete" =>
+            "previous_output" \in prompt_sections
+
+    ClassificationIncludedWhenExpected ==
+        (phase = "complete" /\ HasInstruction) =>
+            "classification" \in prompt_sections
+
+    ClassificationOmittedWhenNoInstruction ==
+        (phase = "complete" /\ ~HasInstruction) =>
+            "classification" \notin prompt_sections
+
+    CounterexampleIncludedWhenPresent ==
+        (phase = "complete" /\ has_counterexample) =>
+            "counterexample" \in prompt_sections
+
+    CounterexampleOmittedWhenAbsent ==
+        (phase = "complete" /\ ~has_counterexample) =>
+            "counterexample" \notin prompt_sections
+
+    GWTThenCondition ==
+        (phase = "complete" /\ HasInstruction) =>
+            /\ "classification" \in prompt_sections
+            /\ "previous_output" \in prompt_sections
+            /\ "initial_prompt" \in prompt_sections
+
+    OnlyKnownSections ==
+        prompt_sections \subseteq PromptSectionUniverse
+
+end define;
+
+fair process builder = "main"
+begin
+    AddInitialPrompt:
+        prompt_sections := prompt_sections \union {"initial_prompt"};
+
+    AddRetryHeader:
+        prompt_sections := prompt_sections \union {"retry_header"};
+
+    AddClassification:
+        if HasInstruction then
+            prompt_sections := prompt_sections \union {"classification"};
+        end if;
+
+    AddPreviousOutput:
+        prompt_sections := prompt_sections \union {"previous_output"};
+
+    AddErrorMessage:
+        prompt_sections := prompt_sections \union {"error_message"};
+
+    AddCounterexample:
+        if has_counterexample then
+            prompt_sections := prompt_sections \union {"counterexample"};
+        end if;
+
+    AddTLCOutput:
+        prompt_sections := prompt_sections \union {"tlc_output"};
+
+    AddClosing:
+        prompt_sections := prompt_sections \union {"closing"};
+
+    Finish:
+        phase := "complete";
+
+end process;
+
+end algorithm; *)
+
+====

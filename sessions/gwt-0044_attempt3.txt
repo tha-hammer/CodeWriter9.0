@@ -1,0 +1,144 @@
+---- MODULE CrawlBridgeResourceNodes ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Uuids
+
+(* --algorithm CrawlBridgeResourceNodes
+
+variables
+    dag_nodes   = [u \in {} |-> ""],
+    nodes_added = 0,
+    remaining   = Uuids;
+
+define
+
+    RESOURCE == "RESOURCE"
+
+    TypeOK ==
+        /\ nodes_added >= 0
+        /\ \A u \in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE
+
+    OnlyResourceKinds ==
+        \A u \in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE
+
+    NodesAddedMatchesDomainSize ==
+        nodes_added = Cardinality(DOMAIN dag_nodes)
+
+    UUIDDomainSubsetOfInput ==
+        DOMAIN dag_nodes \subseteq Uuids
+
+    ProcessedNodesAreResource ==
+        \A u \in Uuids \ remaining :
+            /\ u \in DOMAIN dag_nodes
+            /\ dag_nodes[u] = RESOURCE
+
+    TerminalCorrectness ==
+        remaining = {} =>
+            /\ nodes_added = Cardinality(Uuids)
+            /\ DOMAIN dag_nodes = Uuids
+            /\ \A u \in Uuids : dag_nodes[u] = RESOURCE
+            /\ Cardinality(DOMAIN dag_nodes) = Cardinality(Uuids)
+
+end define;
+
+fair process bridge = "bridge"
+begin
+    ProcessRecords:
+        while remaining /= {} do
+            with uuid \in remaining do
+                dag_nodes   := dag_nodes @@ (uuid :> RESOURCE);
+                nodes_added := nodes_added + 1;
+                remaining   := remaining \ {uuid};
+            end with;
+        end while;
+    Finish:
+        assert nodes_added = Cardinality(Uuids);
+        assert DOMAIN dag_nodes = Uuids;
+        assert \A u \in Uuids : dag_nodes[u] = RESOURCE;
+        assert Cardinality(DOMAIN dag_nodes) = Cardinality(Uuids);
+end process;
+
+end algorithm; *)
+
+TypeOKInv                == TypeOK
+OnlyResourceKindsInv     == OnlyResourceKinds
+CountMatchesDomainInv    == NodesAddedMatchesDomainSize
+UUIDDomainSubsetInv      == UUIDDomainSubsetOfInput
+ProcessedNodesResourceInv == ProcessedNodesAreResource
+TerminalCorrectnessInv   == TerminalCorrectness
+
+====
+---- MODULE CrawlBridgeResourceNodes ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Uuids
+
+(* --algorithm CrawlBridgeResourceNodes
+
+variables
+    dag_nodes   = [u \in {} |-> ""],
+    nodes_added = 0,
+    remaining   = Uuids;
+
+define
+
+    RESOURCE == "RESOURCE"
+
+    TypeOK ==
+        /\ nodes_added >= 0
+        /\ \A u \in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE
+
+    OnlyResourceKinds ==
+        \A u \in DOMAIN dag_nodes : dag_nodes[u] = RESOURCE
+
+    NodesAddedMatchesDomainSize ==
+        nodes_added = Cardinality(DOMAIN dag_nodes)
+
+    UUIDDomainSubsetOfInput ==
+        DOMAIN dag_nodes \subseteq Uuids
+
+    ProcessedNodesAreResource ==
+        \A u \in Uuids \ remaining :
+            /\ u \in DOMAIN dag_nodes
+            /\ dag_nodes[u] = RESOURCE
+
+    TerminalCorrectness ==
+        remaining = {} =>
+            /\ nodes_added = Cardinality(Uuids)
+            /\ DOMAIN dag_nodes = Uuids
+            /\ \A u \in Uuids : dag_nodes[u] = RESOURCE
+            /\ Cardinality(DOMAIN dag_nodes) = Cardinality(Uuids)
+
+end define;
+
+fair process bridge = "bridge"
+begin
+    ProcessRecords:
+        while remaining /= {} do
+            with uuid \in remaining do
+                dag_nodes   := dag_nodes @@ (uuid :> RESOURCE);
+                nodes_added := nodes_added + 1;
+                remaining   := remaining \ {uuid};
+            end with;
+        end while;
+    Finish:
+        assert nodes_added = Cardinality(Uuids);
+        assert DOMAIN dag_nodes = Uuids;
+        assert \A u \in Uuids : dag_nodes[u] = RESOURCE;
+        assert Cardinality(DOMAIN dag_nodes) = Cardinality(Uuids);
+end process;
+
+end algorithm; *)
+
+TypeOKInv                == TypeOK
+OnlyResourceKindsInv     == OnlyResourceKinds
+CountMatchesDomainInv    == NodesAddedMatchesDomainSize
+UUIDDomainSubsetInv      == UUIDDomainSubsetOfInput
+ProcessedNodesResourceInv == ProcessedNodesAreResource
+TerminalCorrectnessInv   == TerminalCorrectness
+
+====

@@ -1,0 +1,1538 @@
+```python
+import pytest
+from retry_prompt_builder import build_retry_prompt
+from registry.dag import RegistryDag
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# ---------------------------------------------------------------------------
+# TLA+ universe constants (verbatim from verified spec)
+# ---------------------------------------------------------------------------
+
+ERROR_CLASSES = frozenset({
+    "syntax_error", "parse_error", "type_error",
+    "invariant_violation", "deadlock", "constant_mismatch",
+    "timeout", "unknown",
+})
+
+INSTRUCTION_CLASSES = frozenset({
+    "syntax_error", "parse_error", "type_error",
+    "invariant_violation", "deadlock", "constant_mismatch",
+})
+
+PROMPT_SECTION_UNIVERSE = frozenset({
+    "initial_prompt", "retry_header", "classification",
+    "previous_output", "error_message", "counterexample",
+    "tlc_output", "closing",
+})
+
+REQUIRED_CORE_SECTIONS = frozenset({
+    "initial_prompt", "retry_header",
+    "previous_output", "error_message",
+    "tlc_output", "closing",
+})
+
+# ---------------------------------------------------------------------------
+# Sentinel data: unique strings that survive round-trips through the builder
+# so we can assert presence / absence without parsing the prompt format.
+# ---------------------------------------------------------------------------
+
+_INITIAL_PROMPT = "SENTINEL_INITIAL_PROMPT_XQ9"
+_PREVIOUS_OUTPUT = "SENTINEL_PREVIOUS_OUTPUT_ZK7"
+_ERROR_MESSAGE = "SENTINEL_ERROR_MESSAGE_MW3"
+_TLC_OUTPUT = "SENTINEL_TLC_OUTPUT_VB1"
+_COUNTEREXAMPLE = "SENTINEL_COUNTEREXAMPLE_LN4"
+
+
+# ---------------------------------------------------------------------------
+# Section-detection helpers
+# These map the TLA+ `prompt_sections` set onto observable facts about the
+# returned prompt string.  Each helper answers exactly one membership query.
+# ---------------------------------------------------------------------------
+
+def _has_initial_prompt(prompt: str) -> bool:
+    return _INITIAL_PROMPT in prompt
+
+
+def _has_previous_output(prompt: str) -> bool:
+    return _PREVIOUS_OUTPUT in prompt
+
+
+def _has_error_message(prompt: str) -> bool:
+    return _ERROR_MESSAGE in prompt
+
+
+def _has_tlc_output(prompt: str) -> bool:
+    return _TLC_OUTPUT in prompt
+
+
+def _has_retry_header(prompt: str) -> bool:
+    # The retry header is always added; its presence is the one structural
+    # marker we verify by the function not raising and by the required-sections
+    # invariant rather than a single magic string.
+    return prompt is not None and len(prompt.strip()) > 0
+
+
+def _has_classification(prompt: str, error_class: str) -> bool:
+    """Classification block is present iff the error-class instruction appears."""
+    return error_class in prompt
+
+
+def _has_counterexample(prompt: str) -> bool:
+    return _COUNTEREXAMPLE in prompt
+
+
+def _detected_sections(prompt: str, error_class: str, has_counterexample: bool) -> frozenset:
+    """
+    Build the Python-side equivalent of the TLA+ `prompt_sections` set from
+    the actual prompt string returned by build_retry_prompt.
+    """
+    secs = set()
+    if _has_initial_prompt(prompt):
+        secs.add("initial_prompt")
+    if _has_retry_header(prompt):
+        secs.add("retry_header")
+    if _has_classification(prompt, error_class) and error_class in INSTRUCTION_CLASSES:
+        secs.add("classification")
+    if _has_previous_output(prompt):
+        secs.add("previous_output")
+    if _has_error_message(prompt):
+        secs.add("error_message")
+    if _has_counterexample(prompt):
+        secs.add("counterexample")
+    if _has_tlc_output(prompt):
+        secs.add("tlc_output")
+    # closing: if all other sections are present the builder reached Finish
+    if REQUIRED_CORE_SECTIONS - {"closing"} <= secs:
+        secs.add("closing")
+    return frozenset(secs)
+
+
+# ---------------------------------------------------------------------------
+# Invariant checker  (applies after phase = "complete")
+# All 10 TLA+ invariants translated to Python assertions.
+# ---------------------------------------------------------------------------
+
+def _assert_invariants(prompt: str, error_class: str, has_counterexample_flag: bool) -> None:
+    """
+    Verify every invariant from the verified TLA+ spec holds for the
+    completed prompt returned by build_retry_prompt.
+    """
+    secs = _detected_sections(prompt, error_class, has_counterexample_flag)
+
+    # TypeOK – variables stay in their declared domains
+    assert error_class in ERROR_CLASSES, f"TypeOK: unknown error_class {error_class!r}"
+    assert isinstance(has_counterexample_flag, bool), "TypeOK: has_counterexample not bool"
+    assert secs <= PROMPT_SECTION_UNIVERSE, (
+        f"TypeOK / OnlyKnownSections: unexpected sections {secs - PROMPT_SECTION_UNIVERSE}"
+    )
+
+    # OnlyKnownSections (same body as TypeOK section constraint)
+    assert secs <= PROMPT_SECTION_UNIVERSE
+
+    # RequiredSectionsPresent
+    assert REQUIRED_CORE_SECTIONS <= secs, (
+        f"RequiredSectionsPresent: missing {REQUIRED_CORE_SECTIONS - secs}"
+    )
+
+    # InitialPromptAlwaysPresent
+    assert "initial_prompt" in secs, "InitialPromptAlwaysPresent"
+
+    # PreviousOutputAlwaysPresent
+    assert "previous_output" in secs, "PreviousOutputAlwaysPresent"
+
+    # ClassificationIncludedWhenExpected
+    if error_class in INSTRUCTION_CLASSES:
+        assert "classification" in secs, (
+            f"ClassificationIncludedWhenExpected: error_class={error_class!r}"
+        )
+
+    # ClassificationOmittedWhenNoInstruction
+    if error_class not in INSTRUCTION_CLASSES:
+        assert "classification" not in secs, (
+            f"ClassificationOmittedWhenNoInstruction: error_class={error_class!r}"
+        )
+
+    # CounterexampleIncludedWhenPresent
+    if has_counterexample_flag:
+        assert "counterexample" in secs, "CounterexampleIncludedWhenPresent"
+
+    # CounterexampleOmittedWhenAbsent
+    if not has_counterexample_flag:
+        assert "counterexample" not in secs, "CounterexampleOmittedWhenAbsent"
+
+    # GWTThenCondition
+    if error_class in INSTRUCTION_CLASSES:
+        assert "classification" in secs, "GWTThenCondition: classification"
+        assert "previous_output" in secs, "GWTThenCondition: previous_output"
+        assert "initial_prompt" in secs, "GWTThenCondition: initial_prompt"
+
+
+# ---------------------------------------------------------------------------
+# Shared builder call – single source-of-truth for invoking the SUT
+# ---------------------------------------------------------------------------
+
+def _call_builder(error_class: str, has_counterexample_flag: bool) -> str:
+    counterexample = _COUNTEREXAMPLE if has_counterexample_flag else None
+    return build_retry_prompt(
+        initial_prompt=_INITIAL_PROMPT,
+        previous_output=_PREVIOUS_OUTPUT,
+        error_class=error_class,
+        error_message=_ERROR_MESSAGE,
+        tlc_output=_TLC_OUTPUT,
+        counterexample=counterexample,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 – error_class="unknown", has_counterexample=False
+# Init:  error_class="unknown", has_counterexample=FALSE
+# Final: phase="complete"; no "classification"; no "counterexample"
+# ---------------------------------------------------------------------------
+
+class TestTrace1:
+    """
+    Invariants: TypeOK, RequiredSectionsPresent, InitialPromptAlwaysPresent,
+    PreviousOutputAlwaysPresent, ClassificationOmittedWhenNoInstruction,
+    CounterexampleOmittedWhenAbsent, OnlyKnownSections
+    """
+
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("unknown", False)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+        assert len(prompt) > 0
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_omitted(self, prompt):
+        # "unknown" ∉ InstructionClasses → classification must be absent
+        assert not _has_classification(prompt, "unknown")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "unknown", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2 – error_class="constant_mismatch", has_counterexample=False
+# Init:  error_class="constant_mismatch", has_counterexample=FALSE
+# Final: phase="complete"; "classification" present; no "counterexample"
+# ---------------------------------------------------------------------------
+
+class TestTrace2:
+    """
+    Invariants: TypeOK, RequiredSectionsPresent, InitialPromptAlwaysPresent,
+    PreviousOutputAlwaysPresent, ClassificationIncludedWhenExpected,
+    ClassificationOmittedWhenNoInstruction (n/a here), GWTThenCondition,
+    CounterexampleOmittedWhenAbsent, OnlyKnownSections
+    """
+
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("constant_mismatch", False)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        # "constant_mismatch" ∈ InstructionClasses → classification block required
+        assert _has_classification(prompt, "constant_mismatch")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "constant_mismatch", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3 – error_class="syntax_error", has_counterexample=False
+# ---------------------------------------------------------------------------
+
+class TestTrace3:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("syntax_error", False)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "syntax_error")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "syntax_error", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4 – error_class="constant_mismatch", has_counterexample=True
+# Final: "classification" present; "counterexample" present
+# ---------------------------------------------------------------------------
+
+class TestTrace4:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("constant_mismatch", True)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "constant_mismatch")
+
+    def test_counterexample_present(self, prompt):
+        assert _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "constant_mismatch", True)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5 – error_class="syntax_error", has_counterexample=False (second instance)
+# Exercises same topology as Trace 3; both must satisfy identical invariants.
+# ---------------------------------------------------------------------------
+
+class TestTrace5:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("syntax_error", False)
+
+    def test_idempotent_with_trace3(self, prompt):
+        other = _call_builder("syntax_error", False)
+        # Two calls with identical inputs must include the same required sections
+        secs_a = _detected_sections(prompt, "syntax_error", False)
+        secs_b = _detected_sections(other, "syntax_error", False)
+        assert REQUIRED_CORE_SECTIONS <= secs_a
+        assert REQUIRED_CORE_SECTIONS <= secs_b
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "syntax_error")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "syntax_error", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6 – error_class="parse_error", has_counterexample=True
+# ---------------------------------------------------------------------------
+
+class TestTrace6:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("parse_error", True)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "parse_error")
+
+    def test_counterexample_present(self, prompt):
+        assert _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "parse_error", True)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7 – error_class="invariant_violation", has_counterexample=False
+# ---------------------------------------------------------------------------
+
+class TestTrace7:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("invariant_violation", False)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "invariant_violation")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "invariant_violation", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8 – error_class="parse_error", has_counterexample=True (second instance)
+# ---------------------------------------------------------------------------
+
+class TestTrace8:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("parse_error", True)
+
+    def test_idempotent_with_trace6(self, prompt):
+        other = _call_builder("parse_error", True)
+        secs_a = _detected_sections(prompt, "parse_error", True)
+        secs_b = _detected_sections(other, "parse_error", True)
+        assert "classification" in secs_a and "classification" in secs_b
+        assert "counterexample" in secs_a and "counterexample" in secs_b
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "parse_error")
+
+    def test_counterexample_present(self, prompt):
+        assert _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "parse_error", True)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9 – error_class="syntax_error", has_counterexample=True
+# ---------------------------------------------------------------------------
+
+class TestTrace9:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("syntax_error", True)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "syntax_error")
+
+    def test_counterexample_present(self, prompt):
+        assert _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "syntax_error", True)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10 – error_class="syntax_error", has_counterexample=False (third instance)
+# Exercises determinism across repeated calls.
+# ---------------------------------------------------------------------------
+
+class TestTrace10:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("syntax_error", False)
+
+    def test_deterministic_sections(self, prompt):
+        # Calling the builder twice with the same inputs must yield the same
+        # logical sections (OnlyKnownSections + RequiredSectionsPresent hold
+        # on every call, not just the first).
+        second = _call_builder("syntax_error", False)
+        secs_a = _detected_sections(prompt, "syntax_error", False)
+        secs_b = _detected_sections(second, "syntax_error", False)
+        assert secs_a == secs_b
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "syntax_error")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "syntax_error", False)
+
+
+# ---------------------------------------------------------------------------
+# Dedicated invariant-verifier tests (each exercises ≥2 trace topologies)
+# ---------------------------------------------------------------------------
+
+class TestInvariantTypeOK:
+    """TypeOK: all runtime types stay within their declared TLA+ domains."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),          # Trace 1
+        ("constant_mismatch", True), # Trace 4
+    ])
+    def test_error_class_in_error_classes(self, error_class, has_cx):
+        assert error_class in ERROR_CLASSES
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("syntax_error", False),  # Trace 3
+        ("parse_error", True),    # Trace 6
+    ])
+    def test_sections_subset_of_universe(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        assert secs <= PROMPT_SECTION_UNIVERSE
+
+
+class TestInvariantRequiredSectionsPresent:
+    """RequiredCoreSections ⊆ prompt_sections when phase = "complete"."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),             # Trace 1 – no InstructionClass
+        ("invariant_violation", False), # Trace 7 – InstructionClass, no cx
+        ("parse_error", True),          # Trace 6 – InstructionClass + cx
+    ])
+    def test_required_core_sections_present(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        assert REQUIRED_CORE_SECTIONS <= secs, (
+            f"Missing required sections for error_class={error_class!r}: "
+            f"{REQUIRED_CORE_SECTIONS - secs}"
+        )
+
+
+class TestInvariantInitialPromptAlwaysPresent:
+    """initial_prompt ∈ prompt_sections for every completed build."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),          # Trace 1
+        ("constant_mismatch", True), # Trace 4
+        ("syntax_error", True),      # Trace 9
+    ])
+    def test_initial_prompt_always_in_output(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        assert _has_initial_prompt(prompt)
+
+
+class TestInvariantPreviousOutputAlwaysPresent:
+    """previous_output ∈ prompt_sections for every completed build."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),             # Trace 1
+        ("invariant_violation", False), # Trace 7
+        ("parse_error", True),          # Trace 8
+    ])
+    def test_previous_output_always_in_output(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        assert _has_previous_output(prompt)
+
+
+class TestInvariantClassificationIncludedWhenExpected:
+    """For error_class ∈ InstructionClasses the classification block is present."""
+
+    @pytest.mark.parametrize("error_class", sorted(INSTRUCTION_CLASSES))
+    def test_classification_present_for_instruction_class(self, error_class):
+        prompt = _call_builder(error_class, False)
+        assert _has_classification(prompt, error_class), (
+            f"Expected classification for {error_class!r}"
+        )
+
+
+class TestInvariantClassificationOmittedWhenNoInstruction:
+    """For error_class ∉ InstructionClasses no classification block appears."""
+
+    @pytest.mark.parametrize("error_class", sorted(ERROR_CLASSES - INSTRUCTION_CLASSES))
+    def test_classification_absent_for_non_instruction_class(self, error_class):
+        prompt = _call_builder(error_class, False)
+        assert not _has_classification(prompt, error_class), (
+            f"Unexpected classification for {error_class!r}"
+        )
+
+
+class TestInvariantCounterexampleIncludedWhenPresent:
+    """has_counterexample=True → counterexample content in prompt."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("constant_mismatch", True), # Trace 4
+        ("parse_error", True),       # Trace 6
+        ("syntax_error", True),      # Trace 9
+    ])
+    def test_counterexample_in_output(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        assert _has_counterexample(prompt)
+
+
+class TestInvariantCounterexampleOmittedWhenAbsent:
+    """has_counterexample=False → no counterexample content in prompt."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),             # Trace 1
+        ("constant_mismatch", False),   # Trace 2
+        ("invariant_violation", False), # Trace 7
+    ])
+    def test_counterexample_not_in_output(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        assert not _has_counterexample(prompt)
+
+
+class TestInvariantGWTThenCondition:
+    """
+    GWTThenCondition: phase=complete ∧ error_class ∈ InstructionClasses →
+        classification ∈ secs ∧ previous_output ∈ secs ∧ initial_prompt ∈ secs
+    """
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("syntax_error", False),        # Trace 3
+        ("constant_mismatch", True),    # Trace 4
+        ("parse_error", True),          # Trace 6
+        ("invariant_violation", False), # Trace 7
+    ])
+    def test_gwt_then_triple(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        assert "classification" in secs
+        assert "previous_output" in secs
+        assert "initial_prompt" in secs
+
+
+class TestInvariantOnlyKnownSections:
+    """prompt_sections ⊆ PromptSectionUniverse at every completed state."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),          # Trace 1
+        ("syntax_error", True),      # Trace 9
+        ("parse_error", True),       # Trace 6
+        ("constant_mismatch", False),# Trace 2
+    ])
+    def test_no_unknown_sections(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        unknown = secs - PROMPT_SECTION_UNIVERSE
+        assert unknown == frozenset(), f"Unknown sections detected: {unknown}"
+
+
+# ---------------------------------------------------------------------------
+# Edge-case tests (minimally invented; error_class values from traces)
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+    """
+    Edge cases: empty/minimal inputs, all InstructionClasses, boundary of
+    counterexample flag.  Derived from trace topologies where possible.
+    """
+
+    def test_empty_initial_prompt_still_returns_string(self):
+        result = build_retry_prompt(
+            initial_prompt="",
+            previous_output=_PREVIOUS_OUTPUT,
+            error_class="syntax_error",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert isinstance(result, str)
+
+    def test_empty_previous_output_still_returns_string(self):
+        result = build_retry_prompt(
+            initial_prompt=_INITIAL_PROMPT,
+            previous_output="",
+            error_class="syntax_error",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert isinstance(result, str)
+
+    def test_none_counterexample_equivalent_to_false(self):
+        # has_counterexample=False ↔ counterexample=None
+        result = build_retry_prompt(
+            initial_prompt=_INITIAL_PROMPT,
+            previous_output=_PREVIOUS_OUTPUT,
+            error_class="parse_error",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert not _has_counterexample(result)
+        _assert_invariants(result, "parse_error", False)
+
+    def test_unknown_error_class_no_classification_block(self):
+        # "unknown" ∉ InstructionClasses (Trace 1 topology)
+        result = _call_builder("unknown", False)
+        secs = _detected_sections(result, "unknown", False)
+        assert "classification" not in secs
+
+    def test_timeout_error_class_no_classification_block(self):
+        # "timeout" ∉ InstructionClasses (not covered by traces, derived from spec)
+        result = _call_builder("timeout", False)
+        secs = _detected_sections(result, "timeout", False)
+        assert "classification" not in secs
+        _assert_invariants(result, "timeout", False)
+
+    def test_all_instruction_classes_produce_classification(self):
+        # Every member of InstructionClasses must trigger the classification block
+        for ec in sorted(INSTRUCTION_CLASSES):
+            result = _call_builder(ec, False)
+            assert _has_classification(result, ec), (
+                f"classification block missing for error_class={ec!r}"
+            )
+
+    def test_counterexample_present_across_instruction_classes(self):
+        # has_counterexample=True + each InstructionClass → both blocks present
+        for ec in sorted(INSTRUCTION_CLASSES):
+            result = _call_builder(ec, True)
+            assert _has_classification(result, ec)
+            assert _has_counterexample(result)
+
+    def test_initial_prompt_verbatim_in_output(self):
+        # The full text of the initial prompt must appear in the output (Trace 3)
+        long_prompt = "INITIAL " + ("X" * 500)
+        result = build_retry_prompt(
+            initial_prompt=long_prompt,
+            previous_output=_PREVIOUS_OUTPUT,
+            error_class="syntax_error",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert long_prompt in result
+
+    def test_previous_output_verbatim_in_output(self):
+        # The full previous LLM output must appear in the output (Trace 2)
+        long_output = "PREV_OUT " + ("Y" * 500)
+        result = build_retry_prompt(
+            initial_prompt=_INITIAL_PROMPT,
+            previous_output=long_output,
+            error_class="constant_mismatch",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert long_output in result
+
+    def test_dag_gwt_registration_reflects_behavior(self):
+        """
+        Register the verified GWT behavior in RegistryDag and confirm the
+        behavior node is reachable, binding the spec to the registry.
+        """
+        dag = RegistryDag()
+        gwt_id = dag.register_gwt(
+            given=(
+                "a TLC verification attempt that fails with an identifiable "
+                "error class (syntax_error, parse_error, type_error, "
+                "invariant_violation, deadlock, constant_mismatch)"
+            ),
+            when="build_retry_prompt constructs the next attempt prompt",
+            then=(
+                "the retry prompt includes the classified error instruction block "
+                "specific to that error class, the full previous LLM output, "
+                "and the complete initial prompt"
+            ),
+            name="RetryPromptBuilderBehavior",
+        )
+        assert gwt_id is not None
+        result = dag.query_relevant(gwt_id)
+        assert gwt_id in result.node_ids
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("syntax_error", False),        # Trace 3 / 5 / 10
+        ("constant_mismatch", False),   # Trace 2
+        ("parse_error", True),          # Trace 6 / 8
+    ])
+    def test_sections_never_escape_universe(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        assert secs <= PROMPT_SECTION_UNIVERSE
+```
+```python
+import pytest
+from retry_prompt_builder import build_retry_prompt
+from registry.dag import RegistryDag
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# ---------------------------------------------------------------------------
+# TLA+ universe constants (verbatim from verified spec)
+# ---------------------------------------------------------------------------
+
+ERROR_CLASSES = frozenset({
+    "syntax_error", "parse_error", "type_error",
+    "invariant_violation", "deadlock", "constant_mismatch",
+    "timeout", "unknown",
+})
+
+INSTRUCTION_CLASSES = frozenset({
+    "syntax_error", "parse_error", "type_error",
+    "invariant_violation", "deadlock", "constant_mismatch",
+})
+
+PROMPT_SECTION_UNIVERSE = frozenset({
+    "initial_prompt", "retry_header", "classification",
+    "previous_output", "error_message", "counterexample",
+    "tlc_output", "closing",
+})
+
+REQUIRED_CORE_SECTIONS = frozenset({
+    "initial_prompt", "retry_header",
+    "previous_output", "error_message",
+    "tlc_output", "closing",
+})
+
+# ---------------------------------------------------------------------------
+# Sentinel data: unique strings that survive round-trips through the builder
+# so we can assert presence / absence without parsing the prompt format.
+# ---------------------------------------------------------------------------
+
+_INITIAL_PROMPT = "SENTINEL_INITIAL_PROMPT_XQ9"
+_PREVIOUS_OUTPUT = "SENTINEL_PREVIOUS_OUTPUT_ZK7"
+_ERROR_MESSAGE = "SENTINEL_ERROR_MESSAGE_MW3"
+_TLC_OUTPUT = "SENTINEL_TLC_OUTPUT_VB1"
+_COUNTEREXAMPLE = "SENTINEL_COUNTEREXAMPLE_LN4"
+
+
+# ---------------------------------------------------------------------------
+# Section-detection helpers
+# These map the TLA+ `prompt_sections` set onto observable facts about the
+# returned prompt string.  Each helper answers exactly one membership query.
+# ---------------------------------------------------------------------------
+
+def _has_initial_prompt(prompt: str) -> bool:
+    return _INITIAL_PROMPT in prompt
+
+
+def _has_previous_output(prompt: str) -> bool:
+    return _PREVIOUS_OUTPUT in prompt
+
+
+def _has_error_message(prompt: str) -> bool:
+    return _ERROR_MESSAGE in prompt
+
+
+def _has_tlc_output(prompt: str) -> bool:
+    return _TLC_OUTPUT in prompt
+
+
+def _has_retry_header(prompt: str) -> bool:
+    # The retry header is always added; its presence is the one structural
+    # marker we verify by the function not raising and by the required-sections
+    # invariant rather than a single magic string.
+    return prompt is not None and len(prompt.strip()) > 0
+
+
+def _has_classification(prompt: str, error_class: str) -> bool:
+    """Classification block is present iff the error-class instruction appears."""
+    return error_class in prompt
+
+
+def _has_counterexample(prompt: str) -> bool:
+    return _COUNTEREXAMPLE in prompt
+
+
+def _detected_sections(prompt: str, error_class: str, has_counterexample: bool) -> frozenset:
+    """
+    Build the Python-side equivalent of the TLA+ `prompt_sections` set from
+    the actual prompt string returned by build_retry_prompt.
+    """
+    secs = set()
+    if _has_initial_prompt(prompt):
+        secs.add("initial_prompt")
+    if _has_retry_header(prompt):
+        secs.add("retry_header")
+    if _has_classification(prompt, error_class) and error_class in INSTRUCTION_CLASSES:
+        secs.add("classification")
+    if _has_previous_output(prompt):
+        secs.add("previous_output")
+    if _has_error_message(prompt):
+        secs.add("error_message")
+    if _has_counterexample(prompt):
+        secs.add("counterexample")
+    if _has_tlc_output(prompt):
+        secs.add("tlc_output")
+    # closing: if all other sections are present the builder reached Finish
+    if REQUIRED_CORE_SECTIONS - {"closing"} <= secs:
+        secs.add("closing")
+    return frozenset(secs)
+
+
+# ---------------------------------------------------------------------------
+# Invariant checker  (applies after phase = "complete")
+# All 10 TLA+ invariants translated to Python assertions.
+# ---------------------------------------------------------------------------
+
+def _assert_invariants(prompt: str, error_class: str, has_counterexample_flag: bool) -> None:
+    """
+    Verify every invariant from the verified TLA+ spec holds for the
+    completed prompt returned by build_retry_prompt.
+    """
+    secs = _detected_sections(prompt, error_class, has_counterexample_flag)
+
+    # TypeOK – variables stay in their declared domains
+    assert error_class in ERROR_CLASSES, f"TypeOK: unknown error_class {error_class!r}"
+    assert isinstance(has_counterexample_flag, bool), "TypeOK: has_counterexample not bool"
+    assert secs <= PROMPT_SECTION_UNIVERSE, (
+        f"TypeOK / OnlyKnownSections: unexpected sections {secs - PROMPT_SECTION_UNIVERSE}"
+    )
+
+    # OnlyKnownSections (same body as TypeOK section constraint)
+    assert secs <= PROMPT_SECTION_UNIVERSE
+
+    # RequiredSectionsPresent
+    assert REQUIRED_CORE_SECTIONS <= secs, (
+        f"RequiredSectionsPresent: missing {REQUIRED_CORE_SECTIONS - secs}"
+    )
+
+    # InitialPromptAlwaysPresent
+    assert "initial_prompt" in secs, "InitialPromptAlwaysPresent"
+
+    # PreviousOutputAlwaysPresent
+    assert "previous_output" in secs, "PreviousOutputAlwaysPresent"
+
+    # ClassificationIncludedWhenExpected
+    if error_class in INSTRUCTION_CLASSES:
+        assert "classification" in secs, (
+            f"ClassificationIncludedWhenExpected: error_class={error_class!r}"
+        )
+
+    # ClassificationOmittedWhenNoInstruction
+    if error_class not in INSTRUCTION_CLASSES:
+        assert "classification" not in secs, (
+            f"ClassificationOmittedWhenNoInstruction: error_class={error_class!r}"
+        )
+
+    # CounterexampleIncludedWhenPresent
+    if has_counterexample_flag:
+        assert "counterexample" in secs, "CounterexampleIncludedWhenPresent"
+
+    # CounterexampleOmittedWhenAbsent
+    if not has_counterexample_flag:
+        assert "counterexample" not in secs, "CounterexampleOmittedWhenAbsent"
+
+    # GWTThenCondition
+    if error_class in INSTRUCTION_CLASSES:
+        assert "classification" in secs, "GWTThenCondition: classification"
+        assert "previous_output" in secs, "GWTThenCondition: previous_output"
+        assert "initial_prompt" in secs, "GWTThenCondition: initial_prompt"
+
+
+# ---------------------------------------------------------------------------
+# Shared builder call – single source-of-truth for invoking the SUT
+# ---------------------------------------------------------------------------
+
+def _call_builder(error_class: str, has_counterexample_flag: bool) -> str:
+    counterexample = _COUNTEREXAMPLE if has_counterexample_flag else None
+    return build_retry_prompt(
+        initial_prompt=_INITIAL_PROMPT,
+        previous_output=_PREVIOUS_OUTPUT,
+        error_class=error_class,
+        error_message=_ERROR_MESSAGE,
+        tlc_output=_TLC_OUTPUT,
+        counterexample=counterexample,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 – error_class="unknown", has_counterexample=False
+# Init:  error_class="unknown", has_counterexample=FALSE
+# Final: phase="complete"; no "classification"; no "counterexample"
+# ---------------------------------------------------------------------------
+
+class TestTrace1:
+    """
+    Invariants: TypeOK, RequiredSectionsPresent, InitialPromptAlwaysPresent,
+    PreviousOutputAlwaysPresent, ClassificationOmittedWhenNoInstruction,
+    CounterexampleOmittedWhenAbsent, OnlyKnownSections
+    """
+
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("unknown", False)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+        assert len(prompt) > 0
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_omitted(self, prompt):
+        # "unknown" ∉ InstructionClasses → classification must be absent
+        assert not _has_classification(prompt, "unknown")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "unknown", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2 – error_class="constant_mismatch", has_counterexample=False
+# Init:  error_class="constant_mismatch", has_counterexample=FALSE
+# Final: phase="complete"; "classification" present; no "counterexample"
+# ---------------------------------------------------------------------------
+
+class TestTrace2:
+    """
+    Invariants: TypeOK, RequiredSectionsPresent, InitialPromptAlwaysPresent,
+    PreviousOutputAlwaysPresent, ClassificationIncludedWhenExpected,
+    ClassificationOmittedWhenNoInstruction (n/a here), GWTThenCondition,
+    CounterexampleOmittedWhenAbsent, OnlyKnownSections
+    """
+
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("constant_mismatch", False)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        # "constant_mismatch" ∈ InstructionClasses → classification block required
+        assert _has_classification(prompt, "constant_mismatch")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "constant_mismatch", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3 – error_class="syntax_error", has_counterexample=False
+# ---------------------------------------------------------------------------
+
+class TestTrace3:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("syntax_error", False)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "syntax_error")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "syntax_error", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4 – error_class="constant_mismatch", has_counterexample=True
+# Final: "classification" present; "counterexample" present
+# ---------------------------------------------------------------------------
+
+class TestTrace4:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("constant_mismatch", True)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "constant_mismatch")
+
+    def test_counterexample_present(self, prompt):
+        assert _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "constant_mismatch", True)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5 – error_class="syntax_error", has_counterexample=False (second instance)
+# Exercises same topology as Trace 3; both must satisfy identical invariants.
+# ---------------------------------------------------------------------------
+
+class TestTrace5:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("syntax_error", False)
+
+    def test_idempotent_with_trace3(self, prompt):
+        other = _call_builder("syntax_error", False)
+        # Two calls with identical inputs must include the same required sections
+        secs_a = _detected_sections(prompt, "syntax_error", False)
+        secs_b = _detected_sections(other, "syntax_error", False)
+        assert REQUIRED_CORE_SECTIONS <= secs_a
+        assert REQUIRED_CORE_SECTIONS <= secs_b
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "syntax_error")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "syntax_error", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6 – error_class="parse_error", has_counterexample=True
+# ---------------------------------------------------------------------------
+
+class TestTrace6:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("parse_error", True)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "parse_error")
+
+    def test_counterexample_present(self, prompt):
+        assert _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "parse_error", True)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7 – error_class="invariant_violation", has_counterexample=False
+# ---------------------------------------------------------------------------
+
+class TestTrace7:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("invariant_violation", False)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "invariant_violation")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "invariant_violation", False)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8 – error_class="parse_error", has_counterexample=True (second instance)
+# ---------------------------------------------------------------------------
+
+class TestTrace8:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("parse_error", True)
+
+    def test_idempotent_with_trace6(self, prompt):
+        other = _call_builder("parse_error", True)
+        secs_a = _detected_sections(prompt, "parse_error", True)
+        secs_b = _detected_sections(other, "parse_error", True)
+        assert "classification" in secs_a and "classification" in secs_b
+        assert "counterexample" in secs_a and "counterexample" in secs_b
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "parse_error")
+
+    def test_counterexample_present(self, prompt):
+        assert _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "parse_error", True)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9 – error_class="syntax_error", has_counterexample=True
+# ---------------------------------------------------------------------------
+
+class TestTrace9:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("syntax_error", True)
+
+    def test_returns_string(self, prompt):
+        assert isinstance(prompt, str)
+
+    def test_contains_initial_prompt(self, prompt):
+        assert _has_initial_prompt(prompt)
+
+    def test_contains_previous_output(self, prompt):
+        assert _has_previous_output(prompt)
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "syntax_error")
+
+    def test_counterexample_present(self, prompt):
+        assert _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "syntax_error", True)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10 – error_class="syntax_error", has_counterexample=False (third instance)
+# Exercises determinism across repeated calls.
+# ---------------------------------------------------------------------------
+
+class TestTrace10:
+    @pytest.fixture
+    def prompt(self):
+        return _call_builder("syntax_error", False)
+
+    def test_deterministic_sections(self, prompt):
+        # Calling the builder twice with the same inputs must yield the same
+        # logical sections (OnlyKnownSections + RequiredSectionsPresent hold
+        # on every call, not just the first).
+        second = _call_builder("syntax_error", False)
+        secs_a = _detected_sections(prompt, "syntax_error", False)
+        secs_b = _detected_sections(second, "syntax_error", False)
+        assert secs_a == secs_b
+
+    def test_classification_present(self, prompt):
+        assert _has_classification(prompt, "syntax_error")
+
+    def test_counterexample_omitted(self, prompt):
+        assert not _has_counterexample(prompt)
+
+    def test_all_invariants(self, prompt):
+        _assert_invariants(prompt, "syntax_error", False)
+
+
+# ---------------------------------------------------------------------------
+# Dedicated invariant-verifier tests (each exercises ≥2 trace topologies)
+# ---------------------------------------------------------------------------
+
+class TestInvariantTypeOK:
+    """TypeOK: all runtime types stay within their declared TLA+ domains."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),          # Trace 1
+        ("constant_mismatch", True), # Trace 4
+    ])
+    def test_error_class_in_error_classes(self, error_class, has_cx):
+        assert error_class in ERROR_CLASSES
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("syntax_error", False),  # Trace 3
+        ("parse_error", True),    # Trace 6
+    ])
+    def test_sections_subset_of_universe(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        assert secs <= PROMPT_SECTION_UNIVERSE
+
+
+class TestInvariantRequiredSectionsPresent:
+    """RequiredCoreSections ⊆ prompt_sections when phase = "complete"."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),             # Trace 1 – no InstructionClass
+        ("invariant_violation", False), # Trace 7 – InstructionClass, no cx
+        ("parse_error", True),          # Trace 6 – InstructionClass + cx
+    ])
+    def test_required_core_sections_present(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        assert REQUIRED_CORE_SECTIONS <= secs, (
+            f"Missing required sections for error_class={error_class!r}: "
+            f"{REQUIRED_CORE_SECTIONS - secs}"
+        )
+
+
+class TestInvariantInitialPromptAlwaysPresent:
+    """initial_prompt ∈ prompt_sections for every completed build."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),          # Trace 1
+        ("constant_mismatch", True), # Trace 4
+        ("syntax_error", True),      # Trace 9
+    ])
+    def test_initial_prompt_always_in_output(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        assert _has_initial_prompt(prompt)
+
+
+class TestInvariantPreviousOutputAlwaysPresent:
+    """previous_output ∈ prompt_sections for every completed build."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),             # Trace 1
+        ("invariant_violation", False), # Trace 7
+        ("parse_error", True),          # Trace 8
+    ])
+    def test_previous_output_always_in_output(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        assert _has_previous_output(prompt)
+
+
+class TestInvariantClassificationIncludedWhenExpected:
+    """For error_class ∈ InstructionClasses the classification block is present."""
+
+    @pytest.mark.parametrize("error_class", sorted(INSTRUCTION_CLASSES))
+    def test_classification_present_for_instruction_class(self, error_class):
+        prompt = _call_builder(error_class, False)
+        assert _has_classification(prompt, error_class), (
+            f"Expected classification for {error_class!r}"
+        )
+
+
+class TestInvariantClassificationOmittedWhenNoInstruction:
+    """For error_class ∉ InstructionClasses no classification block appears."""
+
+    @pytest.mark.parametrize("error_class", sorted(ERROR_CLASSES - INSTRUCTION_CLASSES))
+    def test_classification_absent_for_non_instruction_class(self, error_class):
+        prompt = _call_builder(error_class, False)
+        assert not _has_classification(prompt, error_class), (
+            f"Unexpected classification for {error_class!r}"
+        )
+
+
+class TestInvariantCounterexampleIncludedWhenPresent:
+    """has_counterexample=True → counterexample content in prompt."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("constant_mismatch", True), # Trace 4
+        ("parse_error", True),       # Trace 6
+        ("syntax_error", True),      # Trace 9
+    ])
+    def test_counterexample_in_output(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        assert _has_counterexample(prompt)
+
+
+class TestInvariantCounterexampleOmittedWhenAbsent:
+    """has_counterexample=False → no counterexample content in prompt."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),             # Trace 1
+        ("constant_mismatch", False),   # Trace 2
+        ("invariant_violation", False), # Trace 7
+    ])
+    def test_counterexample_not_in_output(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        assert not _has_counterexample(prompt)
+
+
+class TestInvariantGWTThenCondition:
+    """
+    GWTThenCondition: phase=complete ∧ error_class ∈ InstructionClasses →
+        classification ∈ secs ∧ previous_output ∈ secs ∧ initial_prompt ∈ secs
+    """
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("syntax_error", False),        # Trace 3
+        ("constant_mismatch", True),    # Trace 4
+        ("parse_error", True),          # Trace 6
+        ("invariant_violation", False), # Trace 7
+    ])
+    def test_gwt_then_triple(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        assert "classification" in secs
+        assert "previous_output" in secs
+        assert "initial_prompt" in secs
+
+
+class TestInvariantOnlyKnownSections:
+    """prompt_sections ⊆ PromptSectionUniverse at every completed state."""
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("unknown", False),          # Trace 1
+        ("syntax_error", True),      # Trace 9
+        ("parse_error", True),       # Trace 6
+        ("constant_mismatch", False),# Trace 2
+    ])
+    def test_no_unknown_sections(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        unknown = secs - PROMPT_SECTION_UNIVERSE
+        assert unknown == frozenset(), f"Unknown sections detected: {unknown}"
+
+
+# ---------------------------------------------------------------------------
+# Edge-case tests (minimally invented; error_class values from traces)
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+    """
+    Edge cases: empty/minimal inputs, all InstructionClasses, boundary of
+    counterexample flag.  Derived from trace topologies where possible.
+    """
+
+    def test_empty_initial_prompt_still_returns_string(self):
+        result = build_retry_prompt(
+            initial_prompt="",
+            previous_output=_PREVIOUS_OUTPUT,
+            error_class="syntax_error",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert isinstance(result, str)
+
+    def test_empty_previous_output_still_returns_string(self):
+        result = build_retry_prompt(
+            initial_prompt=_INITIAL_PROMPT,
+            previous_output="",
+            error_class="syntax_error",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert isinstance(result, str)
+
+    def test_none_counterexample_equivalent_to_false(self):
+        # has_counterexample=False ↔ counterexample=None
+        result = build_retry_prompt(
+            initial_prompt=_INITIAL_PROMPT,
+            previous_output=_PREVIOUS_OUTPUT,
+            error_class="parse_error",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert not _has_counterexample(result)
+        _assert_invariants(result, "parse_error", False)
+
+    def test_unknown_error_class_no_classification_block(self):
+        # "unknown" ∉ InstructionClasses (Trace 1 topology)
+        result = _call_builder("unknown", False)
+        secs = _detected_sections(result, "unknown", False)
+        assert "classification" not in secs
+
+    def test_timeout_error_class_no_classification_block(self):
+        # "timeout" ∉ InstructionClasses (not covered by traces, derived from spec)
+        result = _call_builder("timeout", False)
+        secs = _detected_sections(result, "timeout", False)
+        assert "classification" not in secs
+        _assert_invariants(result, "timeout", False)
+
+    def test_all_instruction_classes_produce_classification(self):
+        # Every member of InstructionClasses must trigger the classification block
+        for ec in sorted(INSTRUCTION_CLASSES):
+            result = _call_builder(ec, False)
+            assert _has_classification(result, ec), (
+                f"classification block missing for error_class={ec!r}"
+            )
+
+    def test_counterexample_present_across_instruction_classes(self):
+        # has_counterexample=True + each InstructionClass → both blocks present
+        for ec in sorted(INSTRUCTION_CLASSES):
+            result = _call_builder(ec, True)
+            assert _has_classification(result, ec)
+            assert _has_counterexample(result)
+
+    def test_initial_prompt_verbatim_in_output(self):
+        # The full text of the initial prompt must appear in the output (Trace 3)
+        long_prompt = "INITIAL " + ("X" * 500)
+        result = build_retry_prompt(
+            initial_prompt=long_prompt,
+            previous_output=_PREVIOUS_OUTPUT,
+            error_class="syntax_error",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert long_prompt in result
+
+    def test_previous_output_verbatim_in_output(self):
+        # The full previous LLM output must appear in the output (Trace 2)
+        long_output = "PREV_OUT " + ("Y" * 500)
+        result = build_retry_prompt(
+            initial_prompt=_INITIAL_PROMPT,
+            previous_output=long_output,
+            error_class="constant_mismatch",
+            error_message=_ERROR_MESSAGE,
+            tlc_output=_TLC_OUTPUT,
+            counterexample=None,
+        )
+        assert long_output in result
+
+    def test_dag_gwt_registration_reflects_behavior(self):
+        """
+        Register the verified GWT behavior in RegistryDag and confirm the
+        behavior node is reachable, binding the spec to the registry.
+        """
+        dag = RegistryDag()
+        gwt_id = dag.register_gwt(
+            given=(
+                "a TLC verification attempt that fails with an identifiable "
+                "error class (syntax_error, parse_error, type_error, "
+                "invariant_violation, deadlock, constant_mismatch)"
+            ),
+            when="build_retry_prompt constructs the next attempt prompt",
+            then=(
+                "the retry prompt includes the classified error instruction block "
+                "specific to that error class, the full previous LLM output, "
+                "and the complete initial prompt"
+            ),
+            name="RetryPromptBuilderBehavior",
+        )
+        assert gwt_id is not None
+        result = dag.query_relevant(gwt_id)
+        assert gwt_id in result.node_ids
+
+    @pytest.mark.parametrize("error_class,has_cx", [
+        ("syntax_error", False),        # Trace 3 / 5 / 10
+        ("constant_mismatch", False),   # Trace 2
+        ("parse_error", True),          # Trace 6 / 8
+    ])
+    def test_sections_never_escape_universe(self, error_class, has_cx):
+        prompt = _call_builder(error_class, has_cx)
+        secs = _detected_sections(prompt, error_class, has_cx)
+        assert secs <= PROMPT_SECTION_UNIVERSE
+```

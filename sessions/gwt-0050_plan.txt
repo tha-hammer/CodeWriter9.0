@@ -1,0 +1,1094 @@
+```python
+import pytest
+from pathlib import Path
+
+from scanner_go_line_ranges import scan_file
+from dag import RegistryDag
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# ---------------------------------------------------------------------------
+# Canonical source fixture
+#
+# Matches TLA+:  Lines == << "Func", "Other", "InterfaceOpen",
+#                             "Func", "InterfaceClose", "Func", "Other" >>
+#                N     == 7
+# ---------------------------------------------------------------------------
+GO_SOURCE = (
+    "func Alpha() {}\n"                  # line 1  – Func   (outside interface)
+    "// other line\n"                    # line 2  – Other
+    "type MyInterface interface {\n"     # line 3  – InterfaceOpen
+    "func InsideIface()\n"               # line 4  – Func   (inside  interface → excluded)
+    "}\n"                                # line 5  – InterfaceClose
+    "func Beta() {}\n"                   # line 6  – Func   (outside interface)
+    "// trailing comment\n"             # line 7  – Other
+)
+
+N = 7  # TLA+ constant
+
+
+@pytest.fixture
+def go_file(tmp_path: Path) -> Path:
+    """Write the canonical 7-line Go source file used by every trace."""
+    p = tmp_path / "subject.go"
+    p.write_text(GO_SOURCE)
+    return p
+
+
+# ---------------------------------------------------------------------------
+# Invariant helpers
+# ---------------------------------------------------------------------------
+
+def _interface_body_line_numbers(source_lines: list[str]) -> set[int]:
+    """Return 1-indexed line numbers that are *inside* an interface block."""
+    inside = False
+    result: set[int] = set()
+    for idx, raw in enumerate(source_lines, start=1):
+        stripped = raw.strip()
+        if "interface {" in stripped:
+            inside = True
+            continue
+        if inside and stripped == "}":
+            inside = False
+            continue
+        if inside:
+            result.add(idx)
+    return result
+
+
+def _verify_line_number_correct(skeletons, source_lines: list[str]) -> None:
+    """LineNumberCorrect: ∀ s ∈ skeletons: s.line_number ∈ [1,N]
+    ∧ Lines[s.line_number] = "Func"."""
+    total = len(source_lines)
+    for s in skeletons:
+        assert 1 <= s.line_number <= total, (
+            f"line_number {s.line_number} out of valid range [1, {total}]"
+        )
+        assert source_lines[s.line_number - 1].lstrip().startswith("func"), (
+            f"line {s.line_number} is not a 'func' line: "
+            f"{source_lines[s.line_number - 1]!r}"
+        )
+
+
+def _verify_interface_exclusion(skeletons, source_lines: list[str]) -> None:
+    """InterfaceExclusion: no skeleton references a line inside an interface."""
+    iface_lines = _interface_body_line_numbers(source_lines)
+    for s in skeletons:
+        assert s.line_number not in iface_lines, (
+            f"skeleton at line {s.line_number} is inside an interface block"
+        )
+
+
+def _verify_no_gaps(skeletons, source_lines: list[str]) -> None:
+    """NoGaps: after the full scan every Func-line outside an interface has a
+    matching skeleton."""
+    iface_lines = _interface_body_line_numbers(source_lines)
+    expected = {
+        idx
+        for idx, raw in enumerate(source_lines, start=1)
+        if raw.lstrip().startswith("func") and idx not in iface_lines
+    }
+    actual = {s.line_number for s in skeletons}
+    assert expected == actual, (
+        f"NoGaps violated – expected skeletons at {expected}, got {actual}"
+    )
+
+
+def _verify_cursor_bounded(skeletons, n: int) -> None:
+    """CursorBounded: i ≤ N + 1; no skeleton can reference beyond N + 1."""
+    for s in skeletons:
+        assert s.line_number <= n + 1, (
+            f"line_number {s.line_number} exceeds N+1 = {n + 1}"
+        )
+
+
+def _all_invariants(skeletons, source_lines: list[str]) -> None:
+    _verify_line_number_correct(skeletons, source_lines)
+    _verify_interface_exclusion(skeletons, source_lines)
+    _verify_no_gaps(skeletons, source_lines)
+    _verify_cursor_bounded(skeletons, len(source_lines))
+
+
+# ---------------------------------------------------------------------------
+# Trace 1
+# 24 steps – LineNumberCorrect, InterfaceExclusion, NoGaps, CursorBounded
+# Final: skeletons = {[line_num|->1],[line_num|->6]}, i = 8
+# ---------------------------------------------------------------------------
+
+def test_trace_1_scan_produces_correct_line_numbers(go_file: Path) -> None:
+    """Trace 1: scan_file on the canonical 7-line source yields exactly the
+    two func declarations at lines 1 and 6; all four invariants hold."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+
+    # Action: ScanLoop x7 → ProcessLine x7 → Advance x7 → Finish
+    skeletons = scan_file(str(go_file))
+
+    # Final-state assertion (TLA+ Finish state)
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}, f"Expected {{1, 6}}, got {line_nums}"
+    assert len(skeletons) == 2
+
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2
+# Same 24-step trace – focused re-verification of LineNumberCorrect
+# ---------------------------------------------------------------------------
+
+def test_trace_2_line_number_correct(go_file: Path) -> None:
+    """Trace 2: every skeleton's line_number is within [1, N] and the
+    referenced source line starts with 'func'."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}
+    _verify_line_number_correct(skeletons, source_lines)
+    _verify_cursor_bounded(skeletons, N)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3 – InterfaceExclusion focus
+# ---------------------------------------------------------------------------
+
+def test_trace_3_interface_exclusion(go_file: Path) -> None:
+    """Trace 3: the func on line 4 (inside interface) must not appear in the
+    returned skeletons; in_interface transitions TRUE→FALSE are respected."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert 4 not in line_nums, (
+        "Line 4 is inside the interface block and must not produce a skeleton"
+    )
+    assert line_nums == {1, 6}
+    _verify_interface_exclusion(skeletons, source_lines)
+    _verify_no_gaps(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4 – NoGaps focus
+# ---------------------------------------------------------------------------
+
+def test_trace_4_no_gaps(go_file: Path) -> None:
+    """Trace 4: after the scan completes (i > N), every Func-line outside any
+    interface block is represented in skeletons without omission."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}
+    _verify_no_gaps(skeletons, source_lines)
+    _verify_line_number_correct(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5 – CursorBounded focus
+# ---------------------------------------------------------------------------
+
+def test_trace_5_cursor_bounded(go_file: Path) -> None:
+    """Trace 5: scanner cursor never exceeds N + 1 = 8; all skeleton
+    line_numbers remain within valid file bounds."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}
+    _verify_cursor_bounded(skeletons, N)
+    _verify_line_number_correct(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6 – exact skeleton count
+# ---------------------------------------------------------------------------
+
+def test_trace_6_skeleton_count_equals_two(go_file: Path) -> None:
+    """Trace 6: exactly two skeletons are produced for the 7-line canonical
+    source (lines 1 and 6); line 4 is excluded by interface tracking."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    assert len(skeletons) == 2, f"Expected 2 skeletons, got {len(skeletons)}"
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7 – first func at line 1
+# ---------------------------------------------------------------------------
+
+def test_trace_7_first_skeleton_at_line_1(go_file: Path) -> None:
+    """Trace 7: the first skeleton must reference line 1, the very first line
+    of the file (the func keyword is detected on the initial ProcessLine
+    action)."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    sorted_nums = sorted(s.line_number for s in skeletons)
+    assert sorted_nums[0] == 1, (
+        f"Expected first skeleton at line 1, got {sorted_nums[0]}"
+    )
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8 – second func at line 6 (after interface closes)
+# ---------------------------------------------------------------------------
+
+def test_trace_8_second_skeleton_at_line_6(go_file: Path) -> None:
+    """Trace 8: the second skeleton must reference line 6; this verifies that
+    in_interface is correctly reset to FALSE when line 5 (InterfaceClose) is
+    processed, allowing the func on line 6 to be captured."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    sorted_nums = sorted(s.line_number for s in skeletons)
+    assert sorted_nums[-1] == 6, (
+        f"Expected last skeleton at line 6, got {sorted_nums[-1]}"
+    )
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9 – Other lines produce no skeleton
+# ---------------------------------------------------------------------------
+
+def test_trace_9_other_lines_produce_no_skeleton(go_file: Path) -> None:
+    """Trace 9: lines 2 and 7 (classified as Other in TLA+) must not appear
+    in the skeleton set."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert 2 not in line_nums, "Line 2 (Other) must not produce a skeleton"
+    assert 7 not in line_nums, "Line 7 (Other) must not produce a skeleton"
+    assert line_nums == {1, 6}
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10 – InterfaceOpen / InterfaceClose lines produce no skeleton
+# ---------------------------------------------------------------------------
+
+def test_trace_10_interface_markers_produce_no_skeleton(go_file: Path) -> None:
+    """Trace 10: lines 3 (InterfaceOpen) and 5 (InterfaceClose) are structural
+    markers that update the in_interface flag but must never be recorded as
+    skeletons."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert 3 not in line_nums, "Line 3 (InterfaceOpen) must not produce a skeleton"
+    assert 5 not in line_nums, "Line 5 (InterfaceClose) must not produce a skeleton"
+    assert line_nums == {1, 6}
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier suites – each exercises ≥ 2 distinct topologies
+# ---------------------------------------------------------------------------
+
+class TestLineNumberCorrectInvariant:
+    """LineNumberCorrect: ∀ s ∈ skeletons:
+         s.line_number ∈ [1, N]  ∧  Lines[s.line_number] = "Func"."""
+
+    def test_topology_canonical_7_lines(self, go_file: Path) -> None:
+        source_lines = GO_SOURCE.splitlines(keepends=True)
+        skeletons = scan_file(str(go_file))
+        _verify_line_number_correct(skeletons, source_lines)
+
+    def test_topology_single_func_line_1(self, tmp_path: Path) -> None:
+        """Minimal 1-line file; skeleton must point to line 1."""
+        src = "func Solo() {}\n"
+        p = tmp_path / "solo.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_line_number_correct(skeletons, source_lines)
+        assert {s.line_number for s in skeletons} == {1}
+
+    def test_topology_funcs_at_lines_3_and_5(self, tmp_path: Path) -> None:
+        """5-line file with funcs at non-boundary lines."""
+        src = (
+            "package main\n"   # line 1 – Other
+            "// comment\n"     # line 2 – Other
+            "func A() {}\n"    # line 3 – Func
+            "// comment\n"     # line 4 – Other
+            "func B() {}\n"    # line 5 – Func
+        )
+        p = tmp_path / "multi.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_line_number_correct(skeletons, source_lines)
+        assert {s.line_number for s in skeletons} == {3, 5}
+
+
+class TestInterfaceExclusionInvariant:
+    """InterfaceExclusion: no skeleton references a line inside an interface."""
+
+    def test_topology_canonical_7_lines(self, go_file: Path) -> None:
+        source_lines = GO_SOURCE.splitlines(keepends=True)
+        skeletons = scan_file(str(go_file))
+        _verify_interface_exclusion(skeletons, source_lines)
+
+    def test_topology_interface_only_file(self, tmp_path: Path) -> None:
+        """File containing only an interface block; zero skeletons expected."""
+        src = (
+            "type Iface interface {\n"   # line 1 – InterfaceOpen
+            "func Method()\n"            # line 2 – Func inside → excluded
+            "}\n"                        # line 3 – InterfaceClose
+        )
+        p = tmp_path / "iface_only.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_interface_exclusion(skeletons, source_lines)
+        assert len(skeletons) == 0, (
+            "No skeletons expected when every func is inside an interface"
+        )
+
+    def test_topology_func_before_and_after_interface(self, tmp_path: Path) -> None:
+        """Func on lines 1 and 5; interface on lines 2-4 excludes line 3."""
+        src = (
+            "func Before() {}\n"         # line 1 – Func (outside)
+            "type Iface interface {\n"   # line 2 – InterfaceOpen
+            "func Inside()\n"            # line 3 – Func (inside → excluded)
+            "}\n"                        # line 4 – InterfaceClose
+            "func After() {}\n"          # line 5 – Func (outside)
+        )
+        p = tmp_path / "before_after.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_interface_exclusion(skeletons, source_lines)
+        assert {s.line_number for s in skeletons} == {1, 5}
+
+
+class TestNoGapsInvariant:
+    """NoGaps: once i > N every non-interface Func-line has a skeleton."""
+
+    def test_topology_canonical_7_lines(self, go_file: Path) -> None:
+        source_lines = GO_SOURCE.splitlines(keepends=True)
+        skeletons = scan_file(str(go_file))
+        _verify_no_gaps(skeletons, source_lines)
+
+    def test_topology_three_consecutive_funcs(self, tmp_path: Path) -> None:
+        """Three consecutive func lines; all three must appear in skeletons."""
+        src = (
+            "func A() {}\n"   # line 1 – Func
+            "func B() {}\n"   # line 2 – Func
+            "func C() {}\n"   # line 3 – Func
+        )
+        p = tmp_path / "three_funcs.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_no_gaps(skeletons, source_lines)
+        assert {s.line_number for s in skeletons} == {1, 2, 3}
+
+    def test_topology_no_func_declarations(self, tmp_path: Path) -> None:
+        """File with no func keywords; empty skeleton set satisfies NoGaps."""
+        src = (
+            "package main\n"
+            "// just comments\n"
+        )
+        p = tmp_path / "no_funcs.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_no_gaps(skeletons, source_lines)
+        assert len(skeletons) == 0
+
+
+class TestCursorBoundedInvariant:
+    """CursorBounded: i ≤ N + 1 at every state; no skeleton exceeds that."""
+
+    def test_topology_canonical_7_lines(self, go_file: Path) -> None:
+        skeletons = scan_file(str(go_file))
+        _verify_cursor_bounded(skeletons, N)
+        assert all(s.line_number <= N + 1 for s in skeletons)
+
+    def test_topology_single_line_file(self, tmp_path: Path) -> None:
+        """N = 1 → cursor must not exceed 2."""
+        src = "func F() {}\n"
+        p = tmp_path / "single.go"
+        p.write_text(src)
+        skeletons = scan_file(str(p))
+        _verify_cursor_bounded(skeletons, 1)
+        assert {s.line_number for s in skeletons} == {1}
+
+    def test_topology_five_line_file(self, tmp_path: Path) -> None:
+        """N = 5 → all line_numbers must be ≤ 6."""
+        src = (
+            "func A() {}\n"   # line 1
+            "// c\n"           # line 2
+            "func B() {}\n"   # line 3
+            "// c\n"           # line 4
+            "func C() {}\n"   # line 5
+        )
+        p = tmp_path / "five.go"
+        p.write_text(src)
+        skeletons = scan_file(str(p))
+        _verify_cursor_bounded(skeletons, 5)
+        assert {s.line_number for s in skeletons} == {1, 3, 5}
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+def test_edge_empty_file(tmp_path: Path) -> None:
+    """Empty Go file produces zero skeletons and violates no invariant."""
+    p = tmp_path / "empty.go"
+    p.write_text("")
+    skeletons = scan_file(str(p))
+    assert len(skeletons) == 0
+
+
+def test_edge_file_with_only_comments(tmp_path: Path) -> None:
+    """Comment-only file produces zero skeletons; NoGaps trivially satisfied."""
+    src = "// package doc\n// another comment\n"
+    p = tmp_path / "comments_only.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert len(skeletons) == 0
+    _verify_no_gaps(skeletons, source_lines)
+
+
+def test_edge_single_func_declaration(tmp_path: Path) -> None:
+    """Single func at line 1 satisfies all four invariants."""
+    src = "func Single() {}\n"
+    p = tmp_path / "single_func.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {1}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_adjacent_func_declarations(tmp_path: Path) -> None:
+    """Two consecutive func lines; both captured, no gaps."""
+    src = "func A() {}\nfunc B() {}\n"
+    p = tmp_path / "adjacent.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {1, 2}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_interface_at_start_of_file(tmp_path: Path) -> None:
+    """Interface opened on line 1; only the func after the closing brace is
+    captured."""
+    src = (
+        "type StartIface interface {\n"   # line 1 – InterfaceOpen
+        "func Method()\n"                 # line 2 – Func inside → excluded
+        "}\n"                             # line 3 – InterfaceClose
+        "func RealFunc() {}\n"            # line 4 – Func outside
+    )
+    p = tmp_path / "iface_start.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {4}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_interface_at_end_of_file(tmp_path: Path) -> None:
+    """Interface closing at the last line; func before it is captured."""
+    src = (
+        "func First() {}\n"             # line 1 – Func outside
+        "type EndIface interface {\n"   # line 2 – InterfaceOpen
+        "func Method()\n"               # line 3 – Func inside → excluded
+        "}\n"                           # line 4 – InterfaceClose
+    )
+    p = tmp_path / "iface_end.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {1}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_two_interface_blocks_with_func_between(tmp_path: Path) -> None:
+    """Two separate interface blocks; only the func between them is captured."""
+    src = (
+        "type I1 interface {\n"   # line 1 – InterfaceOpen
+        "func M1()\n"             # line 2 – Func inside I1 → excluded
+        "}\n"                     # line 3 – InterfaceClose
+        "func Between() {}\n"    # line 4 – Func outside
+        "type I2 interface {\n"  # line 5 – InterfaceOpen
+        "func M2()\n"             # line 6 – Func inside I2 → excluded
+        "}\n"                     # line 7 – InterfaceClose
+    )
+    p = tmp_path / "two_ifaces.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {4}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_no_skeleton_duplicated_for_same_line(tmp_path: Path) -> None:
+    """Each func line must produce at most one skeleton (set semantics from
+    TLA+ skeletons = skeletons ∪ {[line_num |-> i]})."""
+    src = "func OnlyOnce() {}\n"
+    p = tmp_path / "once.go"
+    p.write_text(src)
+    skeletons = scan_file(str(p))
+    line_nums = [s.line_number for s in skeletons]
+    assert len(line_nums) == len(set(line_nums)), (
+        "Duplicate skeleton entries detected for the same line_number"
+    )
+    assert set(line_nums) == {1}
+```
+```python
+import pytest
+from pathlib import Path
+
+from scanner_go_line_ranges import scan_file
+from dag import RegistryDag
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# ---------------------------------------------------------------------------
+# Canonical source fixture
+#
+# Matches TLA+:  Lines == << "Func", "Other", "InterfaceOpen",
+#                             "Func", "InterfaceClose", "Func", "Other" >>
+#                N     == 7
+# ---------------------------------------------------------------------------
+GO_SOURCE = (
+    "func Alpha() {}\n"                  # line 1  – Func   (outside interface)
+    "// other line\n"                    # line 2  – Other
+    "type MyInterface interface {\n"     # line 3  – InterfaceOpen
+    "func InsideIface()\n"               # line 4  – Func   (inside  interface → excluded)
+    "}\n"                                # line 5  – InterfaceClose
+    "func Beta() {}\n"                   # line 6  – Func   (outside interface)
+    "// trailing comment\n"             # line 7  – Other
+)
+
+N = 7  # TLA+ constant
+
+
+@pytest.fixture
+def go_file(tmp_path: Path) -> Path:
+    """Write the canonical 7-line Go source file used by every trace."""
+    p = tmp_path / "subject.go"
+    p.write_text(GO_SOURCE)
+    return p
+
+
+# ---------------------------------------------------------------------------
+# Invariant helpers
+# ---------------------------------------------------------------------------
+
+def _interface_body_line_numbers(source_lines: list[str]) -> set[int]:
+    """Return 1-indexed line numbers that are *inside* an interface block."""
+    inside = False
+    result: set[int] = set()
+    for idx, raw in enumerate(source_lines, start=1):
+        stripped = raw.strip()
+        if "interface {" in stripped:
+            inside = True
+            continue
+        if inside and stripped == "}":
+            inside = False
+            continue
+        if inside:
+            result.add(idx)
+    return result
+
+
+def _verify_line_number_correct(skeletons, source_lines: list[str]) -> None:
+    """LineNumberCorrect: ∀ s ∈ skeletons: s.line_number ∈ [1,N]
+    ∧ Lines[s.line_number] = "Func"."""
+    total = len(source_lines)
+    for s in skeletons:
+        assert 1 <= s.line_number <= total, (
+            f"line_number {s.line_number} out of valid range [1, {total}]"
+        )
+        assert source_lines[s.line_number - 1].lstrip().startswith("func"), (
+            f"line {s.line_number} is not a 'func' line: "
+            f"{source_lines[s.line_number - 1]!r}"
+        )
+
+
+def _verify_interface_exclusion(skeletons, source_lines: list[str]) -> None:
+    """InterfaceExclusion: no skeleton references a line inside an interface."""
+    iface_lines = _interface_body_line_numbers(source_lines)
+    for s in skeletons:
+        assert s.line_number not in iface_lines, (
+            f"skeleton at line {s.line_number} is inside an interface block"
+        )
+
+
+def _verify_no_gaps(skeletons, source_lines: list[str]) -> None:
+    """NoGaps: after the full scan every Func-line outside an interface has a
+    matching skeleton."""
+    iface_lines = _interface_body_line_numbers(source_lines)
+    expected = {
+        idx
+        for idx, raw in enumerate(source_lines, start=1)
+        if raw.lstrip().startswith("func") and idx not in iface_lines
+    }
+    actual = {s.line_number for s in skeletons}
+    assert expected == actual, (
+        f"NoGaps violated – expected skeletons at {expected}, got {actual}"
+    )
+
+
+def _verify_cursor_bounded(skeletons, n: int) -> None:
+    """CursorBounded: i ≤ N + 1; no skeleton can reference beyond N + 1."""
+    for s in skeletons:
+        assert s.line_number <= n + 1, (
+            f"line_number {s.line_number} exceeds N+1 = {n + 1}"
+        )
+
+
+def _all_invariants(skeletons, source_lines: list[str]) -> None:
+    _verify_line_number_correct(skeletons, source_lines)
+    _verify_interface_exclusion(skeletons, source_lines)
+    _verify_no_gaps(skeletons, source_lines)
+    _verify_cursor_bounded(skeletons, len(source_lines))
+
+
+# ---------------------------------------------------------------------------
+# Trace 1
+# 24 steps – LineNumberCorrect, InterfaceExclusion, NoGaps, CursorBounded
+# Final: skeletons = {[line_num|->1],[line_num|->6]}, i = 8
+# ---------------------------------------------------------------------------
+
+def test_trace_1_scan_produces_correct_line_numbers(go_file: Path) -> None:
+    """Trace 1: scan_file on the canonical 7-line source yields exactly the
+    two func declarations at lines 1 and 6; all four invariants hold."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+
+    # Action: ScanLoop x7 → ProcessLine x7 → Advance x7 → Finish
+    skeletons = scan_file(str(go_file))
+
+    # Final-state assertion (TLA+ Finish state)
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}, f"Expected {{1, 6}}, got {line_nums}"
+    assert len(skeletons) == 2
+
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2
+# Same 24-step trace – focused re-verification of LineNumberCorrect
+# ---------------------------------------------------------------------------
+
+def test_trace_2_line_number_correct(go_file: Path) -> None:
+    """Trace 2: every skeleton's line_number is within [1, N] and the
+    referenced source line starts with 'func'."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}
+    _verify_line_number_correct(skeletons, source_lines)
+    _verify_cursor_bounded(skeletons, N)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3 – InterfaceExclusion focus
+# ---------------------------------------------------------------------------
+
+def test_trace_3_interface_exclusion(go_file: Path) -> None:
+    """Trace 3: the func on line 4 (inside interface) must not appear in the
+    returned skeletons; in_interface transitions TRUE→FALSE are respected."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert 4 not in line_nums, (
+        "Line 4 is inside the interface block and must not produce a skeleton"
+    )
+    assert line_nums == {1, 6}
+    _verify_interface_exclusion(skeletons, source_lines)
+    _verify_no_gaps(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4 – NoGaps focus
+# ---------------------------------------------------------------------------
+
+def test_trace_4_no_gaps(go_file: Path) -> None:
+    """Trace 4: after the scan completes (i > N), every Func-line outside any
+    interface block is represented in skeletons without omission."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}
+    _verify_no_gaps(skeletons, source_lines)
+    _verify_line_number_correct(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5 – CursorBounded focus
+# ---------------------------------------------------------------------------
+
+def test_trace_5_cursor_bounded(go_file: Path) -> None:
+    """Trace 5: scanner cursor never exceeds N + 1 = 8; all skeleton
+    line_numbers remain within valid file bounds."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}
+    _verify_cursor_bounded(skeletons, N)
+    _verify_line_number_correct(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6 – exact skeleton count
+# ---------------------------------------------------------------------------
+
+def test_trace_6_skeleton_count_equals_two(go_file: Path) -> None:
+    """Trace 6: exactly two skeletons are produced for the 7-line canonical
+    source (lines 1 and 6); line 4 is excluded by interface tracking."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    assert len(skeletons) == 2, f"Expected 2 skeletons, got {len(skeletons)}"
+    line_nums = {s.line_number for s in skeletons}
+    assert line_nums == {1, 6}
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7 – first func at line 1
+# ---------------------------------------------------------------------------
+
+def test_trace_7_first_skeleton_at_line_1(go_file: Path) -> None:
+    """Trace 7: the first skeleton must reference line 1, the very first line
+    of the file (the func keyword is detected on the initial ProcessLine
+    action)."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    sorted_nums = sorted(s.line_number for s in skeletons)
+    assert sorted_nums[0] == 1, (
+        f"Expected first skeleton at line 1, got {sorted_nums[0]}"
+    )
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8 – second func at line 6 (after interface closes)
+# ---------------------------------------------------------------------------
+
+def test_trace_8_second_skeleton_at_line_6(go_file: Path) -> None:
+    """Trace 8: the second skeleton must reference line 6; this verifies that
+    in_interface is correctly reset to FALSE when line 5 (InterfaceClose) is
+    processed, allowing the func on line 6 to be captured."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    sorted_nums = sorted(s.line_number for s in skeletons)
+    assert sorted_nums[-1] == 6, (
+        f"Expected last skeleton at line 6, got {sorted_nums[-1]}"
+    )
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9 – Other lines produce no skeleton
+# ---------------------------------------------------------------------------
+
+def test_trace_9_other_lines_produce_no_skeleton(go_file: Path) -> None:
+    """Trace 9: lines 2 and 7 (classified as Other in TLA+) must not appear
+    in the skeleton set."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert 2 not in line_nums, "Line 2 (Other) must not produce a skeleton"
+    assert 7 not in line_nums, "Line 7 (Other) must not produce a skeleton"
+    assert line_nums == {1, 6}
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10 – InterfaceOpen / InterfaceClose lines produce no skeleton
+# ---------------------------------------------------------------------------
+
+def test_trace_10_interface_markers_produce_no_skeleton(go_file: Path) -> None:
+    """Trace 10: lines 3 (InterfaceOpen) and 5 (InterfaceClose) are structural
+    markers that update the in_interface flag but must never be recorded as
+    skeletons."""
+    source_lines = GO_SOURCE.splitlines(keepends=True)
+    skeletons = scan_file(str(go_file))
+
+    line_nums = {s.line_number for s in skeletons}
+    assert 3 not in line_nums, "Line 3 (InterfaceOpen) must not produce a skeleton"
+    assert 5 not in line_nums, "Line 5 (InterfaceClose) must not produce a skeleton"
+    assert line_nums == {1, 6}
+    _all_invariants(skeletons, source_lines)
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier suites – each exercises ≥ 2 distinct topologies
+# ---------------------------------------------------------------------------
+
+class TestLineNumberCorrectInvariant:
+    """LineNumberCorrect: ∀ s ∈ skeletons:
+         s.line_number ∈ [1, N]  ∧  Lines[s.line_number] = "Func"."""
+
+    def test_topology_canonical_7_lines(self, go_file: Path) -> None:
+        source_lines = GO_SOURCE.splitlines(keepends=True)
+        skeletons = scan_file(str(go_file))
+        _verify_line_number_correct(skeletons, source_lines)
+
+    def test_topology_single_func_line_1(self, tmp_path: Path) -> None:
+        """Minimal 1-line file; skeleton must point to line 1."""
+        src = "func Solo() {}\n"
+        p = tmp_path / "solo.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_line_number_correct(skeletons, source_lines)
+        assert {s.line_number for s in skeletons} == {1}
+
+    def test_topology_funcs_at_lines_3_and_5(self, tmp_path: Path) -> None:
+        """5-line file with funcs at non-boundary lines."""
+        src = (
+            "package main\n"   # line 1 – Other
+            "// comment\n"     # line 2 – Other
+            "func A() {}\n"    # line 3 – Func
+            "// comment\n"     # line 4 – Other
+            "func B() {}\n"    # line 5 – Func
+        )
+        p = tmp_path / "multi.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_line_number_correct(skeletons, source_lines)
+        assert {s.line_number for s in skeletons} == {3, 5}
+
+
+class TestInterfaceExclusionInvariant:
+    """InterfaceExclusion: no skeleton references a line inside an interface."""
+
+    def test_topology_canonical_7_lines(self, go_file: Path) -> None:
+        source_lines = GO_SOURCE.splitlines(keepends=True)
+        skeletons = scan_file(str(go_file))
+        _verify_interface_exclusion(skeletons, source_lines)
+
+    def test_topology_interface_only_file(self, tmp_path: Path) -> None:
+        """File containing only an interface block; zero skeletons expected."""
+        src = (
+            "type Iface interface {\n"   # line 1 – InterfaceOpen
+            "func Method()\n"            # line 2 – Func inside → excluded
+            "}\n"                        # line 3 – InterfaceClose
+        )
+        p = tmp_path / "iface_only.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_interface_exclusion(skeletons, source_lines)
+        assert len(skeletons) == 0, (
+            "No skeletons expected when every func is inside an interface"
+        )
+
+    def test_topology_func_before_and_after_interface(self, tmp_path: Path) -> None:
+        """Func on lines 1 and 5; interface on lines 2-4 excludes line 3."""
+        src = (
+            "func Before() {}\n"         # line 1 – Func (outside)
+            "type Iface interface {\n"   # line 2 – InterfaceOpen
+            "func Inside()\n"            # line 3 – Func (inside → excluded)
+            "}\n"                        # line 4 – InterfaceClose
+            "func After() {}\n"          # line 5 – Func (outside)
+        )
+        p = tmp_path / "before_after.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_interface_exclusion(skeletons, source_lines)
+        assert {s.line_number for s in skeletons} == {1, 5}
+
+
+class TestNoGapsInvariant:
+    """NoGaps: once i > N every non-interface Func-line has a skeleton."""
+
+    def test_topology_canonical_7_lines(self, go_file: Path) -> None:
+        source_lines = GO_SOURCE.splitlines(keepends=True)
+        skeletons = scan_file(str(go_file))
+        _verify_no_gaps(skeletons, source_lines)
+
+    def test_topology_three_consecutive_funcs(self, tmp_path: Path) -> None:
+        """Three consecutive func lines; all three must appear in skeletons."""
+        src = (
+            "func A() {}\n"   # line 1 – Func
+            "func B() {}\n"   # line 2 – Func
+            "func C() {}\n"   # line 3 – Func
+        )
+        p = tmp_path / "three_funcs.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_no_gaps(skeletons, source_lines)
+        assert {s.line_number for s in skeletons} == {1, 2, 3}
+
+    def test_topology_no_func_declarations(self, tmp_path: Path) -> None:
+        """File with no func keywords; empty skeleton set satisfies NoGaps."""
+        src = (
+            "package main\n"
+            "// just comments\n"
+        )
+        p = tmp_path / "no_funcs.go"
+        p.write_text(src)
+        source_lines = src.splitlines(keepends=True)
+        skeletons = scan_file(str(p))
+        _verify_no_gaps(skeletons, source_lines)
+        assert len(skeletons) == 0
+
+
+class TestCursorBoundedInvariant:
+    """CursorBounded: i ≤ N + 1 at every state; no skeleton exceeds that."""
+
+    def test_topology_canonical_7_lines(self, go_file: Path) -> None:
+        skeletons = scan_file(str(go_file))
+        _verify_cursor_bounded(skeletons, N)
+        assert all(s.line_number <= N + 1 for s in skeletons)
+
+    def test_topology_single_line_file(self, tmp_path: Path) -> None:
+        """N = 1 → cursor must not exceed 2."""
+        src = "func F() {}\n"
+        p = tmp_path / "single.go"
+        p.write_text(src)
+        skeletons = scan_file(str(p))
+        _verify_cursor_bounded(skeletons, 1)
+        assert {s.line_number for s in skeletons} == {1}
+
+    def test_topology_five_line_file(self, tmp_path: Path) -> None:
+        """N = 5 → all line_numbers must be ≤ 6."""
+        src = (
+            "func A() {}\n"   # line 1
+            "// c\n"           # line 2
+            "func B() {}\n"   # line 3
+            "// c\n"           # line 4
+            "func C() {}\n"   # line 5
+        )
+        p = tmp_path / "five.go"
+        p.write_text(src)
+        skeletons = scan_file(str(p))
+        _verify_cursor_bounded(skeletons, 5)
+        assert {s.line_number for s in skeletons} == {1, 3, 5}
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+def test_edge_empty_file(tmp_path: Path) -> None:
+    """Empty Go file produces zero skeletons and violates no invariant."""
+    p = tmp_path / "empty.go"
+    p.write_text("")
+    skeletons = scan_file(str(p))
+    assert len(skeletons) == 0
+
+
+def test_edge_file_with_only_comments(tmp_path: Path) -> None:
+    """Comment-only file produces zero skeletons; NoGaps trivially satisfied."""
+    src = "// package doc\n// another comment\n"
+    p = tmp_path / "comments_only.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert len(skeletons) == 0
+    _verify_no_gaps(skeletons, source_lines)
+
+
+def test_edge_single_func_declaration(tmp_path: Path) -> None:
+    """Single func at line 1 satisfies all four invariants."""
+    src = "func Single() {}\n"
+    p = tmp_path / "single_func.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {1}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_adjacent_func_declarations(tmp_path: Path) -> None:
+    """Two consecutive func lines; both captured, no gaps."""
+    src = "func A() {}\nfunc B() {}\n"
+    p = tmp_path / "adjacent.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {1, 2}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_interface_at_start_of_file(tmp_path: Path) -> None:
+    """Interface opened on line 1; only the func after the closing brace is
+    captured."""
+    src = (
+        "type StartIface interface {\n"   # line 1 – InterfaceOpen
+        "func Method()\n"                 # line 2 – Func inside → excluded
+        "}\n"                             # line 3 – InterfaceClose
+        "func RealFunc() {}\n"            # line 4 – Func outside
+    )
+    p = tmp_path / "iface_start.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {4}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_interface_at_end_of_file(tmp_path: Path) -> None:
+    """Interface closing at the last line; func before it is captured."""
+    src = (
+        "func First() {}\n"             # line 1 – Func outside
+        "type EndIface interface {\n"   # line 2 – InterfaceOpen
+        "func Method()\n"               # line 3 – Func inside → excluded
+        "}\n"                           # line 4 – InterfaceClose
+    )
+    p = tmp_path / "iface_end.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {1}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_two_interface_blocks_with_func_between(tmp_path: Path) -> None:
+    """Two separate interface blocks; only the func between them is captured."""
+    src = (
+        "type I1 interface {\n"   # line 1 – InterfaceOpen
+        "func M1()\n"             # line 2 – Func inside I1 → excluded
+        "}\n"                     # line 3 – InterfaceClose
+        "func Between() {}\n"    # line 4 – Func outside
+        "type I2 interface {\n"  # line 5 – InterfaceOpen
+        "func M2()\n"             # line 6 – Func inside I2 → excluded
+        "}\n"                     # line 7 – InterfaceClose
+    )
+    p = tmp_path / "two_ifaces.go"
+    p.write_text(src)
+    source_lines = src.splitlines(keepends=True)
+    skeletons = scan_file(str(p))
+    assert {s.line_number for s in skeletons} == {4}
+    _all_invariants(skeletons, source_lines)
+
+
+def test_edge_no_skeleton_duplicated_for_same_line(tmp_path: Path) -> None:
+    """Each func line must produce at most one skeleton (set semantics from
+    TLA+ skeletons = skeletons ∪ {[line_num |-> i]})."""
+    src = "func OnlyOnce() {}\n"
+    p = tmp_path / "once.go"
+    p.write_text(src)
+    skeletons = scan_file(str(p))
+    line_nums = [s.line_number for s in skeletons]
+    assert len(line_nums) == len(set(line_nums)), (
+        "Duplicate skeleton entries detected for the same line_number"
+    )
+    assert set(line_nums) == {1}
+```

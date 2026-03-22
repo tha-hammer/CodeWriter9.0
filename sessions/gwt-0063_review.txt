@@ -1,0 +1,1486 @@
+## Review Findings
+
+After checking all four criteria against the TLA+ spec and bridge verifiers, the plan is **semantically correct in all invariant translations and fixture logic**. Three corrections are needed: two misleading docstrings/comments and one off-by-four count in a stage sequence. No test will ever produce a wrong pass or wrong failure — these are purely documentation/accuracy issues.
+
+---
+
+### Issues Found
+
+| # | Location | Type | Problem |
+|---|---|---|---|
+| 1 | `TestEdgeCases.test_stage_never_regresses` | Misleading name + comment | `check_stage_ordering` is a set-membership predicate (`stage ∈ VALID_STAGES`); it has no notion of ordering. The test cannot catch a stage regression, e.g. `"done" → "idle"`. Name and comment over-promise. |
+| 2 | `TestEdgeCases.test_empty_dag_metrics` | Missing assertion | Docstring promises "correct component count" but no assertion for it is present. Either assert it or drop the claim. |
+| 3 | `TestStageOrdering.test_stage_sequence_during_trace` | Off-by-four count | Comment/intent implies all 19 trace states, but `expected_sequence` has only 15 entries and 11 `"compile_all"` items where the 19-state trace actually has **14** (states 2–15). Harmless for correctness (it's just a membership loop), but misleads any reader who trusts the count. |
+
+---
+
+### Corrected Test Plan
+
+```python
+import pytest
+from dag import RegistryDag, NodeNotFoundError
+from registry.types import Edge, EdgeType, Node
+
+# ---------------------------------------------------------------------------
+# TLA+ constants reproduced verbatim from the verified spec
+# ---------------------------------------------------------------------------
+
+VERIFIERS = [
+    {"name": "inv1", "has_cond": True,  "is_dict": True},   # k=1 → compiled
+    {"name": "inv2", "has_cond": True,  "is_dict": True},   # k=2 → compiled
+    {"name": "inv3", "has_cond": False, "is_dict": True},   # k=3 → EmptyCondSkipped
+    {"name": "skip", "has_cond": True,  "is_dict": False},  # k=4 → NonDictSkipped
+]
+N = 4
+VALID_STAGES = {"idle", "compile_all", "cargo_check", "compile_test", "run", "done"}
+
+# ---------------------------------------------------------------------------
+# Shared fixture builder (from trace Init state pattern)
+# ---------------------------------------------------------------------------
+
+def _make_dag(node_ids, edges, artifacts):
+    dag = RegistryDag()
+    for nid in node_ids:
+        dag.add_node(Node.behavior(nid, nid, "given", "when", "then"))
+    for src, dst in edges:
+        dag.add_edge(Edge(src, dst, EdgeType.IMPORTS))
+    dag.test_artifacts = artifacts
+    return dag
+
+
+# ---------------------------------------------------------------------------
+# compile_assertions: exact simulation of the TLA+ PlusCal algorithm
+# ---------------------------------------------------------------------------
+
+def _compile_assertions(verifiers):
+    """
+    Simulates the verifier PlusCal process:
+      CompileAll → ProcessLoop/ProcessV/AdvanceV × N → CargoCheck → CompileTest → RunTest → Finish
+    Returns (compiled: set[str], stage: str, passed: bool, cursor: int).
+    """
+    compiled = set()
+    passed = False
+    cursor = 1
+
+    # State: CompileAll
+    stage = "compile_all"
+
+    # States: ProcessLoop / ProcessV / AdvanceV
+    while cursor <= len(verifiers):
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        cursor += 1
+
+    # State: CargoCheck
+    stage = "cargo_check"
+    passed = True
+
+    # State: CompileTest
+    stage = "compile_test"
+
+    # State: RunTest
+    stage = "run"
+
+    # State: Finish
+    stage = "done"
+
+    return compiled, stage, passed, cursor
+
+
+# ---------------------------------------------------------------------------
+# Invariant checkers (direct translations of TLA+ define block)
+# ---------------------------------------------------------------------------
+
+def check_batch_consistent(compiled, cursor, verifiers, n):
+    """cursor > N => all is_dict /\ has_cond verifiers are in compiled."""
+    if cursor > n:
+        for v in verifiers:
+            if v["is_dict"] and v["has_cond"]:
+                assert v["name"] in compiled, (
+                    f"BatchConsistent violated: '{v['name']}' missing from compiled "
+                    f"after cursor={cursor} > N={n}"
+                )
+
+
+def check_non_dict_skipped(compiled):
+    """~(∃ c ∈ compiled : c.name = 'skip')"""
+    assert "skip" not in compiled, (
+        "NonDictSkipped violated: 'skip' (is_dict=False) must never appear in compiled"
+    )
+
+
+def check_empty_cond_skipped(compiled):
+    """~(∃ c ∈ compiled : c.name = 'inv3')"""
+    assert "inv3" not in compiled, (
+        "EmptyCondSkipped violated: 'inv3' (has_cond=False) must never appear in compiled"
+    )
+
+
+def check_no_helper_needed():
+    """NoHelperNeeded == TRUE"""
+    pass  # always satisfied
+
+
+def check_stage_ordering(stage):
+    """stage ∈ {"idle","compile_all","cargo_check","compile_test","run","done"}"""
+    assert stage in VALID_STAGES, (
+        f"StageOrdering violated: '{stage}' is not a valid stage"
+    )
+
+
+def check_cargo_check_passed_only_after_compile(passed, stage):
+    """passed => stage ∈ {"cargo_check","compile_test","run","done"}"""
+    if passed:
+        assert stage in {"cargo_check", "compile_test", "run", "done"}, (
+            f"CargoCheckPassedOnlyAfterCompile violated: "
+            f"passed=True but stage='{stage}'"
+        )
+
+
+def check_compiled_subset_valid(compiled, verifiers):
+    """∀ c ∈ compiled : ∃ k : Verifiers[k].name=c /\ is_dict /\ has_cond"""
+    valid_names = {v["name"] for v in verifiers if v["is_dict"] and v["has_cond"]}
+    for name in compiled:
+        assert name in valid_names, (
+            f"CompiledSubsetValid violated: '{name}' is not an eligible verifier "
+            f"(must have is_dict=True and has_cond=True)"
+        )
+
+
+def check_test_file_valid(stage, passed):
+    """stage = "done" => passed"""
+    if stage == "done":
+        assert passed, "TestFileValid violated: stage='done' but passed=False"
+
+
+def check_all_invariants(compiled, cursor, stage, passed, verifiers, n):
+    """Check every invariant at a single state — mirrors TLA+ invariant conjunction."""
+    check_batch_consistent(compiled, cursor, verifiers, n)
+    check_non_dict_skipped(compiled)
+    check_empty_cond_skipped(compiled)
+    check_no_helper_needed()
+    check_stage_ordering(stage)
+    check_cargo_check_passed_only_after_compile(passed, stage)
+    check_compiled_subset_valid(compiled, verifiers)
+    check_test_file_valid(stage, passed)
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def standard_dag():
+    """
+    Derived from all 10 trace Init states.
+    Nodes: inv1, inv2, inv3, skip (the 4 TLA+ Verifiers)
+    Edges: inv1→inv2→inv3 (linear chain; skip is isolated)
+    Artifacts: VERIFIERS list
+    """
+    return _make_dag(
+        node_ids=["inv1", "inv2", "inv3", "skip"],
+        edges=[("inv1", "inv2"), ("inv2", "inv3")],
+        artifacts=VERIFIERS,
+    )
+
+
+@pytest.fixture
+def minimal_two_verifier_dag():
+    """Topology with only the two eligible verifiers — no skip, no inv3."""
+    verifiers = [
+        {"name": "inv1", "has_cond": True, "is_dict": True},
+        {"name": "inv2", "has_cond": True, "is_dict": True},
+    ]
+    return _make_dag(["inv1", "inv2"], [("inv1", "inv2")], verifiers)
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — step-by-step walkthrough (19 states, all invariants at every state)
+# ---------------------------------------------------------------------------
+
+class TestTrace1:
+    """
+    Trace 1 (19 steps): CompileAll → ProcessLoop → ProcessV → AdvanceV × 4
+                         → CargoCheck → CompileTest → RunTest → Finish
+    Invariants tested: BatchConsistent, NonDictSkipped, EmptyCondSkipped,
+                       NoHelperNeeded, StageOrdering, CargoCheckPassedOnlyAfterCompile,
+                       CompiledSubsetValid, TestFileValid
+    """
+
+    def test_full_pipeline_step_by_step(self, standard_dag):
+        dag = standard_dag
+        verifiers = dag.test_artifacts
+        n = len(verifiers)
+
+        # ── State 1: Init ─────────────────────────────────────────────────
+        compiled, cursor, stage, passed = set(), 1, "idle", False
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 2: CompileAll ───────────────────────────────────────────
+        stage = "compile_all"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 3: ProcessLoop (cursor=1≤4 → ProcessV) ──────────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 4: ProcessV cursor=1 → inv1 (is_dict=T, has_cond=T) ─────
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        assert compiled == {"inv1"}
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 5: AdvanceV → cursor=2 ─────────────────────────────────
+        cursor += 1
+        assert cursor == 2
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 6: ProcessLoop (cursor=2≤4 → ProcessV) ──────────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 7: ProcessV cursor=2 → inv2 (is_dict=T, has_cond=T) ─────
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        assert compiled == {"inv1", "inv2"}
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 8: AdvanceV → cursor=3 ─────────────────────────────────
+        cursor += 1
+        assert cursor == 3
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 9: ProcessLoop (cursor=3≤4 → ProcessV) ──────────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 10: ProcessV cursor=3 → inv3 (has_cond=F) → skipped ─────
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        assert compiled == {"inv1", "inv2"}  # inv3 not added
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 11: AdvanceV → cursor=4 ────────────────────────────────
+        cursor += 1
+        assert cursor == 4
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 12: ProcessLoop (cursor=4≤4 → ProcessV) ─────────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 13: ProcessV cursor=4 → skip (is_dict=F) → skipped ──────
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        assert compiled == {"inv1", "inv2"}  # skip not added
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 14: AdvanceV → cursor=5 ────────────────────────────────
+        cursor += 1
+        assert cursor == 5
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 15: ProcessLoop (cursor=5>4 → CargoCheck) ───────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 16: CargoCheck ──────────────────────────────────────────
+        stage = "cargo_check"
+        passed = True
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 17: CompileTest ─────────────────────────────────────────
+        stage = "compile_test"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 18: RunTest ─────────────────────────────────────────────
+        stage = "run"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 19: Finish (Done) ───────────────────────────────────────
+        stage = "done"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # Final state matches trace exactly
+        assert compiled == {"inv1", "inv2"}
+        assert passed is True
+        assert stage == "done"
+        assert cursor == 5  # N+1
+
+
+# ---------------------------------------------------------------------------
+# Traces 2-10 (structurally identical to Trace 1)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("trace_id", range(2, 11))
+def test_trace_parametrized(trace_id, standard_dag):
+    """
+    Traces 2-10 share the exact same 19-step structure as Trace 1.
+    compile_assertions runs the full pipeline and we verify final state + all invariants.
+    """
+    dag = standard_dag
+    verifiers = dag.test_artifacts
+    n = len(verifiers)
+
+    compiled, stage, passed, cursor = _compile_assertions(verifiers)
+
+    # Final state matches every trace's State 19
+    assert compiled == {"inv1", "inv2"}, (
+        f"Trace {trace_id}: compiled set wrong: {compiled}"
+    )
+    assert passed is True, f"Trace {trace_id}: passed must be True at done"
+    assert stage == "done",  f"Trace {trace_id}: final stage must be 'done'"
+    assert cursor == n + 1,  f"Trace {trace_id}: cursor must be N+1={n+1}"
+
+    check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+
+# ---------------------------------------------------------------------------
+# Dedicated invariant tests (≥2 topologies each)
+# ---------------------------------------------------------------------------
+
+class TestBatchConsistent:
+    """
+    BatchConsistent: cursor > N => all (is_dict ∧ has_cond) verifiers in compiled.
+    """
+
+    def test_standard_topology_after_full_loop(self, standard_dag):
+        verifiers = standard_dag.test_artifacts
+        n = len(verifiers)
+        compiled, _, _, cursor = _compile_assertions(verifiers)
+        assert cursor > n
+        check_batch_consistent(compiled, cursor, verifiers, n)
+
+    def test_mid_loop_not_triggered(self):
+        """Invariant is vacuously satisfied when cursor ≤ N."""
+        # cursor=1, N=4 — no violation even if compiled is empty
+        check_batch_consistent(set(), 1, VERIFIERS, N)
+        check_batch_consistent(set(), 3, VERIFIERS, N)
+
+    def test_second_topology_all_eligible(self):
+        verifiers2 = [
+            {"name": "a", "has_cond": True, "is_dict": True},
+            {"name": "b", "has_cond": True, "is_dict": True},
+        ]
+        compiled, _, _, cursor = _compile_assertions(verifiers2)
+        check_batch_consistent(compiled, cursor, verifiers2, len(verifiers2))
+        assert compiled == {"a", "b"}
+
+    def test_violation_detected_when_eligible_entry_missing(self):
+        """Directly construct an inconsistent state and confirm the checker raises."""
+        verifiers = [{"name": "x", "has_cond": True, "is_dict": True}]
+        with pytest.raises(AssertionError, match="BatchConsistent"):
+            # cursor=2 > N=1 but compiled is empty — invariant must fire
+            check_batch_consistent(set(), 2, verifiers, 1)
+
+
+class TestNonDictSkipped:
+    """
+    NonDictSkipped: 'skip' (is_dict=False) must never appear in compiled.
+    """
+
+    def test_standard_topology(self, standard_dag):
+        compiled, _, _, _ = _compile_assertions(standard_dag.test_artifacts)
+        check_non_dict_skipped(compiled)
+        assert "skip" not in compiled
+
+    def test_all_non_dict_topology(self):
+        verifiers = [
+            {"name": "x", "has_cond": True, "is_dict": False},
+            {"name": "y", "has_cond": True, "is_dict": False},
+        ]
+        compiled, _, _, _ = _compile_assertions(verifiers)
+        assert compiled == set()
+        check_non_dict_skipped(compiled)
+
+    def test_invariant_at_every_intermediate_step(self):
+        """Check invariant after each ProcessV step, not just at the end."""
+        compiled = set()
+        for v in VERIFIERS:
+            if v["is_dict"] and v["has_cond"]:
+                compiled.add(v["name"])
+            check_non_dict_skipped(compiled)
+
+    def test_violation_detected(self):
+        with pytest.raises(AssertionError, match="NonDictSkipped"):
+            check_non_dict_skipped({"skip"})
+
+
+class TestEmptyCondSkipped:
+    """
+    EmptyCondSkipped: 'inv3' (has_cond=False) must never appear in compiled.
+    """
+
+    def test_standard_topology(self, standard_dag):
+        compiled, _, _, _ = _compile_assertions(standard_dag.test_artifacts)
+        check_empty_cond_skipped(compiled)
+        assert "inv3" not in compiled
+
+    def test_all_no_cond_topology(self):
+        verifiers = [
+            {"name": "p", "has_cond": False, "is_dict": True},
+            {"name": "q", "has_cond": False, "is_dict": True},
+        ]
+        compiled, _, _, _ = _compile_assertions(verifiers)
+        assert compiled == set()
+        check_empty_cond_skipped(compiled)
+
+    def test_invariant_at_every_intermediate_step(self):
+        compiled = set()
+        for v in VERIFIERS:
+            if v["is_dict"] and v["has_cond"]:
+                compiled.add(v["name"])
+            check_empty_cond_skipped(compiled)
+
+    def test_violation_detected(self):
+        with pytest.raises(AssertionError, match="EmptyCondSkipped"):
+            check_empty_cond_skipped({"inv3"})
+
+
+class TestNoHelperNeeded:
+    """
+    NoHelperNeeded == TRUE — the API requires no external helper module.
+    """
+
+    def test_no_helper_needed_standard_topology(self, standard_dag):
+        check_no_helper_needed()
+
+    def test_no_helper_needed_minimal_topology(self, minimal_two_verifier_dag):
+        check_no_helper_needed()
+
+    def test_no_helper_needed_always_passes(self):
+        for _ in range(5):
+            check_no_helper_needed()
+
+
+class TestStageOrdering:
+    """
+    StageOrdering: stage ∈ {"idle","compile_all","cargo_check","compile_test","run","done"}.
+    Note: this is a set-membership predicate only; no ordering between stages is enforced here.
+    """
+
+    def test_all_valid_stages(self, standard_dag):
+        for s in VALID_STAGES:
+            check_stage_ordering(s)
+
+    def test_stage_sequence_during_trace(self, standard_dag):
+        # CORRECTION: the 19-state trace has stages:
+        #   idle (×1), compile_all (×14, states 2–15), cargo_check (×1),
+        #   compile_test (×1), run (×1), done (×1).
+        # This sequence exercises all vocabulary members for membership validity.
+        expected_sequence = (
+            ["idle"]
+            + ["compile_all"] * 14   # states 2–15 (CompileAll through final ProcessLoop)
+            + ["cargo_check", "compile_test", "run", "done"]
+        )
+        for s in expected_sequence:
+            check_stage_ordering(s)
+
+    def test_invalid_stage_raises(self):
+        with pytest.raises(AssertionError, match="StageOrdering"):
+            check_stage_ordering("unknown_stage")
+
+    def test_empty_string_stage_raises(self):
+        with pytest.raises(AssertionError, match="StageOrdering"):
+            check_stage_ordering("")
+
+    def test_second_topology_stage_sequence(self, minimal_two_verifier_dag):
+        compiled, stage, passed, cursor = _compile_assertions(minimal_two_verifier_dag.test_artifacts)
+        check_stage_ordering(stage)
+        assert stage == "done"
+
+
+class TestCargoCheckPassedOnlyAfterCompile:
+    """
+    CargoCheckPassedOnlyAfterCompile: passed => stage ∈ {"cargo_check","compile_test","run","done"}.
+    """
+
+    def test_passed_false_before_cargo_check(self, standard_dag):
+        check_cargo_check_passed_only_after_compile(False, "idle")
+        check_cargo_check_passed_only_after_compile(False, "compile_all")
+
+    def test_passed_true_only_in_late_stages(self):
+        for stage in ("cargo_check", "compile_test", "run", "done"):
+            check_cargo_check_passed_only_after_compile(True, stage)
+
+    def test_passed_true_in_idle_raises(self):
+        with pytest.raises(AssertionError, match="CargoCheckPassedOnlyAfterCompile"):
+            check_cargo_check_passed_only_after_compile(True, "idle")
+
+    def test_passed_true_in_compile_all_raises(self):
+        with pytest.raises(AssertionError, match="CargoCheckPassedOnlyAfterCompile"):
+            check_cargo_check_passed_only_after_compile(True, "compile_all")
+
+    def test_invariant_across_full_trace(self, standard_dag):
+        """Verify invariant at every state in the simulated pipeline."""
+        verifiers = standard_dag.test_artifacts
+        compiled = set()
+        cursor = 1
+        passed = False
+
+        # idle
+        check_cargo_check_passed_only_after_compile(passed, "idle")
+        # compile_all (multiple ProcessV steps)
+        for v in verifiers:
+            if v["is_dict"] and v["has_cond"]:
+                compiled.add(v["name"])
+            cursor += 1
+            check_cargo_check_passed_only_after_compile(passed, "compile_all")
+        # cargo_check
+        passed = True
+        check_cargo_check_passed_only_after_compile(passed, "cargo_check")
+        # compile_test, run, done
+        for stage in ("compile_test", "run", "done"):
+            check_cargo_check_passed_only_after_compile(passed, stage)
+
+    def test_second_topology(self, minimal_two_verifier_dag):
+        compiled, stage, passed, cursor = _compile_assertions(minimal_two_verifier_dag.test_artifacts)
+        check_cargo_check_passed_only_after_compile(passed, stage)
+
+
+class TestCompiledSubsetValid:
+    """
+    CompiledSubsetValid: ∀ c ∈ compiled : ∃ k : Verifiers[k].name=c ∧ is_dict ∧ has_cond.
+    """
+
+    def test_standard_topology_subset_valid(self, standard_dag):
+        verifiers = standard_dag.test_artifacts
+        compiled, _, _, _ = _compile_assertions(verifiers)
+        check_compiled_subset_valid(compiled, verifiers)
+        assert compiled == {"inv1", "inv2"}
+
+    def test_only_eligible_entries_compiled(self, standard_dag):
+        verifiers = standard_dag.test_artifacts
+        compiled, _, _, _ = _compile_assertions(verifiers)
+        assert "inv3" not in compiled
+        assert "skip" not in compiled
+
+    def test_second_topology_mixed_eligibility(self):
+        verifiers2 = [
+            {"name": "a", "has_cond": True,  "is_dict": True},
+            {"name": "b", "has_cond": False, "is_dict": True},
+            {"name": "c", "has_cond": True,  "is_dict": False},
+        ]
+        compiled, _, _, _ = _compile_assertions(verifiers2)
+        assert compiled == {"a"}
+        check_compiled_subset_valid(compiled, verifiers2)
+
+    def test_violation_detected_when_ineligible_entry_present(self):
+        # inv3 has has_cond=False → must not be in compiled
+        with pytest.raises(AssertionError, match="CompiledSubsetValid"):
+            check_compiled_subset_valid({"inv3"}, VERIFIERS)
+
+    def test_violation_detected_skip_in_compiled(self):
+        with pytest.raises(AssertionError, match="CompiledSubsetValid"):
+            check_compiled_subset_valid({"skip"}, VERIFIERS)
+
+
+class TestTestFileValid:
+    """
+    TestFileValid: stage = "done" => passed.
+    """
+
+    def test_done_implies_passed_standard_topology(self, standard_dag):
+        verifiers = standard_dag.test_artifacts
+        compiled, stage, passed, cursor = _compile_assertions(verifiers)
+        assert stage == "done"
+        check_test_file_valid(stage, passed)
+
+    def test_non_done_stages_do_not_require_passed(self):
+        for stage in ("idle", "compile_all", "cargo_check", "compile_test", "run"):
+            check_test_file_valid(stage, False)
+
+    def test_done_with_passed_false_raises(self):
+        with pytest.raises(AssertionError, match="TestFileValid"):
+            check_test_file_valid("done", False)
+
+    def test_second_topology_final_state(self, minimal_two_verifier_dag):
+        compiled, stage, passed, cursor = _compile_assertions(minimal_two_verifier_dag.test_artifacts)
+        check_test_file_valid(stage, passed)
+        assert stage == "done" and passed is True
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+
+    def test_empty_verifiers_list(self):
+        """Empty verifier list → empty compiled, cargo_check still passes."""
+        dag = _make_dag([], [], [])
+        verifiers = dag.test_artifacts
+        compiled, stage, passed, cursor = _compile_assertions(verifiers)
+        assert compiled == set()
+        assert stage == "done"
+        assert passed is True
+        assert cursor == 1  # loop condition 1 ≤ 0 is False immediately; cursor never incremented
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, 0)
+
+    def test_all_non_dict_verifiers(self):
+        """All verifiers ineligible due to is_dict=False → nothing compiled."""
+        verifiers = [
+            {"name": "a", "has_cond": True, "is_dict": False},
+            {"name": "b", "has_cond": True, "is_dict": False},
+        ]
+        dag = _make_dag(["a", "b"], [], verifiers)
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == set()
+        check_non_dict_skipped(compiled)
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, len(verifiers))
+
+    def test_all_no_cond_verifiers(self):
+        """All verifiers ineligible due to has_cond=False → nothing compiled."""
+        verifiers = [
+            {"name": "p", "has_cond": False, "is_dict": True},
+            {"name": "q", "has_cond": False, "is_dict": True},
+        ]
+        dag = _make_dag(["p", "q"], [], verifiers)
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == set()
+        check_empty_cond_skipped(compiled)
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, len(verifiers))
+
+    def test_single_eligible_verifier(self):
+        """Single (is_dict=True, has_cond=True) verifier → exactly one entry compiled."""
+        verifiers = [{"name": "only", "has_cond": True, "is_dict": True}]
+        dag = _make_dag(["only"], [], verifiers)
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == {"only"}
+        assert passed is True
+        assert stage == "done"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, len(verifiers))
+
+    def test_isolated_node_in_dag(self):
+        """Isolated node (no edges) in the DAG doesn't affect verifier compilation."""
+        dag = _make_dag(["isolated"], [], VERIFIERS)
+        assert dag.node_count >= 1
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == {"inv1", "inv2"}
+        check_all_invariants(compiled, cursor, stage, passed, VERIFIERS, N)
+
+    def test_diamond_topology_dag(self):
+        """Diamond DAG pattern A→B, A→C, B→D, C→D — verifier loop unaffected."""
+        dag = _make_dag(
+            ["A", "B", "C", "D"],
+            [("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")],
+            VERIFIERS,
+        )
+        assert dag.node_count == 4
+        assert dag.edge_count == 4
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == {"inv1", "inv2"}
+        check_all_invariants(compiled, cursor, stage, passed, VERIFIERS, N)
+
+    def test_node_not_found_error_on_query(self):
+        """Querying a nonexistent node ID raises NodeNotFoundError from the real API."""
+        dag = _make_dag(["inv1", "inv2"], [], VERIFIERS)
+        with pytest.raises(NodeNotFoundError):
+            dag.query_relevant("nonexistent_node_xyz")
+
+    def test_empty_dag_metrics(self):
+        """Brand-new RegistryDag has zero nodes and zero edges."""
+        dag = RegistryDag()
+        assert dag.node_count == 0
+        assert dag.edge_count == 0
+
+    def test_passed_remains_false_through_compile_all(self):
+        """passed must be False in idle and compile_all; invariant must hold at each step."""
+        compiled = set()
+        cursor = 1
+        passed = False
+
+        check_cargo_check_passed_only_after_compile(passed, "idle")
+        for v in VERIFIERS:
+            if v["is_dict"] and v["has_cond"]:
+                compiled.add(v["name"])
+            cursor += 1
+            check_cargo_check_passed_only_after_compile(passed, "compile_all")
+
+        # Only after CargoCheck may passed become True
+        passed = True
+        check_cargo_check_passed_only_after_compile(passed, "cargo_check")
+
+    def test_stage_vocabulary_complete_and_invalid_rejected(self):
+        """
+        CORRECTION (was test_stage_never_regresses): StageOrdering is a set-membership
+        predicate only — it accepts any value in VALID_STAGES regardless of order.
+        This test verifies every valid token is accepted and out-of-vocabulary tokens
+        are rejected; monotonic ordering must be enforced by the caller, not this invariant.
+        """
+        for s in ["idle", "compile_all", "cargo_check", "compile_test", "run", "done"]:
+            check_stage_ordering(s)
+        with pytest.raises(AssertionError, match="StageOrdering"):
+            check_stage_ordering("pre_compile")
+
+    def test_batch_consistent_after_mixed_eligibility_loop(self):
+        """
+        After processing a mixed verifier list, BatchConsistent holds:
+        only eligible ones land in compiled and all eligible ones are present.
+        """
+        verifiers = [
+            {"name": "e1", "has_cond": True,  "is_dict": True},   # eligible
+            {"name": "e2", "has_cond": False, "is_dict": True},   # skipped
+            {"name": "e3", "has_cond": True,  "is_dict": False},  # skipped
+            {"name": "e4", "has_cond": True,  "is_dict": True},   # eligible
+        ]
+        compiled, _, _, cursor = _compile_assertions(verifiers)
+        assert compiled == {"e1", "e4"}
+        check_batch_consistent(compiled, cursor, verifiers, len(verifiers))
+        check_compiled_subset_valid(compiled, verifiers)
+```
+
+---
+
+## Summary of Changes
+
+| # | Change | Rationale |
+|---|---|---|
+| 1 | **Renamed** `test_stage_never_regresses` → `test_stage_vocabulary_complete_and_invalid_rejected`; rewrote docstring | `check_stage_ordering` is `stage ∈ VALID_STAGES` (a set predicate). It cannot detect regressions like `"done"→"idle"`. The old name falsely promised regression detection that no code provided. |
+| 2 | **Removed** "correct component count" from `test_empty_dag_metrics` docstring | No component-count assertion existed; the claim was dead documentation. |
+| 3 | **Fixed** `expected_sequence` in `test_stage_sequence_during_trace` to 19 entries (1 idle + **14** compile_all + 4 terminal stages) | The original had 11 `compile_all` entries; the actual 19-state trace has 14 states with `stage="compile_all"` (states 2–15 inclusive). Harmless for correctness but misleading for readers. |
+
+All invariant translations, fixture topologies, API bindings, and edge-case logic were verified correct and are unchanged.
+## Review Findings
+
+After checking all four criteria against the TLA+ spec and bridge verifiers, the plan is **semantically correct in all invariant translations and fixture logic**. Three corrections are needed: two misleading docstrings/comments and one off-by-four count in a stage sequence. No test will ever produce a wrong pass or wrong failure — these are purely documentation/accuracy issues.
+
+---
+
+### Issues Found
+
+| # | Location | Type | Problem |
+|---|---|---|---|
+| 1 | `TestEdgeCases.test_stage_never_regresses` | Misleading name + comment | `check_stage_ordering` is a set-membership predicate (`stage ∈ VALID_STAGES`); it has no notion of ordering. The test cannot catch a stage regression, e.g. `"done" → "idle"`. Name and comment over-promise. |
+| 2 | `TestEdgeCases.test_empty_dag_metrics` | Missing assertion | Docstring promises "correct component count" but no assertion for it is present. Either assert it or drop the claim. |
+| 3 | `TestStageOrdering.test_stage_sequence_during_trace` | Off-by-four count | Comment/intent implies all 19 trace states, but `expected_sequence` has only 15 entries and 11 `"compile_all"` items where the 19-state trace actually has **14** (states 2–15). Harmless for correctness (it's just a membership loop), but misleads any reader who trusts the count. |
+
+---
+
+### Corrected Test Plan
+
+```python
+import pytest
+from dag import RegistryDag, NodeNotFoundError
+from registry.types import Edge, EdgeType, Node
+
+# ---------------------------------------------------------------------------
+# TLA+ constants reproduced verbatim from the verified spec
+# ---------------------------------------------------------------------------
+
+VERIFIERS = [
+    {"name": "inv1", "has_cond": True,  "is_dict": True},   # k=1 → compiled
+    {"name": "inv2", "has_cond": True,  "is_dict": True},   # k=2 → compiled
+    {"name": "inv3", "has_cond": False, "is_dict": True},   # k=3 → EmptyCondSkipped
+    {"name": "skip", "has_cond": True,  "is_dict": False},  # k=4 → NonDictSkipped
+]
+N = 4
+VALID_STAGES = {"idle", "compile_all", "cargo_check", "compile_test", "run", "done"}
+
+# ---------------------------------------------------------------------------
+# Shared fixture builder (from trace Init state pattern)
+# ---------------------------------------------------------------------------
+
+def _make_dag(node_ids, edges, artifacts):
+    dag = RegistryDag()
+    for nid in node_ids:
+        dag.add_node(Node.behavior(nid, nid, "given", "when", "then"))
+    for src, dst in edges:
+        dag.add_edge(Edge(src, dst, EdgeType.IMPORTS))
+    dag.test_artifacts = artifacts
+    return dag
+
+
+# ---------------------------------------------------------------------------
+# compile_assertions: exact simulation of the TLA+ PlusCal algorithm
+# ---------------------------------------------------------------------------
+
+def _compile_assertions(verifiers):
+    """
+    Simulates the verifier PlusCal process:
+      CompileAll → ProcessLoop/ProcessV/AdvanceV × N → CargoCheck → CompileTest → RunTest → Finish
+    Returns (compiled: set[str], stage: str, passed: bool, cursor: int).
+    """
+    compiled = set()
+    passed = False
+    cursor = 1
+
+    # State: CompileAll
+    stage = "compile_all"
+
+    # States: ProcessLoop / ProcessV / AdvanceV
+    while cursor <= len(verifiers):
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        cursor += 1
+
+    # State: CargoCheck
+    stage = "cargo_check"
+    passed = True
+
+    # State: CompileTest
+    stage = "compile_test"
+
+    # State: RunTest
+    stage = "run"
+
+    # State: Finish
+    stage = "done"
+
+    return compiled, stage, passed, cursor
+
+
+# ---------------------------------------------------------------------------
+# Invariant checkers (direct translations of TLA+ define block)
+# ---------------------------------------------------------------------------
+
+def check_batch_consistent(compiled, cursor, verifiers, n):
+    """cursor > N => all is_dict /\ has_cond verifiers are in compiled."""
+    if cursor > n:
+        for v in verifiers:
+            if v["is_dict"] and v["has_cond"]:
+                assert v["name"] in compiled, (
+                    f"BatchConsistent violated: '{v['name']}' missing from compiled "
+                    f"after cursor={cursor} > N={n}"
+                )
+
+
+def check_non_dict_skipped(compiled):
+    """~(∃ c ∈ compiled : c.name = 'skip')"""
+    assert "skip" not in compiled, (
+        "NonDictSkipped violated: 'skip' (is_dict=False) must never appear in compiled"
+    )
+
+
+def check_empty_cond_skipped(compiled):
+    """~(∃ c ∈ compiled : c.name = 'inv3')"""
+    assert "inv3" not in compiled, (
+        "EmptyCondSkipped violated: 'inv3' (has_cond=False) must never appear in compiled"
+    )
+
+
+def check_no_helper_needed():
+    """NoHelperNeeded == TRUE"""
+    pass  # always satisfied
+
+
+def check_stage_ordering(stage):
+    """stage ∈ {"idle","compile_all","cargo_check","compile_test","run","done"}"""
+    assert stage in VALID_STAGES, (
+        f"StageOrdering violated: '{stage}' is not a valid stage"
+    )
+
+
+def check_cargo_check_passed_only_after_compile(passed, stage):
+    """passed => stage ∈ {"cargo_check","compile_test","run","done"}"""
+    if passed:
+        assert stage in {"cargo_check", "compile_test", "run", "done"}, (
+            f"CargoCheckPassedOnlyAfterCompile violated: "
+            f"passed=True but stage='{stage}'"
+        )
+
+
+def check_compiled_subset_valid(compiled, verifiers):
+    """∀ c ∈ compiled : ∃ k : Verifiers[k].name=c /\ is_dict /\ has_cond"""
+    valid_names = {v["name"] for v in verifiers if v["is_dict"] and v["has_cond"]}
+    for name in compiled:
+        assert name in valid_names, (
+            f"CompiledSubsetValid violated: '{name}' is not an eligible verifier "
+            f"(must have is_dict=True and has_cond=True)"
+        )
+
+
+def check_test_file_valid(stage, passed):
+    """stage = "done" => passed"""
+    if stage == "done":
+        assert passed, "TestFileValid violated: stage='done' but passed=False"
+
+
+def check_all_invariants(compiled, cursor, stage, passed, verifiers, n):
+    """Check every invariant at a single state — mirrors TLA+ invariant conjunction."""
+    check_batch_consistent(compiled, cursor, verifiers, n)
+    check_non_dict_skipped(compiled)
+    check_empty_cond_skipped(compiled)
+    check_no_helper_needed()
+    check_stage_ordering(stage)
+    check_cargo_check_passed_only_after_compile(passed, stage)
+    check_compiled_subset_valid(compiled, verifiers)
+    check_test_file_valid(stage, passed)
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def standard_dag():
+    """
+    Derived from all 10 trace Init states.
+    Nodes: inv1, inv2, inv3, skip (the 4 TLA+ Verifiers)
+    Edges: inv1→inv2→inv3 (linear chain; skip is isolated)
+    Artifacts: VERIFIERS list
+    """
+    return _make_dag(
+        node_ids=["inv1", "inv2", "inv3", "skip"],
+        edges=[("inv1", "inv2"), ("inv2", "inv3")],
+        artifacts=VERIFIERS,
+    )
+
+
+@pytest.fixture
+def minimal_two_verifier_dag():
+    """Topology with only the two eligible verifiers — no skip, no inv3."""
+    verifiers = [
+        {"name": "inv1", "has_cond": True, "is_dict": True},
+        {"name": "inv2", "has_cond": True, "is_dict": True},
+    ]
+    return _make_dag(["inv1", "inv2"], [("inv1", "inv2")], verifiers)
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — step-by-step walkthrough (19 states, all invariants at every state)
+# ---------------------------------------------------------------------------
+
+class TestTrace1:
+    """
+    Trace 1 (19 steps): CompileAll → ProcessLoop → ProcessV → AdvanceV × 4
+                         → CargoCheck → CompileTest → RunTest → Finish
+    Invariants tested: BatchConsistent, NonDictSkipped, EmptyCondSkipped,
+                       NoHelperNeeded, StageOrdering, CargoCheckPassedOnlyAfterCompile,
+                       CompiledSubsetValid, TestFileValid
+    """
+
+    def test_full_pipeline_step_by_step(self, standard_dag):
+        dag = standard_dag
+        verifiers = dag.test_artifacts
+        n = len(verifiers)
+
+        # ── State 1: Init ─────────────────────────────────────────────────
+        compiled, cursor, stage, passed = set(), 1, "idle", False
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 2: CompileAll ───────────────────────────────────────────
+        stage = "compile_all"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 3: ProcessLoop (cursor=1≤4 → ProcessV) ──────────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 4: ProcessV cursor=1 → inv1 (is_dict=T, has_cond=T) ─────
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        assert compiled == {"inv1"}
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 5: AdvanceV → cursor=2 ─────────────────────────────────
+        cursor += 1
+        assert cursor == 2
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 6: ProcessLoop (cursor=2≤4 → ProcessV) ──────────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 7: ProcessV cursor=2 → inv2 (is_dict=T, has_cond=T) ─────
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        assert compiled == {"inv1", "inv2"}
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 8: AdvanceV → cursor=3 ─────────────────────────────────
+        cursor += 1
+        assert cursor == 3
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 9: ProcessLoop (cursor=3≤4 → ProcessV) ──────────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 10: ProcessV cursor=3 → inv3 (has_cond=F) → skipped ─────
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        assert compiled == {"inv1", "inv2"}  # inv3 not added
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 11: AdvanceV → cursor=4 ────────────────────────────────
+        cursor += 1
+        assert cursor == 4
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 12: ProcessLoop (cursor=4≤4 → ProcessV) ─────────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 13: ProcessV cursor=4 → skip (is_dict=F) → skipped ──────
+        v = verifiers[cursor - 1]
+        if v["is_dict"] and v["has_cond"]:
+            compiled.add(v["name"])
+        assert compiled == {"inv1", "inv2"}  # skip not added
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 14: AdvanceV → cursor=5 ────────────────────────────────
+        cursor += 1
+        assert cursor == 5
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 15: ProcessLoop (cursor=5>4 → CargoCheck) ───────────────
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 16: CargoCheck ──────────────────────────────────────────
+        stage = "cargo_check"
+        passed = True
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 17: CompileTest ─────────────────────────────────────────
+        stage = "compile_test"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 18: RunTest ─────────────────────────────────────────────
+        stage = "run"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # ── State 19: Finish (Done) ───────────────────────────────────────
+        stage = "done"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+        # Final state matches trace exactly
+        assert compiled == {"inv1", "inv2"}
+        assert passed is True
+        assert stage == "done"
+        assert cursor == 5  # N+1
+
+
+# ---------------------------------------------------------------------------
+# Traces 2-10 (structurally identical to Trace 1)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("trace_id", range(2, 11))
+def test_trace_parametrized(trace_id, standard_dag):
+    """
+    Traces 2-10 share the exact same 19-step structure as Trace 1.
+    compile_assertions runs the full pipeline and we verify final state + all invariants.
+    """
+    dag = standard_dag
+    verifiers = dag.test_artifacts
+    n = len(verifiers)
+
+    compiled, stage, passed, cursor = _compile_assertions(verifiers)
+
+    # Final state matches every trace's State 19
+    assert compiled == {"inv1", "inv2"}, (
+        f"Trace {trace_id}: compiled set wrong: {compiled}"
+    )
+    assert passed is True, f"Trace {trace_id}: passed must be True at done"
+    assert stage == "done",  f"Trace {trace_id}: final stage must be 'done'"
+    assert cursor == n + 1,  f"Trace {trace_id}: cursor must be N+1={n+1}"
+
+    check_all_invariants(compiled, cursor, stage, passed, verifiers, n)
+
+
+# ---------------------------------------------------------------------------
+# Dedicated invariant tests (≥2 topologies each)
+# ---------------------------------------------------------------------------
+
+class TestBatchConsistent:
+    """
+    BatchConsistent: cursor > N => all (is_dict ∧ has_cond) verifiers in compiled.
+    """
+
+    def test_standard_topology_after_full_loop(self, standard_dag):
+        verifiers = standard_dag.test_artifacts
+        n = len(verifiers)
+        compiled, _, _, cursor = _compile_assertions(verifiers)
+        assert cursor > n
+        check_batch_consistent(compiled, cursor, verifiers, n)
+
+    def test_mid_loop_not_triggered(self):
+        """Invariant is vacuously satisfied when cursor ≤ N."""
+        # cursor=1, N=4 — no violation even if compiled is empty
+        check_batch_consistent(set(), 1, VERIFIERS, N)
+        check_batch_consistent(set(), 3, VERIFIERS, N)
+
+    def test_second_topology_all_eligible(self):
+        verifiers2 = [
+            {"name": "a", "has_cond": True, "is_dict": True},
+            {"name": "b", "has_cond": True, "is_dict": True},
+        ]
+        compiled, _, _, cursor = _compile_assertions(verifiers2)
+        check_batch_consistent(compiled, cursor, verifiers2, len(verifiers2))
+        assert compiled == {"a", "b"}
+
+    def test_violation_detected_when_eligible_entry_missing(self):
+        """Directly construct an inconsistent state and confirm the checker raises."""
+        verifiers = [{"name": "x", "has_cond": True, "is_dict": True}]
+        with pytest.raises(AssertionError, match="BatchConsistent"):
+            # cursor=2 > N=1 but compiled is empty — invariant must fire
+            check_batch_consistent(set(), 2, verifiers, 1)
+
+
+class TestNonDictSkipped:
+    """
+    NonDictSkipped: 'skip' (is_dict=False) must never appear in compiled.
+    """
+
+    def test_standard_topology(self, standard_dag):
+        compiled, _, _, _ = _compile_assertions(standard_dag.test_artifacts)
+        check_non_dict_skipped(compiled)
+        assert "skip" not in compiled
+
+    def test_all_non_dict_topology(self):
+        verifiers = [
+            {"name": "x", "has_cond": True, "is_dict": False},
+            {"name": "y", "has_cond": True, "is_dict": False},
+        ]
+        compiled, _, _, _ = _compile_assertions(verifiers)
+        assert compiled == set()
+        check_non_dict_skipped(compiled)
+
+    def test_invariant_at_every_intermediate_step(self):
+        """Check invariant after each ProcessV step, not just at the end."""
+        compiled = set()
+        for v in VERIFIERS:
+            if v["is_dict"] and v["has_cond"]:
+                compiled.add(v["name"])
+            check_non_dict_skipped(compiled)
+
+    def test_violation_detected(self):
+        with pytest.raises(AssertionError, match="NonDictSkipped"):
+            check_non_dict_skipped({"skip"})
+
+
+class TestEmptyCondSkipped:
+    """
+    EmptyCondSkipped: 'inv3' (has_cond=False) must never appear in compiled.
+    """
+
+    def test_standard_topology(self, standard_dag):
+        compiled, _, _, _ = _compile_assertions(standard_dag.test_artifacts)
+        check_empty_cond_skipped(compiled)
+        assert "inv3" not in compiled
+
+    def test_all_no_cond_topology(self):
+        verifiers = [
+            {"name": "p", "has_cond": False, "is_dict": True},
+            {"name": "q", "has_cond": False, "is_dict": True},
+        ]
+        compiled, _, _, _ = _compile_assertions(verifiers)
+        assert compiled == set()
+        check_empty_cond_skipped(compiled)
+
+    def test_invariant_at_every_intermediate_step(self):
+        compiled = set()
+        for v in VERIFIERS:
+            if v["is_dict"] and v["has_cond"]:
+                compiled.add(v["name"])
+            check_empty_cond_skipped(compiled)
+
+    def test_violation_detected(self):
+        with pytest.raises(AssertionError, match="EmptyCondSkipped"):
+            check_empty_cond_skipped({"inv3"})
+
+
+class TestNoHelperNeeded:
+    """
+    NoHelperNeeded == TRUE — the API requires no external helper module.
+    """
+
+    def test_no_helper_needed_standard_topology(self, standard_dag):
+        check_no_helper_needed()
+
+    def test_no_helper_needed_minimal_topology(self, minimal_two_verifier_dag):
+        check_no_helper_needed()
+
+    def test_no_helper_needed_always_passes(self):
+        for _ in range(5):
+            check_no_helper_needed()
+
+
+class TestStageOrdering:
+    """
+    StageOrdering: stage ∈ {"idle","compile_all","cargo_check","compile_test","run","done"}.
+    Note: this is a set-membership predicate only; no ordering between stages is enforced here.
+    """
+
+    def test_all_valid_stages(self, standard_dag):
+        for s in VALID_STAGES:
+            check_stage_ordering(s)
+
+    def test_stage_sequence_during_trace(self, standard_dag):
+        # CORRECTION: the 19-state trace has stages:
+        #   idle (×1), compile_all (×14, states 2–15), cargo_check (×1),
+        #   compile_test (×1), run (×1), done (×1).
+        # This sequence exercises all vocabulary members for membership validity.
+        expected_sequence = (
+            ["idle"]
+            + ["compile_all"] * 14   # states 2–15 (CompileAll through final ProcessLoop)
+            + ["cargo_check", "compile_test", "run", "done"]
+        )
+        for s in expected_sequence:
+            check_stage_ordering(s)
+
+    def test_invalid_stage_raises(self):
+        with pytest.raises(AssertionError, match="StageOrdering"):
+            check_stage_ordering("unknown_stage")
+
+    def test_empty_string_stage_raises(self):
+        with pytest.raises(AssertionError, match="StageOrdering"):
+            check_stage_ordering("")
+
+    def test_second_topology_stage_sequence(self, minimal_two_verifier_dag):
+        compiled, stage, passed, cursor = _compile_assertions(minimal_two_verifier_dag.test_artifacts)
+        check_stage_ordering(stage)
+        assert stage == "done"
+
+
+class TestCargoCheckPassedOnlyAfterCompile:
+    """
+    CargoCheckPassedOnlyAfterCompile: passed => stage ∈ {"cargo_check","compile_test","run","done"}.
+    """
+
+    def test_passed_false_before_cargo_check(self, standard_dag):
+        check_cargo_check_passed_only_after_compile(False, "idle")
+        check_cargo_check_passed_only_after_compile(False, "compile_all")
+
+    def test_passed_true_only_in_late_stages(self):
+        for stage in ("cargo_check", "compile_test", "run", "done"):
+            check_cargo_check_passed_only_after_compile(True, stage)
+
+    def test_passed_true_in_idle_raises(self):
+        with pytest.raises(AssertionError, match="CargoCheckPassedOnlyAfterCompile"):
+            check_cargo_check_passed_only_after_compile(True, "idle")
+
+    def test_passed_true_in_compile_all_raises(self):
+        with pytest.raises(AssertionError, match="CargoCheckPassedOnlyAfterCompile"):
+            check_cargo_check_passed_only_after_compile(True, "compile_all")
+
+    def test_invariant_across_full_trace(self, standard_dag):
+        """Verify invariant at every state in the simulated pipeline."""
+        verifiers = standard_dag.test_artifacts
+        compiled = set()
+        cursor = 1
+        passed = False
+
+        # idle
+        check_cargo_check_passed_only_after_compile(passed, "idle")
+        # compile_all (multiple ProcessV steps)
+        for v in verifiers:
+            if v["is_dict"] and v["has_cond"]:
+                compiled.add(v["name"])
+            cursor += 1
+            check_cargo_check_passed_only_after_compile(passed, "compile_all")
+        # cargo_check
+        passed = True
+        check_cargo_check_passed_only_after_compile(passed, "cargo_check")
+        # compile_test, run, done
+        for stage in ("compile_test", "run", "done"):
+            check_cargo_check_passed_only_after_compile(passed, stage)
+
+    def test_second_topology(self, minimal_two_verifier_dag):
+        compiled, stage, passed, cursor = _compile_assertions(minimal_two_verifier_dag.test_artifacts)
+        check_cargo_check_passed_only_after_compile(passed, stage)
+
+
+class TestCompiledSubsetValid:
+    """
+    CompiledSubsetValid: ∀ c ∈ compiled : ∃ k : Verifiers[k].name=c ∧ is_dict ∧ has_cond.
+    """
+
+    def test_standard_topology_subset_valid(self, standard_dag):
+        verifiers = standard_dag.test_artifacts
+        compiled, _, _, _ = _compile_assertions(verifiers)
+        check_compiled_subset_valid(compiled, verifiers)
+        assert compiled == {"inv1", "inv2"}
+
+    def test_only_eligible_entries_compiled(self, standard_dag):
+        verifiers = standard_dag.test_artifacts
+        compiled, _, _, _ = _compile_assertions(verifiers)
+        assert "inv3" not in compiled
+        assert "skip" not in compiled
+
+    def test_second_topology_mixed_eligibility(self):
+        verifiers2 = [
+            {"name": "a", "has_cond": True,  "is_dict": True},
+            {"name": "b", "has_cond": False, "is_dict": True},
+            {"name": "c", "has_cond": True,  "is_dict": False},
+        ]
+        compiled, _, _, _ = _compile_assertions(verifiers2)
+        assert compiled == {"a"}
+        check_compiled_subset_valid(compiled, verifiers2)
+
+    def test_violation_detected_when_ineligible_entry_present(self):
+        # inv3 has has_cond=False → must not be in compiled
+        with pytest.raises(AssertionError, match="CompiledSubsetValid"):
+            check_compiled_subset_valid({"inv3"}, VERIFIERS)
+
+    def test_violation_detected_skip_in_compiled(self):
+        with pytest.raises(AssertionError, match="CompiledSubsetValid"):
+            check_compiled_subset_valid({"skip"}, VERIFIERS)
+
+
+class TestTestFileValid:
+    """
+    TestFileValid: stage = "done" => passed.
+    """
+
+    def test_done_implies_passed_standard_topology(self, standard_dag):
+        verifiers = standard_dag.test_artifacts
+        compiled, stage, passed, cursor = _compile_assertions(verifiers)
+        assert stage == "done"
+        check_test_file_valid(stage, passed)
+
+    def test_non_done_stages_do_not_require_passed(self):
+        for stage in ("idle", "compile_all", "cargo_check", "compile_test", "run"):
+            check_test_file_valid(stage, False)
+
+    def test_done_with_passed_false_raises(self):
+        with pytest.raises(AssertionError, match="TestFileValid"):
+            check_test_file_valid("done", False)
+
+    def test_second_topology_final_state(self, minimal_two_verifier_dag):
+        compiled, stage, passed, cursor = _compile_assertions(minimal_two_verifier_dag.test_artifacts)
+        check_test_file_valid(stage, passed)
+        assert stage == "done" and passed is True
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+
+    def test_empty_verifiers_list(self):
+        """Empty verifier list → empty compiled, cargo_check still passes."""
+        dag = _make_dag([], [], [])
+        verifiers = dag.test_artifacts
+        compiled, stage, passed, cursor = _compile_assertions(verifiers)
+        assert compiled == set()
+        assert stage == "done"
+        assert passed is True
+        assert cursor == 1  # loop condition 1 ≤ 0 is False immediately; cursor never incremented
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, 0)
+
+    def test_all_non_dict_verifiers(self):
+        """All verifiers ineligible due to is_dict=False → nothing compiled."""
+        verifiers = [
+            {"name": "a", "has_cond": True, "is_dict": False},
+            {"name": "b", "has_cond": True, "is_dict": False},
+        ]
+        dag = _make_dag(["a", "b"], [], verifiers)
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == set()
+        check_non_dict_skipped(compiled)
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, len(verifiers))
+
+    def test_all_no_cond_verifiers(self):
+        """All verifiers ineligible due to has_cond=False → nothing compiled."""
+        verifiers = [
+            {"name": "p", "has_cond": False, "is_dict": True},
+            {"name": "q", "has_cond": False, "is_dict": True},
+        ]
+        dag = _make_dag(["p", "q"], [], verifiers)
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == set()
+        check_empty_cond_skipped(compiled)
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, len(verifiers))
+
+    def test_single_eligible_verifier(self):
+        """Single (is_dict=True, has_cond=True) verifier → exactly one entry compiled."""
+        verifiers = [{"name": "only", "has_cond": True, "is_dict": True}]
+        dag = _make_dag(["only"], [], verifiers)
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == {"only"}
+        assert passed is True
+        assert stage == "done"
+        check_all_invariants(compiled, cursor, stage, passed, verifiers, len(verifiers))
+
+    def test_isolated_node_in_dag(self):
+        """Isolated node (no edges) in the DAG doesn't affect verifier compilation."""
+        dag = _make_dag(["isolated"], [], VERIFIERS)
+        assert dag.node_count >= 1
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == {"inv1", "inv2"}
+        check_all_invariants(compiled, cursor, stage, passed, VERIFIERS, N)
+
+    def test_diamond_topology_dag(self):
+        """Diamond DAG pattern A→B, A→C, B→D, C→D — verifier loop unaffected."""
+        dag = _make_dag(
+            ["A", "B", "C", "D"],
+            [("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")],
+            VERIFIERS,
+        )
+        assert dag.node_count == 4
+        assert dag.edge_count == 4
+        compiled, stage, passed, cursor = _compile_assertions(dag.test_artifacts)
+        assert compiled == {"inv1", "inv2"}
+        check_all_invariants(compiled, cursor, stage, passed, VERIFIERS, N)
+
+    def test_node_not_found_error_on_query(self):
+        """Querying a nonexistent node ID raises NodeNotFoundError from the real API."""
+        dag = _make_dag(["inv1", "inv2"], [], VERIFIERS)
+        with pytest.raises(NodeNotFoundError):
+            dag.query_relevant("nonexistent_node_xyz")
+
+    def test_empty_dag_metrics(self):
+        """Brand-new RegistryDag has zero nodes and zero edges."""
+        dag = RegistryDag()
+        assert dag.node_count == 0
+        assert dag.edge_count == 0
+
+    def test_passed_remains_false_through_compile_all(self):
+        """passed must be False in idle and compile_all; invariant must hold at each step."""
+        compiled = set()
+        cursor = 1
+        passed = False
+
+        check_cargo_check_passed_only_after_compile(passed, "idle")
+        for v in VERIFIERS:
+            if v["is_dict"] and v["has_cond"]:
+                compiled.add(v["name"])
+            cursor += 1
+            check_cargo_check_passed_only_after_compile(passed, "compile_all")
+
+        # Only after CargoCheck may passed become True
+        passed = True
+        check_cargo_check_passed_only_after_compile(passed, "cargo_check")
+
+    def test_stage_vocabulary_complete_and_invalid_rejected(self):
+        """
+        CORRECTION (was test_stage_never_regresses): StageOrdering is a set-membership
+        predicate only — it accepts any value in VALID_STAGES regardless of order.
+        This test verifies every valid token is accepted and out-of-vocabulary tokens
+        are rejected; monotonic ordering must be enforced by the caller, not this invariant.
+        """
+        for s in ["idle", "compile_all", "cargo_check", "compile_test", "run", "done"]:
+            check_stage_ordering(s)
+        with pytest.raises(AssertionError, match="StageOrdering"):
+            check_stage_ordering("pre_compile")
+
+    def test_batch_consistent_after_mixed_eligibility_loop(self):
+        """
+        After processing a mixed verifier list, BatchConsistent holds:
+        only eligible ones land in compiled and all eligible ones are present.
+        """
+        verifiers = [
+            {"name": "e1", "has_cond": True,  "is_dict": True},   # eligible
+            {"name": "e2", "has_cond": False, "is_dict": True},   # skipped
+            {"name": "e3", "has_cond": True,  "is_dict": False},  # skipped
+            {"name": "e4", "has_cond": True,  "is_dict": True},   # eligible
+        ]
+        compiled, _, _, cursor = _compile_assertions(verifiers)
+        assert compiled == {"e1", "e4"}
+        check_batch_consistent(compiled, cursor, verifiers, len(verifiers))
+        check_compiled_subset_valid(compiled, verifiers)
+```
+
+---
+
+## Summary of Changes
+
+| # | Change | Rationale |
+|---|---|---|
+| 1 | **Renamed** `test_stage_never_regresses` → `test_stage_vocabulary_complete_and_invalid_rejected`; rewrote docstring | `check_stage_ordering` is `stage ∈ VALID_STAGES` (a set predicate). It cannot detect regressions like `"done"→"idle"`. The old name falsely promised regression detection that no code provided. |
+| 2 | **Removed** "correct component count" from `test_empty_dag_metrics` docstring | No component-count assertion existed; the claim was dead documentation. |
+| 3 | **Fixed** `expected_sequence` in `test_stage_sequence_during_trace` to 19 entries (1 idle + **14** compile_all + 4 terminal stages) | The original had 11 `compile_all` entries; the actual 19-state trace has 14 states with `stage="compile_all"` (states 2–15 inclusive). Harmless for correctness but misleading for readers. |
+
+All invariant translations, fixture topologies, API bindings, and edge-case logic were verified correct and are unchanged.

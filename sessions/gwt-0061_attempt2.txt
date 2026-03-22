@@ -1,0 +1,168 @@
+---- MODULE go_profile_file_validity ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+Verifiers == <<
+    [name |-> "inv1", has_cond |-> TRUE,  is_dict |-> TRUE,  uses_quant |-> FALSE],
+    [name |-> "inv2", has_cond |-> TRUE,  is_dict |-> TRUE,  uses_quant |-> TRUE],
+    [name |-> "inv3", has_cond |-> FALSE, is_dict |-> TRUE,  uses_quant |-> FALSE],
+    [name |-> "skip", has_cond |-> TRUE,  is_dict |-> FALSE, uses_quant |-> FALSE]
+>>
+N == 4
+
+(* --algorithm GoFileValidity
+
+variables
+    cursor        = 1,
+    compiled      = {},
+    helper_needed = FALSE,
+    stage         = "idle",
+    passed        = FALSE;
+
+define
+    BatchConsistent ==
+        cursor > N =>
+            \A k \in 1..N :
+                (Verifiers[k].is_dict /\ Verifiers[k].has_cond) =>
+                    \E c \in compiled : c.name = Verifiers[k].name
+
+    HelperIncluded ==
+        helper_needed =>
+            (stage \in {"vet", "list", "run", "done"} => passed = TRUE)
+
+    StageOrdering ==
+        stage \in {"idle", "compile_all", "vet", "list", "run", "done"}
+
+    VetPassedWhenDone ==
+        stage = "done" => passed = TRUE
+
+    CompiledOnlyEligible ==
+        \A c \in compiled :
+            \E k \in 1..N :
+                Verifiers[k].name = c.name /\
+                Verifiers[k].is_dict /\
+                Verifiers[k].has_cond
+
+    HelperNeededIffQuantUsed ==
+        cursor > N =>
+            (helper_needed <=>
+                \E k \in 1..N :
+                    Verifiers[k].is_dict /\
+                    Verifiers[k].has_cond /\
+                    Verifiers[k].uses_quant)
+end define;
+
+process verifier = "verifier"
+begin
+    CompileAll:
+        stage := "compile_all";
+    LoopStart:
+        while cursor <= N do
+            ProcessV:
+                if Verifiers[cursor].is_dict /\ Verifiers[cursor].has_cond then
+                    compiled := compiled \cup {[name |-> Verifiers[cursor].name]};
+                    if Verifiers[cursor].uses_quant then
+                        helper_needed := TRUE;
+                    end if;
+                end if;
+            AdvanceV:
+                cursor := cursor + 1;
+        end while;
+    GoVet:
+        stage := "vet";
+        passed := TRUE;
+    ListTests:
+        stage := "list";
+    RunTests:
+        stage := "run";
+    Finish:
+        stage := "done";
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE go_profile_file_validity ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+Verifiers == <<
+    [name |-> "inv1", has_cond |-> TRUE,  is_dict |-> TRUE,  uses_quant |-> FALSE],
+    [name |-> "inv2", has_cond |-> TRUE,  is_dict |-> TRUE,  uses_quant |-> TRUE],
+    [name |-> "inv3", has_cond |-> FALSE, is_dict |-> TRUE,  uses_quant |-> FALSE],
+    [name |-> "skip", has_cond |-> TRUE,  is_dict |-> FALSE, uses_quant |-> FALSE]
+>>
+N == 4
+
+(* --algorithm GoFileValidity
+
+variables
+    cursor        = 1,
+    compiled      = {},
+    helper_needed = FALSE,
+    stage         = "idle",
+    passed        = FALSE;
+
+define
+    BatchConsistent ==
+        cursor > N =>
+            \A k \in 1..N :
+                (Verifiers[k].is_dict /\ Verifiers[k].has_cond) =>
+                    \E c \in compiled : c.name = Verifiers[k].name
+
+    HelperIncluded ==
+        helper_needed =>
+            (stage \in {"vet", "list", "run", "done"} => passed = TRUE)
+
+    StageOrdering ==
+        stage \in {"idle", "compile_all", "vet", "list", "run", "done"}
+
+    VetPassedWhenDone ==
+        stage = "done" => passed = TRUE
+
+    CompiledOnlyEligible ==
+        \A c \in compiled :
+            \E k \in 1..N :
+                Verifiers[k].name = c.name /\
+                Verifiers[k].is_dict /\
+                Verifiers[k].has_cond
+
+    HelperNeededIffQuantUsed ==
+        cursor > N =>
+            (helper_needed <=>
+                \E k \in 1..N :
+                    Verifiers[k].is_dict /\
+                    Verifiers[k].has_cond /\
+                    Verifiers[k].uses_quant)
+end define;
+
+process verifier = "verifier"
+begin
+    CompileAll:
+        stage := "compile_all";
+    LoopStart:
+        while cursor <= N do
+            ProcessV:
+                if Verifiers[cursor].is_dict /\ Verifiers[cursor].has_cond then
+                    compiled := compiled \cup {[name |-> Verifiers[cursor].name]};
+                    if Verifiers[cursor].uses_quant then
+                        helper_needed := TRUE;
+                    end if;
+                end if;
+            AdvanceV:
+                cursor := cursor + 1;
+        end while;
+    GoVet:
+        stage := "vet";
+        passed := TRUE;
+    ListTests:
+        stage := "list";
+    RunTests:
+        stage := "run";
+    Finish:
+        stage := "done";
+end process;
+
+end algorithm; *)
+
+====

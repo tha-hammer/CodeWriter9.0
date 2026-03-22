@@ -1,0 +1,144 @@
+---- MODULE python_profile_file_validity ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+Verifiers == <<
+    [name |-> "inv1", has_cond |-> TRUE,  is_dict |-> TRUE],
+    [name |-> "inv2", has_cond |-> TRUE,  is_dict |-> TRUE],
+    [name |-> "inv3", has_cond |-> FALSE, is_dict |-> TRUE],
+    [name |-> "skip", has_cond |-> TRUE,  is_dict |-> FALSE]
+>>
+N == 4
+
+(* --algorithm PythonFileValidity
+
+variables
+    cursor    = 1,
+    compiled  = {},
+    stage     = "idle",
+    passed    = FALSE;
+
+define
+    BatchConsistent ==
+        cursor > N =>
+            \A k \in 1..N :
+                (Verifiers[k].is_dict /\ Verifiers[k].has_cond) =>
+                    \E c \in compiled : c.name = Verifiers[k].name
+
+    NonDictSkipped ==
+        ~(\E c \in compiled : c.name = "skip")
+
+    EmptyCondSkipped ==
+        ~(\E c \in compiled : c.name = "inv3")
+
+    StageOrdering ==
+        stage \in {"idle", "compile_all", "check_syntax", "check_collect", "done"}
+
+    SyntaxPassedOnlyAfterCompile ==
+        passed => stage \in {"check_syntax", "check_collect", "done"}
+
+    CollectImpliesSyntax ==
+        stage = "check_collect" => passed = TRUE
+
+    DoneImpliesAllChecked ==
+        stage = "done" => passed = TRUE
+end define;
+
+process verifier = "verifier"
+begin
+    CompileAll:
+        stage := "compile_all";
+    ProcessLoop:
+        while cursor <= N do
+            ProcessVerifier:
+                if Verifiers[cursor].is_dict /\ Verifiers[cursor].has_cond then
+                    compiled := compiled \cup {[name |-> Verifiers[cursor].name]};
+                end if;
+            AdvanceV:
+                cursor := cursor + 1;
+        end while;
+    CheckSyntax:
+        stage := "check_syntax";
+        passed := TRUE;
+    CheckCollect:
+        stage := "check_collect";
+        skip;
+    Finish:
+        stage := "done";
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE python_profile_file_validity ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+Verifiers == <<
+    [name |-> "inv1", has_cond |-> TRUE,  is_dict |-> TRUE],
+    [name |-> "inv2", has_cond |-> TRUE,  is_dict |-> TRUE],
+    [name |-> "inv3", has_cond |-> FALSE, is_dict |-> TRUE],
+    [name |-> "skip", has_cond |-> TRUE,  is_dict |-> FALSE]
+>>
+N == 4
+
+(* --algorithm PythonFileValidity
+
+variables
+    cursor    = 1,
+    compiled  = {},
+    stage     = "idle",
+    passed    = FALSE;
+
+define
+    BatchConsistent ==
+        cursor > N =>
+            \A k \in 1..N :
+                (Verifiers[k].is_dict /\ Verifiers[k].has_cond) =>
+                    \E c \in compiled : c.name = Verifiers[k].name
+
+    NonDictSkipped ==
+        ~(\E c \in compiled : c.name = "skip")
+
+    EmptyCondSkipped ==
+        ~(\E c \in compiled : c.name = "inv3")
+
+    StageOrdering ==
+        stage \in {"idle", "compile_all", "check_syntax", "check_collect", "done"}
+
+    SyntaxPassedOnlyAfterCompile ==
+        passed => stage \in {"check_syntax", "check_collect", "done"}
+
+    CollectImpliesSyntax ==
+        stage = "check_collect" => passed = TRUE
+
+    DoneImpliesAllChecked ==
+        stage = "done" => passed = TRUE
+end define;
+
+process verifier = "verifier"
+begin
+    CompileAll:
+        stage := "compile_all";
+    ProcessLoop:
+        while cursor <= N do
+            ProcessVerifier:
+                if Verifiers[cursor].is_dict /\ Verifiers[cursor].has_cond then
+                    compiled := compiled \cup {[name |-> Verifiers[cursor].name]};
+                end if;
+            AdvanceV:
+                cursor := cursor + 1;
+        end while;
+    CheckSyntax:
+        stage := "check_syntax";
+        passed := TRUE;
+    CheckCollect:
+        stage := "check_collect";
+        skip;
+    Finish:
+        stage := "done";
+end process;
+
+end algorithm; *)
+
+====

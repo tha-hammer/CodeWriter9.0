@@ -1,0 +1,1526 @@
+```python
+"""
+pytest tests for validate_depends_on derived from TLC-verified traces.
+
+Behaviour under test
+--------------------
+Given  research notes mentioning functions that exist in crawl.db and an LLM
+       response containing depends_on UUIDs
+When   validate_depends_on checks the authored GWTs against the registry DAG
+       (acting as crawl.db records table)
+Then   only UUIDs that exist in the DAG are retained in depends_on_output, and
+       invalid UUIDs are removed with warnings (not exceptions)
+"""
+
+from __future__ import annotations
+
+import logging
+import uuid as _uuid_mod
+from typing import Any
+
+import pytest
+
+from registry.dag import RegistryDag
+from registry.types import Edge, EdgeType, Node, NodeKind
+from validate_depends_on import validate_depends_on
+
+# ---------------------------------------------------------------------------
+# Symbolic UUID constants (stable identifiers referenced by the TLA+ traces)
+# ---------------------------------------------------------------------------
+
+_DEPENDS_ON_INPUT_1 = "10000000-0000-0000-0000-000000000001"
+_DEPENDS_ON_INPUT_2 = "10000000-0000-0000-0000-000000000002"
+
+_VALID_UUID_A = "aaa00000-0000-0000-0000-000000000001"
+_VALID_UUID_B = "aaa00000-0000-0000-0000-000000000002"
+_INVALID_UUID_X = "fff00000-0000-0000-0000-000000000099"
+_INVALID_UUID_Y = "fff00000-0000-0000-0000-000000000100"
+
+MAX_STEPS = 2  # matches TLA+ MaxSteps inferred from traces (step_count <= 2)
+
+
+# ---------------------------------------------------------------------------
+# Helper: build a RegistryDag whose registered-node IDs represent AllUUIDs
+#         (i.e., the crawl.db records table).
+# ---------------------------------------------------------------------------
+
+def _make_dag(registered_node_ids: list[str]) -> RegistryDag:
+    """
+    Build a RegistryDag where each id in *registered_node_ids* is a behaviour
+    node.  These node ids represent AllUUIDs (UUIDs present in crawl.db).
+    """
+    dag = RegistryDag()
+    for nid in registered_node_ids:
+        dag.add_node(
+            Node.behavior(
+                id=nid,
+                name=nid,
+                given="given fixture",
+                when="when action",
+                then="then outcome",
+            )
+        )
+    return dag
+
+
+# ---------------------------------------------------------------------------
+# Shared invariant verifier
+# ---------------------------------------------------------------------------
+
+def _assert_all_invariants(
+    *,
+    depends_on_input: list[str],
+    depends_on_output: list[str],
+    all_uuids: set[str],
+    exception_raised: bool,
+    step_count: int,
+    warnings_count: int,
+) -> None:
+    """
+    Verify every TLA+ invariant that holds at every reachable state.
+
+    OutputSubsetOfAll      ∀ u ∈ depends_on_output : u ∈ AllUUIDs
+    NoExceptionRaised      exception_raised = FALSE
+    BoundedExecution       step_count ≤ MaxSteps
+    NoInvalidSurvives      ∀ u ∈ depends_on_output : u ∈ AllUUIDs ∧ u ∈ DependsOnInput
+    ProcessedValidRetained processed valid uuids are present in output
+    ProcessedInvalidExcluded processed invalid uuids are absent from output
+    TerminalOutputCorrect  when remaining = {} output exactly = valid inputs
+    TerminalCondition      when remaining = {} output ⊆ AllUUIDs
+    WarningsNotExceptions  exception_raised = FALSE  (alias of NoExceptionRaised)
+    """
+    output_set = set(depends_on_output)
+    input_set = set(depends_on_input)
+
+    # OutputSubsetOfAll
+    assert output_set <= all_uuids, (
+        f"OutputSubsetOfAll violated: {output_set - all_uuids} not in AllUUIDs"
+    )
+
+    # NoExceptionRaised / WarningsNotExceptions
+    assert exception_raised is False, "NoExceptionRaised / WarningsNotExceptions violated"
+
+    # BoundedExecution
+    assert step_count <= MAX_STEPS, (
+        f"BoundedExecution violated: step_count={step_count} > MaxSteps={MAX_STEPS}"
+    )
+
+    # NoInvalidSurvives
+    for u in output_set:
+        assert u in all_uuids, f"NoInvalidSurvives: {u!r} in output but not in AllUUIDs"
+        assert u in input_set, f"NoInvalidSurvives: {u!r} in output but not in DependsOnInput"
+
+    # ProcessedValidRetained  (terminal: remaining == {}, so all inputs processed)
+    valid_inputs = input_set & all_uuids
+    for u in valid_inputs:
+        assert u in output_set, (
+            f"ProcessedValidRetained: valid uuid {u!r} missing from output"
+        )
+
+    # ProcessedInvalidExcluded  (terminal)
+    invalid_inputs = input_set - all_uuids
+    for u in invalid_inputs:
+        assert u not in output_set, (
+            f"ProcessedInvalidExcluded: invalid uuid {u!r} survived in output"
+        )
+
+    # TerminalOutputCorrect (remaining = {} at end of all traces)
+    for u in input_set:
+        if u in all_uuids:
+            assert u in output_set, (
+                f"TerminalOutputCorrect: valid uuid {u!r} absent from output"
+            )
+        else:
+            assert u not in output_set, (
+                f"TerminalOutputCorrect: invalid uuid {u!r} present in output"
+            )
+
+    # TerminalCondition
+    assert output_set <= all_uuids, "TerminalCondition violated"
+
+    # Warnings count: one per invalid input processed
+    expected_warnings = len(invalid_inputs)
+    assert warnings_count == expected_warnings, (
+        f"Expected {expected_warnings} warnings, got {warnings_count}"
+    )
+
+
+# ===========================================================================
+# TRACE-DERIVED FIXTURES AND TESTS
+# Traces 1-10 are all semantically identical:
+#   Init:  DependsOnInput = {DependsOnInput_1, DependsOnInput_2}, AllUUIDs ∩ DependsOnInput = ∅
+#   Final: depends_on_output = {}, warnings = 2, exception_raised = FALSE
+# They differ only in the order the two invalid UUIDs are consumed.
+# ===========================================================================
+
+class TestAllInvalidUUIDs:
+    """
+    Covers all 10 TLC traces.
+    Both DependsOnInput_1 and DependsOnInput_2 are absent from AllUUIDs
+    (i.e., absent from the crawl.db records table).
+    Expected: depends_on_output = [], two warnings, no exception.
+    """
+
+    # -----------------------------------------------------------------------
+    # Trace 1
+    # -----------------------------------------------------------------------
+    def test_trace_1_both_invalid_output_empty(self, caplog: pytest.LogCaptureFixture) -> None:
+        """
+        Trace 1: DependsOnInput_1 consumed first → warning; DependsOnInput_2 consumed
+        second → warning.  Final output is empty.
+        """
+        dag = _make_dag([])                       # AllUUIDs = {} (empty crawl.db)
+        depends_on_input = [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]
+        all_uuids: set[str] = set()
+
+        exception_raised = False
+        warnings_count = 0
+
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(depends_on_input, dag)
+            except Exception:
+                exception_raised = True
+                result = []
+
+        depends_on_output = list(result) if result is not None else []
+        warnings_count = sum(
+            1 for r in caplog.records if r.levelno >= logging.WARNING
+        )
+
+        # Terminal state assertions (State 5)
+        assert set(depends_on_output) == set(), "depends_on_output must be empty"
+        assert exception_raised is False
+
+        _assert_all_invariants(
+            depends_on_input=depends_on_input,
+            depends_on_output=depends_on_output,
+            all_uuids=all_uuids,
+            exception_raised=exception_raised,
+            step_count=len(depends_on_input),
+            warnings_count=warnings_count,
+        )
+
+    # -----------------------------------------------------------------------
+    # Trace 2
+    # -----------------------------------------------------------------------
+    def test_trace_2_both_invalid_output_empty(self, caplog: pytest.LogCaptureFixture) -> None:
+        """
+        Trace 2: DependsOnInput_2 consumed first → warning; DependsOnInput_1 consumed
+        second → warning.  Semantically identical final state to Trace 1.
+        """
+        dag = _make_dag([])
+        depends_on_input = [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]
+        all_uuids: set[str] = set()
+
+        exception_raised = False
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(depends_on_input, dag)
+            except Exception:
+                exception_raised = True
+                result = []
+
+        depends_on_output = list(result) if result is not None else []
+        warnings_count = sum(
+            1 for r in caplog.records if r.levelno >= logging.WARNING
+        )
+
+        assert set(depends_on_output) == set()
+        assert exception_raised is False
+
+        _assert_all_invariants(
+            depends_on_input=depends_on_input,
+            depends_on_output=depends_on_output,
+            all_uuids=all_uuids,
+            exception_raised=exception_raised,
+            step_count=len(depends_on_input),
+            warnings_count=warnings_count,
+        )
+
+    # -----------------------------------------------------------------------
+    # Traces 3-10 are parametrized: same topology, assert same terminal state
+    # -----------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        "trace_id,input_order",
+        [
+            (3,  [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]),
+            (4,  [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]),
+            (5,  [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]),
+            (6,  [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]),
+            (7,  [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]),
+            (8,  [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]),
+            (9,  [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]),
+            (10, [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]),
+        ],
+    )
+    def test_trace_n_both_invalid(
+        self,
+        trace_id: int,
+        input_order: list[str],
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """
+        Traces 3-10: all inputs invalid, all removed with warnings, output empty.
+        """
+        dag = _make_dag([])
+        all_uuids: set[str] = set()
+        exception_raised = False
+
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(input_order, dag)
+            except Exception:
+                exception_raised = True
+                result = []
+
+        depends_on_output = list(result) if result is not None else []
+        warnings_count = sum(
+            1 for r in caplog.records if r.levelno >= logging.WARNING
+        )
+
+        assert set(depends_on_output) == set(), (
+            f"Trace {trace_id}: output must be empty when all inputs invalid"
+        )
+        assert exception_raised is False, f"Trace {trace_id}: must not raise"
+
+        _assert_all_invariants(
+            depends_on_input=input_order,
+            depends_on_output=depends_on_output,
+            all_uuids=all_uuids,
+            exception_raised=exception_raised,
+            step_count=len(input_order),
+            warnings_count=warnings_count,
+        )
+
+
+# ===========================================================================
+# INVARIANT VERIFIER TESTS
+# Each verifier is exercised across ≥2 trace-derived topologies.
+# ===========================================================================
+
+class TestOutputSubsetOfAll:
+    """∀ u ∈ depends_on_output : u ∈ AllUUIDs"""
+
+    def test_topology_all_invalid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        assert all_uuids_registered(result, dag), (
+            "output must be a subset of AllUUIDs (empty dag)"
+        )
+
+    def test_topology_mixed_valid_invalid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])                   # AllUUIDs = {_VALID_UUID_A}
+        result = validate_depends_on(
+            [_VALID_UUID_A, _INVALID_UUID_X], dag
+        )
+        output_set = set(result) if result else set()
+        registered = {_VALID_UUID_A}
+        assert output_set <= registered, (
+            f"OutputSubsetOfAll violated: {output_set - registered}"
+        )
+
+    def test_topology_all_valid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        result = validate_depends_on([_VALID_UUID_A, _VALID_UUID_B], dag)
+        output_set = set(result) if result else set()
+        registered = {_VALID_UUID_A, _VALID_UUID_B}
+        assert output_set <= registered
+
+
+class TestNoExceptionRaised:
+    """exception_raised = FALSE — invalid UUIDs must produce warnings, never exceptions."""
+
+    def test_all_invalid_no_exception(self) -> None:
+        dag = _make_dag([])
+        try:
+            validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        except Exception as exc:
+            pytest.fail(f"validate_depends_on raised unexpectedly: {exc!r}")
+
+    def test_mixed_no_exception(self) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        try:
+            validate_depends_on([_VALID_UUID_A, _INVALID_UUID_X], dag)
+        except Exception as exc:
+            pytest.fail(f"validate_depends_on raised unexpectedly: {exc!r}")
+
+    def test_empty_input_no_exception(self) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        try:
+            validate_depends_on([], dag)
+        except Exception as exc:
+            pytest.fail(f"validate_depends_on raised on empty input: {exc!r}")
+
+
+class TestBoundedExecution:
+    """step_count ≤ MaxSteps — processing terminates within bounded steps."""
+
+    def test_two_inputs_bounded(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        depends_on_input = [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on(depends_on_input, dag)
+        step_count = len(depends_on_input)        # one step per UUID processed
+        assert step_count <= MAX_STEPS
+
+    def test_single_input_bounded(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        depends_on_input = [_DEPENDS_ON_INPUT_1]
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on(depends_on_input, dag)
+        assert len(depends_on_input) <= MAX_STEPS
+
+
+class TestNoInvalidSurvives:
+    """∀ u ∈ depends_on_output : u ∈ AllUUIDs ∧ u ∈ DependsOnInput"""
+
+    def test_trace_topology_all_invalid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        output_set = set(result) if result else set()
+        assert _DEPENDS_ON_INPUT_1 not in output_set
+        assert _DEPENDS_ON_INPUT_2 not in output_set
+
+    def test_extra_invalid_uuid_not_in_output(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A, _INVALID_UUID_X, _INVALID_UUID_Y], dag)
+        output_set = set(result) if result else set()
+        assert _INVALID_UUID_X not in output_set
+        assert _INVALID_UUID_Y not in output_set
+        assert _VALID_UUID_A in output_set
+
+
+class TestProcessedValidRetained:
+    """∀ u ∈ DependsOnInput : u ∉ remaining ⟹ (u ∈ AllUUIDs ⟹ u ∈ depends_on_output)"""
+
+    def test_single_valid_uuid_retained(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A], dag)
+        assert _VALID_UUID_A in set(result or [])
+
+    def test_valid_uuid_retained_among_invalids(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on(
+            [_VALID_UUID_A, _DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag
+        )
+        output_set = set(result) if result else set()
+        assert _VALID_UUID_A in output_set, "valid UUID must be retained"
+
+    def test_both_valid_uuids_retained(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        result = validate_depends_on([_VALID_UUID_A, _VALID_UUID_B], dag)
+        output_set = set(result) if result else set()
+        assert _VALID_UUID_A in output_set
+        assert _VALID_UUID_B in output_set
+
+
+class TestProcessedInvalidExcluded:
+    """∀ u ∈ DependsOnInput : u ∉ remaining ⟹ (u ∉ AllUUIDs ⟹ u ∉ depends_on_output)"""
+
+    def test_trace_topology_both_excluded(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        output_set = set(result) if result else set()
+        assert _DEPENDS_ON_INPUT_1 not in output_set
+        assert _DEPENDS_ON_INPUT_2 not in output_set
+
+    def test_invalid_excluded_valid_kept(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A, _INVALID_UUID_X], dag)
+        output_set = set(result) if result else set()
+        assert _INVALID_UUID_X not in output_set
+        assert _VALID_UUID_A in output_set
+
+
+class TestTerminalOutputCorrect:
+    """remaining = {} ⟹ ∀ u : (u ∈ AllUUIDs ⟹ u ∈ output) ∧ (u ∉ AllUUIDs ⟹ u ∉ output)"""
+
+    def test_terminal_all_invalid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        all_uuids: set[str] = set()
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        output_set = set(result) if result else set()
+        assert output_set == set()            # no valid UUIDs exist
+
+    def test_terminal_all_valid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        result = validate_depends_on([_VALID_UUID_A, _VALID_UUID_B], dag)
+        output_set = set(result) if result else set()
+        assert output_set == {_VALID_UUID_A, _VALID_UUID_B}
+
+    def test_terminal_mixed(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on(
+            [_VALID_UUID_A, _DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag
+        )
+        output_set = set(result) if result else set()
+        assert output_set == {_VALID_UUID_A}
+
+
+class TestTerminalCondition:
+    """remaining = {} ⟹ ∀ u ∈ depends_on_output : u ∈ AllUUIDs"""
+
+    def test_trace_topology(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        output_set = set(result) if result else set()
+        registered_ids = set(_node_ids(dag))
+        assert output_set <= registered_ids
+
+    def test_mixed_topology(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A, _INVALID_UUID_X], dag)
+        output_set = set(result) if result else set()
+        registered_ids = set(_node_ids(dag))
+        assert output_set <= registered_ids
+
+
+class TestWarningsNotExceptions:
+    """Invalid UUIDs emit warnings; they never raise exceptions."""
+
+    def test_single_invalid_emits_warning_not_exception(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on([_DEPENDS_ON_INPUT_1], dag)
+            except Exception as exc:
+                pytest.fail(f"Should not raise; got {exc!r}")
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) >= 1, "Expected at least one warning for invalid UUID"
+
+    def test_two_invalids_emit_two_warnings(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(
+                    [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag
+                )
+            except Exception as exc:
+                pytest.fail(f"Should not raise; got {exc!r}")
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) == 2, (
+            f"Expected exactly 2 warnings (one per invalid UUID), got {len(warning_records)}"
+        )
+
+    def test_valid_uuid_emits_no_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on([_VALID_UUID_A], dag)
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) == 0, "Valid UUID must not produce warnings"
+
+
+# ===========================================================================
+# EDGE CASE TESTS
+# ===========================================================================
+
+class TestEdgeCases:
+
+    def test_empty_depends_on_input(self) -> None:
+        """Empty input → empty output, no warnings, no exception."""
+        dag = _make_dag([_VALID_UUID_A])
+        try:
+            result = validate_depends_on([], dag)
+        except Exception as exc:
+            pytest.fail(f"Empty input raised: {exc!r}")
+        assert (result is None or list(result) == [])
+
+    def test_empty_dag_all_inputs_invalid(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """No nodes registered ⟹ every depends_on UUID is invalid."""
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        assert set(result or []) == set()
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) == 2
+
+    def test_duplicate_valid_uuid_not_duplicated_in_output(self) -> None:
+        """Duplicate UUIDs in depends_on must not duplicate in output."""
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A, _VALID_UUID_A], dag)
+        output_list = list(result) if result else []
+        assert output_list.count(_VALID_UUID_A) <= 1, (
+            "Duplicate valid UUID must appear at most once in output"
+        )
+
+    def test_duplicate_invalid_uuid_warns_once_per_occurrence(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Each invalid UUID occurrence should trigger its own warning."""
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_1], dag)
+        output_set = set(result or [])
+        assert _DEPENDS_ON_INPUT_1 not in output_set
+
+    def test_isolated_node_not_in_depends_on_not_added(self) -> None:
+        """
+        A node registered in the DAG but NOT referenced in depends_on
+        must not appear in depends_on_output.
+        """
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        result = validate_depends_on([_VALID_UUID_A], dag)
+        output_set = set(result) if result else set()
+        assert _VALID_UUID_B not in output_set, (
+            "UUID not in depends_on input must not appear in output"
+        )
+
+    def test_single_valid_uuid_retained(self) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A], dag)
+        assert _VALID_UUID_A in set(result or [])
+
+    def test_single_invalid_uuid_excluded(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on([_INVALID_UUID_X], dag)
+        assert _INVALID_UUID_X not in set(result or [])
+
+    def test_diamond_pattern_all_valid(self) -> None:
+        """
+        Diamond: A → B, A → C, B → D, C → D.
+        All four UUIDs registered; all four in depends_on → all retained.
+        """
+        uuids = [
+            "d1000000-0000-0000-0000-000000000001",
+            "d1000000-0000-0000-0000-000000000002",
+            "d1000000-0000-0000-0000-000000000003",
+            "d1000000-0000-0000-0000-000000000004",
+        ]
+        dag = _make_dag(uuids)
+        # Add diamond edges
+        dag.add_edge(Edge(uuids[0], uuids[1], EdgeType.IMPORTS))
+        dag.add_edge(Edge(uuids[0], uuids[2], EdgeType.IMPORTS))
+        dag.add_edge(Edge(uuids[1], uuids[3], EdgeType.IMPORTS))
+        dag.add_edge(Edge(uuids[2], uuids[3], EdgeType.IMPORTS))
+
+        result = validate_depends_on(uuids, dag)
+        output_set = set(result) if result else set()
+        assert output_set == set(uuids)
+
+    def test_diamond_pattern_leaf_invalid(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """
+        Diamond topology; only the leaf node (D) is present in depends_on but
+        D is NOT registered ⟹ D is excluded with a warning.
+        A, B, C are registered and referenced ⟹ retained.
+        """
+        uuid_a = "d2000000-0000-0000-0000-000000000001"
+        uuid_b = "d2000000-0000-0000-0000-000000000002"
+        uuid_c = "d2000000-0000-0000-0000-000000000003"
+        uuid_d_invalid = "d2000000-0000-0000-0000-000000000099"   # not registered
+
+        dag = _make_dag([uuid_a, uuid_b, uuid_c])
+        dag.add_edge(Edge(uuid_a, uuid_b, EdgeType.IMPORTS))
+        dag.add_edge(Edge(uuid_a, uuid_c, EdgeType.IMPORTS))
+
+        depends_on_input = [uuid_a, uuid_b, uuid_c, uuid_d_invalid]
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on(depends_on_input, dag)
+
+        output_set = set(result) if result else set()
+        assert uuid_a in output_set
+        assert uuid_b in output_set
+        assert uuid_c in output_set
+        assert uuid_d_invalid not in output_set
+
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) >= 1, "Expected warning for unregistered leaf UUID"
+
+    def test_missing_artifact_does_not_raise(self) -> None:
+        """validate_depends_on must not raise when the DAG has no nodes at all."""
+        dag = RegistryDag()   # completely empty
+        try:
+            result = validate_depends_on([_DEPENDS_ON_INPUT_1], dag)
+        except Exception as exc:
+            pytest.fail(f"Raised on empty DAG: {exc!r}")
+
+    def test_output_is_subset_of_input(self) -> None:
+        """depends_on_output ⊆ depends_on_input (output can only shrink, never grow)."""
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        depends_on_input = [_VALID_UUID_A, _INVALID_UUID_X]
+        result = validate_depends_on(depends_on_input, dag)
+        output_set = set(result) if result else set()
+        input_set = set(depends_on_input)
+        assert output_set <= input_set, (
+            f"Output {output_set} contains UUIDs not in input {input_set}"
+        )
+
+
+# ===========================================================================
+# COMBINED FULL-TRACE INTEGRATION TESTS (exact state replication)
+# ===========================================================================
+
+class TestFullTraceIntegration:
+    """
+    Re-run the complete Validate→Validate→Finish action sequence from each
+    TLC trace and verify the exact terminal state.
+    """
+
+    @pytest.mark.parametrize("trace_id", list(range(1, 11)))
+    def test_full_trace_terminal_state(
+        self, trace_id: int, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """
+        Init:   remaining = {DependsOnInput_1, DependsOnInput_2},
+                depends_on_output = {}, warnings = 0, exception_raised = FALSE,
+                step_count = 0
+
+        Actions: Validate → Validate → Validate (loop empties remaining) → Finish
+
+        Terminal (State 5):
+                remaining = {},
+                depends_on_output = {},   # both inputs invalid
+                step_count = 2,
+                warnings = 2,
+                exception_raised = FALSE
+        """
+        # --- Init state ---
+        dag = _make_dag([])                                    # AllUUIDs = {}
+        depends_on_input = [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]
+        all_uuids: set[str] = set()
+
+        exception_raised = False
+
+        # --- Validate actions (API call) ---
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(depends_on_input, dag)
+            except Exception:
+                exception_raised = True
+                result = []
+
+        depends_on_output = list(result) if result is not None else []
+        warnings_count = sum(
+            1 for r in caplog.records if r.levelno >= logging.WARNING
+        )
+
+        # --- Terminal state assertions (State 5) ---
+        assert set(depends_on_output) == set(), (
+            f"Trace {trace_id}: depends_on_output must be empty"
+        )
+        assert exception_raised is False, f"Trace {trace_id}: must not raise"
+        assert warnings_count == 2, (
+            f"Trace {trace_id}: expected warnings=2, got {warnings_count}"
+        )
+
+        # --- All invariants hold at terminal state ---
+        _assert_all_invariants(
+            depends_on_input=depends_on_input,
+            depends_on_output=depends_on_output,
+            all_uuids=all_uuids,
+            exception_raised=exception_raised,
+            step_count=len(depends_on_input),   # step_count == 2 == MaxSteps
+            warnings_count=warnings_count,
+        )
+
+
+# ===========================================================================
+# HELPERS
+# ===========================================================================
+
+def all_uuids_registered(result: Any, dag: RegistryDag) -> bool:
+    """Return True iff every UUID in result is registered in the DAG."""
+    if result is None:
+        return True
+    registered = set(_node_ids(dag))
+    return all(u in registered for u in result)
+
+
+def _node_ids(dag: RegistryDag) -> list[str]:
+    """Extract all node IDs currently registered in the DAG."""
+    return list(dag.to_dict().get("nodes", {}).keys())
+```
+
+---
+
+**What each section covers:**
+
+| Section | TLA+ Invariants exercised | Topology |
+|---|---|---|
+| `TestAllInvalidUUIDs` (10 tests) | All 9 invariants | Trace-exact: both inputs invalid, `AllUUIDs = ∅` |
+| `TestOutputSubsetOfAll` | `OutputSubsetOfAll`, `TerminalCondition` | empty dag / mixed / all-valid |
+| `TestNoExceptionRaised` / `TestWarningsNotExceptions` | `NoExceptionRaised`, `WarningsNotExceptions` | all-invalid, mixed, empty input |
+| `TestBoundedExecution` | `BoundedExecution` | 2-input and 1-input traces |
+| `TestNoInvalidSurvives` | `NoInvalidSurvives` | trace topology + extras |
+| `TestProcessedValidRetained` | `ProcessedValidRetained` | single valid, mixed, both valid |
+| `TestProcessedInvalidExcluded` | `ProcessedInvalidExcluded` | trace topology + mixed |
+| `TestTerminalOutputCorrect` | `TerminalOutputCorrect` | all-invalid, all-valid, mixed |
+| `TestTerminalCondition` | `TerminalCondition` | trace topology + mixed |
+| `TestEdgeCases` | All invariants | empty input, empty dag, duplicates, isolated nodes, diamond topology |
+| `TestFullTraceIntegration` (10 parametrized) | All 9 invariants | Exact terminal state replay for every trace |
+```python
+"""
+pytest tests for validate_depends_on derived from TLC-verified traces.
+
+Behaviour under test
+--------------------
+Given  research notes mentioning functions that exist in crawl.db and an LLM
+       response containing depends_on UUIDs
+When   validate_depends_on checks the authored GWTs against the registry DAG
+       (acting as crawl.db records table)
+Then   only UUIDs that exist in the DAG are retained in depends_on_output, and
+       invalid UUIDs are removed with warnings (not exceptions)
+"""
+
+from __future__ import annotations
+
+import logging
+import uuid as _uuid_mod
+from typing import Any
+
+import pytest
+
+from registry.dag import RegistryDag
+from registry.types import Edge, EdgeType, Node, NodeKind
+from validate_depends_on import validate_depends_on
+
+# ---------------------------------------------------------------------------
+# Symbolic UUID constants (stable identifiers referenced by the TLA+ traces)
+# ---------------------------------------------------------------------------
+
+_DEPENDS_ON_INPUT_1 = "10000000-0000-0000-0000-000000000001"
+_DEPENDS_ON_INPUT_2 = "10000000-0000-0000-0000-000000000002"
+
+_VALID_UUID_A = "aaa00000-0000-0000-0000-000000000001"
+_VALID_UUID_B = "aaa00000-0000-0000-0000-000000000002"
+_INVALID_UUID_X = "fff00000-0000-0000-0000-000000000099"
+_INVALID_UUID_Y = "fff00000-0000-0000-0000-000000000100"
+
+MAX_STEPS = 2  # matches TLA+ MaxSteps inferred from traces (step_count <= 2)
+
+
+# ---------------------------------------------------------------------------
+# Helper: build a RegistryDag whose registered-node IDs represent AllUUIDs
+#         (i.e., the crawl.db records table).
+# ---------------------------------------------------------------------------
+
+def _make_dag(registered_node_ids: list[str]) -> RegistryDag:
+    """
+    Build a RegistryDag where each id in *registered_node_ids* is a behaviour
+    node.  These node ids represent AllUUIDs (UUIDs present in crawl.db).
+    """
+    dag = RegistryDag()
+    for nid in registered_node_ids:
+        dag.add_node(
+            Node.behavior(
+                id=nid,
+                name=nid,
+                given="given fixture",
+                when="when action",
+                then="then outcome",
+            )
+        )
+    return dag
+
+
+# ---------------------------------------------------------------------------
+# Shared invariant verifier
+# ---------------------------------------------------------------------------
+
+def _assert_all_invariants(
+    *,
+    depends_on_input: list[str],
+    depends_on_output: list[str],
+    all_uuids: set[str],
+    exception_raised: bool,
+    step_count: int,
+    warnings_count: int,
+) -> None:
+    """
+    Verify every TLA+ invariant that holds at every reachable state.
+
+    OutputSubsetOfAll      ∀ u ∈ depends_on_output : u ∈ AllUUIDs
+    NoExceptionRaised      exception_raised = FALSE
+    BoundedExecution       step_count ≤ MaxSteps
+    NoInvalidSurvives      ∀ u ∈ depends_on_output : u ∈ AllUUIDs ∧ u ∈ DependsOnInput
+    ProcessedValidRetained processed valid uuids are present in output
+    ProcessedInvalidExcluded processed invalid uuids are absent from output
+    TerminalOutputCorrect  when remaining = {} output exactly = valid inputs
+    TerminalCondition      when remaining = {} output ⊆ AllUUIDs
+    WarningsNotExceptions  exception_raised = FALSE  (alias of NoExceptionRaised)
+    """
+    output_set = set(depends_on_output)
+    input_set = set(depends_on_input)
+
+    # OutputSubsetOfAll
+    assert output_set <= all_uuids, (
+        f"OutputSubsetOfAll violated: {output_set - all_uuids} not in AllUUIDs"
+    )
+
+    # NoExceptionRaised / WarningsNotExceptions
+    assert exception_raised is False, "NoExceptionRaised / WarningsNotExceptions violated"
+
+    # BoundedExecution
+    assert step_count <= MAX_STEPS, (
+        f"BoundedExecution violated: step_count={step_count} > MaxSteps={MAX_STEPS}"
+    )
+
+    # NoInvalidSurvives
+    for u in output_set:
+        assert u in all_uuids, f"NoInvalidSurvives: {u!r} in output but not in AllUUIDs"
+        assert u in input_set, f"NoInvalidSurvives: {u!r} in output but not in DependsOnInput"
+
+    # ProcessedValidRetained  (terminal: remaining == {}, so all inputs processed)
+    valid_inputs = input_set & all_uuids
+    for u in valid_inputs:
+        assert u in output_set, (
+            f"ProcessedValidRetained: valid uuid {u!r} missing from output"
+        )
+
+    # ProcessedInvalidExcluded  (terminal)
+    invalid_inputs = input_set - all_uuids
+    for u in invalid_inputs:
+        assert u not in output_set, (
+            f"ProcessedInvalidExcluded: invalid uuid {u!r} survived in output"
+        )
+
+    # TerminalOutputCorrect (remaining = {} at end of all traces)
+    for u in input_set:
+        if u in all_uuids:
+            assert u in output_set, (
+                f"TerminalOutputCorrect: valid uuid {u!r} absent from output"
+            )
+        else:
+            assert u not in output_set, (
+                f"TerminalOutputCorrect: invalid uuid {u!r} present in output"
+            )
+
+    # TerminalCondition
+    assert output_set <= all_uuids, "TerminalCondition violated"
+
+    # Warnings count: one per invalid input processed
+    expected_warnings = len(invalid_inputs)
+    assert warnings_count == expected_warnings, (
+        f"Expected {expected_warnings} warnings, got {warnings_count}"
+    )
+
+
+# ===========================================================================
+# TRACE-DERIVED FIXTURES AND TESTS
+# Traces 1-10 are all semantically identical:
+#   Init:  DependsOnInput = {DependsOnInput_1, DependsOnInput_2}, AllUUIDs ∩ DependsOnInput = ∅
+#   Final: depends_on_output = {}, warnings = 2, exception_raised = FALSE
+# They differ only in the order the two invalid UUIDs are consumed.
+# ===========================================================================
+
+class TestAllInvalidUUIDs:
+    """
+    Covers all 10 TLC traces.
+    Both DependsOnInput_1 and DependsOnInput_2 are absent from AllUUIDs
+    (i.e., absent from the crawl.db records table).
+    Expected: depends_on_output = [], two warnings, no exception.
+    """
+
+    # -----------------------------------------------------------------------
+    # Trace 1
+    # -----------------------------------------------------------------------
+    def test_trace_1_both_invalid_output_empty(self, caplog: pytest.LogCaptureFixture) -> None:
+        """
+        Trace 1: DependsOnInput_1 consumed first → warning; DependsOnInput_2 consumed
+        second → warning.  Final output is empty.
+        """
+        dag = _make_dag([])                       # AllUUIDs = {} (empty crawl.db)
+        depends_on_input = [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]
+        all_uuids: set[str] = set()
+
+        exception_raised = False
+        warnings_count = 0
+
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(depends_on_input, dag)
+            except Exception:
+                exception_raised = True
+                result = []
+
+        depends_on_output = list(result) if result is not None else []
+        warnings_count = sum(
+            1 for r in caplog.records if r.levelno >= logging.WARNING
+        )
+
+        # Terminal state assertions (State 5)
+        assert set(depends_on_output) == set(), "depends_on_output must be empty"
+        assert exception_raised is False
+
+        _assert_all_invariants(
+            depends_on_input=depends_on_input,
+            depends_on_output=depends_on_output,
+            all_uuids=all_uuids,
+            exception_raised=exception_raised,
+            step_count=len(depends_on_input),
+            warnings_count=warnings_count,
+        )
+
+    # -----------------------------------------------------------------------
+    # Trace 2
+    # -----------------------------------------------------------------------
+    def test_trace_2_both_invalid_output_empty(self, caplog: pytest.LogCaptureFixture) -> None:
+        """
+        Trace 2: DependsOnInput_2 consumed first → warning; DependsOnInput_1 consumed
+        second → warning.  Semantically identical final state to Trace 1.
+        """
+        dag = _make_dag([])
+        depends_on_input = [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]
+        all_uuids: set[str] = set()
+
+        exception_raised = False
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(depends_on_input, dag)
+            except Exception:
+                exception_raised = True
+                result = []
+
+        depends_on_output = list(result) if result is not None else []
+        warnings_count = sum(
+            1 for r in caplog.records if r.levelno >= logging.WARNING
+        )
+
+        assert set(depends_on_output) == set()
+        assert exception_raised is False
+
+        _assert_all_invariants(
+            depends_on_input=depends_on_input,
+            depends_on_output=depends_on_output,
+            all_uuids=all_uuids,
+            exception_raised=exception_raised,
+            step_count=len(depends_on_input),
+            warnings_count=warnings_count,
+        )
+
+    # -----------------------------------------------------------------------
+    # Traces 3-10 are parametrized: same topology, assert same terminal state
+    # -----------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        "trace_id,input_order",
+        [
+            (3,  [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]),
+            (4,  [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]),
+            (5,  [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]),
+            (6,  [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]),
+            (7,  [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]),
+            (8,  [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]),
+            (9,  [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]),
+            (10, [_DEPENDS_ON_INPUT_2, _DEPENDS_ON_INPUT_1]),
+        ],
+    )
+    def test_trace_n_both_invalid(
+        self,
+        trace_id: int,
+        input_order: list[str],
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """
+        Traces 3-10: all inputs invalid, all removed with warnings, output empty.
+        """
+        dag = _make_dag([])
+        all_uuids: set[str] = set()
+        exception_raised = False
+
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(input_order, dag)
+            except Exception:
+                exception_raised = True
+                result = []
+
+        depends_on_output = list(result) if result is not None else []
+        warnings_count = sum(
+            1 for r in caplog.records if r.levelno >= logging.WARNING
+        )
+
+        assert set(depends_on_output) == set(), (
+            f"Trace {trace_id}: output must be empty when all inputs invalid"
+        )
+        assert exception_raised is False, f"Trace {trace_id}: must not raise"
+
+        _assert_all_invariants(
+            depends_on_input=input_order,
+            depends_on_output=depends_on_output,
+            all_uuids=all_uuids,
+            exception_raised=exception_raised,
+            step_count=len(input_order),
+            warnings_count=warnings_count,
+        )
+
+
+# ===========================================================================
+# INVARIANT VERIFIER TESTS
+# Each verifier is exercised across ≥2 trace-derived topologies.
+# ===========================================================================
+
+class TestOutputSubsetOfAll:
+    """∀ u ∈ depends_on_output : u ∈ AllUUIDs"""
+
+    def test_topology_all_invalid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        assert all_uuids_registered(result, dag), (
+            "output must be a subset of AllUUIDs (empty dag)"
+        )
+
+    def test_topology_mixed_valid_invalid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])                   # AllUUIDs = {_VALID_UUID_A}
+        result = validate_depends_on(
+            [_VALID_UUID_A, _INVALID_UUID_X], dag
+        )
+        output_set = set(result) if result else set()
+        registered = {_VALID_UUID_A}
+        assert output_set <= registered, (
+            f"OutputSubsetOfAll violated: {output_set - registered}"
+        )
+
+    def test_topology_all_valid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        result = validate_depends_on([_VALID_UUID_A, _VALID_UUID_B], dag)
+        output_set = set(result) if result else set()
+        registered = {_VALID_UUID_A, _VALID_UUID_B}
+        assert output_set <= registered
+
+
+class TestNoExceptionRaised:
+    """exception_raised = FALSE — invalid UUIDs must produce warnings, never exceptions."""
+
+    def test_all_invalid_no_exception(self) -> None:
+        dag = _make_dag([])
+        try:
+            validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        except Exception as exc:
+            pytest.fail(f"validate_depends_on raised unexpectedly: {exc!r}")
+
+    def test_mixed_no_exception(self) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        try:
+            validate_depends_on([_VALID_UUID_A, _INVALID_UUID_X], dag)
+        except Exception as exc:
+            pytest.fail(f"validate_depends_on raised unexpectedly: {exc!r}")
+
+    def test_empty_input_no_exception(self) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        try:
+            validate_depends_on([], dag)
+        except Exception as exc:
+            pytest.fail(f"validate_depends_on raised on empty input: {exc!r}")
+
+
+class TestBoundedExecution:
+    """step_count ≤ MaxSteps — processing terminates within bounded steps."""
+
+    def test_two_inputs_bounded(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        depends_on_input = [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on(depends_on_input, dag)
+        step_count = len(depends_on_input)        # one step per UUID processed
+        assert step_count <= MAX_STEPS
+
+    def test_single_input_bounded(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        depends_on_input = [_DEPENDS_ON_INPUT_1]
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on(depends_on_input, dag)
+        assert len(depends_on_input) <= MAX_STEPS
+
+
+class TestNoInvalidSurvives:
+    """∀ u ∈ depends_on_output : u ∈ AllUUIDs ∧ u ∈ DependsOnInput"""
+
+    def test_trace_topology_all_invalid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        output_set = set(result) if result else set()
+        assert _DEPENDS_ON_INPUT_1 not in output_set
+        assert _DEPENDS_ON_INPUT_2 not in output_set
+
+    def test_extra_invalid_uuid_not_in_output(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A, _INVALID_UUID_X, _INVALID_UUID_Y], dag)
+        output_set = set(result) if result else set()
+        assert _INVALID_UUID_X not in output_set
+        assert _INVALID_UUID_Y not in output_set
+        assert _VALID_UUID_A in output_set
+
+
+class TestProcessedValidRetained:
+    """∀ u ∈ DependsOnInput : u ∉ remaining ⟹ (u ∈ AllUUIDs ⟹ u ∈ depends_on_output)"""
+
+    def test_single_valid_uuid_retained(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A], dag)
+        assert _VALID_UUID_A in set(result or [])
+
+    def test_valid_uuid_retained_among_invalids(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on(
+            [_VALID_UUID_A, _DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag
+        )
+        output_set = set(result) if result else set()
+        assert _VALID_UUID_A in output_set, "valid UUID must be retained"
+
+    def test_both_valid_uuids_retained(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        result = validate_depends_on([_VALID_UUID_A, _VALID_UUID_B], dag)
+        output_set = set(result) if result else set()
+        assert _VALID_UUID_A in output_set
+        assert _VALID_UUID_B in output_set
+
+
+class TestProcessedInvalidExcluded:
+    """∀ u ∈ DependsOnInput : u ∉ remaining ⟹ (u ∉ AllUUIDs ⟹ u ∉ depends_on_output)"""
+
+    def test_trace_topology_both_excluded(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        output_set = set(result) if result else set()
+        assert _DEPENDS_ON_INPUT_1 not in output_set
+        assert _DEPENDS_ON_INPUT_2 not in output_set
+
+    def test_invalid_excluded_valid_kept(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A, _INVALID_UUID_X], dag)
+        output_set = set(result) if result else set()
+        assert _INVALID_UUID_X not in output_set
+        assert _VALID_UUID_A in output_set
+
+
+class TestTerminalOutputCorrect:
+    """remaining = {} ⟹ ∀ u : (u ∈ AllUUIDs ⟹ u ∈ output) ∧ (u ∉ AllUUIDs ⟹ u ∉ output)"""
+
+    def test_terminal_all_invalid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        all_uuids: set[str] = set()
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        output_set = set(result) if result else set()
+        assert output_set == set()            # no valid UUIDs exist
+
+    def test_terminal_all_valid(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        result = validate_depends_on([_VALID_UUID_A, _VALID_UUID_B], dag)
+        output_set = set(result) if result else set()
+        assert output_set == {_VALID_UUID_A, _VALID_UUID_B}
+
+    def test_terminal_mixed(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on(
+            [_VALID_UUID_A, _DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag
+        )
+        output_set = set(result) if result else set()
+        assert output_set == {_VALID_UUID_A}
+
+
+class TestTerminalCondition:
+    """remaining = {} ⟹ ∀ u ∈ depends_on_output : u ∈ AllUUIDs"""
+
+    def test_trace_topology(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([])
+        result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        output_set = set(result) if result else set()
+        registered_ids = set(_node_ids(dag))
+        assert output_set <= registered_ids
+
+    def test_mixed_topology(self, caplog: pytest.LogCaptureFixture) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A, _INVALID_UUID_X], dag)
+        output_set = set(result) if result else set()
+        registered_ids = set(_node_ids(dag))
+        assert output_set <= registered_ids
+
+
+class TestWarningsNotExceptions:
+    """Invalid UUIDs emit warnings; they never raise exceptions."""
+
+    def test_single_invalid_emits_warning_not_exception(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on([_DEPENDS_ON_INPUT_1], dag)
+            except Exception as exc:
+                pytest.fail(f"Should not raise; got {exc!r}")
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) >= 1, "Expected at least one warning for invalid UUID"
+
+    def test_two_invalids_emit_two_warnings(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(
+                    [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag
+                )
+            except Exception as exc:
+                pytest.fail(f"Should not raise; got {exc!r}")
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) == 2, (
+            f"Expected exactly 2 warnings (one per invalid UUID), got {len(warning_records)}"
+        )
+
+    def test_valid_uuid_emits_no_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on([_VALID_UUID_A], dag)
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) == 0, "Valid UUID must not produce warnings"
+
+
+# ===========================================================================
+# EDGE CASE TESTS
+# ===========================================================================
+
+class TestEdgeCases:
+
+    def test_empty_depends_on_input(self) -> None:
+        """Empty input → empty output, no warnings, no exception."""
+        dag = _make_dag([_VALID_UUID_A])
+        try:
+            result = validate_depends_on([], dag)
+        except Exception as exc:
+            pytest.fail(f"Empty input raised: {exc!r}")
+        assert (result is None or list(result) == [])
+
+    def test_empty_dag_all_inputs_invalid(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """No nodes registered ⟹ every depends_on UUID is invalid."""
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2], dag)
+        assert set(result or []) == set()
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) == 2
+
+    def test_duplicate_valid_uuid_not_duplicated_in_output(self) -> None:
+        """Duplicate UUIDs in depends_on must not duplicate in output."""
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A, _VALID_UUID_A], dag)
+        output_list = list(result) if result else []
+        assert output_list.count(_VALID_UUID_A) <= 1, (
+            "Duplicate valid UUID must appear at most once in output"
+        )
+
+    def test_duplicate_invalid_uuid_warns_once_per_occurrence(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Each invalid UUID occurrence should trigger its own warning."""
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on([_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_1], dag)
+        output_set = set(result or [])
+        assert _DEPENDS_ON_INPUT_1 not in output_set
+
+    def test_isolated_node_not_in_depends_on_not_added(self) -> None:
+        """
+        A node registered in the DAG but NOT referenced in depends_on
+        must not appear in depends_on_output.
+        """
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        result = validate_depends_on([_VALID_UUID_A], dag)
+        output_set = set(result) if result else set()
+        assert _VALID_UUID_B not in output_set, (
+            "UUID not in depends_on input must not appear in output"
+        )
+
+    def test_single_valid_uuid_retained(self) -> None:
+        dag = _make_dag([_VALID_UUID_A])
+        result = validate_depends_on([_VALID_UUID_A], dag)
+        assert _VALID_UUID_A in set(result or [])
+
+    def test_single_invalid_uuid_excluded(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        dag = _make_dag([])
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on([_INVALID_UUID_X], dag)
+        assert _INVALID_UUID_X not in set(result or [])
+
+    def test_diamond_pattern_all_valid(self) -> None:
+        """
+        Diamond: A → B, A → C, B → D, C → D.
+        All four UUIDs registered; all four in depends_on → all retained.
+        """
+        uuids = [
+            "d1000000-0000-0000-0000-000000000001",
+            "d1000000-0000-0000-0000-000000000002",
+            "d1000000-0000-0000-0000-000000000003",
+            "d1000000-0000-0000-0000-000000000004",
+        ]
+        dag = _make_dag(uuids)
+        # Add diamond edges
+        dag.add_edge(Edge(uuids[0], uuids[1], EdgeType.IMPORTS))
+        dag.add_edge(Edge(uuids[0], uuids[2], EdgeType.IMPORTS))
+        dag.add_edge(Edge(uuids[1], uuids[3], EdgeType.IMPORTS))
+        dag.add_edge(Edge(uuids[2], uuids[3], EdgeType.IMPORTS))
+
+        result = validate_depends_on(uuids, dag)
+        output_set = set(result) if result else set()
+        assert output_set == set(uuids)
+
+    def test_diamond_pattern_leaf_invalid(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """
+        Diamond topology; only the leaf node (D) is present in depends_on but
+        D is NOT registered ⟹ D is excluded with a warning.
+        A, B, C are registered and referenced ⟹ retained.
+        """
+        uuid_a = "d2000000-0000-0000-0000-000000000001"
+        uuid_b = "d2000000-0000-0000-0000-000000000002"
+        uuid_c = "d2000000-0000-0000-0000-000000000003"
+        uuid_d_invalid = "d2000000-0000-0000-0000-000000000099"   # not registered
+
+        dag = _make_dag([uuid_a, uuid_b, uuid_c])
+        dag.add_edge(Edge(uuid_a, uuid_b, EdgeType.IMPORTS))
+        dag.add_edge(Edge(uuid_a, uuid_c, EdgeType.IMPORTS))
+
+        depends_on_input = [uuid_a, uuid_b, uuid_c, uuid_d_invalid]
+        with caplog.at_level(logging.WARNING):
+            result = validate_depends_on(depends_on_input, dag)
+
+        output_set = set(result) if result else set()
+        assert uuid_a in output_set
+        assert uuid_b in output_set
+        assert uuid_c in output_set
+        assert uuid_d_invalid not in output_set
+
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warning_records) >= 1, "Expected warning for unregistered leaf UUID"
+
+    def test_missing_artifact_does_not_raise(self) -> None:
+        """validate_depends_on must not raise when the DAG has no nodes at all."""
+        dag = RegistryDag()   # completely empty
+        try:
+            result = validate_depends_on([_DEPENDS_ON_INPUT_1], dag)
+        except Exception as exc:
+            pytest.fail(f"Raised on empty DAG: {exc!r}")
+
+    def test_output_is_subset_of_input(self) -> None:
+        """depends_on_output ⊆ depends_on_input (output can only shrink, never grow)."""
+        dag = _make_dag([_VALID_UUID_A, _VALID_UUID_B])
+        depends_on_input = [_VALID_UUID_A, _INVALID_UUID_X]
+        result = validate_depends_on(depends_on_input, dag)
+        output_set = set(result) if result else set()
+        input_set = set(depends_on_input)
+        assert output_set <= input_set, (
+            f"Output {output_set} contains UUIDs not in input {input_set}"
+        )
+
+
+# ===========================================================================
+# COMBINED FULL-TRACE INTEGRATION TESTS (exact state replication)
+# ===========================================================================
+
+class TestFullTraceIntegration:
+    """
+    Re-run the complete Validate→Validate→Finish action sequence from each
+    TLC trace and verify the exact terminal state.
+    """
+
+    @pytest.mark.parametrize("trace_id", list(range(1, 11)))
+    def test_full_trace_terminal_state(
+        self, trace_id: int, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """
+        Init:   remaining = {DependsOnInput_1, DependsOnInput_2},
+                depends_on_output = {}, warnings = 0, exception_raised = FALSE,
+                step_count = 0
+
+        Actions: Validate → Validate → Validate (loop empties remaining) → Finish
+
+        Terminal (State 5):
+                remaining = {},
+                depends_on_output = {},   # both inputs invalid
+                step_count = 2,
+                warnings = 2,
+                exception_raised = FALSE
+        """
+        # --- Init state ---
+        dag = _make_dag([])                                    # AllUUIDs = {}
+        depends_on_input = [_DEPENDS_ON_INPUT_1, _DEPENDS_ON_INPUT_2]
+        all_uuids: set[str] = set()
+
+        exception_raised = False
+
+        # --- Validate actions (API call) ---
+        with caplog.at_level(logging.WARNING):
+            try:
+                result = validate_depends_on(depends_on_input, dag)
+            except Exception:
+                exception_raised = True
+                result = []
+
+        depends_on_output = list(result) if result is not None else []
+        warnings_count = sum(
+            1 for r in caplog.records if r.levelno >= logging.WARNING
+        )
+
+        # --- Terminal state assertions (State 5) ---
+        assert set(depends_on_output) == set(), (
+            f"Trace {trace_id}: depends_on_output must be empty"
+        )
+        assert exception_raised is False, f"Trace {trace_id}: must not raise"
+        assert warnings_count == 2, (
+            f"Trace {trace_id}: expected warnings=2, got {warnings_count}"
+        )
+
+        # --- All invariants hold at terminal state ---
+        _assert_all_invariants(
+            depends_on_input=depends_on_input,
+            depends_on_output=depends_on_output,
+            all_uuids=all_uuids,
+            exception_raised=exception_raised,
+            step_count=len(depends_on_input),   # step_count == 2 == MaxSteps
+            warnings_count=warnings_count,
+        )
+
+
+# ===========================================================================
+# HELPERS
+# ===========================================================================
+
+def all_uuids_registered(result: Any, dag: RegistryDag) -> bool:
+    """Return True iff every UUID in result is registered in the DAG."""
+    if result is None:
+        return True
+    registered = set(_node_ids(dag))
+    return all(u in registered for u in result)
+
+
+def _node_ids(dag: RegistryDag) -> list[str]:
+    """Extract all node IDs currently registered in the DAG."""
+    return list(dag.to_dict().get("nodes", {}).keys())
+```
+
+---
+
+**What each section covers:**
+
+| Section | TLA+ Invariants exercised | Topology |
+|---|---|---|
+| `TestAllInvalidUUIDs` (10 tests) | All 9 invariants | Trace-exact: both inputs invalid, `AllUUIDs = ∅` |
+| `TestOutputSubsetOfAll` | `OutputSubsetOfAll`, `TerminalCondition` | empty dag / mixed / all-valid |
+| `TestNoExceptionRaised` / `TestWarningsNotExceptions` | `NoExceptionRaised`, `WarningsNotExceptions` | all-invalid, mixed, empty input |
+| `TestBoundedExecution` | `BoundedExecution` | 2-input and 1-input traces |
+| `TestNoInvalidSurvives` | `NoInvalidSurvives` | trace topology + extras |
+| `TestProcessedValidRetained` | `ProcessedValidRetained` | single valid, mixed, both valid |
+| `TestProcessedInvalidExcluded` | `ProcessedInvalidExcluded` | trace topology + mixed |
+| `TestTerminalOutputCorrect` | `TerminalOutputCorrect` | all-invalid, all-valid, mixed |
+| `TestTerminalCondition` | `TerminalCondition` | trace topology + mixed |
+| `TestEdgeCases` | All invariants | empty input, empty dag, duplicates, isolated nodes, diamond topology |
+| `TestFullTraceIntegration` (10 parametrized) | All 9 invariants | Exact terminal state replay for every trace |

@@ -1,0 +1,288 @@
+--------------------------- MODULE ContextStackRanking ---------------------------
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+(*
+ * Formally models build_test_plan_prompt() context-section ranking.
+ * Ranks: 1=simulation_traces  2=api_context  3=verifiers+compiler_hints
+ *        4=tla_spec_text       5=structural_patterns
+ * Fallback: if rank-1 absent but test_scenarios non-empty, a fallback
+ * section is appended after rank 5.
+ *
+ * gwt-0041 — python/registry/test_gen_loop.py build_test_plan_prompt()
+ *)
+
+(* --algorithm ContextStackRanking
+
+variables
+    has_sim_traces    \in {TRUE, FALSE},
+    has_api_context   = TRUE,
+    has_verifiers     \in {TRUE, FALSE},
+    has_tla_spec      \in {TRUE, FALSE},
+    has_test_scenarios \in {TRUE, FALSE},
+    section_order     = <<>>,
+    fallback_appended = FALSE,
+    built             = FALSE;
+
+define
+
+    ContainsRank(r) ==
+        \E i \in 1..Len(section_order) : section_order[i] = r
+
+    StrictlyIncreasing ==
+        \A i \in 1..(Len(section_order) - 1) :
+            section_order[i] < section_order[i + 1]
+
+    ValidRanks ==
+        \A i \in 1..Len(section_order) :
+            section_order[i] \in 1..5
+
+    NoDuplicates ==
+        \A i \in 1..Len(section_order) :
+        \A j \in 1..Len(section_order) :
+            i # j => section_order[i] # section_order[j]
+
+    SimTracesFirst ==
+        (has_sim_traces /\ Len(section_order) >= 1) => section_order[1] = 1
+
+    Rank1Iff ==
+        ContainsRank(1) <=> has_sim_traces
+
+    Rank2Iff ==
+        ContainsRank(2) <=> has_api_context
+
+    Rank3Iff ==
+        ContainsRank(3) <=> has_verifiers
+
+    Rank4Iff ==
+        ContainsRank(4) <=> has_tla_spec
+
+    Rank5Always ==
+        built => ContainsRank(5)
+
+    FallbackIff ==
+        fallback_appended <=> (built /\ ~has_sim_traces /\ has_test_scenarios)
+
+    TypeOK ==
+        /\ has_sim_traces     \in BOOLEAN
+        /\ has_api_context    \in BOOLEAN
+        /\ has_verifiers      \in BOOLEAN
+        /\ has_tla_spec       \in BOOLEAN
+        /\ has_test_scenarios \in BOOLEAN
+        /\ fallback_appended  \in BOOLEAN
+        /\ built              \in BOOLEAN
+        /\ \A i \in 1..Len(section_order) : section_order[i] \in 1..5
+
+    OrderingInvariant ==
+        built =>
+            /\ StrictlyIncreasing
+            /\ ValidRanks
+            /\ NoDuplicates
+            /\ SimTracesFirst
+            /\ Rank1Iff
+            /\ Rank2Iff
+            /\ Rank3Iff
+            /\ Rank4Iff
+            /\ Rank5Always
+            /\ FallbackIff
+
+    GWTInvariant ==
+        built =>
+            /\ (has_sim_traces => section_order[1] = 1)
+            /\ (has_api_context =>
+                    \E i \in 1..Len(section_order) :
+                        /\ section_order[i] = 2
+                        /\ (~has_sim_traces \/ i > 1))
+            /\ (has_verifiers =>
+                    \E i \in 1..Len(section_order) :
+                        /\ section_order[i] = 3
+                        /\ (~has_api_context \/ \E j \in 1..i-1 : section_order[j] = 2))
+            /\ (has_tla_spec =>
+                    \E i \in 1..Len(section_order) :
+                        /\ section_order[i] = 4
+                        /\ (~has_verifiers \/ \E j \in 1..i-1 : section_order[j] = 3))
+            /\ (\E i \in 1..Len(section_order) :
+                    /\ section_order[i] = 5
+                    /\ (~has_tla_spec \/ \E j \in 1..i-1 : section_order[j] = 4))
+
+end define;
+
+fair process promptBuilder = "builder"
+begin
+    AppendRank1:
+        if has_sim_traces then
+            section_order := Append(section_order, 1);
+        end if;
+    AppendRank2:
+        if has_api_context then
+            section_order := Append(section_order, 2);
+        end if;
+    AppendRank3:
+        if has_verifiers then
+            section_order := Append(section_order, 3);
+        end if;
+    AppendRank4:
+        if has_tla_spec then
+            section_order := Append(section_order, 4);
+        end if;
+    AppendRank5:
+        section_order := Append(section_order, 5);
+    CheckFallback:
+        if ~has_sim_traces /\ has_test_scenarios then
+            fallback_appended := TRUE;
+        end if;
+    Finish:
+        built := TRUE;
+end process;
+
+end algorithm; *)
+
+AllInvariants == TypeOK /\ OrderingInvariant /\ GWTInvariant
+
+GWTLiveness == <>(built)
+
+=============================================================================
+--------------------------- MODULE ContextStackRanking ---------------------------
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+(*
+ * Formally models build_test_plan_prompt() context-section ranking.
+ * Ranks: 1=simulation_traces  2=api_context  3=verifiers+compiler_hints
+ *        4=tla_spec_text       5=structural_patterns
+ * Fallback: if rank-1 absent but test_scenarios non-empty, a fallback
+ * section is appended after rank 5.
+ *
+ * gwt-0041 — python/registry/test_gen_loop.py build_test_plan_prompt()
+ *)
+
+(* --algorithm ContextStackRanking
+
+variables
+    has_sim_traces    \in {TRUE, FALSE},
+    has_api_context   = TRUE,
+    has_verifiers     \in {TRUE, FALSE},
+    has_tla_spec      \in {TRUE, FALSE},
+    has_test_scenarios \in {TRUE, FALSE},
+    section_order     = <<>>,
+    fallback_appended = FALSE,
+    built             = FALSE;
+
+define
+
+    ContainsRank(r) ==
+        \E i \in 1..Len(section_order) : section_order[i] = r
+
+    StrictlyIncreasing ==
+        \A i \in 1..(Len(section_order) - 1) :
+            section_order[i] < section_order[i + 1]
+
+    ValidRanks ==
+        \A i \in 1..Len(section_order) :
+            section_order[i] \in 1..5
+
+    NoDuplicates ==
+        \A i \in 1..Len(section_order) :
+        \A j \in 1..Len(section_order) :
+            i # j => section_order[i] # section_order[j]
+
+    SimTracesFirst ==
+        (has_sim_traces /\ Len(section_order) >= 1) => section_order[1] = 1
+
+    Rank1Iff ==
+        ContainsRank(1) <=> has_sim_traces
+
+    Rank2Iff ==
+        ContainsRank(2) <=> has_api_context
+
+    Rank3Iff ==
+        ContainsRank(3) <=> has_verifiers
+
+    Rank4Iff ==
+        ContainsRank(4) <=> has_tla_spec
+
+    Rank5Always ==
+        built => ContainsRank(5)
+
+    FallbackIff ==
+        fallback_appended <=> (built /\ ~has_sim_traces /\ has_test_scenarios)
+
+    TypeOK ==
+        /\ has_sim_traces     \in BOOLEAN
+        /\ has_api_context    \in BOOLEAN
+        /\ has_verifiers      \in BOOLEAN
+        /\ has_tla_spec       \in BOOLEAN
+        /\ has_test_scenarios \in BOOLEAN
+        /\ fallback_appended  \in BOOLEAN
+        /\ built              \in BOOLEAN
+        /\ \A i \in 1..Len(section_order) : section_order[i] \in 1..5
+
+    OrderingInvariant ==
+        built =>
+            /\ StrictlyIncreasing
+            /\ ValidRanks
+            /\ NoDuplicates
+            /\ SimTracesFirst
+            /\ Rank1Iff
+            /\ Rank2Iff
+            /\ Rank3Iff
+            /\ Rank4Iff
+            /\ Rank5Always
+            /\ FallbackIff
+
+    GWTInvariant ==
+        built =>
+            /\ (has_sim_traces => section_order[1] = 1)
+            /\ (has_api_context =>
+                    \E i \in 1..Len(section_order) :
+                        /\ section_order[i] = 2
+                        /\ (~has_sim_traces \/ i > 1))
+            /\ (has_verifiers =>
+                    \E i \in 1..Len(section_order) :
+                        /\ section_order[i] = 3
+                        /\ (~has_api_context \/ \E j \in 1..i-1 : section_order[j] = 2))
+            /\ (has_tla_spec =>
+                    \E i \in 1..Len(section_order) :
+                        /\ section_order[i] = 4
+                        /\ (~has_verifiers \/ \E j \in 1..i-1 : section_order[j] = 3))
+            /\ (\E i \in 1..Len(section_order) :
+                    /\ section_order[i] = 5
+                    /\ (~has_tla_spec \/ \E j \in 1..i-1 : section_order[j] = 4))
+
+end define;
+
+fair process promptBuilder = "builder"
+begin
+    AppendRank1:
+        if has_sim_traces then
+            section_order := Append(section_order, 1);
+        end if;
+    AppendRank2:
+        if has_api_context then
+            section_order := Append(section_order, 2);
+        end if;
+    AppendRank3:
+        if has_verifiers then
+            section_order := Append(section_order, 3);
+        end if;
+    AppendRank4:
+        if has_tla_spec then
+            section_order := Append(section_order, 4);
+        end if;
+    AppendRank5:
+        section_order := Append(section_order, 5);
+    CheckFallback:
+        if ~has_sim_traces /\ has_test_scenarios then
+            fallback_appended := TRUE;
+        end if;
+    Finish:
+        built := TRUE;
+end process;
+
+end algorithm; *)
+
+AllInvariants == TypeOK /\ OrderingInvariant /\ GWTInvariant
+
+GWTLiveness == <>(built)
+
+=============================================================================

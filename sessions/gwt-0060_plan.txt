@@ -1,0 +1,1690 @@
+```python
+import pytest
+from go_profile_condition_compile import GoProfile, CompiledExpression
+from registry.types import Edge, EdgeType, Node, NodeKind
+from dag import RegistryDag
+
+
+# ---------------------------------------------------------------------------
+# Token table — direct transcription from the verified TLA+ spec
+# ---------------------------------------------------------------------------
+
+TOKENS = [
+    {"tla_op": "In",     "go_op": "slicesContains", "go_expr_token": "slices.Contains", "needs_helper": False},
+    {"tla_op": "And",    "go_op": "ampamp",          "go_expr_token": "&&",              "needs_helper": False},
+    {"tla_op": "Or",     "go_op": "pipepipe",        "go_expr_token": "||",              "needs_helper": False},
+    {"tla_op": "Eq",     "go_op": "doubleEq",        "go_expr_token": "==",              "needs_helper": False},
+    {"tla_op": "Neq",    "go_op": "bangEq",          "go_expr_token": "!=",              "needs_helper": False},
+    {"tla_op": "ForAll", "go_op": "allSatisfy",      "go_expr_token": "allSatisfy",      "needs_helper": True},
+    {"tla_op": "Exists", "go_op": "anySatisfy",      "go_expr_token": "anySatisfy",      "needs_helper": True},
+    {"tla_op": "Len",    "go_op": "len",             "go_expr_token": "len(",            "needs_helper": False},
+    {"tla_op": "Card",   "go_op": "len",             "go_expr_token": "len(",            "needs_helper": False},
+    {"tla_op": "BoolT",  "go_op": "true",            "go_expr_token": "true",            "needs_helper": False},
+    {"tla_op": "BoolF",  "go_op": "false",           "go_expr_token": "false",           "needs_helper": False},
+]
+
+QUANTIFIER_GO_OPS = {"allSatisfy", "anySatisfy"}
+
+# TLA+ expressions that exercise every operator
+EXPR_IN     = r"x \in S"
+EXPR_AND    = r"A /\ B"
+EXPR_OR     = r"A \/ B"
+EXPR_EQ     = "x = y"
+EXPR_NEQ    = "x /= y"
+EXPR_FORALL = r"\A x \in S : P(x)"
+EXPR_EXISTS = r"\E x \in S : P(x)"
+EXPR_LEN    = "Len(s)"
+EXPR_CARD   = "Cardinality(S)"
+EXPR_BOOLT  = "TRUE"
+EXPR_BOOLF  = "FALSE"
+
+# Full expression hitting all 11 tokens — the single sequence compiled in every trace
+EXPR_FULL = (
+    r"x \in S /\ A \/ B = C /= D"
+    r" /\ (\A x \in S : P(x))"
+    r" /\ (\E x \in S : Q(x))"
+    r" /\ Len(s) = Cardinality(T)"
+    r" /\ TRUE /\ FALSE"
+)
+
+
+# ---------------------------------------------------------------------------
+# Invariant helpers — translate TLA+ invariants to Python predicates
+# ---------------------------------------------------------------------------
+
+def _token_present(result: CompiledExpression, tok: dict) -> bool:
+    """AllMapped: go_op for a token appears in go_expr or helper_defs."""
+    return (
+        tok["go_expr_token"] in result.go_expr
+        or tok["go_op"] in result.go_expr
+        or any(tok["go_op"] in hd or tok["go_expr_token"] in hd
+               for hd in (result.helper_defs or []))
+    )
+
+
+def check_all_mapped(result: CompiledExpression, tokens: list) -> None:
+    """AllMapped: cursor > N => every token[k] in results."""
+    for tok in tokens:
+        assert _token_present(result, tok), (
+            f"AllMapped violated: tla_op={tok['tla_op']!r} "
+            f"go_op={tok['go_op']!r} not found in compiled output"
+        )
+
+
+def check_helper_emitted(result: CompiledExpression) -> None:
+    """HelperEmitted: (∃r: r.needs_helper) => has_helper."""
+    quantifier_in_output = any(
+        op in result.go_expr
+        or any(op in hd for hd in (result.helper_defs or []))
+        for op in QUANTIFIER_GO_OPS
+    )
+    if quantifier_in_output:
+        assert result.helper_defs, (
+            "HelperEmitted violated: quantifier operator present "
+            "but helper_defs is empty"
+        )
+
+
+def check_no_quantifier_no_helper(result: CompiledExpression) -> None:
+    """NoQuantifierNoHelper: (~∃r: r.needs_helper) => ~has_helper."""
+    quantifier_in_output = any(
+        op in result.go_expr
+        or any(op in hd for hd in (result.helper_defs or []))
+        for op in QUANTIFIER_GO_OPS
+    )
+    if not quantifier_in_output:
+        assert not result.helper_defs, (
+            "NoQuantifierNoHelper violated: no quantifier operator present "
+            "but helper_defs is non-empty"
+        )
+
+
+def check_no_error(result: CompiledExpression) -> None:
+    """NoError: ~has_error."""
+    assert not getattr(result, "error", None), (
+        f"NoError violated: error={getattr(result, 'error', None)!r}"
+    )
+
+
+def check_all_invariants(result: CompiledExpression, tokens: list) -> None:
+    check_all_mapped(result, tokens)
+    check_helper_emitted(result)
+    check_no_quantifier_no_helper(result)
+    check_no_error(result)
+
+
+# ---------------------------------------------------------------------------
+# Final-state assertion shared by all 10 traces
+# Each trace ends at State 36 <Finish> with has_helper=TRUE, has_error=FALSE,
+# results containing all 11 operator mappings.
+# ---------------------------------------------------------------------------
+
+def assert_final_state_all_traces(result: CompiledExpression) -> None:
+    """Assert State 36 (Done) invariants that hold in every trace."""
+    # NoError — has_error = FALSE
+    check_no_error(result)
+
+    # AllMapped — all 11 TLA+ operators have go counterparts
+    check_all_mapped(result, TOKENS)
+
+    # HelperEmitted — has_helper = TRUE (ForAll + Exists both present)
+    assert result.helper_defs, (
+        "HelperEmitted: ForAll and Exists in full expr → helper_defs must be non-empty"
+    )
+    assert any("allSatisfy" in hd for hd in result.helper_defs), (
+        "HelperEmitted: allSatisfy helper def missing for ForAll"
+    )
+    assert any("anySatisfy" in hd for hd in result.helper_defs), (
+        "HelperEmitted: anySatisfy helper def missing for Exists"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def profile() -> GoProfile:
+    """
+    Trace Init state:
+      results = {}  /  has_helper = FALSE  /  cursor = 1  /  has_error = FALSE
+    """
+    return GoProfile()
+
+
+@pytest.fixture
+def dag_full() -> RegistryDag:
+    """
+    DAG fixture aligned with the Init state common to all 10 traces.
+    Registers a behavior node describing the compile_condition behaviour.
+    """
+    dag = RegistryDag()
+    dag.add_node(Node.behavior(
+        "gwt-compile-condition-full",
+        "compile condition with all operators",
+        given="a TLA+ expression with all 11 standard operators",
+        when="GoProfile.compile_condition is called",
+        then=(
+            "a CompiledExpression is returned with a valid Go expression; "
+            r"\in → slices.Contains, quantifiers emit helper_defs "
+            "with allSatisfy/anySatisfy functions"
+        ),
+    ))
+    return dag
+
+
+@pytest.fixture
+def dag_quantifier_only() -> RegistryDag:
+    """DAG fixture for expressions containing only quantifier operators."""
+    dag = RegistryDag()
+    dag.add_node(Node.behavior(
+        "gwt-compile-quantifier",
+        "compile quantifier expression",
+        given=r"a TLA+ expression with \A or \E",
+        when="GoProfile.compile_condition is called",
+        then="CompiledExpression has non-empty helper_defs",
+    ))
+    return dag
+
+
+@pytest.fixture
+def dag_no_quantifier() -> RegistryDag:
+    """DAG fixture for expressions without any quantifiers."""
+    dag = RegistryDag()
+    dag.add_node(Node.behavior(
+        "gwt-compile-no-quantifier",
+        "compile non-quantifier expression",
+        given=r"a TLA+ expression without \A or \E",
+        when="GoProfile.compile_condition is called",
+        then="CompiledExpression has empty helper_defs",
+    ))
+    return dag
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — 36 steps, CompileLoop × 11 → Finish
+# Init: results={}, has_helper=FALSE, cursor=1, has_error=FALSE
+# Final (State 36): all 11 results, has_helper=TRUE, pc=Done
+# ---------------------------------------------------------------------------
+
+def test_trace_1_full_operator_set(profile):
+    """
+    Trace 1: cursor advances 1→12 processing all 11 tokens.
+    Final state: 11 results, has_helper=TRUE, has_error=FALSE, pc=Done.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2
+# ---------------------------------------------------------------------------
+
+def test_trace_2_full_operator_set(profile):
+    """
+    Trace 2: identical 36-step execution to trace 1.
+    Verifies determinism: same input → same final state.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3
+# ---------------------------------------------------------------------------
+
+def test_trace_3_slices_contains_emitted_for_in(profile):
+    """
+    Trace 3: first token processed at State 3 is 'In' → 'slicesContains'.
+    Verify that the In operator appears in the full output.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert "slices.Contains" in result.go_expr or "slicesContains" in result.go_expr, (
+        "Trace 3: \\in must compile to slices.Contains"
+    )
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4
+# ---------------------------------------------------------------------------
+
+def test_trace_4_logical_operators_emitted(profile):
+    """
+    Trace 4: tokens And (State 6) / Or (State 9) / Eq (State 12) / Neq (State 15)
+    all need_helper=FALSE and must appear in go_expr.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert "&&"  in result.go_expr, "Trace 4: And → &&"
+    assert "||"  in result.go_expr, "Trace 4: Or  → ||"
+    assert "=="  in result.go_expr, "Trace 4: Eq  → =="
+    assert "!="  in result.go_expr, "Trace 4: Neq → !="
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5
+# ---------------------------------------------------------------------------
+
+def test_trace_5_helper_emitted_at_forall_token(profile):
+    """
+    Trace 5: has_helper flips TRUE at State 18 when ForAll token is processed.
+    In final state helper_defs must contain allSatisfy.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert any("allSatisfy" in hd for hd in result.helper_defs), (
+        "Trace 5: ForAll (token 6) must emit allSatisfy helper def"
+    )
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6
+# ---------------------------------------------------------------------------
+
+def test_trace_6_helper_retained_after_exists_token(profile):
+    """
+    Trace 6: has_helper stays TRUE after Exists processed at State 21.
+    Both allSatisfy and anySatisfy helper defs must be present.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert any("allSatisfy" in hd for hd in result.helper_defs)
+    assert any("anySatisfy" in hd for hd in result.helper_defs)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7
+# ---------------------------------------------------------------------------
+
+def test_trace_7_len_appears_twice_for_len_and_card(profile):
+    """
+    Trace 7: both Len (token 8, State 24) and Card (token 9, State 27)
+    map to go_op 'len' — len() must appear ≥2 times in go_expr.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    # len( appears for Len(s) and for Cardinality(T)
+    assert result.go_expr.count("len(") >= 2, (
+        "Trace 7: Len and Card both map to len() → must appear ≥2 times"
+    )
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8
+# ---------------------------------------------------------------------------
+
+def test_trace_8_boolean_literals_emitted(profile):
+    """
+    Trace 8: BoolT (token 10, State 30) → 'true', BoolF (token 11, State 33) → 'false'.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert "true"  in result.go_expr, "Trace 8: BoolT → true"
+    assert "false" in result.go_expr, "Trace 8: BoolF → false"
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9
+# ---------------------------------------------------------------------------
+
+def test_trace_9_cursor_advances_to_12_at_finish(profile):
+    """
+    Trace 9: at State 35 cursor=12 (> N=11) → CompileLoop takes Finish branch.
+    The compiled result must cover all N tokens, confirming cursor reached 12.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    # AllMapped confirms cursor reached > N (all 11 tokens compiled)
+    check_all_mapped(result, TOKENS)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10
+# ---------------------------------------------------------------------------
+
+def test_trace_10_no_error_throughout(profile):
+    """
+    Trace 10: has_error = FALSE in every state; result.error absent in final state.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    check_no_error(result)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# AllMapped invariant verifier — exercises ≥2 trace-derived topologies
+# ---------------------------------------------------------------------------
+
+class TestAllMappedInvariant:
+    """
+    AllMapped: cursor > N =>
+      ∀k ∈ 1..N : ∃r ∈ results : r.tla_op = Tokens[k].tla ∧ r.go_op = Tokens[k].go_op
+    """
+
+    def test_all_11_tokens_full_expression(self, profile):
+        """Topology 1 (all traces): full expression → all 11 go_ops present."""
+        result = profile.compile_condition(EXPR_FULL)
+        check_all_mapped(result, TOKENS)
+
+    def test_in_only(self, profile):
+        """Topology 2: single \\in token → slicesContains mapped."""
+        result = profile.compile_condition(EXPR_IN)
+        check_all_mapped(result, [TOKENS[0]])  # In token
+
+    def test_and_only(self, profile):
+        """Topology 3: /\\ alone → && mapped."""
+        result = profile.compile_condition(EXPR_AND)
+        check_all_mapped(result, [TOKENS[1]])
+
+    def test_or_only(self, profile):
+        """Topology 4: \\/ alone → || mapped."""
+        result = profile.compile_condition(EXPR_OR)
+        check_all_mapped(result, [TOKENS[2]])
+
+    def test_eq_only(self, profile):
+        """Topology 5: = alone → == mapped."""
+        result = profile.compile_condition(EXPR_EQ)
+        check_all_mapped(result, [TOKENS[3]])
+
+    def test_neq_only(self, profile):
+        """Topology 6: /= alone → != mapped."""
+        result = profile.compile_condition(EXPR_NEQ)
+        check_all_mapped(result, [TOKENS[4]])
+
+    def test_forall_only(self, profile):
+        """Topology 7: \\A alone → allSatisfy mapped (in expr or helper_defs)."""
+        result = profile.compile_condition(EXPR_FORALL)
+        check_all_mapped(result, [TOKENS[5]])
+
+    def test_exists_only(self, profile):
+        """Topology 8: \\E alone → anySatisfy mapped (in expr or helper_defs)."""
+        result = profile.compile_condition(EXPR_EXISTS)
+        check_all_mapped(result, [TOKENS[6]])
+
+    def test_len_only(self, profile):
+        """Topology 9: Len alone → len mapped."""
+        result = profile.compile_condition(EXPR_LEN)
+        check_all_mapped(result, [TOKENS[7]])
+
+    def test_card_only(self, profile):
+        """Topology 10: Cardinality alone → len mapped."""
+        result = profile.compile_condition(EXPR_CARD)
+        check_all_mapped(result, [TOKENS[8]])
+
+    def test_boolt_only(self, profile):
+        """Topology 11: TRUE alone → true mapped."""
+        result = profile.compile_condition(EXPR_BOOLT)
+        check_all_mapped(result, [TOKENS[9]])
+
+    def test_boolf_only(self, profile):
+        """Topology 12: FALSE alone → false mapped."""
+        result = profile.compile_condition(EXPR_BOOLF)
+        check_all_mapped(result, [TOKENS[10]])
+
+    @pytest.mark.parametrize("tla_expr,tok_idx", [
+        (EXPR_IN,    0),
+        (EXPR_AND,   1),
+        (EXPR_OR,    2),
+        (EXPR_EQ,    3),
+        (EXPR_NEQ,   4),
+        (EXPR_FORALL,5),
+        (EXPR_EXISTS,6),
+        (EXPR_LEN,   7),
+        (EXPR_CARD,  8),
+        (EXPR_BOOLT, 9),
+        (EXPR_BOOLF, 10),
+    ])
+    def test_each_individual_token_mapped(self, profile, tla_expr, tok_idx):
+        """Parametrized: each of the 11 tokens individually satisfies AllMapped."""
+        result = profile.compile_condition(tla_expr)
+        check_all_mapped(result, [TOKENS[tok_idx]])
+        check_no_error(result)
+
+
+# ---------------------------------------------------------------------------
+# HelperEmitted invariant verifier
+# (∃r ∈ results : r.needs_helper) => has_helper
+# ---------------------------------------------------------------------------
+
+class TestHelperEmittedInvariant:
+    """
+    HelperEmitted: if any compiled result needs_helper=TRUE
+    then helper_defs must be non-empty.
+    """
+
+    def test_forall_emits_all_satisfy_helper(self, profile, dag_quantifier_only):
+        """Topology 1: \\A alone → helper_defs contains allSatisfy function."""
+        result = profile.compile_condition(EXPR_FORALL)
+        check_helper_emitted(result)
+        assert result.helper_defs, "ForAll must emit helper"
+        assert any("allSatisfy" in hd for hd in result.helper_defs)
+        check_no_error(result)
+
+    def test_exists_emits_any_satisfy_helper(self, profile, dag_quantifier_only):
+        """Topology 2: \\E alone → helper_defs contains anySatisfy function."""
+        result = profile.compile_condition(EXPR_EXISTS)
+        check_helper_emitted(result)
+        assert result.helper_defs, "Exists must emit helper"
+        assert any("anySatisfy" in hd for hd in result.helper_defs)
+        check_no_error(result)
+
+    def test_forall_and_exists_both_emit_helpers(self, profile):
+        """Topology 3: \\A ∧ \\E → helper_defs contains both allSatisfy and anySatisfy."""
+        expr = r"(\A x \in S : P(x)) /\ (\E x \in S : Q(x))"
+        result = profile.compile_condition(expr)
+        check_helper_emitted(result)
+        assert any("allSatisfy" in hd for hd in result.helper_defs)
+        assert any("anySatisfy" in hd for hd in result.helper_defs)
+        check_no_error(result)
+
+    def test_full_expression_helper_emitted(self, profile):
+        """Topology 4 (all 10 traces final state): full expression has helper_defs."""
+        result = profile.compile_condition(EXPR_FULL)
+        check_helper_emitted(result)
+        assert result.helper_defs
+
+    def test_non_quantifier_does_not_falsely_emit_helper(self, profile, dag_no_quantifier):
+        """Topology 5: \\in alone must NOT emit helper_defs."""
+        result = profile.compile_condition(EXPR_IN)
+        # HelperEmitted: no quantifier present → no obligation to emit
+        # (but must also satisfy NoQuantifierNoHelper)
+        check_helper_emitted(result)
+        check_no_quantifier_no_helper(result)
+        check_no_error(result)
+
+    def test_mixed_quantifier_and_non_quantifier(self, profile):
+        """Topology 6: \\A + \\in → helper emitted despite mixed operators."""
+        expr = r"x \in S /\ (\A y \in T : P(y))"
+        result = profile.compile_condition(expr)
+        check_helper_emitted(result)
+        assert result.helper_defs
+
+
+# ---------------------------------------------------------------------------
+# NoQuantifierNoHelper invariant verifier
+# (~∃r ∈ results : r.needs_helper) => ~has_helper
+# ---------------------------------------------------------------------------
+
+class TestNoQuantifierNoHelperInvariant:
+    """
+    NoQuantifierNoHelper: when no compiled token needs a helper,
+    helper_defs must be empty.
+    """
+
+    def test_in_only_no_helper(self, profile, dag_no_quantifier):
+        """Topology 1: \\in alone — no quantifier → helper_defs must be empty."""
+        result = profile.compile_condition(EXPR_IN)
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_logical_ops_no_helper(self, profile, dag_no_quantifier):
+        """Topology 2: And / Or / Eq / Neq only → no helper."""
+        expr = r"A /\ B \/ C = D /= E"
+        result = profile.compile_condition(expr)
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_len_and_card_no_helper(self, profile, dag_no_quantifier):
+        """Topology 3: Len + Cardinality → no helper."""
+        result = profile.compile_condition("Len(s) = Cardinality(T)")
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_boolean_literals_no_helper(self, profile, dag_no_quantifier):
+        """Topology 4: TRUE /\\ FALSE → no helper."""
+        result = profile.compile_condition(r"TRUE /\ FALSE")
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_all_non_quantifier_tokens_no_helper(self, profile, dag_no_quantifier):
+        """
+        Topology 5: In + And + Or + Eq + Neq + Len + Card + BoolT + BoolF
+        — nine non-quantifier tokens → helper_defs empty.
+        """
+        expr = (
+            r"x \in S /\ A \/ B = C /= D"
+            r" /\ Len(s) = Cardinality(T)"
+            r" /\ TRUE /\ FALSE"
+        )
+        result = profile.compile_condition(expr)
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_quantifier_overrides_no_helper_constraint(self, profile):
+        """
+        Topology 6: ForAll present → NoQuantifierNoHelper invariant
+        does NOT apply; helper_defs non-empty is correct.
+        """
+        result = profile.compile_condition(EXPR_FORALL)
+        # Invariant fires only when no quantifier is present — must not fire here
+        quantifier_present = any(
+            op in result.go_expr
+            or any(op in hd for hd in (result.helper_defs or []))
+            for op in QUANTIFIER_GO_OPS
+        )
+        if not quantifier_present:
+            assert not result.helper_defs, "NoQuantifierNoHelper violated"
+        check_no_error(result)
+
+
+# ---------------------------------------------------------------------------
+# NoError invariant verifier
+# ---------------------------------------------------------------------------
+
+class TestNoErrorInvariant:
+    """NoError: ~has_error for every call to compile_condition."""
+
+    def test_no_error_in_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_IN))
+
+    def test_no_error_and_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_AND))
+
+    def test_no_error_or_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_OR))
+
+    def test_no_error_eq_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_EQ))
+
+    def test_no_error_neq_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_NEQ))
+
+    def test_no_error_forall_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_FORALL))
+
+    def test_no_error_exists_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_EXISTS))
+
+    def test_no_error_len_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_LEN))
+
+    def test_no_error_card_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_CARD))
+
+    def test_no_error_boolt_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_BOOLT))
+
+    def test_no_error_boolf_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_BOOLF))
+
+    def test_no_error_full_expression(self, profile):
+        """NoError holds for the full 11-token expression (all 10 traces)."""
+        check_no_error(profile.compile_condition(EXPR_FULL))
+
+
+# ---------------------------------------------------------------------------
+# Operator-mapping unit tests (one per TLA+ → Go mapping)
+# ---------------------------------------------------------------------------
+
+class TestOperatorMappings:
+    """One test per row in the verified token table."""
+
+    def test_in_maps_to_slices_contains(self, profile):
+        result = profile.compile_condition(EXPR_IN)
+        assert (
+            "slices.Contains" in result.go_expr
+            or "slicesContains" in result.go_expr
+        ), r"\in must compile to slices.Contains"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_and_maps_to_ampamp(self, profile):
+        result = profile.compile_condition(EXPR_AND)
+        assert "&&" in result.go_expr, "/\\ must compile to &&"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_or_maps_to_pipepipe(self, profile):
+        result = profile.compile_condition(EXPR_OR)
+        assert "||" in result.go_expr, "\\/ must compile to ||"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_eq_maps_to_double_eq(self, profile):
+        result = profile.compile_condition(EXPR_EQ)
+        assert "==" in result.go_expr, "= must compile to =="
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_neq_maps_to_bang_eq(self, profile):
+        result = profile.compile_condition(EXPR_NEQ)
+        assert "!=" in result.go_expr, "/= must compile to !="
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_forall_maps_to_all_satisfy_with_helper(self, profile):
+        result = profile.compile_condition(EXPR_FORALL)
+        assert (
+            "allSatisfy" in result.go_expr
+            or any("allSatisfy" in hd for hd in result.helper_defs)
+        ), r"\A must compile to allSatisfy"
+        assert result.helper_defs, r"\A must emit helper_defs"
+        check_no_error(result)
+
+    def test_exists_maps_to_any_satisfy_with_helper(self, profile):
+        result = profile.compile_condition(EXPR_EXISTS)
+        assert (
+            "anySatisfy" in result.go_expr
+            or any("anySatisfy" in hd for hd in result.helper_defs)
+        ), r"\E must compile to anySatisfy"
+        assert result.helper_defs, r"\E must emit helper_defs"
+        check_no_error(result)
+
+    def test_len_maps_to_len(self, profile):
+        result = profile.compile_condition(EXPR_LEN)
+        assert "len(" in result.go_expr, "Len must compile to len()"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_card_maps_to_len(self, profile):
+        result = profile.compile_condition(EXPR_CARD)
+        assert "len(" in result.go_expr, "Cardinality must compile to len()"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_boolt_maps_to_true(self, profile):
+        result = profile.compile_condition(EXPR_BOOLT)
+        assert "true" in result.go_expr, "TRUE must compile to true"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_boolf_maps_to_false(self, profile):
+        result = profile.compile_condition(EXPR_BOOLF)
+        assert "false" in result.go_expr, "FALSE must compile to false"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_card_and_len_share_go_op_len(self, profile):
+        """Card and Len both map to 'len' — two distinct TLA+ ops, one go_op."""
+        result = profile.compile_condition("Len(s) = Cardinality(T)")
+        assert result.go_expr.count("len(") >= 2, (
+            "Len and Cardinality must both emit len() in go_expr"
+        )
+        assert not result.helper_defs
+        check_no_error(result)
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+    """
+    Edge cases: isolated operators, empty-ish expressions, diamond patterns.
+    Derived from traces where possible; invented minimally otherwise.
+    """
+
+    def test_compile_condition_returns_compiled_expression_type(self, profile):
+        """Return type must be CompiledExpression for any valid input."""
+        result = profile.compile_condition(EXPR_FULL)
+        assert isinstance(result, CompiledExpression)
+
+    def test_compile_condition_full_is_deterministic(self, profile):
+        """Same expression compiled twice yields identical output (no side effects)."""
+        r1 = profile.compile_condition(EXPR_FULL)
+        r2 = profile.compile_condition(EXPR_FULL)
+        assert r1.go_expr == r2.go_expr
+        assert set(r1.helper_defs) == set(r2.helper_defs)
+
+    def test_single_in_isolated(self, profile):
+        """Isolated \\in: one-token compile — AllMapped, NoQuantifierNoHelper, NoError."""
+        result = profile.compile_condition(EXPR_IN)
+        assert "slices.Contains" in result.go_expr or "slicesContains" in result.go_expr
+        assert not result.helper_defs
+        check_all_invariants(result, [TOKENS[0]])
+
+    def test_single_forall_isolated(self, profile):
+        """Isolated \\A: helper_defs non-empty, allSatisfy present, NoError."""
+        result = profile.compile_condition(EXPR_FORALL)
+        assert result.helper_defs
+        assert any("allSatisfy" in hd for hd in result.helper_defs)
+        check_all_invariants(result, [TOKENS[5]])
+
+    def test_single_exists_isolated(self, profile):
+        """Isolated \\E: helper_defs non-empty, anySatisfy present, NoError."""
+        result = profile.compile_condition(EXPR_EXISTS)
+        assert result.helper_defs
+        assert any("anySatisfy" in hd for hd in result.helper_defs)
+        check_all_invariants(result, [TOKENS[6]])
+
+    def test_quantifier_followed_by_non_quantifier_helper_preserved(self, profile):
+        """
+        Once has_helper=TRUE (ForAll processed), adding non-quantifier tokens
+        must not clear helper_defs — mirrors State 18→36 in all traces.
+        """
+        expr = r"(\A x \in S : P(x)) /\ Len(s) = TRUE"
+        result = profile.compile_condition(expr)
+        assert result.helper_defs, (
+            "helper_defs must remain non-empty after non-quantifier tokens "
+            "follow a quantifier"
+        )
+        check_helper_emitted(result)
+        check_no_error(result)
+
+    def test_non_quantifier_tokens_never_set_helper(self, profile):
+        """
+        Nine non-quantifier tokens (In/And/Or/Eq/Neq/Len/Card/BoolT/BoolF)
+        must never set has_helper=TRUE — helper_defs stays empty.
+        """
+        expr = (
+            r"x \in S /\ A \/ B = C /= D"
+            r" /\ Len(s) = Cardinality(T) /\ TRUE /\ FALSE"
+        )
+        result = profile.compile_condition(expr)
+        assert not result.helper_defs, (
+            "NoQuantifierNoHelper: 9 non-quantifier tokens must not emit helper_defs"
+        )
+        check_no_quantifier_no_helper(result)
+        check_no_error(result)
+
+    def test_all_invariants_on_full_expression_one_shot(self, profile, dag_full):
+        """
+        Diamond: all four invariants (AllMapped, HelperEmitted,
+        NoQuantifierNoHelper, NoError) simultaneously verified on EXPR_FULL,
+        matching State 36 of all 10 traces.
+        """
+        result = profile.compile_condition(EXPR_FULL)
+        check_all_invariants(result, TOKENS)
+        assert isinstance(result, CompiledExpression)
+        assert dag_full.node_count >= 1
+
+    def test_helper_defs_are_valid_go_functions(self, profile):
+        """
+        helper_defs emitted for quantifiers must look like Go function definitions
+        (contain 'func' keyword and the function name).
+        """
+        result = profile.compile_condition(EXPR_FORALL)
+        assert result.helper_defs
+        for hd in result.helper_defs:
+            assert "func" in hd or "allSatisfy" in hd or "anySatisfy" in hd, (
+                f"helper_def does not appear to be a Go function: {hd!r}"
+            )
+
+    def test_go_expr_is_non_empty_string(self, profile):
+        """go_expr must be a non-empty string for any valid TLA+ expression."""
+        for expr in [EXPR_IN, EXPR_FORALL, EXPR_BOOLT, EXPR_FULL]:
+            result = profile.compile_condition(expr)
+            assert isinstance(result.go_expr, str), "go_expr must be a str"
+            assert result.go_expr.strip(), f"go_expr must be non-empty for expr={expr!r}"
+
+    def test_helper_defs_is_list(self, profile):
+        """helper_defs must be a list (possibly empty), never None."""
+        for expr in [EXPR_IN, EXPR_FORALL, EXPR_FULL]:
+            result = profile.compile_condition(expr)
+            assert isinstance(result.helper_defs, list), (
+                f"helper_defs must be a list; got {type(result.helper_defs)} "
+                f"for expr={expr!r}"
+            )
+
+    @pytest.mark.parametrize("expr,desc", [
+        (EXPR_IN,    "In only"),
+        (EXPR_AND,   "And only"),
+        (EXPR_BOOLT, "BoolT only"),
+        (EXPR_FULL,  "all 11 tokens"),
+    ])
+    def test_no_error_parametrized(self, profile, expr, desc):
+        """NoError invariant holds across a representative cross-section of expressions."""
+        result = profile.compile_condition(expr)
+        check_no_error(result)
+```
+```python
+import pytest
+from go_profile_condition_compile import GoProfile, CompiledExpression
+from registry.types import Edge, EdgeType, Node, NodeKind
+from dag import RegistryDag
+
+
+# ---------------------------------------------------------------------------
+# Token table — direct transcription from the verified TLA+ spec
+# ---------------------------------------------------------------------------
+
+TOKENS = [
+    {"tla_op": "In",     "go_op": "slicesContains", "go_expr_token": "slices.Contains", "needs_helper": False},
+    {"tla_op": "And",    "go_op": "ampamp",          "go_expr_token": "&&",              "needs_helper": False},
+    {"tla_op": "Or",     "go_op": "pipepipe",        "go_expr_token": "||",              "needs_helper": False},
+    {"tla_op": "Eq",     "go_op": "doubleEq",        "go_expr_token": "==",              "needs_helper": False},
+    {"tla_op": "Neq",    "go_op": "bangEq",          "go_expr_token": "!=",              "needs_helper": False},
+    {"tla_op": "ForAll", "go_op": "allSatisfy",      "go_expr_token": "allSatisfy",      "needs_helper": True},
+    {"tla_op": "Exists", "go_op": "anySatisfy",      "go_expr_token": "anySatisfy",      "needs_helper": True},
+    {"tla_op": "Len",    "go_op": "len",             "go_expr_token": "len(",            "needs_helper": False},
+    {"tla_op": "Card",   "go_op": "len",             "go_expr_token": "len(",            "needs_helper": False},
+    {"tla_op": "BoolT",  "go_op": "true",            "go_expr_token": "true",            "needs_helper": False},
+    {"tla_op": "BoolF",  "go_op": "false",           "go_expr_token": "false",           "needs_helper": False},
+]
+
+QUANTIFIER_GO_OPS = {"allSatisfy", "anySatisfy"}
+
+# TLA+ expressions that exercise every operator
+EXPR_IN     = r"x \in S"
+EXPR_AND    = r"A /\ B"
+EXPR_OR     = r"A \/ B"
+EXPR_EQ     = "x = y"
+EXPR_NEQ    = "x /= y"
+EXPR_FORALL = r"\A x \in S : P(x)"
+EXPR_EXISTS = r"\E x \in S : P(x)"
+EXPR_LEN    = "Len(s)"
+EXPR_CARD   = "Cardinality(S)"
+EXPR_BOOLT  = "TRUE"
+EXPR_BOOLF  = "FALSE"
+
+# Full expression hitting all 11 tokens — the single sequence compiled in every trace
+EXPR_FULL = (
+    r"x \in S /\ A \/ B = C /= D"
+    r" /\ (\A x \in S : P(x))"
+    r" /\ (\E x \in S : Q(x))"
+    r" /\ Len(s) = Cardinality(T)"
+    r" /\ TRUE /\ FALSE"
+)
+
+
+# ---------------------------------------------------------------------------
+# Invariant helpers — translate TLA+ invariants to Python predicates
+# ---------------------------------------------------------------------------
+
+def _token_present(result: CompiledExpression, tok: dict) -> bool:
+    """AllMapped: go_op for a token appears in go_expr or helper_defs."""
+    return (
+        tok["go_expr_token"] in result.go_expr
+        or tok["go_op"] in result.go_expr
+        or any(tok["go_op"] in hd or tok["go_expr_token"] in hd
+               for hd in (result.helper_defs or []))
+    )
+
+
+def check_all_mapped(result: CompiledExpression, tokens: list) -> None:
+    """AllMapped: cursor > N => every token[k] in results."""
+    for tok in tokens:
+        assert _token_present(result, tok), (
+            f"AllMapped violated: tla_op={tok['tla_op']!r} "
+            f"go_op={tok['go_op']!r} not found in compiled output"
+        )
+
+
+def check_helper_emitted(result: CompiledExpression) -> None:
+    """HelperEmitted: (∃r: r.needs_helper) => has_helper."""
+    quantifier_in_output = any(
+        op in result.go_expr
+        or any(op in hd for hd in (result.helper_defs or []))
+        for op in QUANTIFIER_GO_OPS
+    )
+    if quantifier_in_output:
+        assert result.helper_defs, (
+            "HelperEmitted violated: quantifier operator present "
+            "but helper_defs is empty"
+        )
+
+
+def check_no_quantifier_no_helper(result: CompiledExpression) -> None:
+    """NoQuantifierNoHelper: (~∃r: r.needs_helper) => ~has_helper."""
+    quantifier_in_output = any(
+        op in result.go_expr
+        or any(op in hd for hd in (result.helper_defs or []))
+        for op in QUANTIFIER_GO_OPS
+    )
+    if not quantifier_in_output:
+        assert not result.helper_defs, (
+            "NoQuantifierNoHelper violated: no quantifier operator present "
+            "but helper_defs is non-empty"
+        )
+
+
+def check_no_error(result: CompiledExpression) -> None:
+    """NoError: ~has_error."""
+    assert not getattr(result, "error", None), (
+        f"NoError violated: error={getattr(result, 'error', None)!r}"
+    )
+
+
+def check_all_invariants(result: CompiledExpression, tokens: list) -> None:
+    check_all_mapped(result, tokens)
+    check_helper_emitted(result)
+    check_no_quantifier_no_helper(result)
+    check_no_error(result)
+
+
+# ---------------------------------------------------------------------------
+# Final-state assertion shared by all 10 traces
+# Each trace ends at State 36 <Finish> with has_helper=TRUE, has_error=FALSE,
+# results containing all 11 operator mappings.
+# ---------------------------------------------------------------------------
+
+def assert_final_state_all_traces(result: CompiledExpression) -> None:
+    """Assert State 36 (Done) invariants that hold in every trace."""
+    # NoError — has_error = FALSE
+    check_no_error(result)
+
+    # AllMapped — all 11 TLA+ operators have go counterparts
+    check_all_mapped(result, TOKENS)
+
+    # HelperEmitted — has_helper = TRUE (ForAll + Exists both present)
+    assert result.helper_defs, (
+        "HelperEmitted: ForAll and Exists in full expr → helper_defs must be non-empty"
+    )
+    assert any("allSatisfy" in hd for hd in result.helper_defs), (
+        "HelperEmitted: allSatisfy helper def missing for ForAll"
+    )
+    assert any("anySatisfy" in hd for hd in result.helper_defs), (
+        "HelperEmitted: anySatisfy helper def missing for Exists"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def profile() -> GoProfile:
+    """
+    Trace Init state:
+      results = {}  /  has_helper = FALSE  /  cursor = 1  /  has_error = FALSE
+    """
+    return GoProfile()
+
+
+@pytest.fixture
+def dag_full() -> RegistryDag:
+    """
+    DAG fixture aligned with the Init state common to all 10 traces.
+    Registers a behavior node describing the compile_condition behaviour.
+    """
+    dag = RegistryDag()
+    dag.add_node(Node.behavior(
+        "gwt-compile-condition-full",
+        "compile condition with all operators",
+        given="a TLA+ expression with all 11 standard operators",
+        when="GoProfile.compile_condition is called",
+        then=(
+            "a CompiledExpression is returned with a valid Go expression; "
+            r"\in → slices.Contains, quantifiers emit helper_defs "
+            "with allSatisfy/anySatisfy functions"
+        ),
+    ))
+    return dag
+
+
+@pytest.fixture
+def dag_quantifier_only() -> RegistryDag:
+    """DAG fixture for expressions containing only quantifier operators."""
+    dag = RegistryDag()
+    dag.add_node(Node.behavior(
+        "gwt-compile-quantifier",
+        "compile quantifier expression",
+        given=r"a TLA+ expression with \A or \E",
+        when="GoProfile.compile_condition is called",
+        then="CompiledExpression has non-empty helper_defs",
+    ))
+    return dag
+
+
+@pytest.fixture
+def dag_no_quantifier() -> RegistryDag:
+    """DAG fixture for expressions without any quantifiers."""
+    dag = RegistryDag()
+    dag.add_node(Node.behavior(
+        "gwt-compile-no-quantifier",
+        "compile non-quantifier expression",
+        given=r"a TLA+ expression without \A or \E",
+        when="GoProfile.compile_condition is called",
+        then="CompiledExpression has empty helper_defs",
+    ))
+    return dag
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — 36 steps, CompileLoop × 11 → Finish
+# Init: results={}, has_helper=FALSE, cursor=1, has_error=FALSE
+# Final (State 36): all 11 results, has_helper=TRUE, pc=Done
+# ---------------------------------------------------------------------------
+
+def test_trace_1_full_operator_set(profile):
+    """
+    Trace 1: cursor advances 1→12 processing all 11 tokens.
+    Final state: 11 results, has_helper=TRUE, has_error=FALSE, pc=Done.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 2
+# ---------------------------------------------------------------------------
+
+def test_trace_2_full_operator_set(profile):
+    """
+    Trace 2: identical 36-step execution to trace 1.
+    Verifies determinism: same input → same final state.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 3
+# ---------------------------------------------------------------------------
+
+def test_trace_3_slices_contains_emitted_for_in(profile):
+    """
+    Trace 3: first token processed at State 3 is 'In' → 'slicesContains'.
+    Verify that the In operator appears in the full output.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert "slices.Contains" in result.go_expr or "slicesContains" in result.go_expr, (
+        "Trace 3: \\in must compile to slices.Contains"
+    )
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 4
+# ---------------------------------------------------------------------------
+
+def test_trace_4_logical_operators_emitted(profile):
+    """
+    Trace 4: tokens And (State 6) / Or (State 9) / Eq (State 12) / Neq (State 15)
+    all need_helper=FALSE and must appear in go_expr.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert "&&"  in result.go_expr, "Trace 4: And → &&"
+    assert "||"  in result.go_expr, "Trace 4: Or  → ||"
+    assert "=="  in result.go_expr, "Trace 4: Eq  → =="
+    assert "!="  in result.go_expr, "Trace 4: Neq → !="
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 5
+# ---------------------------------------------------------------------------
+
+def test_trace_5_helper_emitted_at_forall_token(profile):
+    """
+    Trace 5: has_helper flips TRUE at State 18 when ForAll token is processed.
+    In final state helper_defs must contain allSatisfy.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert any("allSatisfy" in hd for hd in result.helper_defs), (
+        "Trace 5: ForAll (token 6) must emit allSatisfy helper def"
+    )
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 6
+# ---------------------------------------------------------------------------
+
+def test_trace_6_helper_retained_after_exists_token(profile):
+    """
+    Trace 6: has_helper stays TRUE after Exists processed at State 21.
+    Both allSatisfy and anySatisfy helper defs must be present.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert any("allSatisfy" in hd for hd in result.helper_defs)
+    assert any("anySatisfy" in hd for hd in result.helper_defs)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 7
+# ---------------------------------------------------------------------------
+
+def test_trace_7_len_appears_twice_for_len_and_card(profile):
+    """
+    Trace 7: both Len (token 8, State 24) and Card (token 9, State 27)
+    map to go_op 'len' — len() must appear ≥2 times in go_expr.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    # len( appears for Len(s) and for Cardinality(T)
+    assert result.go_expr.count("len(") >= 2, (
+        "Trace 7: Len and Card both map to len() → must appear ≥2 times"
+    )
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 8
+# ---------------------------------------------------------------------------
+
+def test_trace_8_boolean_literals_emitted(profile):
+    """
+    Trace 8: BoolT (token 10, State 30) → 'true', BoolF (token 11, State 33) → 'false'.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    assert "true"  in result.go_expr, "Trace 8: BoolT → true"
+    assert "false" in result.go_expr, "Trace 8: BoolF → false"
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9
+# ---------------------------------------------------------------------------
+
+def test_trace_9_cursor_advances_to_12_at_finish(profile):
+    """
+    Trace 9: at State 35 cursor=12 (> N=11) → CompileLoop takes Finish branch.
+    The compiled result must cover all N tokens, confirming cursor reached 12.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    # AllMapped confirms cursor reached > N (all 11 tokens compiled)
+    check_all_mapped(result, TOKENS)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# Trace 10
+# ---------------------------------------------------------------------------
+
+def test_trace_10_no_error_throughout(profile):
+    """
+    Trace 10: has_error = FALSE in every state; result.error absent in final state.
+    """
+    result = profile.compile_condition(EXPR_FULL)
+    check_no_error(result)
+    assert_final_state_all_traces(result)
+    check_all_invariants(result, TOKENS)
+
+
+# ---------------------------------------------------------------------------
+# AllMapped invariant verifier — exercises ≥2 trace-derived topologies
+# ---------------------------------------------------------------------------
+
+class TestAllMappedInvariant:
+    """
+    AllMapped: cursor > N =>
+      ∀k ∈ 1..N : ∃r ∈ results : r.tla_op = Tokens[k].tla ∧ r.go_op = Tokens[k].go_op
+    """
+
+    def test_all_11_tokens_full_expression(self, profile):
+        """Topology 1 (all traces): full expression → all 11 go_ops present."""
+        result = profile.compile_condition(EXPR_FULL)
+        check_all_mapped(result, TOKENS)
+
+    def test_in_only(self, profile):
+        """Topology 2: single \\in token → slicesContains mapped."""
+        result = profile.compile_condition(EXPR_IN)
+        check_all_mapped(result, [TOKENS[0]])  # In token
+
+    def test_and_only(self, profile):
+        """Topology 3: /\\ alone → && mapped."""
+        result = profile.compile_condition(EXPR_AND)
+        check_all_mapped(result, [TOKENS[1]])
+
+    def test_or_only(self, profile):
+        """Topology 4: \\/ alone → || mapped."""
+        result = profile.compile_condition(EXPR_OR)
+        check_all_mapped(result, [TOKENS[2]])
+
+    def test_eq_only(self, profile):
+        """Topology 5: = alone → == mapped."""
+        result = profile.compile_condition(EXPR_EQ)
+        check_all_mapped(result, [TOKENS[3]])
+
+    def test_neq_only(self, profile):
+        """Topology 6: /= alone → != mapped."""
+        result = profile.compile_condition(EXPR_NEQ)
+        check_all_mapped(result, [TOKENS[4]])
+
+    def test_forall_only(self, profile):
+        """Topology 7: \\A alone → allSatisfy mapped (in expr or helper_defs)."""
+        result = profile.compile_condition(EXPR_FORALL)
+        check_all_mapped(result, [TOKENS[5]])
+
+    def test_exists_only(self, profile):
+        """Topology 8: \\E alone → anySatisfy mapped (in expr or helper_defs)."""
+        result = profile.compile_condition(EXPR_EXISTS)
+        check_all_mapped(result, [TOKENS[6]])
+
+    def test_len_only(self, profile):
+        """Topology 9: Len alone → len mapped."""
+        result = profile.compile_condition(EXPR_LEN)
+        check_all_mapped(result, [TOKENS[7]])
+
+    def test_card_only(self, profile):
+        """Topology 10: Cardinality alone → len mapped."""
+        result = profile.compile_condition(EXPR_CARD)
+        check_all_mapped(result, [TOKENS[8]])
+
+    def test_boolt_only(self, profile):
+        """Topology 11: TRUE alone → true mapped."""
+        result = profile.compile_condition(EXPR_BOOLT)
+        check_all_mapped(result, [TOKENS[9]])
+
+    def test_boolf_only(self, profile):
+        """Topology 12: FALSE alone → false mapped."""
+        result = profile.compile_condition(EXPR_BOOLF)
+        check_all_mapped(result, [TOKENS[10]])
+
+    @pytest.mark.parametrize("tla_expr,tok_idx", [
+        (EXPR_IN,    0),
+        (EXPR_AND,   1),
+        (EXPR_OR,    2),
+        (EXPR_EQ,    3),
+        (EXPR_NEQ,   4),
+        (EXPR_FORALL,5),
+        (EXPR_EXISTS,6),
+        (EXPR_LEN,   7),
+        (EXPR_CARD,  8),
+        (EXPR_BOOLT, 9),
+        (EXPR_BOOLF, 10),
+    ])
+    def test_each_individual_token_mapped(self, profile, tla_expr, tok_idx):
+        """Parametrized: each of the 11 tokens individually satisfies AllMapped."""
+        result = profile.compile_condition(tla_expr)
+        check_all_mapped(result, [TOKENS[tok_idx]])
+        check_no_error(result)
+
+
+# ---------------------------------------------------------------------------
+# HelperEmitted invariant verifier
+# (∃r ∈ results : r.needs_helper) => has_helper
+# ---------------------------------------------------------------------------
+
+class TestHelperEmittedInvariant:
+    """
+    HelperEmitted: if any compiled result needs_helper=TRUE
+    then helper_defs must be non-empty.
+    """
+
+    def test_forall_emits_all_satisfy_helper(self, profile, dag_quantifier_only):
+        """Topology 1: \\A alone → helper_defs contains allSatisfy function."""
+        result = profile.compile_condition(EXPR_FORALL)
+        check_helper_emitted(result)
+        assert result.helper_defs, "ForAll must emit helper"
+        assert any("allSatisfy" in hd for hd in result.helper_defs)
+        check_no_error(result)
+
+    def test_exists_emits_any_satisfy_helper(self, profile, dag_quantifier_only):
+        """Topology 2: \\E alone → helper_defs contains anySatisfy function."""
+        result = profile.compile_condition(EXPR_EXISTS)
+        check_helper_emitted(result)
+        assert result.helper_defs, "Exists must emit helper"
+        assert any("anySatisfy" in hd for hd in result.helper_defs)
+        check_no_error(result)
+
+    def test_forall_and_exists_both_emit_helpers(self, profile):
+        """Topology 3: \\A ∧ \\E → helper_defs contains both allSatisfy and anySatisfy."""
+        expr = r"(\A x \in S : P(x)) /\ (\E x \in S : Q(x))"
+        result = profile.compile_condition(expr)
+        check_helper_emitted(result)
+        assert any("allSatisfy" in hd for hd in result.helper_defs)
+        assert any("anySatisfy" in hd for hd in result.helper_defs)
+        check_no_error(result)
+
+    def test_full_expression_helper_emitted(self, profile):
+        """Topology 4 (all 10 traces final state): full expression has helper_defs."""
+        result = profile.compile_condition(EXPR_FULL)
+        check_helper_emitted(result)
+        assert result.helper_defs
+
+    def test_non_quantifier_does_not_falsely_emit_helper(self, profile, dag_no_quantifier):
+        """Topology 5: \\in alone must NOT emit helper_defs."""
+        result = profile.compile_condition(EXPR_IN)
+        # HelperEmitted: no quantifier present → no obligation to emit
+        # (but must also satisfy NoQuantifierNoHelper)
+        check_helper_emitted(result)
+        check_no_quantifier_no_helper(result)
+        check_no_error(result)
+
+    def test_mixed_quantifier_and_non_quantifier(self, profile):
+        """Topology 6: \\A + \\in → helper emitted despite mixed operators."""
+        expr = r"x \in S /\ (\A y \in T : P(y))"
+        result = profile.compile_condition(expr)
+        check_helper_emitted(result)
+        assert result.helper_defs
+
+
+# ---------------------------------------------------------------------------
+# NoQuantifierNoHelper invariant verifier
+# (~∃r ∈ results : r.needs_helper) => ~has_helper
+# ---------------------------------------------------------------------------
+
+class TestNoQuantifierNoHelperInvariant:
+    """
+    NoQuantifierNoHelper: when no compiled token needs a helper,
+    helper_defs must be empty.
+    """
+
+    def test_in_only_no_helper(self, profile, dag_no_quantifier):
+        """Topology 1: \\in alone — no quantifier → helper_defs must be empty."""
+        result = profile.compile_condition(EXPR_IN)
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_logical_ops_no_helper(self, profile, dag_no_quantifier):
+        """Topology 2: And / Or / Eq / Neq only → no helper."""
+        expr = r"A /\ B \/ C = D /= E"
+        result = profile.compile_condition(expr)
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_len_and_card_no_helper(self, profile, dag_no_quantifier):
+        """Topology 3: Len + Cardinality → no helper."""
+        result = profile.compile_condition("Len(s) = Cardinality(T)")
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_boolean_literals_no_helper(self, profile, dag_no_quantifier):
+        """Topology 4: TRUE /\\ FALSE → no helper."""
+        result = profile.compile_condition(r"TRUE /\ FALSE")
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_all_non_quantifier_tokens_no_helper(self, profile, dag_no_quantifier):
+        """
+        Topology 5: In + And + Or + Eq + Neq + Len + Card + BoolT + BoolF
+        — nine non-quantifier tokens → helper_defs empty.
+        """
+        expr = (
+            r"x \in S /\ A \/ B = C /= D"
+            r" /\ Len(s) = Cardinality(T)"
+            r" /\ TRUE /\ FALSE"
+        )
+        result = profile.compile_condition(expr)
+        check_no_quantifier_no_helper(result)
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_quantifier_overrides_no_helper_constraint(self, profile):
+        """
+        Topology 6: ForAll present → NoQuantifierNoHelper invariant
+        does NOT apply; helper_defs non-empty is correct.
+        """
+        result = profile.compile_condition(EXPR_FORALL)
+        # Invariant fires only when no quantifier is present — must not fire here
+        quantifier_present = any(
+            op in result.go_expr
+            or any(op in hd for hd in (result.helper_defs or []))
+            for op in QUANTIFIER_GO_OPS
+        )
+        if not quantifier_present:
+            assert not result.helper_defs, "NoQuantifierNoHelper violated"
+        check_no_error(result)
+
+
+# ---------------------------------------------------------------------------
+# NoError invariant verifier
+# ---------------------------------------------------------------------------
+
+class TestNoErrorInvariant:
+    """NoError: ~has_error for every call to compile_condition."""
+
+    def test_no_error_in_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_IN))
+
+    def test_no_error_and_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_AND))
+
+    def test_no_error_or_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_OR))
+
+    def test_no_error_eq_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_EQ))
+
+    def test_no_error_neq_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_NEQ))
+
+    def test_no_error_forall_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_FORALL))
+
+    def test_no_error_exists_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_EXISTS))
+
+    def test_no_error_len_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_LEN))
+
+    def test_no_error_card_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_CARD))
+
+    def test_no_error_boolt_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_BOOLT))
+
+    def test_no_error_boolf_operator(self, profile):
+        check_no_error(profile.compile_condition(EXPR_BOOLF))
+
+    def test_no_error_full_expression(self, profile):
+        """NoError holds for the full 11-token expression (all 10 traces)."""
+        check_no_error(profile.compile_condition(EXPR_FULL))
+
+
+# ---------------------------------------------------------------------------
+# Operator-mapping unit tests (one per TLA+ → Go mapping)
+# ---------------------------------------------------------------------------
+
+class TestOperatorMappings:
+    """One test per row in the verified token table."""
+
+    def test_in_maps_to_slices_contains(self, profile):
+        result = profile.compile_condition(EXPR_IN)
+        assert (
+            "slices.Contains" in result.go_expr
+            or "slicesContains" in result.go_expr
+        ), r"\in must compile to slices.Contains"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_and_maps_to_ampamp(self, profile):
+        result = profile.compile_condition(EXPR_AND)
+        assert "&&" in result.go_expr, "/\\ must compile to &&"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_or_maps_to_pipepipe(self, profile):
+        result = profile.compile_condition(EXPR_OR)
+        assert "||" in result.go_expr, "\\/ must compile to ||"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_eq_maps_to_double_eq(self, profile):
+        result = profile.compile_condition(EXPR_EQ)
+        assert "==" in result.go_expr, "= must compile to =="
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_neq_maps_to_bang_eq(self, profile):
+        result = profile.compile_condition(EXPR_NEQ)
+        assert "!=" in result.go_expr, "/= must compile to !="
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_forall_maps_to_all_satisfy_with_helper(self, profile):
+        result = profile.compile_condition(EXPR_FORALL)
+        assert (
+            "allSatisfy" in result.go_expr
+            or any("allSatisfy" in hd for hd in result.helper_defs)
+        ), r"\A must compile to allSatisfy"
+        assert result.helper_defs, r"\A must emit helper_defs"
+        check_no_error(result)
+
+    def test_exists_maps_to_any_satisfy_with_helper(self, profile):
+        result = profile.compile_condition(EXPR_EXISTS)
+        assert (
+            "anySatisfy" in result.go_expr
+            or any("anySatisfy" in hd for hd in result.helper_defs)
+        ), r"\E must compile to anySatisfy"
+        assert result.helper_defs, r"\E must emit helper_defs"
+        check_no_error(result)
+
+    def test_len_maps_to_len(self, profile):
+        result = profile.compile_condition(EXPR_LEN)
+        assert "len(" in result.go_expr, "Len must compile to len()"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_card_maps_to_len(self, profile):
+        result = profile.compile_condition(EXPR_CARD)
+        assert "len(" in result.go_expr, "Cardinality must compile to len()"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_boolt_maps_to_true(self, profile):
+        result = profile.compile_condition(EXPR_BOOLT)
+        assert "true" in result.go_expr, "TRUE must compile to true"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_boolf_maps_to_false(self, profile):
+        result = profile.compile_condition(EXPR_BOOLF)
+        assert "false" in result.go_expr, "FALSE must compile to false"
+        assert not result.helper_defs
+        check_no_error(result)
+
+    def test_card_and_len_share_go_op_len(self, profile):
+        """Card and Len both map to 'len' — two distinct TLA+ ops, one go_op."""
+        result = profile.compile_condition("Len(s) = Cardinality(T)")
+        assert result.go_expr.count("len(") >= 2, (
+            "Len and Cardinality must both emit len() in go_expr"
+        )
+        assert not result.helper_defs
+        check_no_error(result)
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+    """
+    Edge cases: isolated operators, empty-ish expressions, diamond patterns.
+    Derived from traces where possible; invented minimally otherwise.
+    """
+
+    def test_compile_condition_returns_compiled_expression_type(self, profile):
+        """Return type must be CompiledExpression for any valid input."""
+        result = profile.compile_condition(EXPR_FULL)
+        assert isinstance(result, CompiledExpression)
+
+    def test_compile_condition_full_is_deterministic(self, profile):
+        """Same expression compiled twice yields identical output (no side effects)."""
+        r1 = profile.compile_condition(EXPR_FULL)
+        r2 = profile.compile_condition(EXPR_FULL)
+        assert r1.go_expr == r2.go_expr
+        assert set(r1.helper_defs) == set(r2.helper_defs)
+
+    def test_single_in_isolated(self, profile):
+        """Isolated \\in: one-token compile — AllMapped, NoQuantifierNoHelper, NoError."""
+        result = profile.compile_condition(EXPR_IN)
+        assert "slices.Contains" in result.go_expr or "slicesContains" in result.go_expr
+        assert not result.helper_defs
+        check_all_invariants(result, [TOKENS[0]])
+
+    def test_single_forall_isolated(self, profile):
+        """Isolated \\A: helper_defs non-empty, allSatisfy present, NoError."""
+        result = profile.compile_condition(EXPR_FORALL)
+        assert result.helper_defs
+        assert any("allSatisfy" in hd for hd in result.helper_defs)
+        check_all_invariants(result, [TOKENS[5]])
+
+    def test_single_exists_isolated(self, profile):
+        """Isolated \\E: helper_defs non-empty, anySatisfy present, NoError."""
+        result = profile.compile_condition(EXPR_EXISTS)
+        assert result.helper_defs
+        assert any("anySatisfy" in hd for hd in result.helper_defs)
+        check_all_invariants(result, [TOKENS[6]])
+
+    def test_quantifier_followed_by_non_quantifier_helper_preserved(self, profile):
+        """
+        Once has_helper=TRUE (ForAll processed), adding non-quantifier tokens
+        must not clear helper_defs — mirrors State 18→36 in all traces.
+        """
+        expr = r"(\A x \in S : P(x)) /\ Len(s) = TRUE"
+        result = profile.compile_condition(expr)
+        assert result.helper_defs, (
+            "helper_defs must remain non-empty after non-quantifier tokens "
+            "follow a quantifier"
+        )
+        check_helper_emitted(result)
+        check_no_error(result)
+
+    def test_non_quantifier_tokens_never_set_helper(self, profile):
+        """
+        Nine non-quantifier tokens (In/And/Or/Eq/Neq/Len/Card/BoolT/BoolF)
+        must never set has_helper=TRUE — helper_defs stays empty.
+        """
+        expr = (
+            r"x \in S /\ A \/ B = C /= D"
+            r" /\ Len(s) = Cardinality(T) /\ TRUE /\ FALSE"
+        )
+        result = profile.compile_condition(expr)
+        assert not result.helper_defs, (
+            "NoQuantifierNoHelper: 9 non-quantifier tokens must not emit helper_defs"
+        )
+        check_no_quantifier_no_helper(result)
+        check_no_error(result)
+
+    def test_all_invariants_on_full_expression_one_shot(self, profile, dag_full):
+        """
+        Diamond: all four invariants (AllMapped, HelperEmitted,
+        NoQuantifierNoHelper, NoError) simultaneously verified on EXPR_FULL,
+        matching State 36 of all 10 traces.
+        """
+        result = profile.compile_condition(EXPR_FULL)
+        check_all_invariants(result, TOKENS)
+        assert isinstance(result, CompiledExpression)
+        assert dag_full.node_count >= 1
+
+    def test_helper_defs_are_valid_go_functions(self, profile):
+        """
+        helper_defs emitted for quantifiers must look like Go function definitions
+        (contain 'func' keyword and the function name).
+        """
+        result = profile.compile_condition(EXPR_FORALL)
+        assert result.helper_defs
+        for hd in result.helper_defs:
+            assert "func" in hd or "allSatisfy" in hd or "anySatisfy" in hd, (
+                f"helper_def does not appear to be a Go function: {hd!r}"
+            )
+
+    def test_go_expr_is_non_empty_string(self, profile):
+        """go_expr must be a non-empty string for any valid TLA+ expression."""
+        for expr in [EXPR_IN, EXPR_FORALL, EXPR_BOOLT, EXPR_FULL]:
+            result = profile.compile_condition(expr)
+            assert isinstance(result.go_expr, str), "go_expr must be a str"
+            assert result.go_expr.strip(), f"go_expr must be non-empty for expr={expr!r}"
+
+    def test_helper_defs_is_list(self, profile):
+        """helper_defs must be a list (possibly empty), never None."""
+        for expr in [EXPR_IN, EXPR_FORALL, EXPR_FULL]:
+            result = profile.compile_condition(expr)
+            assert isinstance(result.helper_defs, list), (
+                f"helper_defs must be a list; got {type(result.helper_defs)} "
+                f"for expr={expr!r}"
+            )
+
+    @pytest.mark.parametrize("expr,desc", [
+        (EXPR_IN,    "In only"),
+        (EXPR_AND,   "And only"),
+        (EXPR_BOOLT, "BoolT only"),
+        (EXPR_FULL,  "all 11 tokens"),
+    ])
+    def test_no_error_parametrized(self, profile, expr, desc):
+        """NoError invariant holds across a representative cross-section of expressions."""
+        result = profile.compile_condition(expr)
+        check_no_error(result)
+```

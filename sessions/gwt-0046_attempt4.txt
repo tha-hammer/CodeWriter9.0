@@ -1,0 +1,186 @@
+The root cause of the previous failure was using `LineOf`, `NameOf`, `ContOf` as CONSTANTS — TLC treated them as opaque model values, so function application `LineOf[i]` threw an unexpected exception. The fix is to declare them as **nondeterministic variables** initialized with `\in` over their function spaces. TLC then enumerates all possible file contents as initial states, eliminating both the sequence-Len problem and the opaque-constant problem. `N` remains the sole CONSTANT (a plain integer).
+
+---- MODULE scanner_python_line_ranges ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS N
+
+LineTypeSet == {"Empty", "Comment", "Def", "AsyncDef", "Continuation", "Other"}
+
+(* --algorithm ScannerPythonLineRanges
+
+variables
+    LineOf \in [1..N -> LineTypeSet],
+    ContOf \in [1..N -> BOOLEAN],
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0,
+    sig_async = FALSE;
+
+define
+
+    WellFormed ==
+        \A k \in 1..N :
+            LineOf[k] \in {"Def", "AsyncDef"} =>
+                \A j \in 1..(k-1) :
+                    ( LineOf[j] \in {"Def", "AsyncDef"} /\ ContOf[j] ) =>
+                        \E m \in (j+1)..(k-1) : ~ContOf[m]
+
+    OneIndexed ==
+        \A s \in skeletons : s.line_num >= 1
+
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= N
+            /\ LineOf[s.line_num] \in {"Def", "AsyncDef"}
+            /\ s.is_async = (LineOf[s.line_num] = "AsyncDef")
+
+    MultiLineStable ==
+        \A s \in skeletons :
+            LineOf[s.line_num] \in {"Def", "AsyncDef"}
+
+    NoGaps ==
+        ( WellFormed /\ i > N /\ ~in_sig ) =>
+            ( \A k \in 1..N :
+                LineOf[k] \in {"Def", "AsyncDef"} =>
+                    \E s \in skeletons : s.line_num = k )
+
+    SigStartValid ==
+        in_sig =>
+            ( /\ sig_start >= 1
+              /\ sig_start <= N
+              /\ LineOf[sig_start] \in {"Def", "AsyncDef"} )
+
+    CursorBounded == i <= N + 1
+
+end define;
+
+fair process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= N do
+            ProcessLine:
+                if LineOf[i] \in {"Def", "AsyncDef"} /\ ~in_sig then
+                    sig_start := i;
+                    sig_async := (LineOf[i] = "AsyncDef");
+                    if ContOf[i] then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup
+                            {[ line_num |-> sig_start,
+                               is_async |-> sig_async ]};
+                    end if;
+                elsif in_sig then
+                    if ~ContOf[i] then
+                        skeletons := skeletons \cup
+                            {[ line_num |-> sig_start,
+                               is_async |-> sig_async ]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+The root cause of the previous failure was using `LineOf`, `NameOf`, `ContOf` as CONSTANTS — TLC treated them as opaque model values, so function application `LineOf[i]` threw an unexpected exception. The fix is to declare them as **nondeterministic variables** initialized with `\in` over their function spaces. TLC then enumerates all possible file contents as initial states, eliminating both the sequence-Len problem and the opaque-constant problem. `N` remains the sole CONSTANT (a plain integer).
+
+---- MODULE scanner_python_line_ranges ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS N
+
+LineTypeSet == {"Empty", "Comment", "Def", "AsyncDef", "Continuation", "Other"}
+
+(* --algorithm ScannerPythonLineRanges
+
+variables
+    LineOf \in [1..N -> LineTypeSet],
+    ContOf \in [1..N -> BOOLEAN],
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0,
+    sig_async = FALSE;
+
+define
+
+    WellFormed ==
+        \A k \in 1..N :
+            LineOf[k] \in {"Def", "AsyncDef"} =>
+                \A j \in 1..(k-1) :
+                    ( LineOf[j] \in {"Def", "AsyncDef"} /\ ContOf[j] ) =>
+                        \E m \in (j+1)..(k-1) : ~ContOf[m]
+
+    OneIndexed ==
+        \A s \in skeletons : s.line_num >= 1
+
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= N
+            /\ LineOf[s.line_num] \in {"Def", "AsyncDef"}
+            /\ s.is_async = (LineOf[s.line_num] = "AsyncDef")
+
+    MultiLineStable ==
+        \A s \in skeletons :
+            LineOf[s.line_num] \in {"Def", "AsyncDef"}
+
+    NoGaps ==
+        ( WellFormed /\ i > N /\ ~in_sig ) =>
+            ( \A k \in 1..N :
+                LineOf[k] \in {"Def", "AsyncDef"} =>
+                    \E s \in skeletons : s.line_num = k )
+
+    SigStartValid ==
+        in_sig =>
+            ( /\ sig_start >= 1
+              /\ sig_start <= N
+              /\ LineOf[sig_start] \in {"Def", "AsyncDef"} )
+
+    CursorBounded == i <= N + 1
+
+end define;
+
+fair process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= N do
+            ProcessLine:
+                if LineOf[i] \in {"Def", "AsyncDef"} /\ ~in_sig then
+                    sig_start := i;
+                    sig_async := (LineOf[i] = "AsyncDef");
+                    if ContOf[i] then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup
+                            {[ line_num |-> sig_start,
+                               is_async |-> sig_async ]};
+                    end if;
+                elsif in_sig then
+                    if ~ContOf[i] then
+                        skeletons := skeletons \cup
+                            {[ line_num |-> sig_start,
+                               is_async |-> sig_async ]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

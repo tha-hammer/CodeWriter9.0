@@ -1,0 +1,300 @@
+---- MODULE ProjectContextExternal ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    EngineRoot,
+    TargetRoot,
+    MaxSteps
+
+ASSUME EngineRoot # TargetRoot
+
+(* --algorithm ProjectContextExternal
+
+variables
+    phase                    = "init",
+    engine_root_v            = EngineRoot,
+    target_root_v            = TargetRoot,
+    state_root               = [base |-> "unset", under_cw9 |-> FALSE],
+    schema_dir               = [base |-> "unset", under_cw9 |-> FALSE],
+    spec_dir                 = [base |-> "unset", under_cw9 |-> FALSE],
+    template_dir             = [base |-> "unset", under_cw9 |-> FALSE],
+    tools_dir                = [base |-> "unset", under_cw9 |-> FALSE],
+    artifact_dir             = [base |-> "unset", under_cw9 |-> FALSE],
+    test_output_dir          = [base |-> "unset", under_cw9 |-> FALSE],
+    artifact_dir_under_state = FALSE,
+    spec_dir_under_state     = FALSE,
+    step_count               = 0;
+
+define
+
+    IsUnset(p)        == p.base = "unset"
+    UnderStateRoot(p) == p.base = TargetRoot /\ p.under_cw9 = TRUE
+    UnderEngineRoot(p) == p.base = EngineRoot
+    UnderTargetOnly(p) == p.base = TargetRoot /\ p.under_cw9 = FALSE
+
+    EngineTargetDistinct ==
+        engine_root_v # target_root_v
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    StateRootCorrect ==
+        phase = "complete" =>
+            (state_root.base = TargetRoot /\ state_root.under_cw9 = TRUE)
+
+    SchemaUnderState ==
+        phase = "complete" => UnderStateRoot(schema_dir)
+
+    SpecUnderState ==
+        phase = "complete" => UnderStateRoot(spec_dir)
+
+    TemplateFromEngine ==
+        phase = "complete" => UnderEngineRoot(template_dir)
+
+    ToolsFromEngine ==
+        phase = "complete" => UnderEngineRoot(tools_dir)
+
+    ArtifactUnderState ==
+        phase = "complete" => UnderStateRoot(artifact_dir)
+
+    TestOutputNotUnderCw9 ==
+        phase = "complete" => UnderTargetOnly(test_output_dir)
+
+    NoCrossContamination ==
+        phase = "complete" =>
+            /\ ~UnderEngineRoot(schema_dir)
+            /\ ~UnderEngineRoot(spec_dir)
+            /\ ~UnderEngineRoot(artifact_dir)
+            /\ ~UnderStateRoot(template_dir)
+            /\ ~UnderStateRoot(tools_dir)
+
+    ArtifactDirFlagCorrect ==
+        phase = "complete" => artifact_dir_under_state = TRUE
+
+    SpecDirFlagCorrect ==
+        phase = "complete" => spec_dir_under_state = TRUE
+
+    ArtifactSpecDiverge ==
+        phase = "complete" =>
+            UnderStateRoot(artifact_dir) /\ ~UnderStateRoot(test_output_dir)
+
+    AllInvariants ==
+        /\ EngineTargetDistinct
+        /\ BoundedExecution
+        /\ StateRootCorrect
+        /\ SchemaUnderState
+        /\ SpecUnderState
+        /\ TemplateFromEngine
+        /\ ToolsFromEngine
+        /\ ArtifactUnderState
+        /\ TestOutputNotUnderCw9
+        /\ NoCrossContamination
+        /\ ArtifactDirFlagCorrect
+        /\ SpecDirFlagCorrect
+        /\ ArtifactSpecDiverge
+
+end define;
+
+fair process main = "main"
+begin
+    CheckPrecondition:
+        assert engine_root_v # target_root_v;
+        phase      := "computing";
+        step_count := step_count + 1;
+
+    ComputeStateRoot:
+        state_root := [base |-> target_root_v, under_cw9 |-> TRUE];
+        step_count := step_count + 1;
+
+    ComputeSchemaDir:
+        schema_dir       := [base |-> target_root_v, under_cw9 |-> TRUE];
+        step_count       := step_count + 1;
+
+    ComputeSpecDir:
+        spec_dir             := [base |-> target_root_v, under_cw9 |-> TRUE];
+        spec_dir_under_state := TRUE;
+        step_count           := step_count + 1;
+
+    ComputeTemplateDir:
+        template_dir := [base |-> engine_root_v, under_cw9 |-> FALSE];
+        step_count   := step_count + 1;
+
+    ComputeToolsDir:
+        tools_dir  := [base |-> engine_root_v, under_cw9 |-> FALSE];
+        step_count := step_count + 1;
+
+    ComputeArtifactDir:
+        artifact_dir             := [base |-> target_root_v, under_cw9 |-> TRUE];
+        artifact_dir_under_state := TRUE;
+        step_count               := step_count + 1;
+
+    ComputeTestOutput:
+        test_output_dir := [base |-> target_root_v, under_cw9 |-> FALSE];
+        step_count      := step_count + 1;
+
+    Finish:
+        assert UnderStateRoot(schema_dir);
+        assert UnderStateRoot(spec_dir);
+        assert UnderEngineRoot(template_dir);
+        assert UnderEngineRoot(tools_dir);
+        assert UnderStateRoot(artifact_dir);
+        assert ~UnderStateRoot(test_output_dir);
+        assert artifact_dir_under_state = TRUE;
+        assert spec_dir_under_state = TRUE;
+        phase := "complete";
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE ProjectContextExternal ----
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    EngineRoot,
+    TargetRoot,
+    MaxSteps
+
+ASSUME EngineRoot # TargetRoot
+
+(* --algorithm ProjectContextExternal
+
+variables
+    phase                    = "init",
+    engine_root_v            = EngineRoot,
+    target_root_v            = TargetRoot,
+    state_root               = [base |-> "unset", under_cw9 |-> FALSE],
+    schema_dir               = [base |-> "unset", under_cw9 |-> FALSE],
+    spec_dir                 = [base |-> "unset", under_cw9 |-> FALSE],
+    template_dir             = [base |-> "unset", under_cw9 |-> FALSE],
+    tools_dir                = [base |-> "unset", under_cw9 |-> FALSE],
+    artifact_dir             = [base |-> "unset", under_cw9 |-> FALSE],
+    test_output_dir          = [base |-> "unset", under_cw9 |-> FALSE],
+    artifact_dir_under_state = FALSE,
+    spec_dir_under_state     = FALSE,
+    step_count               = 0;
+
+define
+
+    IsUnset(p)        == p.base = "unset"
+    UnderStateRoot(p) == p.base = TargetRoot /\ p.under_cw9 = TRUE
+    UnderEngineRoot(p) == p.base = EngineRoot
+    UnderTargetOnly(p) == p.base = TargetRoot /\ p.under_cw9 = FALSE
+
+    EngineTargetDistinct ==
+        engine_root_v # target_root_v
+
+    BoundedExecution ==
+        step_count <= MaxSteps
+
+    StateRootCorrect ==
+        phase = "complete" =>
+            (state_root.base = TargetRoot /\ state_root.under_cw9 = TRUE)
+
+    SchemaUnderState ==
+        phase = "complete" => UnderStateRoot(schema_dir)
+
+    SpecUnderState ==
+        phase = "complete" => UnderStateRoot(spec_dir)
+
+    TemplateFromEngine ==
+        phase = "complete" => UnderEngineRoot(template_dir)
+
+    ToolsFromEngine ==
+        phase = "complete" => UnderEngineRoot(tools_dir)
+
+    ArtifactUnderState ==
+        phase = "complete" => UnderStateRoot(artifact_dir)
+
+    TestOutputNotUnderCw9 ==
+        phase = "complete" => UnderTargetOnly(test_output_dir)
+
+    NoCrossContamination ==
+        phase = "complete" =>
+            /\ ~UnderEngineRoot(schema_dir)
+            /\ ~UnderEngineRoot(spec_dir)
+            /\ ~UnderEngineRoot(artifact_dir)
+            /\ ~UnderStateRoot(template_dir)
+            /\ ~UnderStateRoot(tools_dir)
+
+    ArtifactDirFlagCorrect ==
+        phase = "complete" => artifact_dir_under_state = TRUE
+
+    SpecDirFlagCorrect ==
+        phase = "complete" => spec_dir_under_state = TRUE
+
+    ArtifactSpecDiverge ==
+        phase = "complete" =>
+            UnderStateRoot(artifact_dir) /\ ~UnderStateRoot(test_output_dir)
+
+    AllInvariants ==
+        /\ EngineTargetDistinct
+        /\ BoundedExecution
+        /\ StateRootCorrect
+        /\ SchemaUnderState
+        /\ SpecUnderState
+        /\ TemplateFromEngine
+        /\ ToolsFromEngine
+        /\ ArtifactUnderState
+        /\ TestOutputNotUnderCw9
+        /\ NoCrossContamination
+        /\ ArtifactDirFlagCorrect
+        /\ SpecDirFlagCorrect
+        /\ ArtifactSpecDiverge
+
+end define;
+
+fair process main = "main"
+begin
+    CheckPrecondition:
+        assert engine_root_v # target_root_v;
+        phase      := "computing";
+        step_count := step_count + 1;
+
+    ComputeStateRoot:
+        state_root := [base |-> target_root_v, under_cw9 |-> TRUE];
+        step_count := step_count + 1;
+
+    ComputeSchemaDir:
+        schema_dir       := [base |-> target_root_v, under_cw9 |-> TRUE];
+        step_count       := step_count + 1;
+
+    ComputeSpecDir:
+        spec_dir             := [base |-> target_root_v, under_cw9 |-> TRUE];
+        spec_dir_under_state := TRUE;
+        step_count           := step_count + 1;
+
+    ComputeTemplateDir:
+        template_dir := [base |-> engine_root_v, under_cw9 |-> FALSE];
+        step_count   := step_count + 1;
+
+    ComputeToolsDir:
+        tools_dir  := [base |-> engine_root_v, under_cw9 |-> FALSE];
+        step_count := step_count + 1;
+
+    ComputeArtifactDir:
+        artifact_dir             := [base |-> target_root_v, under_cw9 |-> TRUE];
+        artifact_dir_under_state := TRUE;
+        step_count               := step_count + 1;
+
+    ComputeTestOutput:
+        test_output_dir := [base |-> target_root_v, under_cw9 |-> FALSE];
+        step_count      := step_count + 1;
+
+    Finish:
+        assert UnderStateRoot(schema_dir);
+        assert UnderStateRoot(spec_dir);
+        assert UnderEngineRoot(template_dir);
+        assert UnderEngineRoot(tools_dir);
+        assert UnderStateRoot(artifact_dir);
+        assert ~UnderStateRoot(test_output_dir);
+        assert artifact_dir_under_state = TRUE;
+        assert spec_dir_under_state = TRUE;
+        phase := "complete";
+end process;
+
+end algorithm; *)
+
+====

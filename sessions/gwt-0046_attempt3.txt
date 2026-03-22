@@ -1,0 +1,198 @@
+The root cause is that TLC cannot handle `Lines` as a CONSTANT sequence — it treats it as an opaque model value and `Len` fails. The fix is to replace the sequence constant with three separate function constants (`LineOf`, `NameOf`, `ContOf`) over a domain `1..N`, eliminating `Len` entirely.
+
+---- MODULE scanner_python_line_ranges ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    N,
+    LineOf,
+    NameOf,
+    ContOf,
+    MaxLines
+
+ASSUME N >= 0
+ASSUME MaxLines >= N
+
+(* --algorithm ScannerPythonLineRanges
+
+variables
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0,
+    sig_name  = "",
+    sig_async = FALSE;
+
+define
+
+    TypeOK ==
+        /\ i \in 1..(MaxLines + 1)
+        /\ in_sig \in BOOLEAN
+        /\ sig_start \in 0..MaxLines
+
+    OneIndexed ==
+        \A s \in skeletons : s.line_num >= 1
+
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= N
+            /\ NameOf[s.line_num] = s.func_name
+            /\ LineOf[s.line_num] \in {"Def", "AsyncDef"}
+
+    MultiLineStable ==
+        \A s \in skeletons :
+            LineOf[s.line_num] \in {"Def", "AsyncDef"}
+
+    NoGaps ==
+        (i > N /\ ~in_sig) =>
+            (\A k \in 1..N :
+                LineOf[k] \in {"Def", "AsyncDef"} =>
+                    \E s \in skeletons : s.line_num = k)
+
+    SigStartValid ==
+        in_sig =>
+            ( /\ sig_start >= 1
+              /\ sig_start <= N
+              /\ LineOf[sig_start] \in {"Def", "AsyncDef"} )
+
+    CursorBounded == i <= N + 1
+
+end define;
+
+fair process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= N do
+            ProcessLine:
+                if LineOf[i] \in {"Def", "AsyncDef"} /\ ~in_sig then
+                    sig_start := i;
+                    sig_name  := NameOf[i];
+                    sig_async := (LineOf[i] = "AsyncDef");
+                    if ContOf[i] then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup
+                            {[ func_name |-> sig_name,
+                               line_num  |-> sig_start,
+                               is_async  |-> sig_async ]};
+                    end if;
+                elsif in_sig then
+                    if ~ContOf[i] then
+                        skeletons := skeletons \cup
+                            {[ func_name |-> sig_name,
+                               line_num  |-> sig_start,
+                               is_async  |-> sig_async ]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+The root cause is that TLC cannot handle `Lines` as a CONSTANT sequence — it treats it as an opaque model value and `Len` fails. The fix is to replace the sequence constant with three separate function constants (`LineOf`, `NameOf`, `ContOf`) over a domain `1..N`, eliminating `Len` entirely.
+
+---- MODULE scanner_python_line_ranges ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    N,
+    LineOf,
+    NameOf,
+    ContOf,
+    MaxLines
+
+ASSUME N >= 0
+ASSUME MaxLines >= N
+
+(* --algorithm ScannerPythonLineRanges
+
+variables
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0,
+    sig_name  = "",
+    sig_async = FALSE;
+
+define
+
+    TypeOK ==
+        /\ i \in 1..(MaxLines + 1)
+        /\ in_sig \in BOOLEAN
+        /\ sig_start \in 0..MaxLines
+
+    OneIndexed ==
+        \A s \in skeletons : s.line_num >= 1
+
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= N
+            /\ NameOf[s.line_num] = s.func_name
+            /\ LineOf[s.line_num] \in {"Def", "AsyncDef"}
+
+    MultiLineStable ==
+        \A s \in skeletons :
+            LineOf[s.line_num] \in {"Def", "AsyncDef"}
+
+    NoGaps ==
+        (i > N /\ ~in_sig) =>
+            (\A k \in 1..N :
+                LineOf[k] \in {"Def", "AsyncDef"} =>
+                    \E s \in skeletons : s.line_num = k)
+
+    SigStartValid ==
+        in_sig =>
+            ( /\ sig_start >= 1
+              /\ sig_start <= N
+              /\ LineOf[sig_start] \in {"Def", "AsyncDef"} )
+
+    CursorBounded == i <= N + 1
+
+end define;
+
+fair process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= N do
+            ProcessLine:
+                if LineOf[i] \in {"Def", "AsyncDef"} /\ ~in_sig then
+                    sig_start := i;
+                    sig_name  := NameOf[i];
+                    sig_async := (LineOf[i] = "AsyncDef");
+                    if ContOf[i] then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup
+                            {[ func_name |-> sig_name,
+                               line_num  |-> sig_start,
+                               is_async  |-> sig_async ]};
+                    end if;
+                elsif in_sig then
+                    if ~ContOf[i] then
+                        skeletons := skeletons \cup
+                            {[ func_name |-> sig_name,
+                               line_num  |-> sig_start,
+                               is_async  |-> sig_async ]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

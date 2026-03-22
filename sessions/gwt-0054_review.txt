@@ -1,0 +1,1194 @@
+## Review Findings
+
+### Critical Semantic Bug: `s.line_number` vs. `s.line_num`
+
+The bridge verifiers are unambiguous ground truth — every single invariant condition uses `s.line_num`:
+
+| Verifier | Condition |
+|---|---|
+| `LineNumberCorrect` | `s.line_num >= 1`, `s.line_num <= N`, `Lines[s.line_num] \in DeclTypes` |
+| `NoGaps` | `\E s \in skeletons : s.line_num = k` |
+
+The test plan uses `s.line_number` everywhere instead. This is not a naming preference; it is a field-access bug. If `Skeleton.line_num` is the real attribute, every assertion such as `any(s.line_number == 1 for s in skeletons)` will raise `AttributeError` or silently pass vacuously depending on `__getattr__` behaviour — neither is a valid test.
+
+**All `s.line_number` references must become `s.line_num`** — in helper bodies, error messages, and every in-line assertion.
+
+### Other Findings (non-blocking)
+
+| # | Finding | Verdict |
+|---|---|---|
+| 1 | `Skeleton` imported but never used directly | Harmless; retain for clarity |
+| 2 | `_check_cursor_bounded` uses `len(skeletons) ≤ N` as a proxy for `i ≤ N+1` | Semantically sound — one skeleton per line maximum |
+| 3 | Traces 2–10 are parametrised repeats of Trace 1 | Correct for TLA+ traceability; not redundant by intent |
+| 4 | State-count annotation "24 steps" is consistent with 3 actions/line × 7 + Init + Finish | Correct |
+| 5 | `_check_line_number_correct([], [])` — vacuously true for empty file | Correct |
+
+---
+
+### Corrected Test Plan
+
+```python
+import pytest
+from scanner_javascript_line_ranges import scan_file, Skeleton
+
+# ---------------------------------------------------------------------------
+# TLA+ model constants (verbatim from verified spec)
+# ---------------------------------------------------------------------------
+
+# Lines == << "Func","Other","Arrow","ModExports","ClassOpen","Method","NamedExports" >>
+LINES_SEQUENCE = [
+    "Func",         # line 1
+    "Other",        # line 2
+    "Arrow",        # line 3
+    "ModExports",   # line 4
+    "ClassOpen",    # line 5
+    "Method",       # line 6
+    "NamedExports", # line 7
+]
+N = 7  # total lines in canonical fixture
+
+# DeclTypes == {"Func", "Arrow", "ModExports", "NamedExports", "Method"}
+DECL_TYPES = {"Func", "Arrow", "ModExports", "NamedExports", "Method"}
+
+# Conts == << FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE >>
+# All FALSE: every DeclType line produces a skeleton immediately (no multi-line sigs).
+
+# TLC final state (all 10 traces): skeletons = {line_num ∈ {1,3,4,6,7}}
+EXPECTED_LINE_NUMS = {1, 3, 4, 6, 7}
+
+
+# ---------------------------------------------------------------------------
+# Representative JavaScript lines for each TLA+ line-type label
+# ---------------------------------------------------------------------------
+
+_JS_LINE = {
+    "Func":         "function alpha(x, y) {",
+    "Other":        "  return x + y;",
+    "Arrow":        "const beta = (a, b) => {",
+    "ModExports":   "module.exports = function gamma() {",
+    "ClassOpen":    "class Delta {",
+    "Method":       "  epsilon(param) {",
+    "NamedExports": "export function zeta(x) {",
+}
+
+
+def _build_js_source(lines_sequence=None):
+    """Construct a JS source string from a list of TLA+ line-type labels."""
+    seq = lines_sequence if lines_sequence is not None else LINES_SEQUENCE
+    return "\n".join(_JS_LINE[t] for t in seq) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def js_file(tmp_path):
+    """
+    Canonical 7-line JS fixture matching the TLA+ Lines sequence:
+      1: Func   2: Other   3: Arrow   4: ModExports
+      5: ClassOpen   6: Method   7: NamedExports
+    Expected skeleton line numbers after scan: {1, 3, 4, 6, 7}
+    """
+    p = tmp_path / "subject.js"
+    p.write_text(_build_js_source())
+    return str(p)
+
+
+@pytest.fixture
+def js_file_only_func(tmp_path):
+    """Single-line file: only one Func declaration (line 1)."""
+    p = tmp_path / "single.js"
+    p.write_text(_JS_LINE["Func"] + "\n")
+    return str(p)
+
+
+@pytest.fixture
+def js_file_all_other(tmp_path):
+    """Five 'Other' lines — no function declarations at all."""
+    p = tmp_path / "no_decls.js"
+    p.write_text("\n".join([_JS_LINE["Other"]] * 5) + "\n")
+    return str(p)
+
+
+@pytest.fixture
+def js_file_consecutive_decls(tmp_path):
+    """Two consecutive DeclType lines: Arrow (line 1) then ModExports (line 2)."""
+    p = tmp_path / "consecutive.js"
+    p.write_text(_build_js_source(["Arrow", "ModExports"]))
+    return str(p)
+
+
+@pytest.fixture
+def js_file_empty(tmp_path):
+    """Zero-byte JS file."""
+    p = tmp_path / "empty.js"
+    p.write_text("")
+    return str(p)
+
+
+# ---------------------------------------------------------------------------
+# Invariant helpers (directly translate TLA+ conditions)
+# ---------------------------------------------------------------------------
+
+def _check_line_number_correct(skeletons, lines_seq=None):
+    """
+    LineNumberCorrect:
+      ∀ s ∈ skeletons :
+        s.line_num ≥ 1  ∧
+        s.line_num ≤ N  ∧
+        Lines[s.line_num] ∈ DeclTypes
+
+    Bridge verifier field: s.line_num  (not s.line_number)
+    """
+    seq = lines_seq if lines_seq is not None else LINES_SEQUENCE
+    n = len(seq)
+    for s in skeletons:
+        ln = s.line_num  # ground-truth field name from bridge verifier
+        assert isinstance(ln, int), (
+            f"line_num must be int, got {type(ln).__name__}"
+        )
+        assert 1 <= ln <= n, (
+            f"LineNumberCorrect violated: line_num {ln} not in [1, {n}]"
+        )
+        actual_type = seq[ln - 1]
+        assert actual_type in DECL_TYPES, (
+            f"LineNumberCorrect violated: line {ln} has type {actual_type!r} "
+            f"which is not in DeclTypes"
+        )
+
+
+def _check_no_gaps(skeletons, lines_seq=None):
+    """
+    NoGaps (checked after scan completes, i.e. i > N):
+      ∀ k ∈ 1..N : Lines[k] ∈ DeclTypes ⟹ ∃ s ∈ skeletons : s.line_num = k
+
+    Bridge verifier field: s.line_num  (not s.line_number)
+    """
+    seq = lines_seq if lines_seq is not None else LINES_SEQUENCE
+    required = {i + 1 for i, t in enumerate(seq) if t in DECL_TYPES}
+    found = {s.line_num for s in skeletons}  # ground-truth field name
+    missing = required - found
+    assert not missing, (
+        f"NoGaps violated: DeclType lines {sorted(missing)} have no skeleton"
+    )
+
+
+def _check_cursor_bounded(skeletons, n=None):
+    """
+    CursorBounded: i ≤ N + 1
+    After scan_file returns the cursor advanced through at most N lines,
+    so the skeleton count cannot exceed N.
+    """
+    bound = n if n is not None else N
+    assert len(skeletons) <= bound, (
+        f"CursorBounded violated: {len(skeletons)} skeletons > {bound} lines"
+    )
+
+
+def _check_no_return_type(skeletons):
+    """
+    NoReturnType: ∀ s ∈ skeletons : ¬("return_type" ∈ DOMAIN s)
+    """
+    for s in skeletons:
+        assert not hasattr(s, "return_type"), (
+            f"NoReturnType violated: skeleton at line {s.line_num} "
+            f"carries return_type={getattr(s, 'return_type', None)!r}"
+        )
+
+
+def _assert_all_invariants(skeletons, lines_seq=None, n=None):
+    """Assert all four TLC invariants simultaneously."""
+    seq = lines_seq if lines_seq is not None else LINES_SEQUENCE
+    bound = n if n is not None else N
+    _check_line_number_correct(skeletons, seq)
+    _check_no_gaps(skeletons, seq)
+    _check_cursor_bounded(skeletons, bound)
+    _check_no_return_type(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — reference trace (24 steps)
+# ScanLoop → ProcessLine → Advance × 7 → ScanLoop → Finish
+# Init:  i=1, skeletons={}, in_sig=FALSE, sig_start=0
+# Final: skeletons={line_num∈{1,3,4,6,7}}, sig_start=7, i=8
+# ---------------------------------------------------------------------------
+
+class TestTrace1:
+    """
+    Canonical 24-step trace. Every ProcessLine step on a DeclType line
+    (Conts[i]=FALSE) immediately adds [line_num |-> i] to skeletons.
+    Lines 2 (Other) and 5 (ClassOpen) are not in DeclTypes and are skipped.
+    """
+
+    def test_skeleton_count_equals_five(self, js_file):
+        """Exactly five DeclType lines → exactly five skeletons."""
+        skeletons = scan_file(js_file)
+        assert len(skeletons) == 5
+
+    def test_line1_func_produces_skeleton(self, js_file):
+        """State 3: ProcessLine on line 1 (Func) → skeletons += {[line_num|->1]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 1 for s in skeletons)
+
+    def test_line2_other_produces_no_skeleton(self, js_file):
+        """State 6: ProcessLine on line 2 (Other) → skeletons unchanged."""
+        skeletons = scan_file(js_file)
+        assert all(s.line_num != 2 for s in skeletons)
+
+    def test_line3_arrow_produces_skeleton(self, js_file):
+        """State 9: ProcessLine on line 3 (Arrow) → skeletons += {[line_num|->3]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 3 for s in skeletons)
+
+    def test_line4_modexports_produces_skeleton(self, js_file):
+        """State 12: ProcessLine on line 4 (ModExports) → skeletons += {[line_num|->4]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 4 for s in skeletons)
+
+    def test_line5_classopen_produces_no_skeleton(self, js_file):
+        """State 15: ProcessLine on line 5 (ClassOpen) → skeletons unchanged."""
+        skeletons = scan_file(js_file)
+        assert all(s.line_num != 5 for s in skeletons)
+
+    def test_line6_method_produces_skeleton(self, js_file):
+        """State 18: ProcessLine on line 6 (Method) → skeletons += {[line_num|->6]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 6 for s in skeletons)
+
+    def test_line7_namedexports_produces_skeleton(self, js_file):
+        """State 21: ProcessLine on line 7 (NamedExports) → skeletons += {[line_num|->7]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 7 for s in skeletons)
+
+    def test_exact_final_skeleton_set(self, js_file):
+        """State 24 (Done): exact skeleton line-number set equals TLC final state."""
+        skeletons = scan_file(js_file)
+        assert {s.line_num for s in skeletons} == EXPECTED_LINE_NUMS
+
+    def test_invariant_line_number_correct(self, js_file):
+        """LineNumberCorrect holds at final state."""
+        _check_line_number_correct(scan_file(js_file))
+
+    def test_invariant_no_gaps(self, js_file):
+        """NoGaps holds at final state (i=8 > N=7)."""
+        _check_no_gaps(scan_file(js_file))
+
+    def test_invariant_cursor_bounded(self, js_file):
+        """CursorBounded: skeleton count ≤ N=7."""
+        _check_cursor_bounded(scan_file(js_file))
+
+    def test_invariant_no_return_type(self, js_file):
+        """NoReturnType: no skeleton has a return_type attribute."""
+        _check_no_return_type(scan_file(js_file))
+
+    def test_all_invariants_simultaneously(self, js_file):
+        """All four TLC invariants hold simultaneously at the final state."""
+        _assert_all_invariants(scan_file(js_file))
+
+
+# ---------------------------------------------------------------------------
+# Traces 2-10 — identical topology, individual traceability
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("trace_id", list(range(2, 11)))
+def test_trace_exact_line_set(trace_id, js_file):
+    """
+    Traces 2-10 (each 24 steps, same action sequence as Trace 1).
+    Final state: skeletons = {line_num ∈ {1, 3, 4, 6, 7}}, i=8.
+    All four TLC invariants verified.
+    """
+    skeletons = scan_file(js_file)
+    assert {s.line_num for s in skeletons} == EXPECTED_LINE_NUMS, (
+        f"Trace {trace_id}: skeleton line numbers mismatch"
+    )
+    _assert_all_invariants(skeletons)
+
+
+@pytest.mark.parametrize("trace_id", list(range(2, 11)))
+def test_trace_skeleton_count(trace_id, js_file):
+    """Traces 2-10: scan_file returns exactly 5 skeletons."""
+    assert len(scan_file(js_file)) == 5, (
+        f"Trace {trace_id}: expected 5 skeletons"
+    )
+
+
+@pytest.mark.parametrize("trace_id", list(range(2, 11)))
+def test_trace_non_decl_lines_absent(trace_id, js_file):
+    """Traces 2-10: lines 2 (Other) and 5 (ClassOpen) must not appear."""
+    skeletons = scan_file(js_file)
+    line_nums = {s.line_num for s in skeletons}
+    assert 2 not in line_nums, f"Trace {trace_id}: Other (line 2) must not be a skeleton"
+    assert 5 not in line_nums, f"Trace {trace_id}: ClassOpen (line 5) must not be a skeleton"
+
+
+# ---------------------------------------------------------------------------
+# Dedicated invariant test classes (each exercises ≥2 topologies)
+# ---------------------------------------------------------------------------
+
+class TestInvariantLineNumberCorrect:
+    """
+    TLA+ condition:
+      ∀ s ∈ skeletons :
+        s.line_num ≥ 1  ∧  s.line_num ≤ N  ∧  Lines[s.line_num] ∈ DeclTypes
+    """
+
+    def test_canonical_7line_file(self, js_file):
+        """5 skeletons, all at known DeclType lines in [1,7]."""
+        _check_line_number_correct(scan_file(js_file), LINES_SEQUENCE)
+
+    def test_single_func_file(self, js_file_only_func):
+        """1 skeleton at line 1 (Func), in [1,1], and Func ∈ DeclTypes."""
+        _check_line_number_correct(scan_file(js_file_only_func), ["Func"])
+
+    def test_empty_file(self, js_file_empty):
+        """Empty file → no skeletons → invariant vacuously true."""
+        _check_line_number_correct(scan_file(js_file_empty), [])
+
+    def test_no_decl_lines(self, js_file_all_other):
+        """No DeclType lines → no skeletons → invariant vacuously true."""
+        _check_line_number_correct(scan_file(js_file_all_other), ["Other"] * 5)
+
+    def test_consecutive_decls(self, js_file_consecutive_decls):
+        """Both consecutive DeclType lines produce skeletons within [1,2]."""
+        _check_line_number_correct(
+            scan_file(js_file_consecutive_decls), ["Arrow", "ModExports"]
+        )
+
+    def test_all_five_decl_types(self, tmp_path):
+        """One of each DeclType: all five skeletons satisfy the invariant."""
+        decl_types = ["Func", "Arrow", "ModExports", "NamedExports", "Method"]
+        p = tmp_path / "all_decls.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in decl_types) + "\n")
+        _check_line_number_correct(scan_file(str(p)), decl_types)
+
+
+class TestInvariantNoGaps:
+    """
+    TLA+ condition (checked when i > N, i.e. scan complete):
+      ∀ k ∈ 1..N : Lines[k] ∈ DeclTypes ⟹ ∃ s ∈ skeletons : s.line_num = k
+    """
+
+    def test_canonical_7line_file(self, js_file):
+        """All five DeclType positions {1,3,4,6,7} have skeletons."""
+        _check_no_gaps(scan_file(js_file), LINES_SEQUENCE)
+
+    def test_single_func_file(self, js_file_only_func):
+        """Single Func line → exactly one skeleton at line 1."""
+        skeletons = scan_file(js_file_only_func)
+        _check_no_gaps(skeletons, ["Func"])
+
+    def test_no_decl_file(self, js_file_all_other):
+        """No DeclType lines → required set is empty → no gaps possible."""
+        _check_no_gaps(scan_file(js_file_all_other), ["Other"] * 5)
+
+    def test_consecutive_decls(self, js_file_consecutive_decls):
+        """Both consecutive DeclType lines must produce skeletons."""
+        _check_no_gaps(scan_file(js_file_consecutive_decls), ["Arrow", "ModExports"])
+
+    def test_decls_surrounded_by_others(self, tmp_path):
+        """DeclType lines at positions 2 and 4 in a 5-line file."""
+        seq = ["Other", "Func", "Other", "Arrow", "Other"]
+        p = tmp_path / "surrounded.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in seq) + "\n")
+        _check_no_gaps(scan_file(str(p)), seq)
+
+
+class TestInvariantCursorBounded:
+    """
+    TLA+ condition: i ≤ N + 1
+    After scan_file returns, the internal cursor stopped at or before N+1.
+    Verified by: skeleton count ≤ N (cannot produce more skeletons than lines).
+    """
+
+    def test_canonical_7line_file(self, js_file):
+        """5 skeletons ≤ N=7 lines."""
+        _check_cursor_bounded(scan_file(js_file), N)
+
+    def test_single_func_file(self, js_file_only_func):
+        """1 skeleton ≤ N=1 line."""
+        _check_cursor_bounded(scan_file(js_file_only_func), 1)
+
+    def test_no_decl_file(self, js_file_all_other):
+        """0 skeletons ≤ N=5 lines."""
+        _check_cursor_bounded(scan_file(js_file_all_other), 5)
+
+    def test_empty_file(self, js_file_empty):
+        """0 skeletons ≤ N=0 lines."""
+        _check_cursor_bounded(scan_file(js_file_empty), 0)
+
+    def test_consecutive_decls(self, js_file_consecutive_decls):
+        """2 skeletons ≤ N=2 lines."""
+        _check_cursor_bounded(scan_file(js_file_consecutive_decls), 2)
+
+    def test_all_five_decl_types(self, tmp_path):
+        """5 skeletons ≤ N=5 lines."""
+        decl_types = ["Func", "Arrow", "ModExports", "NamedExports", "Method"]
+        p = tmp_path / "all_decls.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in decl_types) + "\n")
+        _check_cursor_bounded(scan_file(str(p)), len(decl_types))
+
+
+class TestInvariantNoReturnType:
+    """
+    TLA+ condition: ∀ s ∈ skeletons : ¬("return_type" ∈ DOMAIN s)
+    JavaScript scanner must never attach a return_type to any skeleton.
+    """
+
+    def test_canonical_7line_file(self, js_file):
+        """None of the 5 skeletons has return_type."""
+        _check_no_return_type(scan_file(js_file))
+
+    def test_single_func_file(self, js_file_only_func):
+        """Single Func skeleton carries no return_type."""
+        _check_no_return_type(scan_file(js_file_only_func))
+
+    def test_consecutive_decls(self, js_file_consecutive_decls):
+        """Neither of two consecutive DeclType skeletons has return_type."""
+        _check_no_return_type(scan_file(js_file_consecutive_decls))
+
+    def test_all_five_decl_types(self, tmp_path):
+        """All five DeclType flavours: none carries return_type."""
+        decl_types = ["Func", "Arrow", "ModExports", "NamedExports", "Method"]
+        p = tmp_path / "all_decls.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in decl_types) + "\n")
+        _check_no_return_type(scan_file(str(p)))
+
+    def test_empty_file(self, js_file_empty):
+        """No skeletons → NoReturnType vacuously holds."""
+        _check_no_return_type(scan_file(js_file_empty))
+
+
+# ---------------------------------------------------------------------------
+# Edge-case tests (derived from traces where possible)
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+
+    def test_empty_file_returns_empty_list(self, js_file_empty):
+        """
+        Edge: zero-byte file.
+        TLC Init state has skeletons={}; with N=0 the loop never enters.
+        """
+        skeletons = scan_file(js_file_empty)
+        assert list(skeletons) == []
+
+    def test_only_non_decl_lines_yields_no_skeletons(self, js_file_all_other):
+        """
+        Edge: file with no DeclType lines.
+        Mirrors Trace 1 States 5-6 where line 2 (Other) is silently skipped.
+        """
+        assert len(scan_file(js_file_all_other)) == 0
+
+    def test_classopen_not_in_decl_types(self, tmp_path):
+        """
+        Edge: ClassOpen-only file must produce zero skeletons.
+        Mirrors Trace 1 States 14-15: line 5 (ClassOpen) is skipped.
+        """
+        p = tmp_path / "class_only.js"
+        p.write_text(_JS_LINE["ClassOpen"] + "\n")
+        assert len(scan_file(str(p))) == 0
+
+    def test_single_function_skeleton_is_line1(self, js_file_only_func):
+        """
+        Edge: single-line Func file.
+        Mirrors Trace 1 State 3: after first ProcessLine, skeletons={[line_num|->1]}.
+        """
+        skeletons = scan_file(js_file_only_func)
+        assert len(skeletons) == 1
+        assert skeletons[0].line_num == 1
+        _assert_all_invariants(skeletons, ["Func"], n=1)
+
+    def test_consecutive_decl_types_both_captured(self, js_file_consecutive_decls):
+        """
+        Edge: two consecutive DeclType lines (mirrors Trace 1 States 9-12).
+        Arrow at line 3 and ModExports at line 4 in the main trace are
+        analogous; here they are at lines 1 and 2.
+        """
+        skeletons = scan_file(js_file_consecutive_decls)
+        assert {s.line_num for s in skeletons} == {1, 2}
+        _assert_all_invariants(skeletons, ["Arrow", "ModExports"], n=2)
+
+    def test_decl_lines_surrounded_by_non_decls(self, tmp_path):
+        """
+        Edge: DeclType lines at positions 2 and 4 in a 5-line file.
+        Models the non-DeclType 'gaps' present at lines 2 and 5 in all traces.
+        """
+        seq = ["Other", "Func", "Other", "Arrow", "Other"]
+        p = tmp_path / "surrounded.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in seq) + "\n")
+        skeletons = scan_file(str(p))
+        assert {s.line_num for s in skeletons} == {2, 4}
+        _assert_all_invariants(skeletons, seq, n=5)
+
+    def test_all_five_decl_types_one_each(self, tmp_path):
+        """
+        Edge: one line of each DeclType, no non-DeclType filler.
+        All 5 lines produce skeletons; NoGaps holds.
+        """
+        decl_types = ["Func", "Arrow", "ModExports", "NamedExports", "Method"]
+        p = tmp_path / "all_decls.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in decl_types) + "\n")
+        skeletons = scan_file(str(p))
+        assert len(skeletons) == 5
+        assert {s.line_num for s in skeletons} == {1, 2, 3, 4, 5}
+        _assert_all_invariants(skeletons, decl_types, n=5)
+
+    def test_line_numbers_are_one_indexed(self, js_file):
+        """
+        GWT 'Then' clause: each Skeleton.line_num equals the 1-indexed line.
+        Verifies that the scanner does not use 0-based indexing.
+        """
+        for s in scan_file(js_file):
+            assert s.line_num >= 1, (
+                f"Expected 1-indexed line_num, got {s.line_num}"
+            )
+
+    def test_scan_file_is_idempotent(self, js_file):
+        """
+        Edge: calling scan_file twice on the same path yields identical results.
+        Corresponds to TLC determinism: the same Init state always reaches
+        the same final state.
+        """
+        result1 = {s.line_num for s in scan_file(js_file)}
+        result2 = {s.line_num for s in scan_file(js_file)}
+        assert result1 == result2
+
+    def test_no_duplicate_line_numbers(self, js_file):
+        """
+        Edge: the skeleton set (TLA+ set semantics) has no duplicate line numbers.
+        TLA+ skeletons is a set, so each line_num appears at most once.
+        """
+        skeletons = scan_file(js_file)
+        line_nums = [s.line_num for s in skeletons]
+        assert len(line_nums) == len(set(line_nums)), (
+            f"Duplicate skeleton line_nums: {line_nums}"
+        )
+
+    def test_last_decl_line_at_eof_captured(self, tmp_path):
+        """
+        Edge: the last line of the file (line 7, NamedExports) is a DeclType.
+        Mirrors Trace 1 State 21: skeleton added for the final line before Finish.
+        """
+        seq = ["Other", "Other", "Other", "Other", "Other", "Other", "NamedExports"]
+        p = tmp_path / "last_line_decl.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in seq) + "\n")
+        skeletons = scan_file(str(p))
+        assert {s.line_num for s in skeletons} == {7}
+        _assert_all_invariants(skeletons, seq, n=7)
+```
+
+---
+
+## Summary of Changes
+
+**One correction applied, zero structural changes:**
+
+| Location | Before | After | Reason |
+|---|---|---|---|
+| `_check_line_number_correct` body | `s.line_number` | `s.line_num` | Bridge verifier ground truth: `s.line_num >= 1`, `Lines[s.line_num] \in DeclTypes` |
+| `_check_no_gaps` body | `s.line_number` | `s.line_num` | Bridge verifier ground truth: `s.line_num = k` |
+| `_check_no_return_type` error message | `s.line_number` | `s.line_num` | Consistency with corrected field name |
+| All `TestTrace1` per-line assertions | `s.line_number` | `s.line_num` | Same |
+| `test_trace_exact_line_set` set comprehension | `s.line_number` | `s.line_num` | Same |
+| `test_trace_non_decl_lines_absent` set comprehension | `s.line_number` | `s.line_num` | Same |
+| All `TestEdgeCases` direct accesses | `s.line_number` | `s.line_num` | Same |
+
+All four invariants, all fixture topologies, and the edge-case coverage are semantically correct and sufficient. Only the attribute name was wrong.
+## Review Findings
+
+### Critical Semantic Bug: `s.line_number` vs. `s.line_num`
+
+The bridge verifiers are unambiguous ground truth — every single invariant condition uses `s.line_num`:
+
+| Verifier | Condition |
+|---|---|
+| `LineNumberCorrect` | `s.line_num >= 1`, `s.line_num <= N`, `Lines[s.line_num] \in DeclTypes` |
+| `NoGaps` | `\E s \in skeletons : s.line_num = k` |
+
+The test plan uses `s.line_number` everywhere instead. This is not a naming preference; it is a field-access bug. If `Skeleton.line_num` is the real attribute, every assertion such as `any(s.line_number == 1 for s in skeletons)` will raise `AttributeError` or silently pass vacuously depending on `__getattr__` behaviour — neither is a valid test.
+
+**All `s.line_number` references must become `s.line_num`** — in helper bodies, error messages, and every in-line assertion.
+
+### Other Findings (non-blocking)
+
+| # | Finding | Verdict |
+|---|---|---|
+| 1 | `Skeleton` imported but never used directly | Harmless; retain for clarity |
+| 2 | `_check_cursor_bounded` uses `len(skeletons) ≤ N` as a proxy for `i ≤ N+1` | Semantically sound — one skeleton per line maximum |
+| 3 | Traces 2–10 are parametrised repeats of Trace 1 | Correct for TLA+ traceability; not redundant by intent |
+| 4 | State-count annotation "24 steps" is consistent with 3 actions/line × 7 + Init + Finish | Correct |
+| 5 | `_check_line_number_correct([], [])` — vacuously true for empty file | Correct |
+
+---
+
+### Corrected Test Plan
+
+```python
+import pytest
+from scanner_javascript_line_ranges import scan_file, Skeleton
+
+# ---------------------------------------------------------------------------
+# TLA+ model constants (verbatim from verified spec)
+# ---------------------------------------------------------------------------
+
+# Lines == << "Func","Other","Arrow","ModExports","ClassOpen","Method","NamedExports" >>
+LINES_SEQUENCE = [
+    "Func",         # line 1
+    "Other",        # line 2
+    "Arrow",        # line 3
+    "ModExports",   # line 4
+    "ClassOpen",    # line 5
+    "Method",       # line 6
+    "NamedExports", # line 7
+]
+N = 7  # total lines in canonical fixture
+
+# DeclTypes == {"Func", "Arrow", "ModExports", "NamedExports", "Method"}
+DECL_TYPES = {"Func", "Arrow", "ModExports", "NamedExports", "Method"}
+
+# Conts == << FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE >>
+# All FALSE: every DeclType line produces a skeleton immediately (no multi-line sigs).
+
+# TLC final state (all 10 traces): skeletons = {line_num ∈ {1,3,4,6,7}}
+EXPECTED_LINE_NUMS = {1, 3, 4, 6, 7}
+
+
+# ---------------------------------------------------------------------------
+# Representative JavaScript lines for each TLA+ line-type label
+# ---------------------------------------------------------------------------
+
+_JS_LINE = {
+    "Func":         "function alpha(x, y) {",
+    "Other":        "  return x + y;",
+    "Arrow":        "const beta = (a, b) => {",
+    "ModExports":   "module.exports = function gamma() {",
+    "ClassOpen":    "class Delta {",
+    "Method":       "  epsilon(param) {",
+    "NamedExports": "export function zeta(x) {",
+}
+
+
+def _build_js_source(lines_sequence=None):
+    """Construct a JS source string from a list of TLA+ line-type labels."""
+    seq = lines_sequence if lines_sequence is not None else LINES_SEQUENCE
+    return "\n".join(_JS_LINE[t] for t in seq) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def js_file(tmp_path):
+    """
+    Canonical 7-line JS fixture matching the TLA+ Lines sequence:
+      1: Func   2: Other   3: Arrow   4: ModExports
+      5: ClassOpen   6: Method   7: NamedExports
+    Expected skeleton line numbers after scan: {1, 3, 4, 6, 7}
+    """
+    p = tmp_path / "subject.js"
+    p.write_text(_build_js_source())
+    return str(p)
+
+
+@pytest.fixture
+def js_file_only_func(tmp_path):
+    """Single-line file: only one Func declaration (line 1)."""
+    p = tmp_path / "single.js"
+    p.write_text(_JS_LINE["Func"] + "\n")
+    return str(p)
+
+
+@pytest.fixture
+def js_file_all_other(tmp_path):
+    """Five 'Other' lines — no function declarations at all."""
+    p = tmp_path / "no_decls.js"
+    p.write_text("\n".join([_JS_LINE["Other"]] * 5) + "\n")
+    return str(p)
+
+
+@pytest.fixture
+def js_file_consecutive_decls(tmp_path):
+    """Two consecutive DeclType lines: Arrow (line 1) then ModExports (line 2)."""
+    p = tmp_path / "consecutive.js"
+    p.write_text(_build_js_source(["Arrow", "ModExports"]))
+    return str(p)
+
+
+@pytest.fixture
+def js_file_empty(tmp_path):
+    """Zero-byte JS file."""
+    p = tmp_path / "empty.js"
+    p.write_text("")
+    return str(p)
+
+
+# ---------------------------------------------------------------------------
+# Invariant helpers (directly translate TLA+ conditions)
+# ---------------------------------------------------------------------------
+
+def _check_line_number_correct(skeletons, lines_seq=None):
+    """
+    LineNumberCorrect:
+      ∀ s ∈ skeletons :
+        s.line_num ≥ 1  ∧
+        s.line_num ≤ N  ∧
+        Lines[s.line_num] ∈ DeclTypes
+
+    Bridge verifier field: s.line_num  (not s.line_number)
+    """
+    seq = lines_seq if lines_seq is not None else LINES_SEQUENCE
+    n = len(seq)
+    for s in skeletons:
+        ln = s.line_num  # ground-truth field name from bridge verifier
+        assert isinstance(ln, int), (
+            f"line_num must be int, got {type(ln).__name__}"
+        )
+        assert 1 <= ln <= n, (
+            f"LineNumberCorrect violated: line_num {ln} not in [1, {n}]"
+        )
+        actual_type = seq[ln - 1]
+        assert actual_type in DECL_TYPES, (
+            f"LineNumberCorrect violated: line {ln} has type {actual_type!r} "
+            f"which is not in DeclTypes"
+        )
+
+
+def _check_no_gaps(skeletons, lines_seq=None):
+    """
+    NoGaps (checked after scan completes, i.e. i > N):
+      ∀ k ∈ 1..N : Lines[k] ∈ DeclTypes ⟹ ∃ s ∈ skeletons : s.line_num = k
+
+    Bridge verifier field: s.line_num  (not s.line_number)
+    """
+    seq = lines_seq if lines_seq is not None else LINES_SEQUENCE
+    required = {i + 1 for i, t in enumerate(seq) if t in DECL_TYPES}
+    found = {s.line_num for s in skeletons}  # ground-truth field name
+    missing = required - found
+    assert not missing, (
+        f"NoGaps violated: DeclType lines {sorted(missing)} have no skeleton"
+    )
+
+
+def _check_cursor_bounded(skeletons, n=None):
+    """
+    CursorBounded: i ≤ N + 1
+    After scan_file returns the cursor advanced through at most N lines,
+    so the skeleton count cannot exceed N.
+    """
+    bound = n if n is not None else N
+    assert len(skeletons) <= bound, (
+        f"CursorBounded violated: {len(skeletons)} skeletons > {bound} lines"
+    )
+
+
+def _check_no_return_type(skeletons):
+    """
+    NoReturnType: ∀ s ∈ skeletons : ¬("return_type" ∈ DOMAIN s)
+    """
+    for s in skeletons:
+        assert not hasattr(s, "return_type"), (
+            f"NoReturnType violated: skeleton at line {s.line_num} "
+            f"carries return_type={getattr(s, 'return_type', None)!r}"
+        )
+
+
+def _assert_all_invariants(skeletons, lines_seq=None, n=None):
+    """Assert all four TLC invariants simultaneously."""
+    seq = lines_seq if lines_seq is not None else LINES_SEQUENCE
+    bound = n if n is not None else N
+    _check_line_number_correct(skeletons, seq)
+    _check_no_gaps(skeletons, seq)
+    _check_cursor_bounded(skeletons, bound)
+    _check_no_return_type(skeletons)
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — reference trace (24 steps)
+# ScanLoop → ProcessLine → Advance × 7 → ScanLoop → Finish
+# Init:  i=1, skeletons={}, in_sig=FALSE, sig_start=0
+# Final: skeletons={line_num∈{1,3,4,6,7}}, sig_start=7, i=8
+# ---------------------------------------------------------------------------
+
+class TestTrace1:
+    """
+    Canonical 24-step trace. Every ProcessLine step on a DeclType line
+    (Conts[i]=FALSE) immediately adds [line_num |-> i] to skeletons.
+    Lines 2 (Other) and 5 (ClassOpen) are not in DeclTypes and are skipped.
+    """
+
+    def test_skeleton_count_equals_five(self, js_file):
+        """Exactly five DeclType lines → exactly five skeletons."""
+        skeletons = scan_file(js_file)
+        assert len(skeletons) == 5
+
+    def test_line1_func_produces_skeleton(self, js_file):
+        """State 3: ProcessLine on line 1 (Func) → skeletons += {[line_num|->1]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 1 for s in skeletons)
+
+    def test_line2_other_produces_no_skeleton(self, js_file):
+        """State 6: ProcessLine on line 2 (Other) → skeletons unchanged."""
+        skeletons = scan_file(js_file)
+        assert all(s.line_num != 2 for s in skeletons)
+
+    def test_line3_arrow_produces_skeleton(self, js_file):
+        """State 9: ProcessLine on line 3 (Arrow) → skeletons += {[line_num|->3]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 3 for s in skeletons)
+
+    def test_line4_modexports_produces_skeleton(self, js_file):
+        """State 12: ProcessLine on line 4 (ModExports) → skeletons += {[line_num|->4]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 4 for s in skeletons)
+
+    def test_line5_classopen_produces_no_skeleton(self, js_file):
+        """State 15: ProcessLine on line 5 (ClassOpen) → skeletons unchanged."""
+        skeletons = scan_file(js_file)
+        assert all(s.line_num != 5 for s in skeletons)
+
+    def test_line6_method_produces_skeleton(self, js_file):
+        """State 18: ProcessLine on line 6 (Method) → skeletons += {[line_num|->6]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 6 for s in skeletons)
+
+    def test_line7_namedexports_produces_skeleton(self, js_file):
+        """State 21: ProcessLine on line 7 (NamedExports) → skeletons += {[line_num|->7]}."""
+        skeletons = scan_file(js_file)
+        assert any(s.line_num == 7 for s in skeletons)
+
+    def test_exact_final_skeleton_set(self, js_file):
+        """State 24 (Done): exact skeleton line-number set equals TLC final state."""
+        skeletons = scan_file(js_file)
+        assert {s.line_num for s in skeletons} == EXPECTED_LINE_NUMS
+
+    def test_invariant_line_number_correct(self, js_file):
+        """LineNumberCorrect holds at final state."""
+        _check_line_number_correct(scan_file(js_file))
+
+    def test_invariant_no_gaps(self, js_file):
+        """NoGaps holds at final state (i=8 > N=7)."""
+        _check_no_gaps(scan_file(js_file))
+
+    def test_invariant_cursor_bounded(self, js_file):
+        """CursorBounded: skeleton count ≤ N=7."""
+        _check_cursor_bounded(scan_file(js_file))
+
+    def test_invariant_no_return_type(self, js_file):
+        """NoReturnType: no skeleton has a return_type attribute."""
+        _check_no_return_type(scan_file(js_file))
+
+    def test_all_invariants_simultaneously(self, js_file):
+        """All four TLC invariants hold simultaneously at the final state."""
+        _assert_all_invariants(scan_file(js_file))
+
+
+# ---------------------------------------------------------------------------
+# Traces 2-10 — identical topology, individual traceability
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("trace_id", list(range(2, 11)))
+def test_trace_exact_line_set(trace_id, js_file):
+    """
+    Traces 2-10 (each 24 steps, same action sequence as Trace 1).
+    Final state: skeletons = {line_num ∈ {1, 3, 4, 6, 7}}, i=8.
+    All four TLC invariants verified.
+    """
+    skeletons = scan_file(js_file)
+    assert {s.line_num for s in skeletons} == EXPECTED_LINE_NUMS, (
+        f"Trace {trace_id}: skeleton line numbers mismatch"
+    )
+    _assert_all_invariants(skeletons)
+
+
+@pytest.mark.parametrize("trace_id", list(range(2, 11)))
+def test_trace_skeleton_count(trace_id, js_file):
+    """Traces 2-10: scan_file returns exactly 5 skeletons."""
+    assert len(scan_file(js_file)) == 5, (
+        f"Trace {trace_id}: expected 5 skeletons"
+    )
+
+
+@pytest.mark.parametrize("trace_id", list(range(2, 11)))
+def test_trace_non_decl_lines_absent(trace_id, js_file):
+    """Traces 2-10: lines 2 (Other) and 5 (ClassOpen) must not appear."""
+    skeletons = scan_file(js_file)
+    line_nums = {s.line_num for s in skeletons}
+    assert 2 not in line_nums, f"Trace {trace_id}: Other (line 2) must not be a skeleton"
+    assert 5 not in line_nums, f"Trace {trace_id}: ClassOpen (line 5) must not be a skeleton"
+
+
+# ---------------------------------------------------------------------------
+# Dedicated invariant test classes (each exercises ≥2 topologies)
+# ---------------------------------------------------------------------------
+
+class TestInvariantLineNumberCorrect:
+    """
+    TLA+ condition:
+      ∀ s ∈ skeletons :
+        s.line_num ≥ 1  ∧  s.line_num ≤ N  ∧  Lines[s.line_num] ∈ DeclTypes
+    """
+
+    def test_canonical_7line_file(self, js_file):
+        """5 skeletons, all at known DeclType lines in [1,7]."""
+        _check_line_number_correct(scan_file(js_file), LINES_SEQUENCE)
+
+    def test_single_func_file(self, js_file_only_func):
+        """1 skeleton at line 1 (Func), in [1,1], and Func ∈ DeclTypes."""
+        _check_line_number_correct(scan_file(js_file_only_func), ["Func"])
+
+    def test_empty_file(self, js_file_empty):
+        """Empty file → no skeletons → invariant vacuously true."""
+        _check_line_number_correct(scan_file(js_file_empty), [])
+
+    def test_no_decl_lines(self, js_file_all_other):
+        """No DeclType lines → no skeletons → invariant vacuously true."""
+        _check_line_number_correct(scan_file(js_file_all_other), ["Other"] * 5)
+
+    def test_consecutive_decls(self, js_file_consecutive_decls):
+        """Both consecutive DeclType lines produce skeletons within [1,2]."""
+        _check_line_number_correct(
+            scan_file(js_file_consecutive_decls), ["Arrow", "ModExports"]
+        )
+
+    def test_all_five_decl_types(self, tmp_path):
+        """One of each DeclType: all five skeletons satisfy the invariant."""
+        decl_types = ["Func", "Arrow", "ModExports", "NamedExports", "Method"]
+        p = tmp_path / "all_decls.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in decl_types) + "\n")
+        _check_line_number_correct(scan_file(str(p)), decl_types)
+
+
+class TestInvariantNoGaps:
+    """
+    TLA+ condition (checked when i > N, i.e. scan complete):
+      ∀ k ∈ 1..N : Lines[k] ∈ DeclTypes ⟹ ∃ s ∈ skeletons : s.line_num = k
+    """
+
+    def test_canonical_7line_file(self, js_file):
+        """All five DeclType positions {1,3,4,6,7} have skeletons."""
+        _check_no_gaps(scan_file(js_file), LINES_SEQUENCE)
+
+    def test_single_func_file(self, js_file_only_func):
+        """Single Func line → exactly one skeleton at line 1."""
+        skeletons = scan_file(js_file_only_func)
+        _check_no_gaps(skeletons, ["Func"])
+
+    def test_no_decl_file(self, js_file_all_other):
+        """No DeclType lines → required set is empty → no gaps possible."""
+        _check_no_gaps(scan_file(js_file_all_other), ["Other"] * 5)
+
+    def test_consecutive_decls(self, js_file_consecutive_decls):
+        """Both consecutive DeclType lines must produce skeletons."""
+        _check_no_gaps(scan_file(js_file_consecutive_decls), ["Arrow", "ModExports"])
+
+    def test_decls_surrounded_by_others(self, tmp_path):
+        """DeclType lines at positions 2 and 4 in a 5-line file."""
+        seq = ["Other", "Func", "Other", "Arrow", "Other"]
+        p = tmp_path / "surrounded.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in seq) + "\n")
+        _check_no_gaps(scan_file(str(p)), seq)
+
+
+class TestInvariantCursorBounded:
+    """
+    TLA+ condition: i ≤ N + 1
+    After scan_file returns, the internal cursor stopped at or before N+1.
+    Verified by: skeleton count ≤ N (cannot produce more skeletons than lines).
+    """
+
+    def test_canonical_7line_file(self, js_file):
+        """5 skeletons ≤ N=7 lines."""
+        _check_cursor_bounded(scan_file(js_file), N)
+
+    def test_single_func_file(self, js_file_only_func):
+        """1 skeleton ≤ N=1 line."""
+        _check_cursor_bounded(scan_file(js_file_only_func), 1)
+
+    def test_no_decl_file(self, js_file_all_other):
+        """0 skeletons ≤ N=5 lines."""
+        _check_cursor_bounded(scan_file(js_file_all_other), 5)
+
+    def test_empty_file(self, js_file_empty):
+        """0 skeletons ≤ N=0 lines."""
+        _check_cursor_bounded(scan_file(js_file_empty), 0)
+
+    def test_consecutive_decls(self, js_file_consecutive_decls):
+        """2 skeletons ≤ N=2 lines."""
+        _check_cursor_bounded(scan_file(js_file_consecutive_decls), 2)
+
+    def test_all_five_decl_types(self, tmp_path):
+        """5 skeletons ≤ N=5 lines."""
+        decl_types = ["Func", "Arrow", "ModExports", "NamedExports", "Method"]
+        p = tmp_path / "all_decls.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in decl_types) + "\n")
+        _check_cursor_bounded(scan_file(str(p)), len(decl_types))
+
+
+class TestInvariantNoReturnType:
+    """
+    TLA+ condition: ∀ s ∈ skeletons : ¬("return_type" ∈ DOMAIN s)
+    JavaScript scanner must never attach a return_type to any skeleton.
+    """
+
+    def test_canonical_7line_file(self, js_file):
+        """None of the 5 skeletons has return_type."""
+        _check_no_return_type(scan_file(js_file))
+
+    def test_single_func_file(self, js_file_only_func):
+        """Single Func skeleton carries no return_type."""
+        _check_no_return_type(scan_file(js_file_only_func))
+
+    def test_consecutive_decls(self, js_file_consecutive_decls):
+        """Neither of two consecutive DeclType skeletons has return_type."""
+        _check_no_return_type(scan_file(js_file_consecutive_decls))
+
+    def test_all_five_decl_types(self, tmp_path):
+        """All five DeclType flavours: none carries return_type."""
+        decl_types = ["Func", "Arrow", "ModExports", "NamedExports", "Method"]
+        p = tmp_path / "all_decls.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in decl_types) + "\n")
+        _check_no_return_type(scan_file(str(p)))
+
+    def test_empty_file(self, js_file_empty):
+        """No skeletons → NoReturnType vacuously holds."""
+        _check_no_return_type(scan_file(js_file_empty))
+
+
+# ---------------------------------------------------------------------------
+# Edge-case tests (derived from traces where possible)
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+
+    def test_empty_file_returns_empty_list(self, js_file_empty):
+        """
+        Edge: zero-byte file.
+        TLC Init state has skeletons={}; with N=0 the loop never enters.
+        """
+        skeletons = scan_file(js_file_empty)
+        assert list(skeletons) == []
+
+    def test_only_non_decl_lines_yields_no_skeletons(self, js_file_all_other):
+        """
+        Edge: file with no DeclType lines.
+        Mirrors Trace 1 States 5-6 where line 2 (Other) is silently skipped.
+        """
+        assert len(scan_file(js_file_all_other)) == 0
+
+    def test_classopen_not_in_decl_types(self, tmp_path):
+        """
+        Edge: ClassOpen-only file must produce zero skeletons.
+        Mirrors Trace 1 States 14-15: line 5 (ClassOpen) is skipped.
+        """
+        p = tmp_path / "class_only.js"
+        p.write_text(_JS_LINE["ClassOpen"] + "\n")
+        assert len(scan_file(str(p))) == 0
+
+    def test_single_function_skeleton_is_line1(self, js_file_only_func):
+        """
+        Edge: single-line Func file.
+        Mirrors Trace 1 State 3: after first ProcessLine, skeletons={[line_num|->1]}.
+        """
+        skeletons = scan_file(js_file_only_func)
+        assert len(skeletons) == 1
+        assert skeletons[0].line_num == 1
+        _assert_all_invariants(skeletons, ["Func"], n=1)
+
+    def test_consecutive_decl_types_both_captured(self, js_file_consecutive_decls):
+        """
+        Edge: two consecutive DeclType lines (mirrors Trace 1 States 9-12).
+        Arrow at line 3 and ModExports at line 4 in the main trace are
+        analogous; here they are at lines 1 and 2.
+        """
+        skeletons = scan_file(js_file_consecutive_decls)
+        assert {s.line_num for s in skeletons} == {1, 2}
+        _assert_all_invariants(skeletons, ["Arrow", "ModExports"], n=2)
+
+    def test_decl_lines_surrounded_by_non_decls(self, tmp_path):
+        """
+        Edge: DeclType lines at positions 2 and 4 in a 5-line file.
+        Models the non-DeclType 'gaps' present at lines 2 and 5 in all traces.
+        """
+        seq = ["Other", "Func", "Other", "Arrow", "Other"]
+        p = tmp_path / "surrounded.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in seq) + "\n")
+        skeletons = scan_file(str(p))
+        assert {s.line_num for s in skeletons} == {2, 4}
+        _assert_all_invariants(skeletons, seq, n=5)
+
+    def test_all_five_decl_types_one_each(self, tmp_path):
+        """
+        Edge: one line of each DeclType, no non-DeclType filler.
+        All 5 lines produce skeletons; NoGaps holds.
+        """
+        decl_types = ["Func", "Arrow", "ModExports", "NamedExports", "Method"]
+        p = tmp_path / "all_decls.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in decl_types) + "\n")
+        skeletons = scan_file(str(p))
+        assert len(skeletons) == 5
+        assert {s.line_num for s in skeletons} == {1, 2, 3, 4, 5}
+        _assert_all_invariants(skeletons, decl_types, n=5)
+
+    def test_line_numbers_are_one_indexed(self, js_file):
+        """
+        GWT 'Then' clause: each Skeleton.line_num equals the 1-indexed line.
+        Verifies that the scanner does not use 0-based indexing.
+        """
+        for s in scan_file(js_file):
+            assert s.line_num >= 1, (
+                f"Expected 1-indexed line_num, got {s.line_num}"
+            )
+
+    def test_scan_file_is_idempotent(self, js_file):
+        """
+        Edge: calling scan_file twice on the same path yields identical results.
+        Corresponds to TLC determinism: the same Init state always reaches
+        the same final state.
+        """
+        result1 = {s.line_num for s in scan_file(js_file)}
+        result2 = {s.line_num for s in scan_file(js_file)}
+        assert result1 == result2
+
+    def test_no_duplicate_line_numbers(self, js_file):
+        """
+        Edge: the skeleton set (TLA+ set semantics) has no duplicate line numbers.
+        TLA+ skeletons is a set, so each line_num appears at most once.
+        """
+        skeletons = scan_file(js_file)
+        line_nums = [s.line_num for s in skeletons]
+        assert len(line_nums) == len(set(line_nums)), (
+            f"Duplicate skeleton line_nums: {line_nums}"
+        )
+
+    def test_last_decl_line_at_eof_captured(self, tmp_path):
+        """
+        Edge: the last line of the file (line 7, NamedExports) is a DeclType.
+        Mirrors Trace 1 State 21: skeleton added for the final line before Finish.
+        """
+        seq = ["Other", "Other", "Other", "Other", "Other", "Other", "NamedExports"]
+        p = tmp_path / "last_line_decl.js"
+        p.write_text("\n".join(_JS_LINE[t] for t in seq) + "\n")
+        skeletons = scan_file(str(p))
+        assert {s.line_num for s in skeletons} == {7}
+        _assert_all_invariants(skeletons, seq, n=7)
+```
+
+---
+
+## Summary of Changes
+
+**One correction applied, zero structural changes:**
+
+| Location | Before | After | Reason |
+|---|---|---|---|
+| `_check_line_number_correct` body | `s.line_number` | `s.line_num` | Bridge verifier ground truth: `s.line_num >= 1`, `Lines[s.line_num] \in DeclTypes` |
+| `_check_no_gaps` body | `s.line_number` | `s.line_num` | Bridge verifier ground truth: `s.line_num = k` |
+| `_check_no_return_type` error message | `s.line_number` | `s.line_num` | Consistency with corrected field name |
+| All `TestTrace1` per-line assertions | `s.line_number` | `s.line_num` | Same |
+| `test_trace_exact_line_set` set comprehension | `s.line_number` | `s.line_num` | Same |
+| `test_trace_non_decl_lines_absent` set comprehension | `s.line_number` | `s.line_num` | Same |
+| All `TestEdgeCases` direct accesses | `s.line_number` | `s.line_num` | Same |
+
+All four invariants, all fixture topologies, and the edge-case coverage are semantically correct and sufficient. Only the attribute name was wrong.

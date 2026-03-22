@@ -1,0 +1,156 @@
+---- MODULE typescript_profile_file_validity ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+Verifiers == <<
+    [name |-> "inv1", has_cond |-> TRUE,  is_dict |-> TRUE],
+    [name |-> "inv2", has_cond |-> TRUE,  is_dict |-> TRUE],
+    [name |-> "inv3", has_cond |-> FALSE, is_dict |-> TRUE],
+    [name |-> "skip", has_cond |-> TRUE,  is_dict |-> FALSE]
+>>
+N == 4
+
+(* --algorithm TSFileValidity
+
+variables
+    cursor   = 1,
+    compiled = {},
+    stage    = "idle",
+    passed   = FALSE;
+
+define
+    BatchConsistent ==
+        cursor > N =>
+            \A k \in 1..N :
+                (Verifiers[k].is_dict /\ Verifiers[k].has_cond) =>
+                    \E c \in compiled : c.name = Verifiers[k].name
+
+    NonDictSkipped ==
+        ~(\E c \in compiled : c.name = "skip")
+
+    StageOrdering ==
+        stage \in {"idle", "compile_all", "type_check", "discover", "run", "done"}
+
+    TypeCheckPassedOnlyAfterCompile ==
+        passed => stage \in {"type_check", "discover", "run", "done"}
+
+    CompiledSubsetValid ==
+        \A c \in compiled :
+            \E k \in 1..N :
+                Verifiers[k].name = c.name /\
+                Verifiers[k].is_dict /\
+                Verifiers[k].has_cond
+
+    TerminalImpliesAllChecked ==
+        stage = "done" => passed = TRUE
+
+    NoDuplicateNames ==
+        \A c1 \in compiled : \A c2 \in compiled :
+            c1.name = c2.name => c1 = c2
+end define;
+
+process verifier = "verifier"
+begin
+    CompileAll:
+        stage := "compile_all";
+    ProcessLoop:
+        while cursor <= N do
+            ProcessV:
+                if Verifiers[cursor].is_dict /\ Verifiers[cursor].has_cond then
+                    compiled := compiled \cup {[name |-> Verifiers[cursor].name]};
+                end if;
+            AdvanceV:
+                cursor := cursor + 1;
+        end while;
+    TypeCheck:
+        stage := "type_check";
+        passed := TRUE;
+    Discover:
+        stage := "discover";
+    Run:
+        stage := "run";
+    Finish:
+        stage := "done";
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE typescript_profile_file_validity ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+Verifiers == <<
+    [name |-> "inv1", has_cond |-> TRUE,  is_dict |-> TRUE],
+    [name |-> "inv2", has_cond |-> TRUE,  is_dict |-> TRUE],
+    [name |-> "inv3", has_cond |-> FALSE, is_dict |-> TRUE],
+    [name |-> "skip", has_cond |-> TRUE,  is_dict |-> FALSE]
+>>
+N == 4
+
+(* --algorithm TSFileValidity
+
+variables
+    cursor   = 1,
+    compiled = {},
+    stage    = "idle",
+    passed   = FALSE;
+
+define
+    BatchConsistent ==
+        cursor > N =>
+            \A k \in 1..N :
+                (Verifiers[k].is_dict /\ Verifiers[k].has_cond) =>
+                    \E c \in compiled : c.name = Verifiers[k].name
+
+    NonDictSkipped ==
+        ~(\E c \in compiled : c.name = "skip")
+
+    StageOrdering ==
+        stage \in {"idle", "compile_all", "type_check", "discover", "run", "done"}
+
+    TypeCheckPassedOnlyAfterCompile ==
+        passed => stage \in {"type_check", "discover", "run", "done"}
+
+    CompiledSubsetValid ==
+        \A c \in compiled :
+            \E k \in 1..N :
+                Verifiers[k].name = c.name /\
+                Verifiers[k].is_dict /\
+                Verifiers[k].has_cond
+
+    TerminalImpliesAllChecked ==
+        stage = "done" => passed = TRUE
+
+    NoDuplicateNames ==
+        \A c1 \in compiled : \A c2 \in compiled :
+            c1.name = c2.name => c1 = c2
+end define;
+
+process verifier = "verifier"
+begin
+    CompileAll:
+        stage := "compile_all";
+    ProcessLoop:
+        while cursor <= N do
+            ProcessV:
+                if Verifiers[cursor].is_dict /\ Verifiers[cursor].has_cond then
+                    compiled := compiled \cup {[name |-> Verifiers[cursor].name]};
+                end if;
+            AdvanceV:
+                cursor := cursor + 1;
+        end while;
+    TypeCheck:
+        stage := "type_check";
+        passed := TRUE;
+    Discover:
+        stage := "discover";
+    Run:
+        stage := "run";
+    Finish:
+        stage := "done";
+end process;
+
+end algorithm; *)
+
+====

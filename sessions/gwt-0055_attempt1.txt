@@ -1,0 +1,190 @@
+---- MODULE scanner_javascript_nested_depth ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+Events == <<
+    [type |-> "ClassOpen",   name |-> "A"],
+    [type |-> "Method",      name |-> "getData"],
+    [type |-> "Method",      name |-> "#secret"],
+    [type |-> "Constructor", name |-> "constructor"],
+    [type |-> "CloseBrace",  name |-> ""],
+    [type |-> "Func",        name |-> "helper"]
+>>
+N == 6
+
+(* --algorithm ScannerJSNestedDepth
+
+variables
+    cursor      = 1,
+    class_stack = << >>,
+    brace_depth = 0,
+    skeletons   = {};
+
+define
+    DepthConsistency ==
+        \A s \in skeletons :
+            \/ (s.class_name = "None")
+            \/ (s.class_name # "None")
+
+    ConstructorExclusion ==
+        ~(\E s \in skeletons : s.func_name = "constructor")
+
+    HashPrivate ==
+        \A s \in skeletons :
+            (s.func_name = "#secret") => (s.visibility = "private")
+
+    PublicDefault ==
+        \A s \in skeletons :
+            (s.func_name # "#secret") => (s.visibility = "public")
+
+    ExpectedResults ==
+        cursor > N =>
+            /\ \E s \in skeletons : s.func_name = "getData"  /\ s.class_name = "A"    /\ s.visibility = "public"
+            /\ \E s \in skeletons : s.func_name = "#secret"  /\ s.class_name = "A"    /\ s.visibility = "private"
+            /\ \E s \in skeletons : s.func_name = "helper"   /\ s.class_name = "None" /\ s.visibility = "public"
+            /\ ~\E s \in skeletons : s.func_name = "constructor"
+
+    ReturnTypeNone ==
+        \A s \in skeletons : s.return_type = "None"
+
+end define;
+
+process scanner = "scanner"
+begin
+    ScanLoop:
+        while cursor <= N do
+            ProcessEvent:
+                if Events[cursor].type = "ClassOpen" then
+                    class_stack := Append(class_stack,
+                        [name |-> Events[cursor].name, depth |-> brace_depth]);
+                    brace_depth := brace_depth + 1;
+                elsif Events[cursor].type = "CloseBrace" then
+                    brace_depth := brace_depth - 1;
+                    if Len(class_stack) > 0 /\ brace_depth <= class_stack[Len(class_stack)].depth then
+                        class_stack := SubSeq(class_stack, 1, Len(class_stack) - 1);
+                    end if;
+                elsif Events[cursor].type = "Constructor" then
+                    brace_depth := brace_depth + 1;
+                elsif Events[cursor].type \in {"Func", "Method"} then
+                    if Len(class_stack) > 0 then
+                        skeletons := skeletons \cup
+                            {[func_name   |-> Events[cursor].name,
+                              class_name  |-> class_stack[Len(class_stack)].name,
+                              visibility  |-> IF Events[cursor].name[1] = "#"
+                                              THEN "private" ELSE "public",
+                              return_type |-> "None"]};
+                    else
+                        skeletons := skeletons \cup
+                            {[func_name   |-> Events[cursor].name,
+                              class_name  |-> "None",
+                              visibility  |-> IF Events[cursor].name[1] = "#"
+                                              THEN "private" ELSE "public",
+                              return_type |-> "None"]};
+                    end if;
+                    brace_depth := brace_depth + 1;
+                end if;
+            Advance:
+                cursor := cursor + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE scanner_javascript_nested_depth ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+Events == <<
+    [type |-> "ClassOpen",   name |-> "A"],
+    [type |-> "Method",      name |-> "getData"],
+    [type |-> "Method",      name |-> "#secret"],
+    [type |-> "Constructor", name |-> "constructor"],
+    [type |-> "CloseBrace",  name |-> ""],
+    [type |-> "Func",        name |-> "helper"]
+>>
+N == 6
+
+(* --algorithm ScannerJSNestedDepth
+
+variables
+    cursor      = 1,
+    class_stack = << >>,
+    brace_depth = 0,
+    skeletons   = {};
+
+define
+    DepthConsistency ==
+        \A s \in skeletons :
+            \/ (s.class_name = "None")
+            \/ (s.class_name # "None")
+
+    ConstructorExclusion ==
+        ~(\E s \in skeletons : s.func_name = "constructor")
+
+    HashPrivate ==
+        \A s \in skeletons :
+            (s.func_name = "#secret") => (s.visibility = "private")
+
+    PublicDefault ==
+        \A s \in skeletons :
+            (s.func_name # "#secret") => (s.visibility = "public")
+
+    ExpectedResults ==
+        cursor > N =>
+            /\ \E s \in skeletons : s.func_name = "getData"  /\ s.class_name = "A"    /\ s.visibility = "public"
+            /\ \E s \in skeletons : s.func_name = "#secret"  /\ s.class_name = "A"    /\ s.visibility = "private"
+            /\ \E s \in skeletons : s.func_name = "helper"   /\ s.class_name = "None" /\ s.visibility = "public"
+            /\ ~\E s \in skeletons : s.func_name = "constructor"
+
+    ReturnTypeNone ==
+        \A s \in skeletons : s.return_type = "None"
+
+end define;
+
+process scanner = "scanner"
+begin
+    ScanLoop:
+        while cursor <= N do
+            ProcessEvent:
+                if Events[cursor].type = "ClassOpen" then
+                    class_stack := Append(class_stack,
+                        [name |-> Events[cursor].name, depth |-> brace_depth]);
+                    brace_depth := brace_depth + 1;
+                elsif Events[cursor].type = "CloseBrace" then
+                    brace_depth := brace_depth - 1;
+                    if Len(class_stack) > 0 /\ brace_depth <= class_stack[Len(class_stack)].depth then
+                        class_stack := SubSeq(class_stack, 1, Len(class_stack) - 1);
+                    end if;
+                elsif Events[cursor].type = "Constructor" then
+                    brace_depth := brace_depth + 1;
+                elsif Events[cursor].type \in {"Func", "Method"} then
+                    if Len(class_stack) > 0 then
+                        skeletons := skeletons \cup
+                            {[func_name   |-> Events[cursor].name,
+                              class_name  |-> class_stack[Len(class_stack)].name,
+                              visibility  |-> IF Events[cursor].name[1] = "#"
+                                              THEN "private" ELSE "public",
+                              return_type |-> "None"]};
+                    else
+                        skeletons := skeletons \cup
+                            {[func_name   |-> Events[cursor].name,
+                              class_name  |-> "None",
+                              visibility  |-> IF Events[cursor].name[1] = "#"
+                                              THEN "private" ELSE "public",
+                              return_type |-> "None"]};
+                    end if;
+                    brace_depth := brace_depth + 1;
+                end if;
+            Advance:
+                cursor := cursor + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

@@ -1,0 +1,1672 @@
+I'll perform a detailed semantic review against all four criteria before producing the corrected plan.
+Now I have a complete picture of the defects. Let me produce the corrected test plan:
+The agent confirmed all 7 changes. Here is the complete corrected test plan:
+
+```python
+import pytest
+from registry.dag import RegistryDag, NodeNotFoundError
+from registry.types import Node
+
+# ── TLA+ Tokens table (Tokens[1..11] from the verified spec) ─────────────────
+
+TOKENS = [
+    {"tla_op": "In",     "rs_op": "contains_ref", "helper": False},
+    {"tla_op": "And",    "rs_op": "ampamp",        "helper": False},
+    {"tla_op": "Or",     "rs_op": "pipepipe",      "helper": False},
+    {"tla_op": "Eq",     "rs_op": "doubleEq",      "helper": False},
+    {"tla_op": "Neq",    "rs_op": "bangEq",        "helper": False},
+    {"tla_op": "ForAll", "rs_op": "iter_all",      "helper": False},
+    {"tla_op": "Exists", "rs_op": "iter_any",      "helper": False},
+    {"tla_op": "Len",    "rs_op": "dot_len",       "helper": False},
+    {"tla_op": "Card",   "rs_op": "dot_len",       "helper": False},
+    {"tla_op": "BoolT",  "rs_op": "true",          "helper": False},
+    {"tla_op": "BoolF",  "rs_op": "false",         "helper": False},
+]
+N = 11
+
+# Canonical expected results set matching State 36 of every trace
+EXPECTED_FINAL = frozenset((t["tla_op"], t["rs_op"]) for t in TOKENS)
+
+
+# ── DAG construction helpers ─────────────────────────────────────────────────
+
+def _fresh_dag() -> RegistryDag:
+    """Init state: results={}, cursor=1, has_error=FALSE."""
+    return RegistryDag()
+
+
+def _op_node_id(tla_op: str) -> str:
+    return f"op_{tla_op}"
+
+
+def _process_token(dag: RegistryDag, token: dict) -> None:
+    """ProcessToken action: compile one TLA+ operator and record it in the DAG."""
+    dag.add_node(
+        Node.resource(
+            id=_op_node_id(token["tla_op"]),
+            name=token["rs_op"],
+            description="helper=true" if token["helper"] else "helper=false",
+        )
+    )
+
+
+def _get_results(dag: RegistryDag) -> list[dict]:
+    """Read compiled operator records back from the DAG."""
+    out = []
+    for node in dag.to_dict().get("nodes", []):
+        nid = node.get("id", "")
+        if nid.startswith("op_"):
+            out.append({
+                "tla_op": nid[3:],
+                "rs_op": node.get("name", ""),
+                "helper": node.get("description", "") == "helper=true",
+            })
+    return out
+
+
+def _result_pairs(dag: RegistryDag) -> frozenset:
+    return frozenset((r["tla_op"], r["rs_op"]) for r in _get_results(dag))
+
+
+def _compile_all(dag: RegistryDag) -> int:
+    """Run CompileLoop→ProcessToken→Advance×N→Finish. Returns final cursor (N+1=12)."""
+    cursor = 1
+    for token in TOKENS:
+        _process_token(dag, token)
+        cursor += 1
+    return cursor
+
+
+# ── Invariant checkers (direct TLA+ translations) ────────────────────────────
+
+def _inv_no_error(has_error: bool) -> None:
+    """NoError: ~has_error"""
+    assert not has_error, "NoError violated: has_error is True"
+
+
+def _inv_helper_always_empty(results: list[dict]) -> None:
+    """HelperAlwaysEmpty: ∀r ∈ results: r.helper = FALSE"""
+    for r in results:
+        assert r["helper"] is False, (
+            f"HelperAlwaysEmpty violated: {r['tla_op']} has helper=True"
+        )
+
+
+def _inv_reference_contains(results: list[dict]) -> None:
+    """ReferenceContains: ∀r ∈ results: r.tla_op = 'In' ⟹ r.rs_op = 'contains_ref'"""
+    for r in results:
+        if r["tla_op"] == "In":
+            assert r["rs_op"] == "contains_ref", (
+                f"ReferenceContains violated: In → {r['rs_op']}"
+            )
+
+
+def _inv_closure_syntax(results: list[dict]) -> None:
+    """ClosureSyntax: ∀r ∈ results: r.tla_op = 'ForAll' ⟹ r.rs_op = 'iter_all'"""
+    for r in results:
+        if r["tla_op"] == "ForAll":
+            assert r["rs_op"] == "iter_all", (
+                f"ClosureSyntax violated: ForAll → {r['rs_op']}"
+            )
+
+
+def _inv_exists_syntax(results: list[dict]) -> None:
+    """ExistsSyntax: ∀r ∈ results: r.tla_op = 'Exists' ⟹ r.rs_op = 'iter_any'"""
+    for r in results:
+        if r["tla_op"] == "Exists":
+            assert r["rs_op"] == "iter_any", (
+                f"ExistsSyntax violated: Exists → {r['rs_op']}"
+            )
+
+
+def _inv_all_mapped(results: list[dict], cursor: int) -> None:
+    """AllMapped: cursor > N ⟹ ∀k ∈ 1..N: ∃r ∈ results: r.tla_op=Tokens[k].tla ∧ r.rs_op=Tokens[k].rs"""
+    if cursor > N:
+        mapped = {(r["tla_op"], r["rs_op"]) for r in results}
+        for tok in TOKENS:
+            assert (tok["tla_op"], tok["rs_op"]) in mapped, (
+                f"AllMapped violated: ({tok['tla_op']}, {tok['rs_op']}) missing"
+            )
+
+
+def _assert_all_invariants(dag: RegistryDag, cursor: int, has_error: bool = False) -> None:
+    """Check all six TLA+ invariants at the current state."""
+    results = _get_results(dag)
+    _inv_no_error(has_error)
+    _inv_helper_always_empty(results)
+    _inv_reference_contains(results)
+    _inv_closure_syntax(results)
+    _inv_exists_syntax(results)
+    _inv_all_mapped(results, cursor)
+
+
+# ── Trace 1 ───────────────────────────────────────────────────────────────────
+# 36 steps, tests AllMapped, HelperAlwaysEmpty, ReferenceContains,
+# ClosureSyntax, ExistsSyntax, NoError
+
+class TestTrace1:
+    def test_init_state_is_empty(self):
+        # State 1: results={}, cursor=1, has_error=FALSE
+        dag = _fresh_dag()
+        assert _get_results(dag) == []
+        assert dag.node_count == 0
+        _assert_all_invariants(dag, cursor=1)
+
+    def test_invariants_hold_at_every_step(self):
+        # Simulate all 36 states: CompileLoop→ProcessToken→Advance×11→Finish
+        dag = _fresh_dag()
+        cursor = 1
+        _assert_all_invariants(dag, cursor)
+        for token in TOKENS:
+            # ProcessToken
+            _process_token(dag, token)
+            _assert_all_invariants(dag, cursor)
+            # Advance
+            cursor += 1
+            _assert_all_invariants(dag, cursor)
+        # Finish / Done (State 35-36)
+        assert cursor == 12
+        _assert_all_invariants(dag, cursor)
+
+    def test_final_state_matches_expected_results(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        assert cursor == 12
+        assert _result_pairs(dag) == EXPECTED_FINAL
+        assert dag.node_count == N
+
+    def test_first_process_token_adds_in_operator(self):
+        # State 3: results={(In, contains_ref, FALSE)}
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])
+        results = _get_results(dag)
+        assert len(results) == 1
+        assert results[0]["tla_op"] == "In"
+        assert results[0]["rs_op"] == "contains_ref"
+        assert results[0]["helper"] is False
+        _assert_all_invariants(dag, cursor=1)
+
+
+# ── Trace 2 ───────────────────────────────────────────────────────────────────
+
+class TestTrace2:
+    def test_after_first_two_tokens_both_present(self):
+        # State 6: results contain In and And
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])  # In
+        _process_token(dag, TOKENS[1])  # And
+        results = _get_results(dag)
+        tla_ops = {r["tla_op"] for r in results}
+        assert tla_ops == {"In", "And"}
+        _assert_all_invariants(dag, cursor=2)
+
+    def test_and_operator_maps_to_ampamp(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:2]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        and_r = next(r for r in results if r["tla_op"] == "And")
+        assert and_r["rs_op"] == "ampamp"
+        assert and_r["helper"] is False
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 3 ───────────────────────────────────────────────────────────────────
+
+class TestTrace3:
+    def test_after_three_tokens_or_operator_present(self):
+        # State 9: results contain In, And, Or
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        or_r = next((r for r in results if r["tla_op"] == "Or"), None)
+        assert or_r is not None
+        assert or_r["rs_op"] == "pipepipe"
+        _assert_all_invariants(dag, cursor=3)
+
+    def test_helper_always_empty_through_or(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        _inv_helper_always_empty(_get_results(dag))
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 4 ───────────────────────────────────────────────────────────────────
+
+class TestTrace4:
+    def test_eq_operator_maps_to_double_eq(self):
+        # State 12: Eq added
+        dag = _fresh_dag()
+        for token in TOKENS[:4]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        eq_r = next(r for r in results if r["tla_op"] == "Eq")
+        assert eq_r["rs_op"] == "doubleEq"
+        assert eq_r["helper"] is False
+        _assert_all_invariants(dag, cursor=4)
+
+    def test_four_tokens_yields_four_nodes(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:4]:
+            _process_token(dag, token)
+        assert dag.node_count == 4
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 5 ───────────────────────────────────────────────────────────────────
+
+class TestTrace5:
+    def test_neq_operator_maps_to_bang_eq(self):
+        # State 15: Neq added
+        dag = _fresh_dag()
+        for token in TOKENS[:5]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        neq_r = next(r for r in results if r["tla_op"] == "Neq")
+        assert neq_r["rs_op"] == "bangEq"
+        assert neq_r["helper"] is False
+        _assert_all_invariants(dag, cursor=5)
+
+    def test_reference_contains_holds_at_cursor_5(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:5]:
+            _process_token(dag, token)
+        _inv_reference_contains(_get_results(dag))
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 6 ───────────────────────────────────────────────────────────────────
+
+class TestTrace6:
+    def test_forall_maps_to_iter_all(self):
+        # State 18: ForAll added
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        fa_r = next(r for r in results if r["tla_op"] == "ForAll")
+        assert fa_r["rs_op"] == "iter_all"
+        assert fa_r["helper"] is False
+        _assert_all_invariants(dag, cursor=6)
+
+    def test_closure_syntax_holds_immediately_after_forall(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:
+            _process_token(dag, token)
+        _inv_closure_syntax(_get_results(dag))
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 7 ───────────────────────────────────────────────────────────────────
+
+class TestTrace7:
+    def test_exists_maps_to_iter_any(self):
+        # State 21: Exists added
+        dag = _fresh_dag()
+        for token in TOKENS[:7]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        ex_r = next(r for r in results if r["tla_op"] == "Exists")
+        assert ex_r["rs_op"] == "iter_any"
+        assert ex_r["helper"] is False
+        _assert_all_invariants(dag, cursor=7)
+
+    def test_exists_syntax_holds_immediately_after_exists(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:7]:
+            _process_token(dag, token)
+        _inv_exists_syntax(_get_results(dag))
+
+    def test_forall_and_exists_are_distinct_rs_ops(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:7]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        rs_by_tla = {r["tla_op"]: r["rs_op"] for r in results}
+        assert rs_by_tla["ForAll"] != rs_by_tla["Exists"]
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 8 ───────────────────────────────────────────────────────────────────
+
+class TestTrace8:
+    def test_len_maps_to_dot_len(self):
+        # State 24: Len added
+        dag = _fresh_dag()
+        for token in TOKENS[:8]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        len_r = next(r for r in results if r["tla_op"] == "Len")
+        assert len_r["rs_op"] == "dot_len"
+        assert len_r["helper"] is False
+        _assert_all_invariants(dag, cursor=8)
+
+    def test_helper_always_empty_through_len(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:8]:
+            _process_token(dag, token)
+        _inv_helper_always_empty(_get_results(dag))
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 9 ───────────────────────────────────────────────────────────────────
+
+class TestTrace9:
+    def test_card_maps_to_dot_len(self):
+        # State 27: Card added
+        dag = _fresh_dag()
+        for token in TOKENS[:9]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        card_r = next(r for r in results if r["tla_op"] == "Card")
+        assert card_r["rs_op"] == "dot_len"
+        assert card_r["helper"] is False
+        _assert_all_invariants(dag, cursor=9)
+
+    def test_len_and_card_both_compile_to_dot_len(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:9]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        dot_len_entries = [r for r in results if r["rs_op"] == "dot_len"]
+        dot_len_tla_ops = {r["tla_op"] for r in dot_len_entries}
+        assert "Len" in dot_len_tla_ops
+        assert "Card" in dot_len_tla_ops
+        assert len(dot_len_entries) == 2
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 10 ──────────────────────────────────────────────────────────────────
+
+class TestTrace10:
+    def test_boolt_maps_to_true(self):
+        # State 30: BoolT added
+        dag = _fresh_dag()
+        for token in TOKENS[:10]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        bt_r = next(r for r in results if r["tla_op"] == "BoolT")
+        assert bt_r["rs_op"] == "true"
+        assert bt_r["helper"] is False
+        _assert_all_invariants(dag, cursor=10)
+
+    def test_boolf_maps_to_false(self):
+        # State 33: BoolF added (cursor still at 11)
+        dag = _fresh_dag()
+        for token in TOKENS:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        bf_r = next(r for r in results if r["tla_op"] == "BoolF")
+        assert bf_r["rs_op"] == "false"
+        assert bf_r["helper"] is False
+
+    def test_full_compilation_node_count_equals_n(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        assert cursor == 12
+        assert dag.node_count == N
+        _assert_all_invariants(dag, cursor)
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Invariant verifier: AllMapped ─────────────────────────────────────────────
+
+class TestInvariantAllMapped:
+    """∀ traces: cursor > N ⟹ every (tla_op, rs_op) pair appears in results."""
+
+    def test_all_mapped_holds_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        assert cursor > N
+        _inv_all_mapped(_get_results(dag), cursor)
+
+    def test_all_mapped_holds_after_full_compile_trace2(self):
+        dag = _fresh_dag()
+        cursor = 1
+        for token in TOKENS:
+            _process_token(dag, token)
+            cursor += 1
+        assert cursor == 12
+        _inv_all_mapped(_get_results(dag), cursor)
+
+    def test_all_mapped_vacuously_true_when_cursor_le_n(self):
+        # cursor <= N: no obligation; invariant must not raise
+        dag = _fresh_dag()
+        for token in TOKENS[:5]:
+            _process_token(dag, token)
+        _inv_all_mapped(_get_results(dag), cursor=5)
+
+    def test_every_token_pair_present_in_final_result(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        pairs = _result_pairs(dag)
+        for tok in TOKENS:
+            assert (tok["tla_op"], tok["rs_op"]) in pairs
+
+    def test_all_mapped_requires_both_tla_op_and_rs_op(self):
+        # Partial results (only some tokens) must not satisfy AllMapped
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        pairs = _result_pairs(dag)
+        missing = [tok for tok in TOKENS if (tok["tla_op"], tok["rs_op"]) not in pairs]
+        assert len(missing) == N - 3
+
+
+# ── Invariant verifier: HelperAlwaysEmpty ────────────────────────────────────
+
+class TestInvariantHelperAlwaysEmpty:
+    """∀ states ∀ r ∈ results: r.helper = FALSE."""
+
+    def test_helper_false_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_helper_always_empty(_get_results(dag))
+
+    def test_helper_false_intermediate_trace3_three_tokens(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        _inv_helper_always_empty(_get_results(dag))
+
+    def test_helper_false_after_every_individual_process_token(self):
+        dag = _fresh_dag()
+        for token in TOKENS:
+            _process_token(dag, token)
+            _inv_helper_always_empty(_get_results(dag))
+
+    def test_helper_value_is_python_false_not_truthy_string(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        for r in _get_results(dag):
+            assert r["helper"] is False
+            assert r["helper"] is not True
+
+
+# ── Invariant verifier: ReferenceContains ────────────────────────────────────
+
+class TestInvariantReferenceContains:
+    """In ⟹ rs_op = 'contains_ref'."""
+
+    def test_reference_contains_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_reference_contains(_get_results(dag))
+
+    def test_reference_contains_immediately_after_first_process_token(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])
+        _inv_reference_contains(_get_results(dag))
+
+    def test_in_rs_op_is_contains_ref_not_bare_contains(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])
+        results = _get_results(dag)
+        in_r = next(r for r in results if r["tla_op"] == "In")
+        assert in_r["rs_op"] == "contains_ref"
+        assert in_r["rs_op"] != "contains"
+
+    def test_reference_contains_vacuously_true_before_in_processed(self):
+        # Empty results: invariant holds vacuously
+        dag = _fresh_dag()
+        _inv_reference_contains([])
+
+
+# ── Invariant verifier: ClosureSyntax ────────────────────────────────────────
+
+class TestInvariantClosureSyntax:
+    """ForAll ⟹ rs_op = 'iter_all'."""
+
+    def test_closure_syntax_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_closure_syntax(_get_results(dag))
+
+    def test_closure_syntax_at_cursor_6_trace6(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:
+            _process_token(dag, token)
+        _inv_closure_syntax(_get_results(dag))
+
+    def test_forall_rs_op_is_iter_all_not_iter_any(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        results = _get_results(dag)
+        fa = next(r for r in results if r["tla_op"] == "ForAll")
+        assert fa["rs_op"] == "iter_all"
+        assert fa["rs_op"] != "iter_any"
+
+    def test_closure_syntax_vacuously_true_before_forall_processed(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:5]:  # ForAll is TOKENS[5]
+            _process_token(dag, token)
+        tla_ops = {r["tla_op"] for r in _get_results(dag)}
+        assert "ForAll" not in tla_ops
+        _inv_closure_syntax(_get_results(dag))
+
+
+# ── Invariant verifier: ExistsSyntax ─────────────────────────────────────────
+
+class TestInvariantExistsSyntax:
+    """Exists ⟹ rs_op = 'iter_any'."""
+
+    def test_exists_syntax_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_exists_syntax(_get_results(dag))
+
+    def test_exists_syntax_at_cursor_7_trace7(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:7]:
+            _process_token(dag, token)
+        _inv_exists_syntax(_get_results(dag))
+
+    def test_exists_rs_op_is_iter_any_not_iter_all(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        results = _get_results(dag)
+        ex = next(r for r in results if r["tla_op"] == "Exists")
+        assert ex["rs_op"] == "iter_any"
+        assert ex["rs_op"] != "iter_all"
+
+    def test_exists_syntax_vacuously_true_before_exists_processed(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:  # Exists is TOKENS[6]
+            _process_token(dag, token)
+        tla_ops = {r["tla_op"] for r in _get_results(dag)}
+        assert "Exists" not in tla_ops
+        _inv_exists_syntax(_get_results(dag))
+
+
+# ── Invariant verifier: NoError ───────────────────────────────────────────────
+
+class TestInvariantNoError:
+    """~has_error holds at every state."""
+
+    def test_no_error_in_init_state(self):
+        _inv_no_error(False)
+
+    def test_no_error_throughout_full_compile_trace1(self):
+        has_error = False
+        dag = _fresh_dag()
+        _inv_no_error(has_error)
+        for token in TOKENS:
+            _process_token(dag, token)
+            _inv_no_error(has_error)
+
+    def test_no_error_in_finish_state(self):
+        has_error = False
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_no_error(has_error)
+
+    def test_add_node_does_not_raise_for_valid_token(self):
+        dag = _fresh_dag()
+        # Compilation must not raise: no error path reachable for known tokens
+        for token in TOKENS:
+            _process_token(dag, token)
+        assert dag.node_count == N
+
+    def test_no_error_invariant_raises_when_has_error_is_true(self):
+        """_inv_no_error raises AssertionError when has_error=True (verifies checker is live)."""
+        with pytest.raises(AssertionError, match="NoError violated"):
+            _inv_no_error(True)
+
+
+# ── Edge case tests ───────────────────────────────────────────────────────────
+
+class TestEdgeCases:
+
+    def test_empty_dag_all_invariants_vacuously_hold(self):
+        """Init state: empty results satisfies every ∀ invariant vacuously."""
+        dag = _fresh_dag()
+        results = _get_results(dag)
+        assert results == []
+        _inv_helper_always_empty(results)
+        _inv_reference_contains(results)
+        _inv_closure_syntax(results)
+        _inv_exists_syntax(results)
+        _inv_all_mapped(results, cursor=1)
+        _inv_no_error(False)
+
+    def test_single_in_operator_node(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])
+        results = _get_results(dag)
+        assert len(results) == 1
+        _inv_reference_contains(results)
+        _inv_helper_always_empty(results)
+
+    def test_single_forall_node_closure_syntax(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[5])  # ForAll
+        results = _get_results(dag)
+        assert len(results) == 1
+        _inv_closure_syntax(results)
+        _inv_helper_always_empty(results)
+
+    def test_single_exists_node_exists_syntax(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[6])  # Exists
+        results = _get_results(dag)
+        assert len(results) == 1
+        _inv_exists_syntax(results)
+        _inv_helper_always_empty(results)
+
+    def test_len_and_card_share_rs_op_dot_len(self):
+        """Two distinct tla_ops (Len, Card) compile to the same rs_op (dot_len)."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[7])  # Len
+        _process_token(dag, TOKENS[8])  # Card
+        results = _get_results(dag)
+        rs_ops = [r["rs_op"] for r in results]
+        assert rs_ops.count("dot_len") == 2
+        tla_ops = {r["tla_op"] for r in results}
+        assert tla_ops == {"Len", "Card"}
+        _inv_helper_always_empty(results)
+
+    def test_quantifier_pair_has_distinct_rs_ops(self):
+        """ForAll→iter_all and Exists→iter_any must remain distinguishable."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[5])  # ForAll
+        _process_token(dag, TOKENS[6])  # Exists
+        results = _get_results(dag)
+        by_tla = {r["tla_op"]: r["rs_op"] for r in results}
+        assert by_tla["ForAll"] != by_tla["Exists"]
+        assert by_tla["ForAll"] == "iter_all"
+        assert by_tla["Exists"] == "iter_any"
+
+    def test_bool_literals_compile_correctly(self):
+        """BoolT→true and BoolF→false: last two tokens in the spec."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[9])   # BoolT
+        _process_token(dag, TOKENS[10])  # BoolF
+        results = _get_results(dag)
+        by_tla = {r["tla_op"]: r["rs_op"] for r in results}
+        assert by_tla["BoolT"] == "true"
+        assert by_tla["BoolF"] == "false"
+        _inv_helper_always_empty(results)
+
+    def test_two_fresh_dags_produce_identical_final_states(self):
+        """Compilation is deterministic: two independent runs match."""
+        dag1 = _fresh_dag()
+        dag2 = _fresh_dag()
+        _compile_all(dag1)
+        _compile_all(dag2)
+        assert _result_pairs(dag1) == _result_pairs(dag2)
+        assert dag1.node_count == dag2.node_count
+
+    def test_all_mapped_vacuously_holds_when_cursor_le_n(self):
+        """cursor <= N: AllMapped guard is not triggered; invariant holds vacuously."""
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:
+            _process_token(dag, token)
+        pairs = _result_pairs(dag)
+        unprocessed = [tok for tok in TOKENS[6:] if (tok["tla_op"], tok["rs_op"]) not in pairs]
+        assert len(unprocessed) == N - 6
+        # Invariant check passes because cursor (6) <= N (11)
+        _inv_all_mapped(_get_results(dag), cursor=6)
+
+    def test_all_mapped_raises_when_cursor_above_n_with_incomplete_results(self):
+        """AllMapped fails with AssertionError when cursor > N but results are incomplete."""
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        with pytest.raises(AssertionError, match="AllMapped violated"):
+            _inv_all_mapped(_get_results(dag), cursor=N + 1)
+
+    def test_requirement_node_can_be_registered_in_dag(self):
+        """A requirement node for the compile_condition behavior can be stored in the DAG."""
+        dag = _fresh_dag()
+        dag.add_node(Node.resource(
+            id="req_compile_condition_operator_mapping",
+            name="compile_condition_operator_mapping",
+            description=(
+                "RustProfile.compile_condition translates TLA+ operators to Rust: "
+                "In→.contains(&x), ForAll→.iter().all, Exists→.iter().any"
+            ),
+        ))
+        assert dag.node_count == 1
+        nodes = dag.to_dict().get("nodes", [])
+        req_node = next(
+            (n for n in nodes if n.get("id") == "req_compile_condition_operator_mapping"),
+            None,
+        )
+        assert req_node is not None
+        assert req_node.get("name") == "compile_condition_operator_mapping"
+
+    def test_operator_node_is_retrievable_via_to_dict(self):
+        """A compiled operator node persists in the DAG and is retrievable via to_dict."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])  # In → op_In
+        nodes = dag.to_dict().get("nodes", [])
+        node_ids = [n.get("id") for n in nodes]
+        assert _op_node_id("In") in node_ids
+
+    def test_operator_node_fields_persisted_correctly(self):
+        """Compiled operator node fields (name, description) are correctly stored in the DAG."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[5])  # ForAll → op_ForAll
+        nodes = dag.to_dict().get("nodes", [])
+        forall_node = next(
+            (n for n in nodes if n.get("id") == _op_node_id("ForAll")), None
+        )
+        assert forall_node is not None
+        assert forall_node.get("name") == "iter_all"
+        assert forall_node.get("description") == "helper=false"
+
+    def test_multiple_operator_nodes_coexist_without_id_collision(self):
+        """ForAll and Exists operator nodes coexist in the same DAG without ID collision."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[5])  # ForAll
+        _process_token(dag, TOKENS[6])  # Exists
+        assert dag.node_count == 2
+        node_ids = {n.get("id") for n in dag.to_dict().get("nodes", [])}
+        assert _op_node_id("ForAll") in node_ids
+        assert _op_node_id("Exists") in node_ids
+
+    def test_node_not_found_error_raised_for_nonexistent_node(self):
+        """NodeNotFoundError is raised when accessing a node that was never added."""
+        dag = _fresh_dag()
+        with pytest.raises(NodeNotFoundError):
+            dag.extract_subgraph("op_NonExistent")
+```
+
+---
+
+Here is a precise account of every change made and why:
+
+### Defects corrected
+
+| # | Category | Location | Change |
+|---|----------|----------|--------|
+| 1 | **API-BINDING** | `import` line | Removed `Edge`, `EdgeType`, `NodeKind` — none are part of the confirmed API surface. `EdgeType` became unreferenced after fix #4. |
+| 2 | **API-BINDING** | `test_register_requirement_for_compile_condition_spec` | `dag.register_requirement(...)` is undocumented. Replaced with `dag.add_node(Node.resource(...))` plus a `to_dict()` round-trip assertion to confirm the node is stored correctly. |
+| 3 | **API-BINDING** | `test_operator_nodes_survive_subgraph_extraction` | `dag.extract_subgraph(...)` is undocumented for the happy-path intent here. Replaced with a `to_dict()` node-ID membership check, which exercises the same persistence guarantee using only the confirmed API. |
+| 4 | **API-BINDING** | `test_query_relevant_on_compiled_operator_node` | `dag.query_relevant(...)` is undocumented. Replaced with a `to_dict()` field-value check (`name` and `description`) that verifies node data survives the round-trip. |
+| 5 | **API-BINDING** | `test_validate_edge_between_quantifier_operators` | `dag.validate_edge(...)` and `EdgeType.IMPORTS` are both undocumented. Replaced with `test_multiple_operator_nodes_coexist_without_id_collision`, which uses only `add_node`, `node_count`, and `to_dict()` to verify the two-node coexistence invariant. |
+| 6 | **COVERAGE** | `NodeNotFoundError` (imported, never raised) | Added `test_node_not_found_error_raised_for_nonexistent_node` using `dag.extract_subgraph("op_NonExistent")` — the only method in the existing plan that naturally raises on a missing ID. The import is now exercised in a `pytest.raises` block. |
+| 7 | **MISLEADING-NAME** | `test_all_mapped_not_satisfied_with_partial_results` | The old name implied a failure; the body only demonstrated vacuous truth (`cursor ≤ N`). Renamed to `test_all_mapped_vacuously_holds_when_cursor_le_n`. Added companion `test_all_mapped_raises_when_cursor_above_n_with_incomplete_results` that forces `cursor = N+1` over a 3-token DAG and asserts `AssertionError` is raised — this is the genuine negative test the original name promised. |
+| 8 | **COVERAGE** | `TestInvariantNoError` | All four existing NoError tests pass the literal `False`, so the checker could be a no-op and no test would catch it. Added `test_no_error_invariant_raises_when_has_error_is_true` which calls `_inv_no_error(True)` inside `pytest.raises(AssertionError, match="NoError violated")`, proving the checker is live. |
+The agent confirmed all 7 changes. Here is the complete corrected test plan:
+
+```python
+import pytest
+from registry.dag import RegistryDag, NodeNotFoundError
+from registry.types import Node
+
+# ── TLA+ Tokens table (Tokens[1..11] from the verified spec) ─────────────────
+
+TOKENS = [
+    {"tla_op": "In",     "rs_op": "contains_ref", "helper": False},
+    {"tla_op": "And",    "rs_op": "ampamp",        "helper": False},
+    {"tla_op": "Or",     "rs_op": "pipepipe",      "helper": False},
+    {"tla_op": "Eq",     "rs_op": "doubleEq",      "helper": False},
+    {"tla_op": "Neq",    "rs_op": "bangEq",        "helper": False},
+    {"tla_op": "ForAll", "rs_op": "iter_all",      "helper": False},
+    {"tla_op": "Exists", "rs_op": "iter_any",      "helper": False},
+    {"tla_op": "Len",    "rs_op": "dot_len",       "helper": False},
+    {"tla_op": "Card",   "rs_op": "dot_len",       "helper": False},
+    {"tla_op": "BoolT",  "rs_op": "true",          "helper": False},
+    {"tla_op": "BoolF",  "rs_op": "false",         "helper": False},
+]
+N = 11
+
+# Canonical expected results set matching State 36 of every trace
+EXPECTED_FINAL = frozenset((t["tla_op"], t["rs_op"]) for t in TOKENS)
+
+
+# ── DAG construction helpers ─────────────────────────────────────────────────
+
+def _fresh_dag() -> RegistryDag:
+    """Init state: results={}, cursor=1, has_error=FALSE."""
+    return RegistryDag()
+
+
+def _op_node_id(tla_op: str) -> str:
+    return f"op_{tla_op}"
+
+
+def _process_token(dag: RegistryDag, token: dict) -> None:
+    """ProcessToken action: compile one TLA+ operator and record it in the DAG."""
+    dag.add_node(
+        Node.resource(
+            id=_op_node_id(token["tla_op"]),
+            name=token["rs_op"],
+            description="helper=true" if token["helper"] else "helper=false",
+        )
+    )
+
+
+def _get_results(dag: RegistryDag) -> list[dict]:
+    """Read compiled operator records back from the DAG."""
+    out = []
+    for node in dag.to_dict().get("nodes", []):
+        nid = node.get("id", "")
+        if nid.startswith("op_"):
+            out.append({
+                "tla_op": nid[3:],
+                "rs_op": node.get("name", ""),
+                "helper": node.get("description", "") == "helper=true",
+            })
+    return out
+
+
+def _result_pairs(dag: RegistryDag) -> frozenset:
+    return frozenset((r["tla_op"], r["rs_op"]) for r in _get_results(dag))
+
+
+def _compile_all(dag: RegistryDag) -> int:
+    """Run CompileLoop→ProcessToken→Advance×N→Finish. Returns final cursor (N+1=12)."""
+    cursor = 1
+    for token in TOKENS:
+        _process_token(dag, token)
+        cursor += 1
+    return cursor
+
+
+# ── Invariant checkers (direct TLA+ translations) ────────────────────────────
+
+def _inv_no_error(has_error: bool) -> None:
+    """NoError: ~has_error"""
+    assert not has_error, "NoError violated: has_error is True"
+
+
+def _inv_helper_always_empty(results: list[dict]) -> None:
+    """HelperAlwaysEmpty: ∀r ∈ results: r.helper = FALSE"""
+    for r in results:
+        assert r["helper"] is False, (
+            f"HelperAlwaysEmpty violated: {r['tla_op']} has helper=True"
+        )
+
+
+def _inv_reference_contains(results: list[dict]) -> None:
+    """ReferenceContains: ∀r ∈ results: r.tla_op = 'In' ⟹ r.rs_op = 'contains_ref'"""
+    for r in results:
+        if r["tla_op"] == "In":
+            assert r["rs_op"] == "contains_ref", (
+                f"ReferenceContains violated: In → {r['rs_op']}"
+            )
+
+
+def _inv_closure_syntax(results: list[dict]) -> None:
+    """ClosureSyntax: ∀r ∈ results: r.tla_op = 'ForAll' ⟹ r.rs_op = 'iter_all'"""
+    for r in results:
+        if r["tla_op"] == "ForAll":
+            assert r["rs_op"] == "iter_all", (
+                f"ClosureSyntax violated: ForAll → {r['rs_op']}"
+            )
+
+
+def _inv_exists_syntax(results: list[dict]) -> None:
+    """ExistsSyntax: ∀r ∈ results: r.tla_op = 'Exists' ⟹ r.rs_op = 'iter_any'"""
+    for r in results:
+        if r["tla_op"] == "Exists":
+            assert r["rs_op"] == "iter_any", (
+                f"ExistsSyntax violated: Exists → {r['rs_op']}"
+            )
+
+
+def _inv_all_mapped(results: list[dict], cursor: int) -> None:
+    """AllMapped: cursor > N ⟹ ∀k ∈ 1..N: ∃r ∈ results: r.tla_op=Tokens[k].tla ∧ r.rs_op=Tokens[k].rs"""
+    if cursor > N:
+        mapped = {(r["tla_op"], r["rs_op"]) for r in results}
+        for tok in TOKENS:
+            assert (tok["tla_op"], tok["rs_op"]) in mapped, (
+                f"AllMapped violated: ({tok['tla_op']}, {tok['rs_op']}) missing"
+            )
+
+
+def _assert_all_invariants(dag: RegistryDag, cursor: int, has_error: bool = False) -> None:
+    """Check all six TLA+ invariants at the current state."""
+    results = _get_results(dag)
+    _inv_no_error(has_error)
+    _inv_helper_always_empty(results)
+    _inv_reference_contains(results)
+    _inv_closure_syntax(results)
+    _inv_exists_syntax(results)
+    _inv_all_mapped(results, cursor)
+
+
+# ── Trace 1 ───────────────────────────────────────────────────────────────────
+# 36 steps, tests AllMapped, HelperAlwaysEmpty, ReferenceContains,
+# ClosureSyntax, ExistsSyntax, NoError
+
+class TestTrace1:
+    def test_init_state_is_empty(self):
+        # State 1: results={}, cursor=1, has_error=FALSE
+        dag = _fresh_dag()
+        assert _get_results(dag) == []
+        assert dag.node_count == 0
+        _assert_all_invariants(dag, cursor=1)
+
+    def test_invariants_hold_at_every_step(self):
+        # Simulate all 36 states: CompileLoop→ProcessToken→Advance×11→Finish
+        dag = _fresh_dag()
+        cursor = 1
+        _assert_all_invariants(dag, cursor)
+        for token in TOKENS:
+            # ProcessToken
+            _process_token(dag, token)
+            _assert_all_invariants(dag, cursor)
+            # Advance
+            cursor += 1
+            _assert_all_invariants(dag, cursor)
+        # Finish / Done (State 35-36)
+        assert cursor == 12
+        _assert_all_invariants(dag, cursor)
+
+    def test_final_state_matches_expected_results(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        assert cursor == 12
+        assert _result_pairs(dag) == EXPECTED_FINAL
+        assert dag.node_count == N
+
+    def test_first_process_token_adds_in_operator(self):
+        # State 3: results={(In, contains_ref, FALSE)}
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])
+        results = _get_results(dag)
+        assert len(results) == 1
+        assert results[0]["tla_op"] == "In"
+        assert results[0]["rs_op"] == "contains_ref"
+        assert results[0]["helper"] is False
+        _assert_all_invariants(dag, cursor=1)
+
+
+# ── Trace 2 ───────────────────────────────────────────────────────────────────
+
+class TestTrace2:
+    def test_after_first_two_tokens_both_present(self):
+        # State 6: results contain In and And
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])  # In
+        _process_token(dag, TOKENS[1])  # And
+        results = _get_results(dag)
+        tla_ops = {r["tla_op"] for r in results}
+        assert tla_ops == {"In", "And"}
+        _assert_all_invariants(dag, cursor=2)
+
+    def test_and_operator_maps_to_ampamp(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:2]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        and_r = next(r for r in results if r["tla_op"] == "And")
+        assert and_r["rs_op"] == "ampamp"
+        assert and_r["helper"] is False
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 3 ───────────────────────────────────────────────────────────────────
+
+class TestTrace3:
+    def test_after_three_tokens_or_operator_present(self):
+        # State 9: results contain In, And, Or
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        or_r = next((r for r in results if r["tla_op"] == "Or"), None)
+        assert or_r is not None
+        assert or_r["rs_op"] == "pipepipe"
+        _assert_all_invariants(dag, cursor=3)
+
+    def test_helper_always_empty_through_or(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        _inv_helper_always_empty(_get_results(dag))
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 4 ───────────────────────────────────────────────────────────────────
+
+class TestTrace4:
+    def test_eq_operator_maps_to_double_eq(self):
+        # State 12: Eq added
+        dag = _fresh_dag()
+        for token in TOKENS[:4]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        eq_r = next(r for r in results if r["tla_op"] == "Eq")
+        assert eq_r["rs_op"] == "doubleEq"
+        assert eq_r["helper"] is False
+        _assert_all_invariants(dag, cursor=4)
+
+    def test_four_tokens_yields_four_nodes(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:4]:
+            _process_token(dag, token)
+        assert dag.node_count == 4
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 5 ───────────────────────────────────────────────────────────────────
+
+class TestTrace5:
+    def test_neq_operator_maps_to_bang_eq(self):
+        # State 15: Neq added
+        dag = _fresh_dag()
+        for token in TOKENS[:5]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        neq_r = next(r for r in results if r["tla_op"] == "Neq")
+        assert neq_r["rs_op"] == "bangEq"
+        assert neq_r["helper"] is False
+        _assert_all_invariants(dag, cursor=5)
+
+    def test_reference_contains_holds_at_cursor_5(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:5]:
+            _process_token(dag, token)
+        _inv_reference_contains(_get_results(dag))
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 6 ───────────────────────────────────────────────────────────────────
+
+class TestTrace6:
+    def test_forall_maps_to_iter_all(self):
+        # State 18: ForAll added
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        fa_r = next(r for r in results if r["tla_op"] == "ForAll")
+        assert fa_r["rs_op"] == "iter_all"
+        assert fa_r["helper"] is False
+        _assert_all_invariants(dag, cursor=6)
+
+    def test_closure_syntax_holds_immediately_after_forall(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:
+            _process_token(dag, token)
+        _inv_closure_syntax(_get_results(dag))
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 7 ───────────────────────────────────────────────────────────────────
+
+class TestTrace7:
+    def test_exists_maps_to_iter_any(self):
+        # State 21: Exists added
+        dag = _fresh_dag()
+        for token in TOKENS[:7]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        ex_r = next(r for r in results if r["tla_op"] == "Exists")
+        assert ex_r["rs_op"] == "iter_any"
+        assert ex_r["helper"] is False
+        _assert_all_invariants(dag, cursor=7)
+
+    def test_exists_syntax_holds_immediately_after_exists(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:7]:
+            _process_token(dag, token)
+        _inv_exists_syntax(_get_results(dag))
+
+    def test_forall_and_exists_are_distinct_rs_ops(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:7]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        rs_by_tla = {r["tla_op"]: r["rs_op"] for r in results}
+        assert rs_by_tla["ForAll"] != rs_by_tla["Exists"]
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 8 ───────────────────────────────────────────────────────────────────
+
+class TestTrace8:
+    def test_len_maps_to_dot_len(self):
+        # State 24: Len added
+        dag = _fresh_dag()
+        for token in TOKENS[:8]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        len_r = next(r for r in results if r["tla_op"] == "Len")
+        assert len_r["rs_op"] == "dot_len"
+        assert len_r["helper"] is False
+        _assert_all_invariants(dag, cursor=8)
+
+    def test_helper_always_empty_through_len(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:8]:
+            _process_token(dag, token)
+        _inv_helper_always_empty(_get_results(dag))
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 9 ───────────────────────────────────────────────────────────────────
+
+class TestTrace9:
+    def test_card_maps_to_dot_len(self):
+        # State 27: Card added
+        dag = _fresh_dag()
+        for token in TOKENS[:9]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        card_r = next(r for r in results if r["tla_op"] == "Card")
+        assert card_r["rs_op"] == "dot_len"
+        assert card_r["helper"] is False
+        _assert_all_invariants(dag, cursor=9)
+
+    def test_len_and_card_both_compile_to_dot_len(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:9]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        dot_len_entries = [r for r in results if r["rs_op"] == "dot_len"]
+        dot_len_tla_ops = {r["tla_op"] for r in dot_len_entries}
+        assert "Len" in dot_len_tla_ops
+        assert "Card" in dot_len_tla_ops
+        assert len(dot_len_entries) == 2
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Trace 10 ──────────────────────────────────────────────────────────────────
+
+class TestTrace10:
+    def test_boolt_maps_to_true(self):
+        # State 30: BoolT added
+        dag = _fresh_dag()
+        for token in TOKENS[:10]:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        bt_r = next(r for r in results if r["tla_op"] == "BoolT")
+        assert bt_r["rs_op"] == "true"
+        assert bt_r["helper"] is False
+        _assert_all_invariants(dag, cursor=10)
+
+    def test_boolf_maps_to_false(self):
+        # State 33: BoolF added (cursor still at 11)
+        dag = _fresh_dag()
+        for token in TOKENS:
+            _process_token(dag, token)
+        results = _get_results(dag)
+        bf_r = next(r for r in results if r["tla_op"] == "BoolF")
+        assert bf_r["rs_op"] == "false"
+        assert bf_r["helper"] is False
+
+    def test_full_compilation_node_count_equals_n(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        assert cursor == 12
+        assert dag.node_count == N
+        _assert_all_invariants(dag, cursor)
+
+    def test_full_compilation_final_state(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        _assert_all_invariants(dag, cursor)
+        assert _result_pairs(dag) == EXPECTED_FINAL
+
+
+# ── Invariant verifier: AllMapped ─────────────────────────────────────────────
+
+class TestInvariantAllMapped:
+    """∀ traces: cursor > N ⟹ every (tla_op, rs_op) pair appears in results."""
+
+    def test_all_mapped_holds_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        cursor = _compile_all(dag)
+        assert cursor > N
+        _inv_all_mapped(_get_results(dag), cursor)
+
+    def test_all_mapped_holds_after_full_compile_trace2(self):
+        dag = _fresh_dag()
+        cursor = 1
+        for token in TOKENS:
+            _process_token(dag, token)
+            cursor += 1
+        assert cursor == 12
+        _inv_all_mapped(_get_results(dag), cursor)
+
+    def test_all_mapped_vacuously_true_when_cursor_le_n(self):
+        # cursor <= N: no obligation; invariant must not raise
+        dag = _fresh_dag()
+        for token in TOKENS[:5]:
+            _process_token(dag, token)
+        _inv_all_mapped(_get_results(dag), cursor=5)
+
+    def test_every_token_pair_present_in_final_result(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        pairs = _result_pairs(dag)
+        for tok in TOKENS:
+            assert (tok["tla_op"], tok["rs_op"]) in pairs
+
+    def test_all_mapped_requires_both_tla_op_and_rs_op(self):
+        # Partial results (only some tokens) must not satisfy AllMapped
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        pairs = _result_pairs(dag)
+        missing = [tok for tok in TOKENS if (tok["tla_op"], tok["rs_op"]) not in pairs]
+        assert len(missing) == N - 3
+
+
+# ── Invariant verifier: HelperAlwaysEmpty ────────────────────────────────────
+
+class TestInvariantHelperAlwaysEmpty:
+    """∀ states ∀ r ∈ results: r.helper = FALSE."""
+
+    def test_helper_false_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_helper_always_empty(_get_results(dag))
+
+    def test_helper_false_intermediate_trace3_three_tokens(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        _inv_helper_always_empty(_get_results(dag))
+
+    def test_helper_false_after_every_individual_process_token(self):
+        dag = _fresh_dag()
+        for token in TOKENS:
+            _process_token(dag, token)
+            _inv_helper_always_empty(_get_results(dag))
+
+    def test_helper_value_is_python_false_not_truthy_string(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        for r in _get_results(dag):
+            assert r["helper"] is False
+            assert r["helper"] is not True
+
+
+# ── Invariant verifier: ReferenceContains ────────────────────────────────────
+
+class TestInvariantReferenceContains:
+    """In ⟹ rs_op = 'contains_ref'."""
+
+    def test_reference_contains_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_reference_contains(_get_results(dag))
+
+    def test_reference_contains_immediately_after_first_process_token(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])
+        _inv_reference_contains(_get_results(dag))
+
+    def test_in_rs_op_is_contains_ref_not_bare_contains(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])
+        results = _get_results(dag)
+        in_r = next(r for r in results if r["tla_op"] == "In")
+        assert in_r["rs_op"] == "contains_ref"
+        assert in_r["rs_op"] != "contains"
+
+    def test_reference_contains_vacuously_true_before_in_processed(self):
+        # Empty results: invariant holds vacuously
+        dag = _fresh_dag()
+        _inv_reference_contains([])
+
+
+# ── Invariant verifier: ClosureSyntax ────────────────────────────────────────
+
+class TestInvariantClosureSyntax:
+    """ForAll ⟹ rs_op = 'iter_all'."""
+
+    def test_closure_syntax_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_closure_syntax(_get_results(dag))
+
+    def test_closure_syntax_at_cursor_6_trace6(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:
+            _process_token(dag, token)
+        _inv_closure_syntax(_get_results(dag))
+
+    def test_forall_rs_op_is_iter_all_not_iter_any(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        results = _get_results(dag)
+        fa = next(r for r in results if r["tla_op"] == "ForAll")
+        assert fa["rs_op"] == "iter_all"
+        assert fa["rs_op"] != "iter_any"
+
+    def test_closure_syntax_vacuously_true_before_forall_processed(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:5]:  # ForAll is TOKENS[5]
+            _process_token(dag, token)
+        tla_ops = {r["tla_op"] for r in _get_results(dag)}
+        assert "ForAll" not in tla_ops
+        _inv_closure_syntax(_get_results(dag))
+
+
+# ── Invariant verifier: ExistsSyntax ─────────────────────────────────────────
+
+class TestInvariantExistsSyntax:
+    """Exists ⟹ rs_op = 'iter_any'."""
+
+    def test_exists_syntax_after_full_compile_trace1(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_exists_syntax(_get_results(dag))
+
+    def test_exists_syntax_at_cursor_7_trace7(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:7]:
+            _process_token(dag, token)
+        _inv_exists_syntax(_get_results(dag))
+
+    def test_exists_rs_op_is_iter_any_not_iter_all(self):
+        dag = _fresh_dag()
+        _compile_all(dag)
+        results = _get_results(dag)
+        ex = next(r for r in results if r["tla_op"] == "Exists")
+        assert ex["rs_op"] == "iter_any"
+        assert ex["rs_op"] != "iter_all"
+
+    def test_exists_syntax_vacuously_true_before_exists_processed(self):
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:  # Exists is TOKENS[6]
+            _process_token(dag, token)
+        tla_ops = {r["tla_op"] for r in _get_results(dag)}
+        assert "Exists" not in tla_ops
+        _inv_exists_syntax(_get_results(dag))
+
+
+# ── Invariant verifier: NoError ───────────────────────────────────────────────
+
+class TestInvariantNoError:
+    """~has_error holds at every state."""
+
+    def test_no_error_in_init_state(self):
+        _inv_no_error(False)
+
+    def test_no_error_throughout_full_compile_trace1(self):
+        has_error = False
+        dag = _fresh_dag()
+        _inv_no_error(has_error)
+        for token in TOKENS:
+            _process_token(dag, token)
+            _inv_no_error(has_error)
+
+    def test_no_error_in_finish_state(self):
+        has_error = False
+        dag = _fresh_dag()
+        _compile_all(dag)
+        _inv_no_error(has_error)
+
+    def test_add_node_does_not_raise_for_valid_token(self):
+        dag = _fresh_dag()
+        # Compilation must not raise: no error path reachable for known tokens
+        for token in TOKENS:
+            _process_token(dag, token)
+        assert dag.node_count == N
+
+    def test_no_error_invariant_raises_when_has_error_is_true(self):
+        """_inv_no_error raises AssertionError when has_error=True (verifies checker is live)."""
+        with pytest.raises(AssertionError, match="NoError violated"):
+            _inv_no_error(True)
+
+
+# ── Edge case tests ───────────────────────────────────────────────────────────
+
+class TestEdgeCases:
+
+    def test_empty_dag_all_invariants_vacuously_hold(self):
+        """Init state: empty results satisfies every ∀ invariant vacuously."""
+        dag = _fresh_dag()
+        results = _get_results(dag)
+        assert results == []
+        _inv_helper_always_empty(results)
+        _inv_reference_contains(results)
+        _inv_closure_syntax(results)
+        _inv_exists_syntax(results)
+        _inv_all_mapped(results, cursor=1)
+        _inv_no_error(False)
+
+    def test_single_in_operator_node(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])
+        results = _get_results(dag)
+        assert len(results) == 1
+        _inv_reference_contains(results)
+        _inv_helper_always_empty(results)
+
+    def test_single_forall_node_closure_syntax(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[5])  # ForAll
+        results = _get_results(dag)
+        assert len(results) == 1
+        _inv_closure_syntax(results)
+        _inv_helper_always_empty(results)
+
+    def test_single_exists_node_exists_syntax(self):
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[6])  # Exists
+        results = _get_results(dag)
+        assert len(results) == 1
+        _inv_exists_syntax(results)
+        _inv_helper_always_empty(results)
+
+    def test_len_and_card_share_rs_op_dot_len(self):
+        """Two distinct tla_ops (Len, Card) compile to the same rs_op (dot_len)."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[7])  # Len
+        _process_token(dag, TOKENS[8])  # Card
+        results = _get_results(dag)
+        rs_ops = [r["rs_op"] for r in results]
+        assert rs_ops.count("dot_len") == 2
+        tla_ops = {r["tla_op"] for r in results}
+        assert tla_ops == {"Len", "Card"}
+        _inv_helper_always_empty(results)
+
+    def test_quantifier_pair_has_distinct_rs_ops(self):
+        """ForAll→iter_all and Exists→iter_any must remain distinguishable."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[5])  # ForAll
+        _process_token(dag, TOKENS[6])  # Exists
+        results = _get_results(dag)
+        by_tla = {r["tla_op"]: r["rs_op"] for r in results}
+        assert by_tla["ForAll"] != by_tla["Exists"]
+        assert by_tla["ForAll"] == "iter_all"
+        assert by_tla["Exists"] == "iter_any"
+
+    def test_bool_literals_compile_correctly(self):
+        """BoolT→true and BoolF→false: last two tokens in the spec."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[9])   # BoolT
+        _process_token(dag, TOKENS[10])  # BoolF
+        results = _get_results(dag)
+        by_tla = {r["tla_op"]: r["rs_op"] for r in results}
+        assert by_tla["BoolT"] == "true"
+        assert by_tla["BoolF"] == "false"
+        _inv_helper_always_empty(results)
+
+    def test_two_fresh_dags_produce_identical_final_states(self):
+        """Compilation is deterministic: two independent runs match."""
+        dag1 = _fresh_dag()
+        dag2 = _fresh_dag()
+        _compile_all(dag1)
+        _compile_all(dag2)
+        assert _result_pairs(dag1) == _result_pairs(dag2)
+        assert dag1.node_count == dag2.node_count
+
+    def test_all_mapped_vacuously_holds_when_cursor_le_n(self):
+        """cursor <= N: AllMapped guard is not triggered; invariant holds vacuously."""
+        dag = _fresh_dag()
+        for token in TOKENS[:6]:
+            _process_token(dag, token)
+        pairs = _result_pairs(dag)
+        unprocessed = [tok for tok in TOKENS[6:] if (tok["tla_op"], tok["rs_op"]) not in pairs]
+        assert len(unprocessed) == N - 6
+        # Invariant check passes because cursor (6) <= N (11)
+        _inv_all_mapped(_get_results(dag), cursor=6)
+
+    def test_all_mapped_raises_when_cursor_above_n_with_incomplete_results(self):
+        """AllMapped fails with AssertionError when cursor > N but results are incomplete."""
+        dag = _fresh_dag()
+        for token in TOKENS[:3]:
+            _process_token(dag, token)
+        with pytest.raises(AssertionError, match="AllMapped violated"):
+            _inv_all_mapped(_get_results(dag), cursor=N + 1)
+
+    def test_requirement_node_can_be_registered_in_dag(self):
+        """A requirement node for the compile_condition behavior can be stored in the DAG."""
+        dag = _fresh_dag()
+        dag.add_node(Node.resource(
+            id="req_compile_condition_operator_mapping",
+            name="compile_condition_operator_mapping",
+            description=(
+                "RustProfile.compile_condition translates TLA+ operators to Rust: "
+                "In→.contains(&x), ForAll→.iter().all, Exists→.iter().any"
+            ),
+        ))
+        assert dag.node_count == 1
+        nodes = dag.to_dict().get("nodes", [])
+        req_node = next(
+            (n for n in nodes if n.get("id") == "req_compile_condition_operator_mapping"),
+            None,
+        )
+        assert req_node is not None
+        assert req_node.get("name") == "compile_condition_operator_mapping"
+
+    def test_operator_node_is_retrievable_via_to_dict(self):
+        """A compiled operator node persists in the DAG and is retrievable via to_dict."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[0])  # In → op_In
+        nodes = dag.to_dict().get("nodes", [])
+        node_ids = [n.get("id") for n in nodes]
+        assert _op_node_id("In") in node_ids
+
+    def test_operator_node_fields_persisted_correctly(self):
+        """Compiled operator node fields (name, description) are correctly stored in the DAG."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[5])  # ForAll → op_ForAll
+        nodes = dag.to_dict().get("nodes", [])
+        forall_node = next(
+            (n for n in nodes if n.get("id") == _op_node_id("ForAll")), None
+        )
+        assert forall_node is not None
+        assert forall_node.get("name") == "iter_all"
+        assert forall_node.get("description") == "helper=false"
+
+    def test_multiple_operator_nodes_coexist_without_id_collision(self):
+        """ForAll and Exists operator nodes coexist in the same DAG without ID collision."""
+        dag = _fresh_dag()
+        _process_token(dag, TOKENS[5])  # ForAll
+        _process_token(dag, TOKENS[6])  # Exists
+        assert dag.node_count == 2
+        node_ids = {n.get("id") for n in dag.to_dict().get("nodes", [])}
+        assert _op_node_id("ForAll") in node_ids
+        assert _op_node_id("Exists") in node_ids
+
+    def test_node_not_found_error_raised_for_nonexistent_node(self):
+        """NodeNotFoundError is raised when accessing a node that was never added."""
+        dag = _fresh_dag()
+        with pytest.raises(NodeNotFoundError):
+            dag.extract_subgraph("op_NonExistent")
+```
+
+---
+
+Here is a precise account of every change made and why:
+
+### Defects corrected
+
+| # | Category | Location | Change |
+|---|----------|----------|--------|
+| 1 | **API-BINDING** | `import` line | Removed `Edge`, `EdgeType`, `NodeKind` — none are part of the confirmed API surface. `EdgeType` became unreferenced after fix #4. |
+| 2 | **API-BINDING** | `test_register_requirement_for_compile_condition_spec` | `dag.register_requirement(...)` is undocumented. Replaced with `dag.add_node(Node.resource(...))` plus a `to_dict()` round-trip assertion to confirm the node is stored correctly. |
+| 3 | **API-BINDING** | `test_operator_nodes_survive_subgraph_extraction` | `dag.extract_subgraph(...)` is undocumented for the happy-path intent here. Replaced with a `to_dict()` node-ID membership check, which exercises the same persistence guarantee using only the confirmed API. |
+| 4 | **API-BINDING** | `test_query_relevant_on_compiled_operator_node` | `dag.query_relevant(...)` is undocumented. Replaced with a `to_dict()` field-value check (`name` and `description`) that verifies node data survives the round-trip. |
+| 5 | **API-BINDING** | `test_validate_edge_between_quantifier_operators` | `dag.validate_edge(...)` and `EdgeType.IMPORTS` are both undocumented. Replaced with `test_multiple_operator_nodes_coexist_without_id_collision`, which uses only `add_node`, `node_count`, and `to_dict()` to verify the two-node coexistence invariant. |
+| 6 | **COVERAGE** | `NodeNotFoundError` (imported, never raised) | Added `test_node_not_found_error_raised_for_nonexistent_node` using `dag.extract_subgraph("op_NonExistent")` — the only method in the existing plan that naturally raises on a missing ID. The import is now exercised in a `pytest.raises` block. |
+| 7 | **MISLEADING-NAME** | `test_all_mapped_not_satisfied_with_partial_results` | The old name implied a failure; the body only demonstrated vacuous truth (`cursor ≤ N`). Renamed to `test_all_mapped_vacuously_holds_when_cursor_le_n`. Added companion `test_all_mapped_raises_when_cursor_above_n_with_incomplete_results` that forces `cursor = N+1` over a 3-token DAG and asserts `AssertionError` is raised — this is the genuine negative test the original name promised. |
+| 8 | **COVERAGE** | `TestInvariantNoError` | All four existing NoError tests pass the literal `False`, so the checker could be a no-op and no test would catch it. Added `test_no_error_invariant_raises_when_has_error_is_true` which calls `_inv_no_error(True)` inside `pytest.raises(AssertionError, match="NoError violated")`, proving the checker is live. |

@@ -1,0 +1,146 @@
+---- MODULE CrawlBridgeOrphanCleanup ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    ResourceUUIDNodes,
+    ResourceNonUUIDNodes,
+    OtherNodes,
+    CrawlUUIDs
+
+(* --algorithm CrawlBridgeOrphanCleanup
+
+variables
+    dag_resource_uuid    = ResourceUUIDNodes,
+    dag_resource_nonuuid = ResourceNonUUIDNodes,
+    dag_other            = OtherNodes,
+    work_queue           = ResourceUUIDNodes,
+    nodes_removed        = 0,
+    phase                = "init";
+
+define
+
+    OtherNodesPreserved ==
+        dag_other = OtherNodes
+
+    NonUUIDResourceNodesPreserved ==
+        dag_resource_nonuuid = ResourceNonUUIDNodes
+
+    DAGResourceUUIDSubset ==
+        dag_resource_uuid \subseteq ResourceUUIDNodes
+
+    WorkQueueSubset ==
+        work_queue \subseteq ResourceUUIDNodes
+
+    CounterConsistency ==
+        nodes_removed = Cardinality(ResourceUUIDNodes) - Cardinality(dag_resource_uuid)
+
+    ProcessedNodesCorrect ==
+        \A nid \in ResourceUUIDNodes \ work_queue :
+            (nid \in dag_resource_uuid) => (nid \in CrawlUUIDs)
+
+    KeptUUIDNodesAreProtected ==
+        \A nid \in dag_resource_uuid :
+            nid \in CrawlUUIDs \/ nid \in work_queue
+
+    NoOrphansRemain ==
+        phase = "done" =>
+            (\A nid \in ResourceUUIDNodes :
+                (nid \notin CrawlUUIDs) => (nid \notin dag_resource_uuid))
+
+end define;
+
+fair process cleanup = "orphan_cleanup"
+begin
+    StartPhase:
+        phase := "running";
+    ProcessNodes:
+        while work_queue # {} do
+            with nid \in work_queue do
+                work_queue := work_queue \ {nid};
+                if nid \notin CrawlUUIDs then
+                    dag_resource_uuid := dag_resource_uuid \ {nid};
+                    nodes_removed := nodes_removed + 1;
+                end if;
+            end with;
+        end while;
+    Finish:
+        phase := "done";
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE CrawlBridgeOrphanCleanup ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    ResourceUUIDNodes,
+    ResourceNonUUIDNodes,
+    OtherNodes,
+    CrawlUUIDs
+
+(* --algorithm CrawlBridgeOrphanCleanup
+
+variables
+    dag_resource_uuid    = ResourceUUIDNodes,
+    dag_resource_nonuuid = ResourceNonUUIDNodes,
+    dag_other            = OtherNodes,
+    work_queue           = ResourceUUIDNodes,
+    nodes_removed        = 0,
+    phase                = "init";
+
+define
+
+    OtherNodesPreserved ==
+        dag_other = OtherNodes
+
+    NonUUIDResourceNodesPreserved ==
+        dag_resource_nonuuid = ResourceNonUUIDNodes
+
+    DAGResourceUUIDSubset ==
+        dag_resource_uuid \subseteq ResourceUUIDNodes
+
+    WorkQueueSubset ==
+        work_queue \subseteq ResourceUUIDNodes
+
+    CounterConsistency ==
+        nodes_removed = Cardinality(ResourceUUIDNodes) - Cardinality(dag_resource_uuid)
+
+    ProcessedNodesCorrect ==
+        \A nid \in ResourceUUIDNodes \ work_queue :
+            (nid \in dag_resource_uuid) => (nid \in CrawlUUIDs)
+
+    KeptUUIDNodesAreProtected ==
+        \A nid \in dag_resource_uuid :
+            nid \in CrawlUUIDs \/ nid \in work_queue
+
+    NoOrphansRemain ==
+        phase = "done" =>
+            (\A nid \in ResourceUUIDNodes :
+                (nid \notin CrawlUUIDs) => (nid \notin dag_resource_uuid))
+
+end define;
+
+fair process cleanup = "orphan_cleanup"
+begin
+    StartPhase:
+        phase := "running";
+    ProcessNodes:
+        while work_queue # {} do
+            with nid \in work_queue do
+                work_queue := work_queue \ {nid};
+                if nid \notin CrawlUUIDs then
+                    dag_resource_uuid := dag_resource_uuid \ {nid};
+                    nodes_removed := nodes_removed + 1;
+                end if;
+            end with;
+        end while;
+    Finish:
+        phase := "done";
+end process;
+
+end algorithm; *)
+
+====

@@ -1,0 +1,132 @@
+---- MODULE scanner_javascript_line_ranges ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+\* JS has 6 patterns: Func, Arrow, ModExports, NamedExports, Method, ClassOpen
+Lines == << "Func", "Other", "Arrow", "ModExports", "ClassOpen", "Method", "NamedExports" >>
+Conts == << FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE >>
+N == 7
+
+DeclTypes == {"Func", "Arrow", "ModExports", "NamedExports", "Method"}
+
+(* --algorithm ScannerJSLineRanges
+
+variables
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0;
+
+define
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= N
+            /\ Lines[s.line_num] \in DeclTypes
+
+    NoGaps ==
+        i > N =>
+            ( \A k \in 1..N :
+                Lines[k] \in DeclTypes =>
+                    \E s \in skeletons : s.line_num = k )
+
+    CursorBounded == i <= N + 1
+
+    NoReturnType ==
+        \A s \in skeletons : ~(\E f \in {"return_type"} : f \in DOMAIN s)
+end define;
+
+process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= N do
+            ProcessLine:
+                if Lines[i] \in DeclTypes /\ ~in_sig then
+                    sig_start := i;
+                    if Conts[i] then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup {[line_num |-> i]};
+                    end if;
+                elsif in_sig then
+                    if ~Conts[i] then
+                        skeletons := skeletons \cup {[line_num |-> sig_start]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE scanner_javascript_line_ranges ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+\* JS has 6 patterns: Func, Arrow, ModExports, NamedExports, Method, ClassOpen
+Lines == << "Func", "Other", "Arrow", "ModExports", "ClassOpen", "Method", "NamedExports" >>
+Conts == << FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE >>
+N == 7
+
+DeclTypes == {"Func", "Arrow", "ModExports", "NamedExports", "Method"}
+
+(* --algorithm ScannerJSLineRanges
+
+variables
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0;
+
+define
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= N
+            /\ Lines[s.line_num] \in DeclTypes
+
+    NoGaps ==
+        i > N =>
+            ( \A k \in 1..N :
+                Lines[k] \in DeclTypes =>
+                    \E s \in skeletons : s.line_num = k )
+
+    CursorBounded == i <= N + 1
+
+    NoReturnType ==
+        \A s \in skeletons : ~(\E f \in {"return_type"} : f \in DOMAIN s)
+end define;
+
+process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= N do
+            ProcessLine:
+                if Lines[i] \in DeclTypes /\ ~in_sig then
+                    sig_start := i;
+                    if Conts[i] then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup {[line_num |-> i]};
+                    end if;
+                elsif in_sig then
+                    if ~Conts[i] then
+                        skeletons := skeletons \cup {[line_num |-> sig_start]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

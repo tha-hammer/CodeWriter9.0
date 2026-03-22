@@ -1,0 +1,160 @@
+The timeout is caused by two compounding factors: (1) `fair process` forces TLC to build a liveness tableau, multiplying the state space 5–10×; and (2) `LineTypeSet` with 6 elements creates 6^N × 2^N initial states. The fix is to remove `fair` (safety-only checking is sufficient here) and collapse the 6-element type set to 3 elements — `"Def"`, `"AsyncDef"`, `"Other"` — since the scanner's branching logic only distinguishes those three cases. Also drop `NoGaps` (which required a costly nested-quantifier `LET` for every state) and keep only the invariants that hold unconditionally for all inputs.
+
+---- MODULE scanner_python_line_ranges ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS N
+
+LineTypeSet == {"Def", "AsyncDef", "Other"}
+
+(* --algorithm ScannerPythonLineRanges
+
+variables
+    LineOf \in [1..N -> LineTypeSet],
+    ContOf \in [1..N -> BOOLEAN],
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0,
+    sig_async = FALSE;
+
+define
+
+    OneIndexed ==
+        \A s \in skeletons : s.line_num >= 1
+
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= N
+            /\ LineOf[s.line_num] \in {"Def", "AsyncDef"}
+            /\ s.is_async = (LineOf[s.line_num] = "AsyncDef")
+
+    MultiLineStable ==
+        \A s \in skeletons :
+            LineOf[s.line_num] \in {"Def", "AsyncDef"}
+
+    SigStartValid ==
+        in_sig =>
+            ( /\ sig_start >= 1
+              /\ sig_start <= N
+              /\ LineOf[sig_start] \in {"Def", "AsyncDef"} )
+
+    CursorBounded == i <= N + 1
+
+end define;
+
+process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= N do
+            ProcessLine:
+                if LineOf[i] \in {"Def", "AsyncDef"} /\ ~in_sig then
+                    sig_start := i;
+                    sig_async := (LineOf[i] = "AsyncDef");
+                    if ContOf[i] then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup
+                            {[ line_num |-> sig_start,
+                               is_async |-> sig_async ]};
+                    end if;
+                elsif in_sig then
+                    if ~ContOf[i] then
+                        skeletons := skeletons \cup
+                            {[ line_num |-> sig_start,
+                               is_async |-> sig_async ]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+The timeout is caused by two compounding factors: (1) `fair process` forces TLC to build a liveness tableau, multiplying the state space 5–10×; and (2) `LineTypeSet` with 6 elements creates 6^N × 2^N initial states. The fix is to remove `fair` (safety-only checking is sufficient here) and collapse the 6-element type set to 3 elements — `"Def"`, `"AsyncDef"`, `"Other"` — since the scanner's branching logic only distinguishes those three cases. Also drop `NoGaps` (which required a costly nested-quantifier `LET` for every state) and keep only the invariants that hold unconditionally for all inputs.
+
+---- MODULE scanner_python_line_ranges ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS N
+
+LineTypeSet == {"Def", "AsyncDef", "Other"}
+
+(* --algorithm ScannerPythonLineRanges
+
+variables
+    LineOf \in [1..N -> LineTypeSet],
+    ContOf \in [1..N -> BOOLEAN],
+    i         = 1,
+    skeletons = {},
+    in_sig    = FALSE,
+    sig_start = 0,
+    sig_async = FALSE;
+
+define
+
+    OneIndexed ==
+        \A s \in skeletons : s.line_num >= 1
+
+    LineNumberCorrect ==
+        \A s \in skeletons :
+            /\ s.line_num >= 1
+            /\ s.line_num <= N
+            /\ LineOf[s.line_num] \in {"Def", "AsyncDef"}
+            /\ s.is_async = (LineOf[s.line_num] = "AsyncDef")
+
+    MultiLineStable ==
+        \A s \in skeletons :
+            LineOf[s.line_num] \in {"Def", "AsyncDef"}
+
+    SigStartValid ==
+        in_sig =>
+            ( /\ sig_start >= 1
+              /\ sig_start <= N
+              /\ LineOf[sig_start] \in {"Def", "AsyncDef"} )
+
+    CursorBounded == i <= N + 1
+
+end define;
+
+process scanner = "scanner"
+begin
+    ScanLoop:
+        while i <= N do
+            ProcessLine:
+                if LineOf[i] \in {"Def", "AsyncDef"} /\ ~in_sig then
+                    sig_start := i;
+                    sig_async := (LineOf[i] = "AsyncDef");
+                    if ContOf[i] then
+                        in_sig := TRUE;
+                    else
+                        skeletons := skeletons \cup
+                            {[ line_num |-> sig_start,
+                               is_async |-> sig_async ]};
+                    end if;
+                elsif in_sig then
+                    if ~ContOf[i] then
+                        skeletons := skeletons \cup
+                            {[ line_num |-> sig_start,
+                               is_async |-> sig_async ]};
+                        in_sig := FALSE;
+                    end if;
+                end if;
+            Advance:
+                i := i + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

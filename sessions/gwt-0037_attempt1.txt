@@ -1,0 +1,226 @@
+----------------------- MODULE ProjectContextResolution -----------------------
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    CONFIG_EXISTS,
+    CONFIG_ENGINE_VALID,
+    ENGINE_ROOT_PROVIDED,
+    ENGINE_EQUALS_TARGET,
+    AUTO_DETECT_SUCCESS
+
+ASSUME CONFIG_EXISTS      \in BOOLEAN
+ASSUME CONFIG_ENGINE_VALID \in BOOLEAN
+ASSUME ENGINE_ROOT_PROVIDED \in BOOLEAN
+ASSUME ENGINE_EQUALS_TARGET \in BOOLEAN
+ASSUME AUTO_DETECT_SUCCESS  \in BOOLEAN
+
+(* --algorithm ProjectContextResolution
+
+variables
+    engine_resolved = ENGINE_ROOT_PROVIDED,
+    selected_mode   = "UNRESOLVED";
+
+define
+
+    ModeValid ==
+        selected_mode \in {"UNRESOLVED", "SELF_HOSTING", "EXTERNAL", "INSTALLED"}
+
+    ResolvedModeConsistency ==
+        ( selected_mode = "SELF_HOSTING" ) =>
+            ( engine_resolved /\ ENGINE_EQUALS_TARGET )
+
+    ExternalModeConsistency ==
+        ( selected_mode = "EXTERNAL" ) =>
+            ( engine_resolved /\ ~ENGINE_EQUALS_TARGET )
+
+    InstalledModeConsistency ==
+        ( selected_mode = "INSTALLED" ) =>
+            ~engine_resolved
+
+    ConfigDrivenNeverInstalled ==
+        ( ~ENGINE_ROOT_PROVIDED /\ CONFIG_EXISTS /\ CONFIG_ENGINE_VALID ) =>
+            ( selected_mode = "UNRESOLVED" \/
+              selected_mode \in {"SELF_HOSTING", "EXTERNAL"} )
+
+    ThenConfigSelfHosting ==
+        ( ~ENGINE_ROOT_PROVIDED /\
+          CONFIG_EXISTS /\ CONFIG_ENGINE_VALID /\
+          ENGINE_EQUALS_TARGET ) =>
+            ( selected_mode = "UNRESOLVED" \/ selected_mode = "SELF_HOSTING" )
+
+    ThenConfigExternal ==
+        ( ~ENGINE_ROOT_PROVIDED /\
+          CONFIG_EXISTS /\ CONFIG_ENGINE_VALID /\
+          ~ENGINE_EQUALS_TARGET ) =>
+            ( selected_mode = "UNRESOLVED" \/ selected_mode = "EXTERNAL" )
+
+    ExplicitRootRoutes ==
+        ENGINE_ROOT_PROVIDED =>
+            ( selected_mode = "UNRESOLVED" \/
+              selected_mode \in {"SELF_HOSTING", "EXTERNAL"} )
+
+    NoProviderNoConfigNoAuto ==
+        ( ~ENGINE_ROOT_PROVIDED /\
+          ~(CONFIG_EXISTS /\ CONFIG_ENGINE_VALID) /\
+          ~AUTO_DETECT_SUCCESS ) =>
+            ( selected_mode = "UNRESOLVED" \/ selected_mode = "INSTALLED" )
+
+end define;
+
+fair process resolver = "main"
+begin
+    ResolveConfig:
+        if ~ENGINE_ROOT_PROVIDED then
+            if CONFIG_EXISTS /\ CONFIG_ENGINE_VALID then
+                engine_resolved := TRUE;
+            else
+                skip;
+            end if;
+        else
+            skip;
+        end if;
+
+    AutoDetect:
+        if ~engine_resolved then
+            if AUTO_DETECT_SUCCESS then
+                engine_resolved := TRUE;
+            else
+                skip;
+            end if;
+        else
+            skip;
+        end if;
+
+    SelectMode:
+        if engine_resolved then
+            if ENGINE_EQUALS_TARGET then
+                selected_mode := "SELF_HOSTING";
+            else
+                selected_mode := "EXTERNAL";
+            end if;
+        else
+            selected_mode := "INSTALLED";
+        end if;
+
+    Terminate:
+        assert selected_mode \in {"SELF_HOSTING", "EXTERNAL", "INSTALLED"};
+
+end process;
+
+end algorithm; *)
+
+=============================================================================
+----------------------- MODULE ProjectContextResolution -----------------------
+
+EXTENDS Integers, TLC
+
+CONSTANTS
+    CONFIG_EXISTS,
+    CONFIG_ENGINE_VALID,
+    ENGINE_ROOT_PROVIDED,
+    ENGINE_EQUALS_TARGET,
+    AUTO_DETECT_SUCCESS
+
+ASSUME CONFIG_EXISTS      \in BOOLEAN
+ASSUME CONFIG_ENGINE_VALID \in BOOLEAN
+ASSUME ENGINE_ROOT_PROVIDED \in BOOLEAN
+ASSUME ENGINE_EQUALS_TARGET \in BOOLEAN
+ASSUME AUTO_DETECT_SUCCESS  \in BOOLEAN
+
+(* --algorithm ProjectContextResolution
+
+variables
+    engine_resolved = ENGINE_ROOT_PROVIDED,
+    selected_mode   = "UNRESOLVED";
+
+define
+
+    ModeValid ==
+        selected_mode \in {"UNRESOLVED", "SELF_HOSTING", "EXTERNAL", "INSTALLED"}
+
+    ResolvedModeConsistency ==
+        ( selected_mode = "SELF_HOSTING" ) =>
+            ( engine_resolved /\ ENGINE_EQUALS_TARGET )
+
+    ExternalModeConsistency ==
+        ( selected_mode = "EXTERNAL" ) =>
+            ( engine_resolved /\ ~ENGINE_EQUALS_TARGET )
+
+    InstalledModeConsistency ==
+        ( selected_mode = "INSTALLED" ) =>
+            ~engine_resolved
+
+    ConfigDrivenNeverInstalled ==
+        ( ~ENGINE_ROOT_PROVIDED /\ CONFIG_EXISTS /\ CONFIG_ENGINE_VALID ) =>
+            ( selected_mode = "UNRESOLVED" \/
+              selected_mode \in {"SELF_HOSTING", "EXTERNAL"} )
+
+    ThenConfigSelfHosting ==
+        ( ~ENGINE_ROOT_PROVIDED /\
+          CONFIG_EXISTS /\ CONFIG_ENGINE_VALID /\
+          ENGINE_EQUALS_TARGET ) =>
+            ( selected_mode = "UNRESOLVED" \/ selected_mode = "SELF_HOSTING" )
+
+    ThenConfigExternal ==
+        ( ~ENGINE_ROOT_PROVIDED /\
+          CONFIG_EXISTS /\ CONFIG_ENGINE_VALID /\
+          ~ENGINE_EQUALS_TARGET ) =>
+            ( selected_mode = "UNRESOLVED" \/ selected_mode = "EXTERNAL" )
+
+    ExplicitRootRoutes ==
+        ENGINE_ROOT_PROVIDED =>
+            ( selected_mode = "UNRESOLVED" \/
+              selected_mode \in {"SELF_HOSTING", "EXTERNAL"} )
+
+    NoProviderNoConfigNoAuto ==
+        ( ~ENGINE_ROOT_PROVIDED /\
+          ~(CONFIG_EXISTS /\ CONFIG_ENGINE_VALID) /\
+          ~AUTO_DETECT_SUCCESS ) =>
+            ( selected_mode = "UNRESOLVED" \/ selected_mode = "INSTALLED" )
+
+end define;
+
+fair process resolver = "main"
+begin
+    ResolveConfig:
+        if ~ENGINE_ROOT_PROVIDED then
+            if CONFIG_EXISTS /\ CONFIG_ENGINE_VALID then
+                engine_resolved := TRUE;
+            else
+                skip;
+            end if;
+        else
+            skip;
+        end if;
+
+    AutoDetect:
+        if ~engine_resolved then
+            if AUTO_DETECT_SUCCESS then
+                engine_resolved := TRUE;
+            else
+                skip;
+            end if;
+        else
+            skip;
+        end if;
+
+    SelectMode:
+        if engine_resolved then
+            if ENGINE_EQUALS_TARGET then
+                selected_mode := "SELF_HOSTING";
+            else
+                selected_mode := "EXTERNAL";
+            end if;
+        else
+            selected_mode := "INSTALLED";
+        end if;
+
+    Terminate:
+        assert selected_mode \in {"SELF_HOSTING", "EXTERNAL", "INSTALLED"};
+
+end process;
+
+end algorithm; *)
+
+=============================================================================

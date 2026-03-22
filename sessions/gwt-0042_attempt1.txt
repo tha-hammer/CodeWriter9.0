@@ -1,0 +1,358 @@
+---------------------------- MODULE CW7Extract ----------------------------
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+CONSTANTS
+    SessionCount,
+    SessionIdProvided,
+    NumReqs,
+    NumAcRows,
+    AcFormats,
+    WhenEmpty
+
+ASSUME SessionCount \in {0, 1, 2}
+ASSUME SessionIdProvided \in BOOLEAN
+ASSUME NumReqs \in Nat
+ASSUME NumAcRows \in Nat
+ASSUME AcFormats \in [1..NumAcRows -> {"gwt", "other"}]
+ASSUME WhenEmpty \in [1..NumAcRows -> BOOLEAN]
+
+CW7_PREFIX == "cw7-crit-"
+GWT_FORMAT == "gwt"
+
+(* --algorithm CW7Extract
+
+variables
+    phase = "start",
+    resolved_session = 0,
+    req_index = 1,
+    ac_index = 1,
+    output_reqs = <<>>,
+    output_gwts = <<>>,
+    raised_error = "";
+
+define
+
+    GWTIndices == {i \in 1..NumAcRows : AcFormats[i] = GWT_FORMAT}
+
+    ValidPhase ==
+        phase \in {"start", "query_reqs", "query_gwts",
+                   "complete", "err_no_session", "err_multi_session"}
+
+    OutputReqsShape ==
+        phase = "complete" =>
+            /\ Len(output_reqs) = NumReqs
+            /\ \A k \in 1..Len(output_reqs) :
+                /\ "id" \in DOMAIN output_reqs[k]
+                /\ "text" \in DOMAIN output_reqs[k]
+
+    OutputGWTsShape ==
+        phase = "complete" =>
+            /\ Len(output_gwts) = Cardinality(GWTIndices)
+            /\ \A k \in 1..Len(output_gwts) :
+                /\ "criterion_id" \in DOMAIN output_gwts[k]
+                /\ "given_c" \in DOMAIN output_gwts[k]
+                /\ "when_c" \in DOMAIN output_gwts[k]
+                /\ "then_c" \in DOMAIN output_gwts[k]
+                /\ "parent_req" \in DOMAIN output_gwts[k]
+
+    CriterionIdPrefixOK ==
+        phase = "complete" =>
+            \A k \in 1..Len(output_gwts) :
+                output_gwts[k].criterion_id.prefix = CW7_PREFIX
+
+    NameConditional ==
+        phase = "complete" =>
+            \A k \in 1..Len(output_gwts) :
+                "name" \in DOMAIN output_gwts[k] <=> ~output_gwts[k].when_was_empty
+
+    NoOutputOnError ==
+        phase \in {"err_no_session", "err_multi_session"} =>
+            output_reqs = <<>> /\ output_gwts = <<>>
+
+    SuccessImpliesValidSession ==
+        phase = "complete" => (SessionCount = 1 \/ SessionIdProvided)
+
+    ErrorOnZeroSessions ==
+        (~SessionIdProvided /\ SessionCount = 0) => phase /= "complete"
+
+    ErrorOnMultiSessions ==
+        (~SessionIdProvided /\ SessionCount = 2) => phase /= "complete"
+
+    OnlyGWTFormatIncluded ==
+        phase = "complete" =>
+            Len(output_gwts) =
+                Cardinality({i \in 1..NumAcRows : AcFormats[i] = GWT_FORMAT})
+
+    OutputHasBothKeys ==
+        phase = "complete" =>
+            output_reqs /= "ABSENT" /\ output_gwts /= "ABSENT"
+
+end define;
+
+fair process extract = "extract"
+begin
+    Resolve:
+        if SessionIdProvided then
+            resolved_session := 1;
+            phase := "query_reqs";
+        elsif SessionCount = 0 then
+            phase := "err_no_session";
+            raised_error := "ValueError: no sessions found";
+            goto Terminate;
+        elsif SessionCount = 2 then
+            phase := "err_multi_session";
+            raised_error := "ValueError: multiple sessions, specify session_id";
+            goto Terminate;
+        else
+            resolved_session := 1;
+            phase := "query_reqs";
+        end if;
+
+    QueryReqs:
+        req_index := 1;
+        output_reqs := <<>>;
+
+    ReqLoop:
+        while req_index <= NumReqs do
+            ReqStep:
+                output_reqs := Append(output_reqs,
+                    [id |-> req_index, text |-> req_index]);
+                req_index := req_index + 1;
+        end while;
+
+    StartGWT:
+        ac_index := 1;
+        output_gwts := <<>>;
+        phase := "query_gwts";
+
+    GWTLoop:
+        while ac_index <= NumAcRows do
+            GWTCheck:
+                if AcFormats[ac_index] = GWT_FORMAT then
+                    if WhenEmpty[ac_index] then
+                        output_gwts := Append(output_gwts,
+                            [criterion_id |-> [prefix |-> CW7_PREFIX,
+                                               num    |-> ac_index],
+                             given_c        |-> "",
+                             when_c         |-> "",
+                             then_c         |-> "",
+                             parent_req     |-> resolved_session,
+                             when_was_empty |-> TRUE]);
+                    else
+                        output_gwts := Append(output_gwts,
+                            [criterion_id |-> [prefix |-> CW7_PREFIX,
+                                               num    |-> ac_index],
+                             given_c        |-> "",
+                             when_c         |-> "nonempty",
+                             then_c         |-> "",
+                             parent_req     |-> resolved_session,
+                             when_was_empty |-> FALSE,
+                             name           |-> "slug"]);
+                    end if;
+                end if;
+            GWTIncr:
+                ac_index := ac_index + 1;
+        end while;
+
+    Complete:
+        phase := "complete";
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+Invariants == ValidPhase
+           /\ OutputReqsShape
+           /\ OutputGWTsShape
+           /\ CriterionIdPrefixOK
+           /\ NameConditional
+           /\ NoOutputOnError
+           /\ SuccessImpliesValidSession
+           /\ ErrorOnZeroSessions
+           /\ ErrorOnMultiSessions
+           /\ OnlyGWTFormatIncluded
+
+============================================================================
+---------------------------- MODULE CW7Extract ----------------------------
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+CONSTANTS
+    SessionCount,
+    SessionIdProvided,
+    NumReqs,
+    NumAcRows,
+    AcFormats,
+    WhenEmpty
+
+ASSUME SessionCount \in {0, 1, 2}
+ASSUME SessionIdProvided \in BOOLEAN
+ASSUME NumReqs \in Nat
+ASSUME NumAcRows \in Nat
+ASSUME AcFormats \in [1..NumAcRows -> {"gwt", "other"}]
+ASSUME WhenEmpty \in [1..NumAcRows -> BOOLEAN]
+
+CW7_PREFIX == "cw7-crit-"
+GWT_FORMAT == "gwt"
+
+(* --algorithm CW7Extract
+
+variables
+    phase = "start",
+    resolved_session = 0,
+    req_index = 1,
+    ac_index = 1,
+    output_reqs = <<>>,
+    output_gwts = <<>>,
+    raised_error = "";
+
+define
+
+    GWTIndices == {i \in 1..NumAcRows : AcFormats[i] = GWT_FORMAT}
+
+    ValidPhase ==
+        phase \in {"start", "query_reqs", "query_gwts",
+                   "complete", "err_no_session", "err_multi_session"}
+
+    OutputReqsShape ==
+        phase = "complete" =>
+            /\ Len(output_reqs) = NumReqs
+            /\ \A k \in 1..Len(output_reqs) :
+                /\ "id" \in DOMAIN output_reqs[k]
+                /\ "text" \in DOMAIN output_reqs[k]
+
+    OutputGWTsShape ==
+        phase = "complete" =>
+            /\ Len(output_gwts) = Cardinality(GWTIndices)
+            /\ \A k \in 1..Len(output_gwts) :
+                /\ "criterion_id" \in DOMAIN output_gwts[k]
+                /\ "given_c" \in DOMAIN output_gwts[k]
+                /\ "when_c" \in DOMAIN output_gwts[k]
+                /\ "then_c" \in DOMAIN output_gwts[k]
+                /\ "parent_req" \in DOMAIN output_gwts[k]
+
+    CriterionIdPrefixOK ==
+        phase = "complete" =>
+            \A k \in 1..Len(output_gwts) :
+                output_gwts[k].criterion_id.prefix = CW7_PREFIX
+
+    NameConditional ==
+        phase = "complete" =>
+            \A k \in 1..Len(output_gwts) :
+                "name" \in DOMAIN output_gwts[k] <=> ~output_gwts[k].when_was_empty
+
+    NoOutputOnError ==
+        phase \in {"err_no_session", "err_multi_session"} =>
+            output_reqs = <<>> /\ output_gwts = <<>>
+
+    SuccessImpliesValidSession ==
+        phase = "complete" => (SessionCount = 1 \/ SessionIdProvided)
+
+    ErrorOnZeroSessions ==
+        (~SessionIdProvided /\ SessionCount = 0) => phase /= "complete"
+
+    ErrorOnMultiSessions ==
+        (~SessionIdProvided /\ SessionCount = 2) => phase /= "complete"
+
+    OnlyGWTFormatIncluded ==
+        phase = "complete" =>
+            Len(output_gwts) =
+                Cardinality({i \in 1..NumAcRows : AcFormats[i] = GWT_FORMAT})
+
+    OutputHasBothKeys ==
+        phase = "complete" =>
+            output_reqs /= "ABSENT" /\ output_gwts /= "ABSENT"
+
+end define;
+
+fair process extract = "extract"
+begin
+    Resolve:
+        if SessionIdProvided then
+            resolved_session := 1;
+            phase := "query_reqs";
+        elsif SessionCount = 0 then
+            phase := "err_no_session";
+            raised_error := "ValueError: no sessions found";
+            goto Terminate;
+        elsif SessionCount = 2 then
+            phase := "err_multi_session";
+            raised_error := "ValueError: multiple sessions, specify session_id";
+            goto Terminate;
+        else
+            resolved_session := 1;
+            phase := "query_reqs";
+        end if;
+
+    QueryReqs:
+        req_index := 1;
+        output_reqs := <<>>;
+
+    ReqLoop:
+        while req_index <= NumReqs do
+            ReqStep:
+                output_reqs := Append(output_reqs,
+                    [id |-> req_index, text |-> req_index]);
+                req_index := req_index + 1;
+        end while;
+
+    StartGWT:
+        ac_index := 1;
+        output_gwts := <<>>;
+        phase := "query_gwts";
+
+    GWTLoop:
+        while ac_index <= NumAcRows do
+            GWTCheck:
+                if AcFormats[ac_index] = GWT_FORMAT then
+                    if WhenEmpty[ac_index] then
+                        output_gwts := Append(output_gwts,
+                            [criterion_id |-> [prefix |-> CW7_PREFIX,
+                                               num    |-> ac_index],
+                             given_c        |-> "",
+                             when_c         |-> "",
+                             then_c         |-> "",
+                             parent_req     |-> resolved_session,
+                             when_was_empty |-> TRUE]);
+                    else
+                        output_gwts := Append(output_gwts,
+                            [criterion_id |-> [prefix |-> CW7_PREFIX,
+                                               num    |-> ac_index],
+                             given_c        |-> "",
+                             when_c         |-> "nonempty",
+                             then_c         |-> "",
+                             parent_req     |-> resolved_session,
+                             when_was_empty |-> FALSE,
+                             name           |-> "slug"]);
+                    end if;
+                end if;
+            GWTIncr:
+                ac_index := ac_index + 1;
+        end while;
+
+    Complete:
+        phase := "complete";
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+Invariants == ValidPhase
+           /\ OutputReqsShape
+           /\ OutputGWTsShape
+           /\ CriterionIdPrefixOK
+           /\ NameConditional
+           /\ NoOutputOnError
+           /\ SuccessImpliesValidSession
+           /\ ErrorOnZeroSessions
+           /\ ErrorOnMultiSessions
+           /\ OnlyGWTFormatIncluded
+
+============================================================================

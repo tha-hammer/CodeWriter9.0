@@ -1,0 +1,472 @@
+```python
+import pytest
+from pathlib import Path
+
+from registry.context import ProjectContext
+
+
+# ─── Fixtures ────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def engine_root(tmp_path: Path) -> Path:
+    """Canonical engine_root satisfying the GWT Given: contains templates/ and python/."""
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "pluscal").mkdir()
+    (tmp_path / "templates" / "pluscal" / "instances").mkdir()
+    (tmp_path / "python").mkdir()
+    return tmp_path
+
+
+@pytest.fixture
+def ctx(engine_root: Path) -> ProjectContext:
+    """ProjectContext produced by self_hosting() — the system-under-test."""
+    return ProjectContext.self_hosting(engine_root)
+
+
+# ─── Invariant Verifiers ──────────────────────────────────────────────────────
+# TLA+ variable bindings:
+#   engine_root       → ctx.engine_root
+#   target_root       → ctx.target_root
+#   state_root        → ctx.state_root
+#   spec_dir_location → ctx.spec_dir  (INSTANCES ≡ engine_root/"templates"/"pluscal"/"instances")
+#   is_self_hosting   → ctx.is_self_hosting
+#   paths_equal       → (ctx.target_root == ctx.engine_root) and (ctx.state_root == ctx.engine_root)
+
+# RootsAligned: phase="COMPLETE" => target_root = engine_root /\ state_root = engine_root
+
+def test_roots_aligned_target_equals_engine_root(ctx: ProjectContext, engine_root: Path) -> None:
+    """RootsAligned[target]: target_root resolves to engine_root."""
+    assert ctx.target_root == engine_root.resolve()
+
+
+def test_roots_aligned_state_equals_engine_root(ctx: ProjectContext, engine_root: Path) -> None:
+    """RootsAligned[state]: state_root resolves to engine_root."""
+    assert ctx.state_root == engine_root.resolve()
+
+
+def test_engine_root_attribute_is_set(ctx: ProjectContext, engine_root: Path) -> None:
+    """engine_root attribute is present and resolves to the provided path."""
+    assert ctx.engine_root == engine_root.resolve()
+
+
+# SpecInInstancesDir: phase="COMPLETE" => spec_dir_location = INSTANCES
+#   INSTANCES ≡ engine_root / "templates" / "pluscal" / "instances"
+
+def test_spec_dir_equals_instances_path(ctx: ProjectContext, engine_root: Path) -> None:
+    """SpecInInstancesDir: spec_dir is templates/pluscal/instances/ under engine_root."""
+    expected = engine_root.resolve() / "templates" / "pluscal" / "instances"
+    assert ctx.spec_dir == expected
+
+
+# NoCW9Indirection: phase="COMPLETE" => spec_dir_location # CW9_SPECS
+#   CW9_SPECS ≡ engine_root / ".cw9" / "specs"  (external project layout)
+
+def test_spec_dir_not_cw9_specs_path(ctx: ProjectContext, engine_root: Path) -> None:
+    """NoCW9Indirection: spec_dir must not be the .cw9/specs indirection path."""
+    cw9_specs = engine_root.resolve() / ".cw9" / "specs"
+    assert ctx.spec_dir != cw9_specs
+
+
+# SelfHostingFlagSet: phase="COMPLETE" => is_self_hosting = TRUE
+
+def test_is_self_hosting_is_true(ctx: ProjectContext) -> None:
+    """SelfHostingFlagSet: is_self_hosting property returns True."""
+    assert ctx.is_self_hosting is True
+
+
+# PathsEqualConsistent:
+#   phase="COMPLETE" => paths_equal = (target_root = engine_root /\ state_root = engine_root)
+
+def test_paths_equal_consistent(ctx: ProjectContext) -> None:
+    """PathsEqualConsistent: both roots equal engine_root simultaneously."""
+    paths_equal = (ctx.target_root == ctx.engine_root) and (ctx.state_root == ctx.engine_root)
+    assert paths_equal is True
+
+
+# TypeInvariant: all context roots are Path instances; is_self_hosting is bool
+
+def test_type_invariant_roots_are_path_instances(ctx: ProjectContext) -> None:
+    """TypeInvariant: engine_root, target_root, state_root are all Path instances."""
+    assert isinstance(ctx.engine_root, Path)
+    assert isinstance(ctx.target_root, Path)
+    assert isinstance(ctx.state_root, Path)
+
+
+def test_type_invariant_spec_dir_is_path_instance(ctx: ProjectContext) -> None:
+    """TypeInvariant: spec_dir is a Path instance."""
+    assert isinstance(ctx.spec_dir, Path)
+
+
+def test_type_invariant_is_self_hosting_is_bool(ctx: ProjectContext) -> None:
+    """TypeInvariant: is_self_hosting is a bool."""
+    assert isinstance(ctx.is_self_hosting, bool)
+
+
+# ─── Scenario Tests ───────────────────────────────────────────────────────────
+
+# Happy path: SelfHostingCorrect composite — all five sub-invariants hold at once
+
+def test_self_hosting_correct_composite(ctx: ProjectContext, engine_root: Path) -> None:
+    """SelfHostingCorrect: RootsAligned ∧ SpecInInstancesDir ∧ NoCW9Indirection
+    ∧ SelfHostingFlagSet ∧ PathsEqualConsistent all hold simultaneously."""
+    root = engine_root.resolve()
+
+    # RootsAligned
+    assert ctx.target_root == root
+    assert ctx.state_root == root
+
+    # SpecInInstancesDir
+    assert ctx.spec_dir == root / "templates" / "pluscal" / "instances"
+
+    # NoCW9Indirection
+    assert ctx.spec_dir != root / ".cw9" / "specs"
+
+    # SelfHostingFlagSet
+    assert ctx.is_self_hosting is True
+
+    # PathsEqualConsistent
+    assert (ctx.target_root == root) and (ctx.state_root == root)
+
+
+# Boundary: path argument is resolved to absolute regardless of form
+
+def test_self_hosting_resolves_path_to_absolute(tmp_path: Path) -> None:
+    """self_hosting() always produces absolute paths even when given a non-resolved Path."""
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "python").mkdir()
+    ctx = ProjectContext.self_hosting(tmp_path)
+    assert ctx.engine_root.is_absolute()
+    assert ctx.target_root.is_absolute()
+    assert ctx.state_root.is_absolute()
+    assert ctx.spec_dir.is_absolute()
+
+
+# Boundary: spec_dir is strictly nested under engine_root (not a sibling/external path)
+
+def test_spec_dir_is_descendant_of_engine_root(ctx: ProjectContext) -> None:
+    """spec_dir must be nested under engine_root — not a sibling or independent path."""
+    assert ctx.engine_root in ctx.spec_dir.parents
+
+
+# Boundary: spec_dir path terminates with the exact canonical suffix
+
+def test_spec_dir_suffix_is_canonical_instances_path(ctx: ProjectContext) -> None:
+    """spec_dir equals engine_root / templates / pluscal / instances — suffix exact match."""
+    canonical_suffix = Path("templates") / "pluscal" / "instances"
+    assert ctx.spec_dir == ctx.engine_root / canonical_suffix
+
+
+# Edge case: all derived engine paths share engine_root as ancestor
+
+def test_all_engine_derived_paths_descend_from_engine_root(ctx: ProjectContext) -> None:
+    """template_dir, python_dir, spec_dir, artifact_dir are all under engine_root."""
+    root = ctx.engine_root
+    for derived_path in (ctx.template_dir, ctx.python_dir, ctx.spec_dir, ctx.artifact_dir):
+        assert root in derived_path.parents, (
+            f"{derived_path} is not a descendant of engine_root {root}"
+        )
+
+
+# Edge case: two independent calls produce isolated contexts with no shared state
+
+def test_two_calls_yield_independent_contexts(tmp_path: Path) -> None:
+    """self_hosting() called twice with different roots produces fully disjoint contexts."""
+    root_a = tmp_path / "project_a"
+    root_b = tmp_path / "project_b"
+    for root in (root_a, root_b):
+        root.mkdir()
+        (root / "templates").mkdir()
+        (root / "python").mkdir()
+    ctx_a = ProjectContext.self_hosting(root_a)
+    ctx_b = ProjectContext.self_hosting(root_b)
+    assert ctx_a.engine_root != ctx_b.engine_root
+    assert ctx_a.target_root != ctx_b.target_root
+    assert ctx_a.state_root != ctx_b.state_root
+    assert ctx_a.spec_dir != ctx_b.spec_dir
+
+
+# Edge case: self-hosting is_self_hosting=True while external context has is_self_hosting=False
+
+def test_is_self_hosting_false_for_external_context(tmp_path: Path) -> None:
+    """is_self_hosting is False when target_root differs from engine_root (external mode)."""
+    engine = tmp_path / "engine"
+    target = tmp_path / "target"
+    engine.mkdir()
+    target.mkdir()
+    (engine / "templates").mkdir()
+    (engine / "python").mkdir()
+    external_ctx = ProjectContext.external(engine, target)
+    assert external_ctx.is_self_hosting is False
+
+
+# Edge case: self-hosting context spec_dir differs from external context spec_dir
+
+def test_self_hosting_spec_dir_differs_from_external_spec_dir(tmp_path: Path) -> None:
+    """Self-hosting spec_dir (instances/) is structurally distinct from external spec_dir (.cw9/specs)."""
+    engine = tmp_path / "engine"
+    target = tmp_path / "target"
+    engine.mkdir()
+    target.mkdir()
+    (engine / "templates").mkdir()
+    (engine / "python").mkdir()
+    self_ctx = ProjectContext.self_hosting(engine)
+    ext_ctx = ProjectContext.external(engine, target)
+    assert self_ctx.spec_dir != ext_ctx.spec_dir
+    assert "instances" in str(self_ctx.spec_dir)
+    assert ".cw9" in str(ext_ctx.spec_dir)
+
+
+# Immutability: frozen dataclass must reject mutation after construction
+
+def test_context_is_frozen_rejects_mutation(ctx: ProjectContext, engine_root: Path) -> None:
+    """ProjectContext is a frozen dataclass — attribute assignment must raise."""
+    with pytest.raises((AttributeError, TypeError)):
+        ctx.target_root = engine_root / "mutated"  # type: ignore[misc]
+
+
+# BoundedExecution analog: constructor terminates and returns a valid object
+
+def test_constructor_terminates_and_returns_context(tmp_path: Path) -> None:
+    """self_hosting() completes in bounded time and returns a non-None ProjectContext."""
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "python").mkdir()
+    ctx = ProjectContext.self_hosting(tmp_path)
+    assert ctx is not None
+    assert isinstance(ctx, ProjectContext)
+```
+```python
+import pytest
+from pathlib import Path
+
+from registry.context import ProjectContext
+
+
+# ─── Fixtures ────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def engine_root(tmp_path: Path) -> Path:
+    """Canonical engine_root satisfying the GWT Given: contains templates/ and python/."""
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "pluscal").mkdir()
+    (tmp_path / "templates" / "pluscal" / "instances").mkdir()
+    (tmp_path / "python").mkdir()
+    return tmp_path
+
+
+@pytest.fixture
+def ctx(engine_root: Path) -> ProjectContext:
+    """ProjectContext produced by self_hosting() — the system-under-test."""
+    return ProjectContext.self_hosting(engine_root)
+
+
+# ─── Invariant Verifiers ──────────────────────────────────────────────────────
+# TLA+ variable bindings:
+#   engine_root       → ctx.engine_root
+#   target_root       → ctx.target_root
+#   state_root        → ctx.state_root
+#   spec_dir_location → ctx.spec_dir  (INSTANCES ≡ engine_root/"templates"/"pluscal"/"instances")
+#   is_self_hosting   → ctx.is_self_hosting
+#   paths_equal       → (ctx.target_root == ctx.engine_root) and (ctx.state_root == ctx.engine_root)
+
+# RootsAligned: phase="COMPLETE" => target_root = engine_root /\ state_root = engine_root
+
+def test_roots_aligned_target_equals_engine_root(ctx: ProjectContext, engine_root: Path) -> None:
+    """RootsAligned[target]: target_root resolves to engine_root."""
+    assert ctx.target_root == engine_root.resolve()
+
+
+def test_roots_aligned_state_equals_engine_root(ctx: ProjectContext, engine_root: Path) -> None:
+    """RootsAligned[state]: state_root resolves to engine_root."""
+    assert ctx.state_root == engine_root.resolve()
+
+
+def test_engine_root_attribute_is_set(ctx: ProjectContext, engine_root: Path) -> None:
+    """engine_root attribute is present and resolves to the provided path."""
+    assert ctx.engine_root == engine_root.resolve()
+
+
+# SpecInInstancesDir: phase="COMPLETE" => spec_dir_location = INSTANCES
+#   INSTANCES ≡ engine_root / "templates" / "pluscal" / "instances"
+
+def test_spec_dir_equals_instances_path(ctx: ProjectContext, engine_root: Path) -> None:
+    """SpecInInstancesDir: spec_dir is templates/pluscal/instances/ under engine_root."""
+    expected = engine_root.resolve() / "templates" / "pluscal" / "instances"
+    assert ctx.spec_dir == expected
+
+
+# NoCW9Indirection: phase="COMPLETE" => spec_dir_location # CW9_SPECS
+#   CW9_SPECS ≡ engine_root / ".cw9" / "specs"  (external project layout)
+
+def test_spec_dir_not_cw9_specs_path(ctx: ProjectContext, engine_root: Path) -> None:
+    """NoCW9Indirection: spec_dir must not be the .cw9/specs indirection path."""
+    cw9_specs = engine_root.resolve() / ".cw9" / "specs"
+    assert ctx.spec_dir != cw9_specs
+
+
+# SelfHostingFlagSet: phase="COMPLETE" => is_self_hosting = TRUE
+
+def test_is_self_hosting_is_true(ctx: ProjectContext) -> None:
+    """SelfHostingFlagSet: is_self_hosting property returns True."""
+    assert ctx.is_self_hosting is True
+
+
+# PathsEqualConsistent:
+#   phase="COMPLETE" => paths_equal = (target_root = engine_root /\ state_root = engine_root)
+
+def test_paths_equal_consistent(ctx: ProjectContext) -> None:
+    """PathsEqualConsistent: both roots equal engine_root simultaneously."""
+    paths_equal = (ctx.target_root == ctx.engine_root) and (ctx.state_root == ctx.engine_root)
+    assert paths_equal is True
+
+
+# TypeInvariant: all context roots are Path instances; is_self_hosting is bool
+
+def test_type_invariant_roots_are_path_instances(ctx: ProjectContext) -> None:
+    """TypeInvariant: engine_root, target_root, state_root are all Path instances."""
+    assert isinstance(ctx.engine_root, Path)
+    assert isinstance(ctx.target_root, Path)
+    assert isinstance(ctx.state_root, Path)
+
+
+def test_type_invariant_spec_dir_is_path_instance(ctx: ProjectContext) -> None:
+    """TypeInvariant: spec_dir is a Path instance."""
+    assert isinstance(ctx.spec_dir, Path)
+
+
+def test_type_invariant_is_self_hosting_is_bool(ctx: ProjectContext) -> None:
+    """TypeInvariant: is_self_hosting is a bool."""
+    assert isinstance(ctx.is_self_hosting, bool)
+
+
+# ─── Scenario Tests ───────────────────────────────────────────────────────────
+
+# Happy path: SelfHostingCorrect composite — all five sub-invariants hold at once
+
+def test_self_hosting_correct_composite(ctx: ProjectContext, engine_root: Path) -> None:
+    """SelfHostingCorrect: RootsAligned ∧ SpecInInstancesDir ∧ NoCW9Indirection
+    ∧ SelfHostingFlagSet ∧ PathsEqualConsistent all hold simultaneously."""
+    root = engine_root.resolve()
+
+    # RootsAligned
+    assert ctx.target_root == root
+    assert ctx.state_root == root
+
+    # SpecInInstancesDir
+    assert ctx.spec_dir == root / "templates" / "pluscal" / "instances"
+
+    # NoCW9Indirection
+    assert ctx.spec_dir != root / ".cw9" / "specs"
+
+    # SelfHostingFlagSet
+    assert ctx.is_self_hosting is True
+
+    # PathsEqualConsistent
+    assert (ctx.target_root == root) and (ctx.state_root == root)
+
+
+# Boundary: path argument is resolved to absolute regardless of form
+
+def test_self_hosting_resolves_path_to_absolute(tmp_path: Path) -> None:
+    """self_hosting() always produces absolute paths even when given a non-resolved Path."""
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "python").mkdir()
+    ctx = ProjectContext.self_hosting(tmp_path)
+    assert ctx.engine_root.is_absolute()
+    assert ctx.target_root.is_absolute()
+    assert ctx.state_root.is_absolute()
+    assert ctx.spec_dir.is_absolute()
+
+
+# Boundary: spec_dir is strictly nested under engine_root (not a sibling/external path)
+
+def test_spec_dir_is_descendant_of_engine_root(ctx: ProjectContext) -> None:
+    """spec_dir must be nested under engine_root — not a sibling or independent path."""
+    assert ctx.engine_root in ctx.spec_dir.parents
+
+
+# Boundary: spec_dir path terminates with the exact canonical suffix
+
+def test_spec_dir_suffix_is_canonical_instances_path(ctx: ProjectContext) -> None:
+    """spec_dir equals engine_root / templates / pluscal / instances — suffix exact match."""
+    canonical_suffix = Path("templates") / "pluscal" / "instances"
+    assert ctx.spec_dir == ctx.engine_root / canonical_suffix
+
+
+# Edge case: all derived engine paths share engine_root as ancestor
+
+def test_all_engine_derived_paths_descend_from_engine_root(ctx: ProjectContext) -> None:
+    """template_dir, python_dir, spec_dir, artifact_dir are all under engine_root."""
+    root = ctx.engine_root
+    for derived_path in (ctx.template_dir, ctx.python_dir, ctx.spec_dir, ctx.artifact_dir):
+        assert root in derived_path.parents, (
+            f"{derived_path} is not a descendant of engine_root {root}"
+        )
+
+
+# Edge case: two independent calls produce isolated contexts with no shared state
+
+def test_two_calls_yield_independent_contexts(tmp_path: Path) -> None:
+    """self_hosting() called twice with different roots produces fully disjoint contexts."""
+    root_a = tmp_path / "project_a"
+    root_b = tmp_path / "project_b"
+    for root in (root_a, root_b):
+        root.mkdir()
+        (root / "templates").mkdir()
+        (root / "python").mkdir()
+    ctx_a = ProjectContext.self_hosting(root_a)
+    ctx_b = ProjectContext.self_hosting(root_b)
+    assert ctx_a.engine_root != ctx_b.engine_root
+    assert ctx_a.target_root != ctx_b.target_root
+    assert ctx_a.state_root != ctx_b.state_root
+    assert ctx_a.spec_dir != ctx_b.spec_dir
+
+
+# Edge case: self-hosting is_self_hosting=True while external context has is_self_hosting=False
+
+def test_is_self_hosting_false_for_external_context(tmp_path: Path) -> None:
+    """is_self_hosting is False when target_root differs from engine_root (external mode)."""
+    engine = tmp_path / "engine"
+    target = tmp_path / "target"
+    engine.mkdir()
+    target.mkdir()
+    (engine / "templates").mkdir()
+    (engine / "python").mkdir()
+    external_ctx = ProjectContext.external(engine, target)
+    assert external_ctx.is_self_hosting is False
+
+
+# Edge case: self-hosting context spec_dir differs from external context spec_dir
+
+def test_self_hosting_spec_dir_differs_from_external_spec_dir(tmp_path: Path) -> None:
+    """Self-hosting spec_dir (instances/) is structurally distinct from external spec_dir (.cw9/specs)."""
+    engine = tmp_path / "engine"
+    target = tmp_path / "target"
+    engine.mkdir()
+    target.mkdir()
+    (engine / "templates").mkdir()
+    (engine / "python").mkdir()
+    self_ctx = ProjectContext.self_hosting(engine)
+    ext_ctx = ProjectContext.external(engine, target)
+    assert self_ctx.spec_dir != ext_ctx.spec_dir
+    assert "instances" in str(self_ctx.spec_dir)
+    assert ".cw9" in str(ext_ctx.spec_dir)
+
+
+# Immutability: frozen dataclass must reject mutation after construction
+
+def test_context_is_frozen_rejects_mutation(ctx: ProjectContext, engine_root: Path) -> None:
+    """ProjectContext is a frozen dataclass — attribute assignment must raise."""
+    with pytest.raises((AttributeError, TypeError)):
+        ctx.target_root = engine_root / "mutated"  # type: ignore[misc]
+
+
+# BoundedExecution analog: constructor terminates and returns a valid object
+
+def test_constructor_terminates_and_returns_context(tmp_path: Path) -> None:
+    """self_hosting() completes in bounded time and returns a non-None ProjectContext."""
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "python").mkdir()
+    ctx = ProjectContext.self_hosting(tmp_path)
+    assert ctx is not None
+    assert isinstance(ctx, ProjectContext)
+```

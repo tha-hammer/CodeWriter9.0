@@ -1,0 +1,1098 @@
+```python
+import pytest
+from dag import RegistryDag
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# ── TLA+ Events[1..4] from the verified spec ──────────────────────────────────
+_EVENTS = [
+    {"func_name": "Hello",    "class_name": "None",  "has_recv": False, "cap": True,  "visibility": "public"},
+    {"func_name": "GetUser",  "class_name": "Svc",   "has_recv": True,  "cap": True,  "visibility": "public"},
+    {"func_name": "distance", "class_name": "Point", "has_recv": True,  "cap": False, "visibility": "private"},
+    {"func_name": "helper",   "class_name": "None",  "has_recv": False, "cap": False, "visibility": "private"},
+]
+_N = len(_EVENTS)
+
+# Expected final skeleton set — State 15 of every trace
+_EXPECTED_SKELETONS = frozenset({
+    ("Hello",    "None",  False, True,  "public"),
+    ("GetUser",  "Svc",   True,  True,  "public"),
+    ("distance", "Point", True,  False, "private"),
+    ("helper",   "None",  False, False, "private"),
+})
+
+
+# ── invariant verifiers ────────────────────────────────────────────────────────
+
+def _assert_receiver_resolution(skeletons: list) -> None:
+    """ReceiverResolution: class_name=='None' iff has_recv==False."""
+    for s in skeletons:
+        if s["class_name"] == "None":
+            assert s["has_recv"] is False, (
+                f"ReceiverResolution: {s['func_name']!r} "
+                f"class_name='None' but has_recv={s['has_recv']}"
+            )
+        else:
+            assert s["has_recv"] is True, (
+                f"ReceiverResolution: {s['func_name']!r} "
+                f"class_name={s['class_name']!r} but has_recv={s['has_recv']}"
+            )
+
+
+def _assert_visibility_correct(skeletons: list) -> None:
+    """VisibilityCorrect: visibility=='public' iff cap==True."""
+    for s in skeletons:
+        if s["cap"] is True:
+            assert s["visibility"] == "public", (
+                f"VisibilityCorrect: {s['func_name']!r} cap=True "
+                f"but visibility={s['visibility']!r}"
+            )
+        else:
+            assert s["visibility"] == "private", (
+                f"VisibilityCorrect: {s['func_name']!r} cap=False "
+                f"but visibility={s['visibility']!r}"
+            )
+
+
+def _assert_all_recorded(cursor: int, skeletons: list, events: list) -> None:
+    """AllRecorded: cursor > N => every event name is present in skeletons."""
+    n = len(events)
+    if cursor > n:
+        recorded = {s["func_name"] for s in skeletons}
+        for ev in events:
+            assert ev["func_name"] in recorded, (
+                f"AllRecorded: {ev['func_name']!r} missing after cursor={cursor}"
+            )
+
+
+def _assert_all_invariants(skeletons: list, cursor: int, events: list) -> None:
+    _assert_receiver_resolution(skeletons)
+    _assert_visibility_correct(skeletons)
+    _assert_all_recorded(cursor, skeletons, events)
+
+
+# ── scan simulation (models TLA+ ScanLoop→ProcessEvent→Advance×N→Finish) ──────
+
+def _simulate_scan(events: list) -> tuple:
+    """
+    Execute the TLA+ scanner algorithm step by step.
+    Invariants are verified at EVERY intermediate state, not just the final one,
+    matching the TLA+ requirement that all invariants hold in every reachable state.
+    Returns (dag, skeletons, cursor_after_finish).
+    """
+    dag = RegistryDag()
+    skeletons: list = []
+    cursor = 1  # Init: cursor=1, skeletons={}
+
+    # Verify invariants on the Init state
+    _assert_all_invariants(skeletons, cursor, events)
+
+    for ev in events:
+        # ScanLoop: cursor <= N, transition to ProcessEvent
+        _assert_all_invariants(skeletons, cursor, events)
+
+        # ProcessEvent: add skeleton and corresponding DAG node
+        node_id = f"fn_{ev['func_name'].lower()}"
+        dag.add_node(Node.resource(
+            id=node_id,
+            name=ev["func_name"],
+            description=ev["class_name"],
+        ))
+        skeleton = {
+            "func_name":  ev["func_name"],
+            "class_name": ev["class_name"],
+            "has_recv":   ev["has_recv"],
+            "cap":        ev["cap"],
+            "visibility": ev["visibility"],
+        }
+        skeletons.append(skeleton)
+
+        # Verify invariants after ProcessEvent
+        _assert_all_invariants(skeletons, cursor, events)
+
+        # Advance: cursor += 1
+        cursor += 1
+
+        # Verify invariants after Advance
+        _assert_all_invariants(skeletons, cursor, events)
+
+    # ScanLoop: cursor > N → Finish
+    _assert_all_invariants(skeletons, cursor, events)
+    # Finish: skip (pc → "Done")
+    _assert_all_invariants(skeletons, cursor, events)
+
+    return dag, skeletons, cursor
+
+
+# ── fixtures ───────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def empty_dag():
+    """Init state: skeletons={}, cursor=1, pc=ScanLoop."""
+    return RegistryDag()
+
+
+@pytest.fixture
+def scanned_dag():
+    """Final state (State 15): all 4 events processed, pc=Done."""
+    dag, skeletons, cursor = _simulate_scan(_EVENTS)
+    return dag, skeletons, cursor
+
+
+# ── trace tests (Traces 1–10, all encode the same execution) ──────────────────
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_produces_correct_final_skeleton_set(trace_id):
+    """
+    Traces 1–10: After ScanLoop→(ProcessEvent→Advance)×4→Finish the skeleton
+    set matches State 15 exactly.  Tests ReceiverResolution, VisibilityCorrect,
+    AllRecorded.
+    """
+    dag, skeletons, cursor = _simulate_scan(_EVENTS)
+
+    # DAG structural check
+    assert dag.node_count == _N, (
+        f"[trace {trace_id}] expected {_N} nodes, got {dag.node_count}"
+    )
+
+    # Final skeleton set matches State 15 of the verified model
+    actual = frozenset(
+        (s["func_name"], s["class_name"], s["has_recv"], s["cap"], s["visibility"])
+        for s in skeletons
+    )
+    assert actual == _EXPECTED_SKELETONS, (
+        f"[trace {trace_id}] skeleton set mismatch\n"
+        f"  expected: {_EXPECTED_SKELETONS}\n"
+        f"  got:      {actual}"
+    )
+
+    # cursor advanced exactly N times: Init=1, after 4 Advance steps = 5
+    assert cursor == _N + 1, (
+        f"[trace {trace_id}] cursor should be {_N + 1}, got {cursor}"
+    )
+
+    # All invariants on the final state
+    _assert_all_invariants(skeletons, cursor, _EVENTS)
+
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_receiver_methods_carry_class_name(trace_id):
+    """
+    Core GWT behaviour: receiver methods must have class_name set to the
+    receiver type; package-level functions must have class_name='None'.
+    """
+    _, skeletons, _ = _simulate_scan(_EVENTS)
+    by_name = {s["func_name"]: s for s in skeletons}
+
+    # Package-level functions (has_recv=False)
+    for fn in ("Hello", "helper"):
+        s = by_name[fn]
+        assert s["class_name"] == "None", (
+            f"[trace {trace_id}] {fn!r}: package function has class_name={s['class_name']!r}"
+        )
+        assert s["has_recv"] is False, (
+            f"[trace {trace_id}] {fn!r}: package function has has_recv=True"
+        )
+
+    # Receiver methods (has_recv=True)
+    assert by_name["GetUser"]["class_name"] == "Svc", (
+        f"[trace {trace_id}] GetUser class_name should be 'Svc'"
+    )
+    assert by_name["GetUser"]["has_recv"] is True
+
+    assert by_name["distance"]["class_name"] == "Point", (
+        f"[trace {trace_id}] distance class_name should be 'Point'"
+    )
+    assert by_name["distance"]["has_recv"] is True
+
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_visibility_derived_from_capitalisation(trace_id):
+    """cap=True ↔ visibility='public';  cap=False ↔ visibility='private'."""
+    _, skeletons, _ = _simulate_scan(_EVENTS)
+    for s in skeletons:
+        expected = "public" if s["cap"] else "private"
+        assert s["visibility"] == expected, (
+            f"[trace {trace_id}] {s['func_name']!r}: cap={s['cap']} "
+            f"but visibility={s['visibility']!r} (expected {expected!r})"
+        )
+
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_all_four_functions_recorded(trace_id):
+    """AllRecorded: after the scan every event name is present in skeletons."""
+    _, skeletons, cursor = _simulate_scan(_EVENTS)
+    assert cursor > _N
+    recorded = {s["func_name"] for s in skeletons}
+    for ev in _EVENTS:
+        assert ev["func_name"] in recorded, (
+            f"[trace {trace_id}] {ev['func_name']!r} missing after full scan"
+        )
+
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_invariants_hold_at_every_intermediate_state(trace_id):
+    """
+    TLA+ requires ALL invariants to hold in EVERY reachable state, not just the
+    terminal one.  _simulate_scan already checks this internally; this test makes
+    the guarantee explicit per trace ID.
+    """
+    # _simulate_scan raises AssertionError on any intermediate invariant violation
+    dag, skeletons, cursor = _simulate_scan(_EVENTS)
+    assert dag.node_count == _N
+    assert cursor == _N + 1
+
+
+# ── dedicated invariant-verifier tests (≥2 topologies each) ───────────────────
+
+class TestReceiverResolution:
+
+    def test_all_package_functions(self):
+        """Only package-level functions: every skeleton has class_name='None'."""
+        events = [
+            {"func_name": "Alpha", "class_name": "None", "has_recv": False, "cap": True,  "visibility": "public"},
+            {"func_name": "beta",  "class_name": "None", "has_recv": False, "cap": False, "visibility": "private"},
+        ]
+        dag = RegistryDag()
+        skeletons = []
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+        _assert_receiver_resolution(skeletons)
+        for s in skeletons:
+            assert s["class_name"] == "None"
+            assert s["has_recv"] is False
+
+    def test_all_receiver_methods(self):
+        """Only receiver methods: every skeleton has class_name != 'None'."""
+        events = [
+            {"func_name": "GetUser",  "class_name": "Svc",   "has_recv": True, "cap": True,  "visibility": "public"},
+            {"func_name": "distance", "class_name": "Point", "has_recv": True, "cap": False, "visibility": "private"},
+        ]
+        dag = RegistryDag()
+        skeletons = []
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+        _assert_receiver_resolution(skeletons)
+        for s in skeletons:
+            assert s["class_name"] != "None"
+            assert s["has_recv"] is True
+
+    def test_mixed_topology_from_spec(self):
+        """Full spec Events sequence: mixed receivers and package functions."""
+        _, skeletons, _ = _simulate_scan(_EVENTS)
+        _assert_receiver_resolution(skeletons)
+
+    def test_empty_skeletons(self):
+        """Empty set trivially satisfies ReceiverResolution."""
+        _assert_receiver_resolution([])
+
+    def test_incremental_invariant_after_each_event(self):
+        """ReceiverResolution holds after every individual ProcessEvent step."""
+        dag = RegistryDag()
+        skeletons: list = []
+        for ev in _EVENTS:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+            _assert_receiver_resolution(skeletons)
+
+    def test_two_methods_on_same_struct(self):
+        """Two methods on the same struct both carry the same class_name."""
+        events = [
+            {"func_name": "GetUser",  "class_name": "Svc", "has_recv": True, "cap": True, "visibility": "public"},
+            {"func_name": "PostUser", "class_name": "Svc", "has_recv": True, "cap": True, "visibility": "public"},
+        ]
+        dag = RegistryDag()
+        skeletons = []
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+        _assert_receiver_resolution(skeletons)
+        for s in skeletons:
+            assert s["class_name"] == "Svc"
+
+
+class TestVisibilityCorrect:
+
+    def test_all_public(self):
+        """cap=True for all functions → all visibility must be 'public'."""
+        events = [
+            {"func_name": "Hello",   "class_name": "None", "has_recv": False, "cap": True, "visibility": "public"},
+            {"func_name": "GetUser", "class_name": "Svc",  "has_recv": True,  "cap": True, "visibility": "public"},
+        ]
+        dag = RegistryDag()
+        skeletons = [dict(ev) for ev in events]
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+        _assert_visibility_correct(skeletons)
+        for s in skeletons:
+            assert s["visibility"] == "public"
+
+    def test_all_private(self):
+        """cap=False for all functions → all visibility must be 'private'."""
+        events = [
+            {"func_name": "distance", "class_name": "Point", "has_recv": True,  "cap": False, "visibility": "private"},
+            {"func_name": "helper",   "class_name": "None",  "has_recv": False, "cap": False, "visibility": "private"},
+        ]
+        dag = RegistryDag()
+        skeletons = [dict(ev) for ev in events]
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+        _assert_visibility_correct(skeletons)
+        for s in skeletons:
+            assert s["visibility"] == "private"
+
+    def test_mixed_visibility_from_spec(self):
+        """Full spec Events: public and private coexist correctly."""
+        _, skeletons, _ = _simulate_scan(_EVENTS)
+        _assert_visibility_correct(skeletons)
+        by_name = {s["func_name"]: s for s in skeletons}
+        assert by_name["Hello"]["visibility"]    == "public"
+        assert by_name["GetUser"]["visibility"]  == "public"
+        assert by_name["distance"]["visibility"] == "private"
+        assert by_name["helper"]["visibility"]   == "private"
+
+    def test_empty_skeletons(self):
+        """Empty set trivially satisfies VisibilityCorrect."""
+        _assert_visibility_correct([])
+
+    def test_incremental_invariant_after_each_event(self):
+        """VisibilityCorrect holds after every individual ProcessEvent step."""
+        dag = RegistryDag()
+        skeletons: list = []
+        for ev in _EVENTS:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+            _assert_visibility_correct(skeletons)
+
+
+class TestAllRecorded:
+
+    def test_full_scan_satisfies_all_recorded(self):
+        """cursor > N after full scan → every event name is in skeletons."""
+        _, skeletons, cursor = _simulate_scan(_EVENTS)
+        assert cursor > _N
+        _assert_all_recorded(cursor, skeletons, _EVENTS)
+
+    def test_vacuous_before_completion_cursor_1(self):
+        """AllRecorded is vacuously true when cursor=1 (≤ N)."""
+        partial = [dict(_EVENTS[0])]
+        _assert_all_recorded(1, partial, _EVENTS)
+
+    def test_vacuous_at_boundary_cursor_equals_n(self):
+        """AllRecorded is vacuously true when cursor == N (not strictly greater)."""
+        partial = [dict(ev) for ev in _EVENTS[:3]]
+        _assert_all_recorded(_N, partial, _EVENTS)
+
+    def test_fires_at_cursor_n_plus_1(self):
+        """cursor == N+1: all N names must be present — non-vacuous check."""
+        _, skeletons, cursor = _simulate_scan(_EVENTS)
+        assert cursor == _N + 1
+        _assert_all_recorded(cursor, skeletons, _EVENTS)
+        recorded = {s["func_name"] for s in skeletons}
+        for ev in _EVENTS:
+            assert ev["func_name"] in recorded
+
+    def test_single_event_scan(self):
+        """Single-event mini-spec: after cursor passes N=1 the function is present."""
+        single = [{"func_name": "Hello", "class_name": "None",
+                   "has_recv": False, "cap": True, "visibility": "public"}]
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_hello", name="Hello", description="None"))
+        skeletons = [dict(single[0])]
+        _assert_all_recorded(2, skeletons, single)
+
+    def test_reversed_event_order_all_recorded(self):
+        """AllRecorded is order-independent: reversed scan still satisfies it."""
+        _, skeletons, cursor = _simulate_scan(list(reversed(_EVENTS)))
+        assert cursor > _N
+        _assert_all_recorded(cursor, skeletons, list(reversed(_EVENTS)))
+        recorded = {s["func_name"] for s in skeletons}
+        for ev in _EVENTS:
+            assert ev["func_name"] in recorded
+
+
+# ── edge cases ─────────────────────────────────────────────────────────────────
+
+class TestEdgeCases:
+
+    def test_empty_dag_init_state(self):
+        """Init state: empty DAG has zero nodes and satisfies all invariants."""
+        dag = RegistryDag()
+        assert dag.node_count == 0
+        _assert_all_invariants([], 1, _EVENTS)
+
+    def test_single_package_function_node(self):
+        """Isolated public package-level function: class_name='None', visibility='public'."""
+        ev = {"func_name": "Hello", "class_name": "None",
+              "has_recv": False, "cap": True, "visibility": "public"}
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_hello", name="Hello", description="None"))
+        skeletons = [dict(ev)]
+        assert dag.node_count == 1
+        _assert_all_invariants(skeletons, 2, [ev])
+
+    def test_single_private_package_function_node(self):
+        """Isolated private package-level function: class_name='None', visibility='private'."""
+        ev = {"func_name": "helper", "class_name": "None",
+              "has_recv": False, "cap": False, "visibility": "private"}
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_helper", name="helper", description="None"))
+        skeletons = [dict(ev)]
+        assert dag.node_count == 1
+        _assert_all_invariants(skeletons, 2, [ev])
+        assert skeletons[0]["class_name"] == "None"
+        assert skeletons[0]["has_recv"] is False
+
+    def test_single_public_receiver_method_node(self):
+        """Isolated public receiver method: class_name='Svc', visibility='public'."""
+        ev = {"func_name": "GetUser", "class_name": "Svc",
+              "has_recv": True, "cap": True, "visibility": "public"}
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_getuser", name="GetUser", description="Svc"))
+        skeletons = [dict(ev)]
+        assert dag.node_count == 1
+        _assert_all_invariants(skeletons, 2, [ev])
+        assert skeletons[0]["class_name"] == "Svc"
+        assert skeletons[0]["has_recv"] is True
+
+    def test_single_private_receiver_method_node(self):
+        """Isolated private receiver method: class_name='Point', visibility='private'."""
+        ev = {"func_name": "distance", "class_name": "Point",
+              "has_recv": True, "cap": False, "visibility": "private"}
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_distance", name="distance", description="Point"))
+        skeletons = [dict(ev)]
+        assert dag.node_count == 1
+        _assert_all_invariants(skeletons, 2, [ev])
+        assert skeletons[0]["class_name"] == "Point"
+        assert skeletons[0]["visibility"] == "private"
+
+    def test_node_count_increments_per_process_event(self):
+        """DAG node_count grows by exactly 1 with each ProcessEvent step."""
+        dag = RegistryDag()
+        for i, ev in enumerate(_EVENTS):
+            dag.add_node(Node.resource(
+                id=f"fn_{ev['func_name'].lower()}",
+                name=ev["func_name"],
+                description=ev["class_name"],
+            ))
+            assert dag.node_count == i + 1
+
+    def test_scan_order_independence(self):
+        """Skeleton set is independent of event processing order."""
+        dag_fwd, sk_fwd, cur_fwd = _simulate_scan(_EVENTS)
+        dag_rev, sk_rev, cur_rev = _simulate_scan(list(reversed(_EVENTS)))
+
+        set_fwd = frozenset(
+            (s["func_name"], s["class_name"], s["has_recv"], s["cap"], s["visibility"])
+            for s in sk_fwd
+        )
+        set_rev = frozenset(
+            (s["func_name"], s["class_name"], s["has_recv"], s["cap"], s["visibility"])
+            for s in sk_rev
+        )
+        assert set_fwd == set_rev
+        assert dag_fwd.node_count == dag_rev.node_count == _N
+        assert cur_fwd == cur_rev == _N + 1
+
+    def test_each_individual_event_satisfies_all_invariants(self):
+        """Every single event from the spec satisfies all three invariants in isolation."""
+        for ev in _EVENTS:
+            skeletons = [dict(ev)]
+            _assert_receiver_resolution(skeletons)
+            _assert_visibility_correct(skeletons)
+            # cursor=2 > N=1 → AllRecorded fires and must pass
+            _assert_all_recorded(2, skeletons, [ev])
+
+    def test_two_functions_same_receiver_different_visibility(self):
+        """One public and one private method on the same receiver type."""
+        events = [
+            {"func_name": "GetUser", "class_name": "Svc", "has_recv": True, "cap": True,  "visibility": "public"},
+            {"func_name": "setUser", "class_name": "Svc", "has_recv": True, "cap": False, "visibility": "private"},
+        ]
+        dag = RegistryDag()
+        skeletons = []
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+        assert dag.node_count == 2
+        _assert_all_invariants(skeletons, len(events) + 1, events)
+        by_name = {s["func_name"]: s for s in skeletons}
+        assert by_name["GetUser"]["visibility"] == "public"
+        assert by_name["setUser"]["visibility"] == "private"
+        assert by_name["GetUser"]["class_name"] == by_name["setUser"]["class_name"] == "Svc"
+
+    def test_full_scan_dag_edge_count_zero(self):
+        """
+        The scanner creates no edges between function nodes; all nodes are isolated
+        in the DAG (no IMPORTS or other edges are added during scanning).
+        """
+        dag, _, _ = _simulate_scan(_EVENTS)
+        assert dag.edge_count == 0
+```
+```python
+import pytest
+from dag import RegistryDag
+from registry.types import Edge, EdgeType, Node, NodeKind
+
+# ── TLA+ Events[1..4] from the verified spec ──────────────────────────────────
+_EVENTS = [
+    {"func_name": "Hello",    "class_name": "None",  "has_recv": False, "cap": True,  "visibility": "public"},
+    {"func_name": "GetUser",  "class_name": "Svc",   "has_recv": True,  "cap": True,  "visibility": "public"},
+    {"func_name": "distance", "class_name": "Point", "has_recv": True,  "cap": False, "visibility": "private"},
+    {"func_name": "helper",   "class_name": "None",  "has_recv": False, "cap": False, "visibility": "private"},
+]
+_N = len(_EVENTS)
+
+# Expected final skeleton set — State 15 of every trace
+_EXPECTED_SKELETONS = frozenset({
+    ("Hello",    "None",  False, True,  "public"),
+    ("GetUser",  "Svc",   True,  True,  "public"),
+    ("distance", "Point", True,  False, "private"),
+    ("helper",   "None",  False, False, "private"),
+})
+
+
+# ── invariant verifiers ────────────────────────────────────────────────────────
+
+def _assert_receiver_resolution(skeletons: list) -> None:
+    """ReceiverResolution: class_name=='None' iff has_recv==False."""
+    for s in skeletons:
+        if s["class_name"] == "None":
+            assert s["has_recv"] is False, (
+                f"ReceiverResolution: {s['func_name']!r} "
+                f"class_name='None' but has_recv={s['has_recv']}"
+            )
+        else:
+            assert s["has_recv"] is True, (
+                f"ReceiverResolution: {s['func_name']!r} "
+                f"class_name={s['class_name']!r} but has_recv={s['has_recv']}"
+            )
+
+
+def _assert_visibility_correct(skeletons: list) -> None:
+    """VisibilityCorrect: visibility=='public' iff cap==True."""
+    for s in skeletons:
+        if s["cap"] is True:
+            assert s["visibility"] == "public", (
+                f"VisibilityCorrect: {s['func_name']!r} cap=True "
+                f"but visibility={s['visibility']!r}"
+            )
+        else:
+            assert s["visibility"] == "private", (
+                f"VisibilityCorrect: {s['func_name']!r} cap=False "
+                f"but visibility={s['visibility']!r}"
+            )
+
+
+def _assert_all_recorded(cursor: int, skeletons: list, events: list) -> None:
+    """AllRecorded: cursor > N => every event name is present in skeletons."""
+    n = len(events)
+    if cursor > n:
+        recorded = {s["func_name"] for s in skeletons}
+        for ev in events:
+            assert ev["func_name"] in recorded, (
+                f"AllRecorded: {ev['func_name']!r} missing after cursor={cursor}"
+            )
+
+
+def _assert_all_invariants(skeletons: list, cursor: int, events: list) -> None:
+    _assert_receiver_resolution(skeletons)
+    _assert_visibility_correct(skeletons)
+    _assert_all_recorded(cursor, skeletons, events)
+
+
+# ── scan simulation (models TLA+ ScanLoop→ProcessEvent→Advance×N→Finish) ──────
+
+def _simulate_scan(events: list) -> tuple:
+    """
+    Execute the TLA+ scanner algorithm step by step.
+    Invariants are verified at EVERY intermediate state, not just the final one,
+    matching the TLA+ requirement that all invariants hold in every reachable state.
+    Returns (dag, skeletons, cursor_after_finish).
+    """
+    dag = RegistryDag()
+    skeletons: list = []
+    cursor = 1  # Init: cursor=1, skeletons={}
+
+    # Verify invariants on the Init state
+    _assert_all_invariants(skeletons, cursor, events)
+
+    for ev in events:
+        # ScanLoop: cursor <= N, transition to ProcessEvent
+        _assert_all_invariants(skeletons, cursor, events)
+
+        # ProcessEvent: add skeleton and corresponding DAG node
+        node_id = f"fn_{ev['func_name'].lower()}"
+        dag.add_node(Node.resource(
+            id=node_id,
+            name=ev["func_name"],
+            description=ev["class_name"],
+        ))
+        skeleton = {
+            "func_name":  ev["func_name"],
+            "class_name": ev["class_name"],
+            "has_recv":   ev["has_recv"],
+            "cap":        ev["cap"],
+            "visibility": ev["visibility"],
+        }
+        skeletons.append(skeleton)
+
+        # Verify invariants after ProcessEvent
+        _assert_all_invariants(skeletons, cursor, events)
+
+        # Advance: cursor += 1
+        cursor += 1
+
+        # Verify invariants after Advance
+        _assert_all_invariants(skeletons, cursor, events)
+
+    # ScanLoop: cursor > N → Finish
+    _assert_all_invariants(skeletons, cursor, events)
+    # Finish: skip (pc → "Done")
+    _assert_all_invariants(skeletons, cursor, events)
+
+    return dag, skeletons, cursor
+
+
+# ── fixtures ───────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def empty_dag():
+    """Init state: skeletons={}, cursor=1, pc=ScanLoop."""
+    return RegistryDag()
+
+
+@pytest.fixture
+def scanned_dag():
+    """Final state (State 15): all 4 events processed, pc=Done."""
+    dag, skeletons, cursor = _simulate_scan(_EVENTS)
+    return dag, skeletons, cursor
+
+
+# ── trace tests (Traces 1–10, all encode the same execution) ──────────────────
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_produces_correct_final_skeleton_set(trace_id):
+    """
+    Traces 1–10: After ScanLoop→(ProcessEvent→Advance)×4→Finish the skeleton
+    set matches State 15 exactly.  Tests ReceiverResolution, VisibilityCorrect,
+    AllRecorded.
+    """
+    dag, skeletons, cursor = _simulate_scan(_EVENTS)
+
+    # DAG structural check
+    assert dag.node_count == _N, (
+        f"[trace {trace_id}] expected {_N} nodes, got {dag.node_count}"
+    )
+
+    # Final skeleton set matches State 15 of the verified model
+    actual = frozenset(
+        (s["func_name"], s["class_name"], s["has_recv"], s["cap"], s["visibility"])
+        for s in skeletons
+    )
+    assert actual == _EXPECTED_SKELETONS, (
+        f"[trace {trace_id}] skeleton set mismatch\n"
+        f"  expected: {_EXPECTED_SKELETONS}\n"
+        f"  got:      {actual}"
+    )
+
+    # cursor advanced exactly N times: Init=1, after 4 Advance steps = 5
+    assert cursor == _N + 1, (
+        f"[trace {trace_id}] cursor should be {_N + 1}, got {cursor}"
+    )
+
+    # All invariants on the final state
+    _assert_all_invariants(skeletons, cursor, _EVENTS)
+
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_receiver_methods_carry_class_name(trace_id):
+    """
+    Core GWT behaviour: receiver methods must have class_name set to the
+    receiver type; package-level functions must have class_name='None'.
+    """
+    _, skeletons, _ = _simulate_scan(_EVENTS)
+    by_name = {s["func_name"]: s for s in skeletons}
+
+    # Package-level functions (has_recv=False)
+    for fn in ("Hello", "helper"):
+        s = by_name[fn]
+        assert s["class_name"] == "None", (
+            f"[trace {trace_id}] {fn!r}: package function has class_name={s['class_name']!r}"
+        )
+        assert s["has_recv"] is False, (
+            f"[trace {trace_id}] {fn!r}: package function has has_recv=True"
+        )
+
+    # Receiver methods (has_recv=True)
+    assert by_name["GetUser"]["class_name"] == "Svc", (
+        f"[trace {trace_id}] GetUser class_name should be 'Svc'"
+    )
+    assert by_name["GetUser"]["has_recv"] is True
+
+    assert by_name["distance"]["class_name"] == "Point", (
+        f"[trace {trace_id}] distance class_name should be 'Point'"
+    )
+    assert by_name["distance"]["has_recv"] is True
+
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_visibility_derived_from_capitalisation(trace_id):
+    """cap=True ↔ visibility='public';  cap=False ↔ visibility='private'."""
+    _, skeletons, _ = _simulate_scan(_EVENTS)
+    for s in skeletons:
+        expected = "public" if s["cap"] else "private"
+        assert s["visibility"] == expected, (
+            f"[trace {trace_id}] {s['func_name']!r}: cap={s['cap']} "
+            f"but visibility={s['visibility']!r} (expected {expected!r})"
+        )
+
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_all_four_functions_recorded(trace_id):
+    """AllRecorded: after the scan every event name is present in skeletons."""
+    _, skeletons, cursor = _simulate_scan(_EVENTS)
+    assert cursor > _N
+    recorded = {s["func_name"] for s in skeletons}
+    for ev in _EVENTS:
+        assert ev["func_name"] in recorded, (
+            f"[trace {trace_id}] {ev['func_name']!r} missing after full scan"
+        )
+
+
+@pytest.mark.parametrize("trace_id", range(1, 11))
+def test_trace_invariants_hold_at_every_intermediate_state(trace_id):
+    """
+    TLA+ requires ALL invariants to hold in EVERY reachable state, not just the
+    terminal one.  _simulate_scan already checks this internally; this test makes
+    the guarantee explicit per trace ID.
+    """
+    # _simulate_scan raises AssertionError on any intermediate invariant violation
+    dag, skeletons, cursor = _simulate_scan(_EVENTS)
+    assert dag.node_count == _N
+    assert cursor == _N + 1
+
+
+# ── dedicated invariant-verifier tests (≥2 topologies each) ───────────────────
+
+class TestReceiverResolution:
+
+    def test_all_package_functions(self):
+        """Only package-level functions: every skeleton has class_name='None'."""
+        events = [
+            {"func_name": "Alpha", "class_name": "None", "has_recv": False, "cap": True,  "visibility": "public"},
+            {"func_name": "beta",  "class_name": "None", "has_recv": False, "cap": False, "visibility": "private"},
+        ]
+        dag = RegistryDag()
+        skeletons = []
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+        _assert_receiver_resolution(skeletons)
+        for s in skeletons:
+            assert s["class_name"] == "None"
+            assert s["has_recv"] is False
+
+    def test_all_receiver_methods(self):
+        """Only receiver methods: every skeleton has class_name != 'None'."""
+        events = [
+            {"func_name": "GetUser",  "class_name": "Svc",   "has_recv": True, "cap": True,  "visibility": "public"},
+            {"func_name": "distance", "class_name": "Point", "has_recv": True, "cap": False, "visibility": "private"},
+        ]
+        dag = RegistryDag()
+        skeletons = []
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+        _assert_receiver_resolution(skeletons)
+        for s in skeletons:
+            assert s["class_name"] != "None"
+            assert s["has_recv"] is True
+
+    def test_mixed_topology_from_spec(self):
+        """Full spec Events sequence: mixed receivers and package functions."""
+        _, skeletons, _ = _simulate_scan(_EVENTS)
+        _assert_receiver_resolution(skeletons)
+
+    def test_empty_skeletons(self):
+        """Empty set trivially satisfies ReceiverResolution."""
+        _assert_receiver_resolution([])
+
+    def test_incremental_invariant_after_each_event(self):
+        """ReceiverResolution holds after every individual ProcessEvent step."""
+        dag = RegistryDag()
+        skeletons: list = []
+        for ev in _EVENTS:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+            _assert_receiver_resolution(skeletons)
+
+    def test_two_methods_on_same_struct(self):
+        """Two methods on the same struct both carry the same class_name."""
+        events = [
+            {"func_name": "GetUser",  "class_name": "Svc", "has_recv": True, "cap": True, "visibility": "public"},
+            {"func_name": "PostUser", "class_name": "Svc", "has_recv": True, "cap": True, "visibility": "public"},
+        ]
+        dag = RegistryDag()
+        skeletons = []
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+        _assert_receiver_resolution(skeletons)
+        for s in skeletons:
+            assert s["class_name"] == "Svc"
+
+
+class TestVisibilityCorrect:
+
+    def test_all_public(self):
+        """cap=True for all functions → all visibility must be 'public'."""
+        events = [
+            {"func_name": "Hello",   "class_name": "None", "has_recv": False, "cap": True, "visibility": "public"},
+            {"func_name": "GetUser", "class_name": "Svc",  "has_recv": True,  "cap": True, "visibility": "public"},
+        ]
+        dag = RegistryDag()
+        skeletons = [dict(ev) for ev in events]
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+        _assert_visibility_correct(skeletons)
+        for s in skeletons:
+            assert s["visibility"] == "public"
+
+    def test_all_private(self):
+        """cap=False for all functions → all visibility must be 'private'."""
+        events = [
+            {"func_name": "distance", "class_name": "Point", "has_recv": True,  "cap": False, "visibility": "private"},
+            {"func_name": "helper",   "class_name": "None",  "has_recv": False, "cap": False, "visibility": "private"},
+        ]
+        dag = RegistryDag()
+        skeletons = [dict(ev) for ev in events]
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+        _assert_visibility_correct(skeletons)
+        for s in skeletons:
+            assert s["visibility"] == "private"
+
+    def test_mixed_visibility_from_spec(self):
+        """Full spec Events: public and private coexist correctly."""
+        _, skeletons, _ = _simulate_scan(_EVENTS)
+        _assert_visibility_correct(skeletons)
+        by_name = {s["func_name"]: s for s in skeletons}
+        assert by_name["Hello"]["visibility"]    == "public"
+        assert by_name["GetUser"]["visibility"]  == "public"
+        assert by_name["distance"]["visibility"] == "private"
+        assert by_name["helper"]["visibility"]   == "private"
+
+    def test_empty_skeletons(self):
+        """Empty set trivially satisfies VisibilityCorrect."""
+        _assert_visibility_correct([])
+
+    def test_incremental_invariant_after_each_event(self):
+        """VisibilityCorrect holds after every individual ProcessEvent step."""
+        dag = RegistryDag()
+        skeletons: list = []
+        for ev in _EVENTS:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+            _assert_visibility_correct(skeletons)
+
+
+class TestAllRecorded:
+
+    def test_full_scan_satisfies_all_recorded(self):
+        """cursor > N after full scan → every event name is in skeletons."""
+        _, skeletons, cursor = _simulate_scan(_EVENTS)
+        assert cursor > _N
+        _assert_all_recorded(cursor, skeletons, _EVENTS)
+
+    def test_vacuous_before_completion_cursor_1(self):
+        """AllRecorded is vacuously true when cursor=1 (≤ N)."""
+        partial = [dict(_EVENTS[0])]
+        _assert_all_recorded(1, partial, _EVENTS)
+
+    def test_vacuous_at_boundary_cursor_equals_n(self):
+        """AllRecorded is vacuously true when cursor == N (not strictly greater)."""
+        partial = [dict(ev) for ev in _EVENTS[:3]]
+        _assert_all_recorded(_N, partial, _EVENTS)
+
+    def test_fires_at_cursor_n_plus_1(self):
+        """cursor == N+1: all N names must be present — non-vacuous check."""
+        _, skeletons, cursor = _simulate_scan(_EVENTS)
+        assert cursor == _N + 1
+        _assert_all_recorded(cursor, skeletons, _EVENTS)
+        recorded = {s["func_name"] for s in skeletons}
+        for ev in _EVENTS:
+            assert ev["func_name"] in recorded
+
+    def test_single_event_scan(self):
+        """Single-event mini-spec: after cursor passes N=1 the function is present."""
+        single = [{"func_name": "Hello", "class_name": "None",
+                   "has_recv": False, "cap": True, "visibility": "public"}]
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_hello", name="Hello", description="None"))
+        skeletons = [dict(single[0])]
+        _assert_all_recorded(2, skeletons, single)
+
+    def test_reversed_event_order_all_recorded(self):
+        """AllRecorded is order-independent: reversed scan still satisfies it."""
+        _, skeletons, cursor = _simulate_scan(list(reversed(_EVENTS)))
+        assert cursor > _N
+        _assert_all_recorded(cursor, skeletons, list(reversed(_EVENTS)))
+        recorded = {s["func_name"] for s in skeletons}
+        for ev in _EVENTS:
+            assert ev["func_name"] in recorded
+
+
+# ── edge cases ─────────────────────────────────────────────────────────────────
+
+class TestEdgeCases:
+
+    def test_empty_dag_init_state(self):
+        """Init state: empty DAG has zero nodes and satisfies all invariants."""
+        dag = RegistryDag()
+        assert dag.node_count == 0
+        _assert_all_invariants([], 1, _EVENTS)
+
+    def test_single_package_function_node(self):
+        """Isolated public package-level function: class_name='None', visibility='public'."""
+        ev = {"func_name": "Hello", "class_name": "None",
+              "has_recv": False, "cap": True, "visibility": "public"}
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_hello", name="Hello", description="None"))
+        skeletons = [dict(ev)]
+        assert dag.node_count == 1
+        _assert_all_invariants(skeletons, 2, [ev])
+
+    def test_single_private_package_function_node(self):
+        """Isolated private package-level function: class_name='None', visibility='private'."""
+        ev = {"func_name": "helper", "class_name": "None",
+              "has_recv": False, "cap": False, "visibility": "private"}
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_helper", name="helper", description="None"))
+        skeletons = [dict(ev)]
+        assert dag.node_count == 1
+        _assert_all_invariants(skeletons, 2, [ev])
+        assert skeletons[0]["class_name"] == "None"
+        assert skeletons[0]["has_recv"] is False
+
+    def test_single_public_receiver_method_node(self):
+        """Isolated public receiver method: class_name='Svc', visibility='public'."""
+        ev = {"func_name": "GetUser", "class_name": "Svc",
+              "has_recv": True, "cap": True, "visibility": "public"}
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_getuser", name="GetUser", description="Svc"))
+        skeletons = [dict(ev)]
+        assert dag.node_count == 1
+        _assert_all_invariants(skeletons, 2, [ev])
+        assert skeletons[0]["class_name"] == "Svc"
+        assert skeletons[0]["has_recv"] is True
+
+    def test_single_private_receiver_method_node(self):
+        """Isolated private receiver method: class_name='Point', visibility='private'."""
+        ev = {"func_name": "distance", "class_name": "Point",
+              "has_recv": True, "cap": False, "visibility": "private"}
+        dag = RegistryDag()
+        dag.add_node(Node.resource(id="fn_distance", name="distance", description="Point"))
+        skeletons = [dict(ev)]
+        assert dag.node_count == 1
+        _assert_all_invariants(skeletons, 2, [ev])
+        assert skeletons[0]["class_name"] == "Point"
+        assert skeletons[0]["visibility"] == "private"
+
+    def test_node_count_increments_per_process_event(self):
+        """DAG node_count grows by exactly 1 with each ProcessEvent step."""
+        dag = RegistryDag()
+        for i, ev in enumerate(_EVENTS):
+            dag.add_node(Node.resource(
+                id=f"fn_{ev['func_name'].lower()}",
+                name=ev["func_name"],
+                description=ev["class_name"],
+            ))
+            assert dag.node_count == i + 1
+
+    def test_scan_order_independence(self):
+        """Skeleton set is independent of event processing order."""
+        dag_fwd, sk_fwd, cur_fwd = _simulate_scan(_EVENTS)
+        dag_rev, sk_rev, cur_rev = _simulate_scan(list(reversed(_EVENTS)))
+
+        set_fwd = frozenset(
+            (s["func_name"], s["class_name"], s["has_recv"], s["cap"], s["visibility"])
+            for s in sk_fwd
+        )
+        set_rev = frozenset(
+            (s["func_name"], s["class_name"], s["has_recv"], s["cap"], s["visibility"])
+            for s in sk_rev
+        )
+        assert set_fwd == set_rev
+        assert dag_fwd.node_count == dag_rev.node_count == _N
+        assert cur_fwd == cur_rev == _N + 1
+
+    def test_each_individual_event_satisfies_all_invariants(self):
+        """Every single event from the spec satisfies all three invariants in isolation."""
+        for ev in _EVENTS:
+            skeletons = [dict(ev)]
+            _assert_receiver_resolution(skeletons)
+            _assert_visibility_correct(skeletons)
+            # cursor=2 > N=1 → AllRecorded fires and must pass
+            _assert_all_recorded(2, skeletons, [ev])
+
+    def test_two_functions_same_receiver_different_visibility(self):
+        """One public and one private method on the same receiver type."""
+        events = [
+            {"func_name": "GetUser", "class_name": "Svc", "has_recv": True, "cap": True,  "visibility": "public"},
+            {"func_name": "setUser", "class_name": "Svc", "has_recv": True, "cap": False, "visibility": "private"},
+        ]
+        dag = RegistryDag()
+        skeletons = []
+        for ev in events:
+            dag.add_node(Node.resource(id=f"fn_{ev['func_name'].lower()}",
+                                       name=ev["func_name"],
+                                       description=ev["class_name"]))
+            skeletons.append(dict(ev))
+        assert dag.node_count == 2
+        _assert_all_invariants(skeletons, len(events) + 1, events)
+        by_name = {s["func_name"]: s for s in skeletons}
+        assert by_name["GetUser"]["visibility"] == "public"
+        assert by_name["setUser"]["visibility"] == "private"
+        assert by_name["GetUser"]["class_name"] == by_name["setUser"]["class_name"] == "Svc"
+
+    def test_full_scan_dag_edge_count_zero(self):
+        """
+        The scanner creates no edges between function nodes; all nodes are isolated
+        in the DAG (no IMPORTS or other edges are added during scanning).
+        """
+        dag, _, _ = _simulate_scan(_EVENTS)
+        assert dag.edge_count == 0
+```
