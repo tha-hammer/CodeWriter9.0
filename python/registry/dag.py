@@ -433,6 +433,7 @@ class RegistryDag:
                 when=ndata.get("when"),
                 then=ndata.get("then"),
                 text=ndata.get("text"),
+                metadata=ndata.get("metadata"),
             )
         for edata in data.get("edges", []):
             dag.edges.append(Edge(

@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import re
 
+import json
+from pathlib import Path
+
 from registry.crawl_types import (
+    BehavioralReport,
+    BehavioralViolation,
+    CrossCuttingRule,
     DispatchKind,
     FnRecord,
     InSource,
@@ -12,6 +18,183 @@ from registry.crawl_types import (
     SeamMismatch,
     SeamReport,
 )
+
+
+_VALID_POSITIONS = {"pre", "post", "wrap"}
+
+
+# ── Cross-cutting rules loading (gwt-0068) ──────────────────────
+
+
+def load_cross_cutting_rules(path: Path | str) -> list[CrossCuttingRule]:
+    """Load cross-cutting rules from a JSON file.
+
+    Verifiers: NoPartialResults, ValidPositionOnly, CompleteFields,
+    FileAbsentImpliesError, MalformedImpliesError, InvalidSchemaImpliesError,
+    SafeResult, EmptyRulesValid.
+    """
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Rules file not found: {path}")
+
+    text = path.read_text()
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Malformed JSON in {path}: {exc}") from exc
+
+    if not isinstance(data, dict) or "rules" not in data:
+        raise ValueError(f"Invalid schema: expected object with 'rules' key in {path}")
+
+    rules_list = data["rules"]
+    if not isinstance(rules_list, list):
+        raise ValueError(f"Invalid schema: 'rules' must be an array in {path}")
+
+    required_fields = {"resource_type", "required_outs", "position"}
+    result: list[CrossCuttingRule] = []
+    for i, rule_data in enumerate(rules_list):
+        if not isinstance(rule_data, dict):
+            raise ValueError(f"Rule {i} must be an object in {path}")
+        missing = required_fields - set(rule_data.keys())
+        if missing:
+            raise ValueError(f"Rule {i} missing fields {missing} in {path}")
+        if rule_data["position"] not in _VALID_POSITIONS:
+            raise ValueError(
+                f"Rule {i} has invalid position '{rule_data['position']}'; "
+                f"must be one of {_VALID_POSITIONS}"
+            )
+        result.append(CrossCuttingRule(
+            resource_type=rule_data["resource_type"],
+            required_outs=list(rule_data["required_outs"]),
+            position=rule_data["position"],
+        ))
+
+    return result
+
+
+# ── Resource-type matching (gwt-0069 helper) ────────────────────
+
+
+def _matches_resource_type(record: FnRecord, rule: CrossCuttingRule) -> bool:
+    """Check if a record matches a rule's resource_type.
+
+    Transitional heuristic until records table has a resource_type column.
+    """
+    rt = rule.resource_type
+
+    if rt == "external_api":
+        return record.is_external
+
+    bc = (getattr(record, "boundary_contract", None) or "").lower()
+    fp = record.file_path.lower()
+
+    if rt == "database":
+        if "database" in bc or "db" in bc:
+            return True
+        if "/db/" in fp or "_store." in fp:
+            return True
+        return False
+
+    if rt == "message_queue":
+        return "queue" in bc or "mq" in bc
+
+    return False
+
+
+# ── Behavioral contract checking (gwt-0069) ─────────────────────
+
+
+def check_behavioral_contracts(
+    store: "CrawlStore",  # noqa: F821
+    rules: list[CrossCuttingRule],
+) -> BehavioralReport:
+    """Check behavioral contracts across dependency edges.
+
+    Verifiers: CountConsistency, ViolationComplete, NoFalsePositives,
+    NoMatchNoViolation, EmptyEdgesImpliesEmptyReport,
+    ZeroViolationsWhenAllCompliant, NoMatchNoCount.
+    """
+    violations: list[BehavioralViolation] = []
+    satisfied = 0
+
+    # In the deps view: dep_uuid = record with the IN (the caller in call terms),
+    # caller_uuid = source of the IN (the dependency / callee in call terms).
+    # Variable names follow check_all_seams convention.
+    edges = store.get_dependency_edges()
+    for dep_uuid, caller_uuid, dispatch, _ in edges:
+        dependent = store.get_record(dep_uuid)      # the function that calls
+        dependency = store.get_record(caller_uuid)   # the function being called
+        if dependent is None or dependency is None:
+            continue
+
+        # Check which rules match the dependency (the function being called)
+        edge_matched = False
+        edge_has_violation = False
+
+        for rule in rules:
+            if not _matches_resource_type(dependency, rule):
+                continue
+            edge_matched = True
+
+            # Check required outs on the dependency
+            dep_out_types = {o.type_str for o in dependency.outs}
+            dep_out_descriptions = {o.description for o in dependency.outs}
+            dep_out_all = dep_out_types | dep_out_descriptions
+
+            for required_out in rule.required_outs:
+                if required_out not in dep_out_all:
+                    edge_has_violation = True
+                    violations.append(BehavioralViolation(
+                        rule_resource_type=rule.resource_type,
+                        callee_uuid=dependency.uuid,
+                        callee_function=dependency.function_name,
+                        missing_contract=required_out,
+                        caller_uuid=dependent.uuid,
+                        caller_function=dependent.function_name,
+                    ))
+
+        if edge_matched and not edge_has_violation:
+            satisfied += 1
+
+    total_checked = satisfied + len(violations)
+    return BehavioralReport(
+        violations=violations,
+        satisfied=satisfied,
+        total_checked=total_checked,
+    )
+
+
+# ── Behavioral report formatters (gwt-0070) ─────────────────────
+
+
+def render_behavioral_report(report: BehavioralReport) -> str:
+    """Human-readable behavioral contract report."""
+    lines = [f"\nBehavioral Report: {report.total_checked} edges checked"]
+    lines.append(
+        f"  {report.satisfied} satisfied, "
+        f"{len(report.violations)} violations"
+    )
+
+    if report.violations:
+        lines.append("\nBehavioral Violations:")
+        for v in report.violations:
+            lines.append(
+                f"  {v.caller_function}() -> {v.callee_function}(): "
+                f"missing {v.missing_contract} (rule: {v.rule_resource_type})"
+            )
+
+    return "\n".join(lines)
+
+
+def behavioral_report_to_json(report: BehavioralReport) -> dict:
+    """Machine-readable behavioral report."""
+    from dataclasses import asdict
+
+    return {
+        "total_checked": report.total_checked,
+        "satisfied": report.satisfied,
+        "violations": [asdict(v) for v in report.violations],
+    }
 
 
 # ── Type compatibility ────────────────────────────────────────────

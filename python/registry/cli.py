@@ -1709,14 +1709,40 @@ def cmd_seams(args: argparse.Namespace) -> int:
     from registry.crawl_store import CrawlStore
     from registry.seam_checker import check_all_seams, render_seam_report, seam_report_to_json
 
+    # Load cross-cutting rules if requested
+    behavioral_report = None
+    if getattr(args, "cross_cutting", False):
+        from registry.seam_checker import (
+            check_behavioral_contracts,
+            load_cross_cutting_rules,
+        )
+        rules_path = state_root / "schema" / "cross_cutting_rules.json"
+        if not rules_path.exists():
+            print(f"Cross-cutting rules file not found: {rules_path}", file=sys.stderr)
+            return 1
+        try:
+            rules = load_cross_cutting_rules(rules_path)
+        except (ValueError, FileNotFoundError) as exc:
+            print(f"Error loading cross-cutting rules: {exc}", file=sys.stderr)
+            return 1
+
     with CrawlStore(crawl_db_path) as store:
         report = check_all_seams(store)
+        if getattr(args, "cross_cutting", False):
+            behavioral_report = check_behavioral_contracts(store, rules)
 
     if getattr(args, "output_json", False):
         import json
-        print(json.dumps(seam_report_to_json(report), indent=2))
+        data = seam_report_to_json(report)
+        if behavioral_report is not None:
+            from registry.seam_checker import behavioral_report_to_json
+            data["behavioral"] = behavioral_report_to_json(behavioral_report)
+        print(json.dumps(data, indent=2))
     else:
         print(render_seam_report(report, verbose=getattr(args, "verbose", False)))
+        if behavioral_report is not None:
+            from registry.seam_checker import render_behavioral_report
+            print(render_behavioral_report(behavioral_report))
 
     return 1 if report.mismatches else 0
 
@@ -1908,6 +1934,8 @@ def _add_crawl_commands(sub: argparse._SubParsersAction) -> None:
     p_seams.add_argument("--verbose", action="store_true")
     p_seams.add_argument("--file", default=None, help="Filter to functions in this file")
     p_seams.add_argument("--function", default=None, help="Filter to this function name")
+    p_seams.add_argument("--cross-cutting", action="store_true", dest="cross_cutting",
+                         help="Include behavioral contract checks from cross-cutting rules")
 
     p_gwt_author = sub.add_parser("gwt-author", help="Generate GWT specs from research notes + crawl.db")
     p_gwt_author.add_argument("target_dir", nargs="?", default=".", help="Target project directory (default: .)")

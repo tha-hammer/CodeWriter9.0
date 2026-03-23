@@ -218,6 +218,29 @@ def build_retry_prompt(
     return "\n".join(parts)
 
 
+def resolve_template_name(gwt_node: Any, template_dir: Path) -> tuple[str, Path]:
+    """Resolve which PlusCal template to use for a GWT node.
+
+    Checks gwt_node.metadata["template"] if present, falls back to
+    "state_machine" if absent. Raises FileNotFoundError for explicitly
+    annotated template names that don't exist (NoSilentFallback).
+    """
+    template_name = "state_machine"
+    explicitly_annotated = False
+    if getattr(gwt_node, "metadata", None) and "template" in gwt_node.metadata:
+        template_name = gwt_node.metadata["template"]
+        explicitly_annotated = True
+
+    template_path = template_dir / f"{template_name}.tla"
+    if explicitly_annotated and not template_path.exists():
+        raise FileNotFoundError(
+            f"Template not found: {template_path} "
+            f"(from metadata.template='{template_name}')"
+        )
+
+    return template_name, template_path
+
+
 async def run_loop(
     ctx: ProjectContext,
     gwt_id: str,
@@ -261,8 +284,8 @@ async def run_loop(
     bundle = query_context(dag, gwt_id, state_root=ctx.state_root)
     prompt_ctx = format_prompt_context(bundle)
 
-    # Read PlusCal template
-    template_path = ctx.template_dir / "state_machine.tla"
+    # Read PlusCal template (respects metadata.template annotation)
+    _, template_path = resolve_template_name(gwt_node, ctx.template_dir)
     template_text = template_path.read_text() if template_path.exists() else ""
 
     initial_prompt = _build_prompt(gwt_node, prompt_ctx, template_text, context_text)

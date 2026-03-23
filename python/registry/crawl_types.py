@@ -216,6 +216,30 @@ class TestReference:
 
 
 @dataclass
+class CrossCuttingRule:
+    resource_type: str          # e.g., "database", "external_api", "cache"
+    required_outs: list[str]    # e.g., ["audit_event", "span_id"]
+    position: str               # "pre" | "post" | "wrap"
+
+
+@dataclass
+class BehavioralViolation:
+    rule_resource_type: str
+    callee_uuid: str
+    callee_function: str
+    missing_contract: str
+    caller_uuid: str
+    caller_function: str
+
+
+@dataclass
+class BehavioralReport:
+    violations: list[BehavioralViolation]
+    satisfied: int
+    total_checked: int
+
+
+@dataclass
 class SeamMismatch:
     """A detected mismatch or unresolved edge at a function boundary."""
     caller_uuid: str          # empty string for unresolved

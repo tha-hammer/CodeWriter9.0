@@ -56,6 +56,7 @@ class Node:
     when: str | None = None
     then: str | None = None
     text: str | None = None
+    metadata: dict | None = None
 
     @classmethod
     def resource(cls, id: str, name: str, description: str = "", **kwargs: Any) -> Node:
@@ -80,7 +81,7 @@ class Node:
             "description": self.description,
             "version": self.version,
         }
-        for opt in ("schema", "path", "source_schema", "source_key", "given", "when", "then", "text"):
+        for opt in ("schema", "path", "source_schema", "source_key", "given", "when", "then", "text", "metadata"):
             val = getattr(self, opt)
             if val is not None:
                 d[opt] = val
