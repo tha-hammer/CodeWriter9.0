@@ -1,0 +1,246 @@
+The root cause is set-valued CONSTANTS (`Templates`, `ExistingFiles`) being assigned as atoms by TLC, making `\subseteq` assumptions false. Fix: replace all set-valued constants with individual model-value constants and derive sets as defined operators.
+
+---- MODULE TemplateSelectedByAnnotation ----
+
+EXTENDS Integers, TLC, FiniteSets
+
+CONSTANTS
+    StateMachine,
+    ObsStateMachine,
+    UnknownTemplate,
+    NoMetadata
+
+ASSUME StateMachine # ObsStateMachine
+ASSUME UnknownTemplate # StateMachine
+ASSUME UnknownTemplate # ObsStateMachine
+ASSUME NoMetadata # StateMachine
+ASSUME NoMetadata # ObsStateMachine
+ASSUME NoMetadata # UnknownTemplate
+
+(* --algorithm TemplateSelectedByAnnotation
+
+variables
+    gwt_metadata = NoMetadata,
+    selected_template = StateMachine,
+    file_exists = FALSE,
+    template_loaded = FALSE,
+    error = FALSE,
+    phase = "idle";
+
+define
+
+    KnownTemplates == {StateMachine, ObsStateMachine}
+
+    DefaultTemplate == StateMachine
+
+    TypeOK ==
+        /\ gwt_metadata \in (KnownTemplates \cup {UnknownTemplate, NoMetadata})
+        /\ selected_template \in (KnownTemplates \cup {UnknownTemplate})
+        /\ error \in BOOLEAN
+        /\ template_loaded \in BOOLEAN
+        /\ file_exists \in BOOLEAN
+
+    DefaultFallback ==
+        (phase = "prompt_built" /\ gwt_metadata = NoMetadata) =>
+            selected_template = DefaultTemplate
+
+    AnnotationRespected ==
+        \A t \in KnownTemplates :
+            (phase = "prompt_built" /\ gwt_metadata = t) =>
+                selected_template = t
+
+    NoSilentFallback ==
+        ~(gwt_metadata = UnknownTemplate /\ template_loaded = TRUE)
+
+    PromptBuiltOnlyIfLoaded ==
+        phase = "prompt_built" => template_loaded = TRUE
+
+    ErrorMeansNoPrompt ==
+        error = TRUE => phase # "prompt_built"
+
+    UnknownTemplateImpliesError ==
+        (gwt_metadata = UnknownTemplate /\
+         phase \notin {"idle", "metadata_read", "template_resolved"}) =>
+            error = TRUE
+
+    KnownTemplateNeverErrors ==
+        (gwt_metadata \in KnownTemplates /\
+         phase \notin {"idle", "metadata_read"}) =>
+            error = FALSE
+
+end define;
+
+fair process runner = "main"
+begin
+    ChooseInput:
+        either
+            gwt_metadata := NoMetadata;
+        or
+            gwt_metadata := StateMachine;
+        or
+            gwt_metadata := ObsStateMachine;
+        or
+            gwt_metadata := UnknownTemplate;
+        end either;
+        phase := "metadata_read";
+
+    ReadMeta:
+        if gwt_metadata = NoMetadata then
+            selected_template := StateMachine;
+        else
+            selected_template := gwt_metadata;
+        end if;
+        phase := "template_resolved";
+
+    CheckFile:
+        if selected_template \in KnownTemplates then
+            file_exists := TRUE;
+            phase := "exists_checked";
+        else
+            error := TRUE;
+            phase := "error_raised";
+        end if;
+
+    MaybeLoad:
+        if error = TRUE then
+            goto Terminate;
+        end if;
+
+    LoadContent:
+        template_loaded := TRUE;
+        phase := "content_loaded";
+
+    BuildPrompt:
+        phase := "prompt_built";
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+The root cause is set-valued CONSTANTS (`Templates`, `ExistingFiles`) being assigned as atoms by TLC, making `\subseteq` assumptions false. Fix: replace all set-valued constants with individual model-value constants and derive sets as defined operators.
+
+---- MODULE TemplateSelectedByAnnotation ----
+
+EXTENDS Integers, TLC, FiniteSets
+
+CONSTANTS
+    StateMachine,
+    ObsStateMachine,
+    UnknownTemplate,
+    NoMetadata
+
+ASSUME StateMachine # ObsStateMachine
+ASSUME UnknownTemplate # StateMachine
+ASSUME UnknownTemplate # ObsStateMachine
+ASSUME NoMetadata # StateMachine
+ASSUME NoMetadata # ObsStateMachine
+ASSUME NoMetadata # UnknownTemplate
+
+(* --algorithm TemplateSelectedByAnnotation
+
+variables
+    gwt_metadata = NoMetadata,
+    selected_template = StateMachine,
+    file_exists = FALSE,
+    template_loaded = FALSE,
+    error = FALSE,
+    phase = "idle";
+
+define
+
+    KnownTemplates == {StateMachine, ObsStateMachine}
+
+    DefaultTemplate == StateMachine
+
+    TypeOK ==
+        /\ gwt_metadata \in (KnownTemplates \cup {UnknownTemplate, NoMetadata})
+        /\ selected_template \in (KnownTemplates \cup {UnknownTemplate})
+        /\ error \in BOOLEAN
+        /\ template_loaded \in BOOLEAN
+        /\ file_exists \in BOOLEAN
+
+    DefaultFallback ==
+        (phase = "prompt_built" /\ gwt_metadata = NoMetadata) =>
+            selected_template = DefaultTemplate
+
+    AnnotationRespected ==
+        \A t \in KnownTemplates :
+            (phase = "prompt_built" /\ gwt_metadata = t) =>
+                selected_template = t
+
+    NoSilentFallback ==
+        ~(gwt_metadata = UnknownTemplate /\ template_loaded = TRUE)
+
+    PromptBuiltOnlyIfLoaded ==
+        phase = "prompt_built" => template_loaded = TRUE
+
+    ErrorMeansNoPrompt ==
+        error = TRUE => phase # "prompt_built"
+
+    UnknownTemplateImpliesError ==
+        (gwt_metadata = UnknownTemplate /\
+         phase \notin {"idle", "metadata_read", "template_resolved"}) =>
+            error = TRUE
+
+    KnownTemplateNeverErrors ==
+        (gwt_metadata \in KnownTemplates /\
+         phase \notin {"idle", "metadata_read"}) =>
+            error = FALSE
+
+end define;
+
+fair process runner = "main"
+begin
+    ChooseInput:
+        either
+            gwt_metadata := NoMetadata;
+        or
+            gwt_metadata := StateMachine;
+        or
+            gwt_metadata := ObsStateMachine;
+        or
+            gwt_metadata := UnknownTemplate;
+        end either;
+        phase := "metadata_read";
+
+    ReadMeta:
+        if gwt_metadata = NoMetadata then
+            selected_template := StateMachine;
+        else
+            selected_template := gwt_metadata;
+        end if;
+        phase := "template_resolved";
+
+    CheckFile:
+        if selected_template \in KnownTemplates then
+            file_exists := TRUE;
+            phase := "exists_checked";
+        else
+            error := TRUE;
+            phase := "error_raised";
+        end if;
+
+    MaybeLoad:
+        if error = TRUE then
+            goto Terminate;
+        end if;
+
+    LoadContent:
+        template_loaded := TRUE;
+        phase := "content_loaded";
+
+    BuildPrompt:
+        phase := "prompt_built";
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

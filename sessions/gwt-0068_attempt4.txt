@@ -1,0 +1,312 @@
+---- MODULE CrossCuttingRulesLoader ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+ValidPositions == {"pre", "post", "wrap"}
+
+GoodRule == [resource_type |-> "database",
+             required_outs |-> {"audit_event"},
+             position      |-> "wrap"]
+
+BadRule  == [resource_type |-> "database",
+             required_outs |-> {"audit_event"},
+             position      |-> "INVALID"]
+
+(* --algorithm LoadCrossCuttingRules
+
+variables
+    file_exists        = FALSE,
+    json_valid         = FALSE,
+    all_fields_present = FALSE,
+    rules_data         = {},
+    result             = {},
+    error              = "",
+    phase              = "init";
+
+define
+
+    NoPartialResults ==
+        error /= "" => result = {}
+
+    ValidPositionOnly ==
+        \A r \in result : r["position"] \in ValidPositions
+
+    CompleteFields ==
+        \A r \in result :
+            /\ "resource_type" \in DOMAIN r
+            /\ "required_outs" \in DOMAIN r
+            /\ "position"      \in DOMAIN r
+
+    FileAbsentImpliesError ==
+        (~file_exists /\ phase \in {"returned", "raised"}) =>
+            error = "FileNotFoundError"
+
+    MalformedImpliesError ==
+        (file_exists /\ ~json_valid /\ phase \in {"returned", "raised"}) =>
+            error = "ValueError"
+
+    InvalidSchemaImpliesError ==
+        (file_exists /\ json_valid /\ ~all_fields_present /\
+         phase \in {"returned", "raised"}) =>
+            error = "ValueError"
+
+    SafeResult ==
+        phase \in {"returned", "raised"} =>
+            \/ (error = "" /\ \A r \in result : r["position"] \in ValidPositions)
+            \/ (error /= "" /\ result = {})
+
+    EmptyRulesValid ==
+        (file_exists /\ json_valid /\ all_fields_present /\
+         rules_data = {} /\ phase = "returned") =>
+            result = {}
+
+    PhaseValid ==
+        phase \in {"init", "file_read", "json_parsed",
+                   "validating_positions", "positions_valid",
+                   "returned", "raised"}
+
+end define;
+
+fair process loader = "main"
+begin
+    ChooseFileExists:
+        either
+            file_exists := TRUE;
+        or
+            file_exists := FALSE;
+        end either;
+
+    ChooseJsonValid:
+        if file_exists then
+            either
+                json_valid := TRUE;
+            or
+                json_valid := FALSE;
+            end either;
+        end if;
+
+    ChooseSchema:
+        if file_exists /\ json_valid then
+            either
+                all_fields_present := TRUE;
+                rules_data := {GoodRule};
+            or
+                all_fields_present := TRUE;
+                rules_data := {BadRule};
+            or
+                all_fields_present := TRUE;
+                rules_data := {};
+            or
+                all_fields_present := FALSE;
+            end either;
+        end if;
+
+    ReadFile:
+        if ~file_exists then
+            error := "FileNotFoundError";
+            phase := "raised";
+            goto RaisedError;
+        else
+            phase := "file_read";
+        end if;
+
+    ParseJSON:
+        if ~json_valid then
+            error := "ValueError";
+            phase := "raised";
+            goto RaisedError;
+        else
+            phase := "json_parsed";
+        end if;
+
+    ValidateRules:
+        if ~all_fields_present then
+            error := "ValueError";
+            phase := "raised";
+            goto RaisedError;
+        else
+            phase := "validating_positions";
+        end if;
+
+    CheckPositions:
+        if \E r \in rules_data : r["position"] \notin ValidPositions then
+            error := "ValueError";
+            phase := "raised";
+            goto RaisedError;
+        else
+            phase := "positions_valid";
+        end if;
+
+    BuildResult:
+        result := rules_data;
+        phase  := "returned";
+        goto Finish;
+
+    RaisedError:
+        assert result = {};
+        assert error \in {"FileNotFoundError", "ValueError"};
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE CrossCuttingRulesLoader ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+ValidPositions == {"pre", "post", "wrap"}
+
+GoodRule == [resource_type |-> "database",
+             required_outs |-> {"audit_event"},
+             position      |-> "wrap"]
+
+BadRule  == [resource_type |-> "database",
+             required_outs |-> {"audit_event"},
+             position      |-> "INVALID"]
+
+(* --algorithm LoadCrossCuttingRules
+
+variables
+    file_exists        = FALSE,
+    json_valid         = FALSE,
+    all_fields_present = FALSE,
+    rules_data         = {},
+    result             = {},
+    error              = "",
+    phase              = "init";
+
+define
+
+    NoPartialResults ==
+        error /= "" => result = {}
+
+    ValidPositionOnly ==
+        \A r \in result : r["position"] \in ValidPositions
+
+    CompleteFields ==
+        \A r \in result :
+            /\ "resource_type" \in DOMAIN r
+            /\ "required_outs" \in DOMAIN r
+            /\ "position"      \in DOMAIN r
+
+    FileAbsentImpliesError ==
+        (~file_exists /\ phase \in {"returned", "raised"}) =>
+            error = "FileNotFoundError"
+
+    MalformedImpliesError ==
+        (file_exists /\ ~json_valid /\ phase \in {"returned", "raised"}) =>
+            error = "ValueError"
+
+    InvalidSchemaImpliesError ==
+        (file_exists /\ json_valid /\ ~all_fields_present /\
+         phase \in {"returned", "raised"}) =>
+            error = "ValueError"
+
+    SafeResult ==
+        phase \in {"returned", "raised"} =>
+            \/ (error = "" /\ \A r \in result : r["position"] \in ValidPositions)
+            \/ (error /= "" /\ result = {})
+
+    EmptyRulesValid ==
+        (file_exists /\ json_valid /\ all_fields_present /\
+         rules_data = {} /\ phase = "returned") =>
+            result = {}
+
+    PhaseValid ==
+        phase \in {"init", "file_read", "json_parsed",
+                   "validating_positions", "positions_valid",
+                   "returned", "raised"}
+
+end define;
+
+fair process loader = "main"
+begin
+    ChooseFileExists:
+        either
+            file_exists := TRUE;
+        or
+            file_exists := FALSE;
+        end either;
+
+    ChooseJsonValid:
+        if file_exists then
+            either
+                json_valid := TRUE;
+            or
+                json_valid := FALSE;
+            end either;
+        end if;
+
+    ChooseSchema:
+        if file_exists /\ json_valid then
+            either
+                all_fields_present := TRUE;
+                rules_data := {GoodRule};
+            or
+                all_fields_present := TRUE;
+                rules_data := {BadRule};
+            or
+                all_fields_present := TRUE;
+                rules_data := {};
+            or
+                all_fields_present := FALSE;
+            end either;
+        end if;
+
+    ReadFile:
+        if ~file_exists then
+            error := "FileNotFoundError";
+            phase := "raised";
+            goto RaisedError;
+        else
+            phase := "file_read";
+        end if;
+
+    ParseJSON:
+        if ~json_valid then
+            error := "ValueError";
+            phase := "raised";
+            goto RaisedError;
+        else
+            phase := "json_parsed";
+        end if;
+
+    ValidateRules:
+        if ~all_fields_present then
+            error := "ValueError";
+            phase := "raised";
+            goto RaisedError;
+        else
+            phase := "validating_positions";
+        end if;
+
+    CheckPositions:
+        if \E r \in rules_data : r["position"] \notin ValidPositions then
+            error := "ValueError";
+            phase := "raised";
+            goto RaisedError;
+        else
+            phase := "positions_valid";
+        end if;
+
+    BuildResult:
+        result := rules_data;
+        phase  := "returned";
+        goto Finish;
+
+    RaisedError:
+        assert result = {};
+        assert error \in {"FileNotFoundError", "ValueError"};
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

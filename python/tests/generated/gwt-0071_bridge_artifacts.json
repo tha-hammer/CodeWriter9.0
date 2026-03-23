@@ -1,0 +1,912 @@
+{
+  "gwt_id": "gwt-0071",
+  "module_name": "observability_state_machine",
+  "data_structures": {
+    "observability_state_machineState": {
+      "function_id": "fn-observability_state_machine-state",
+      "acceptance_criteria_id": "ac-observability_state_machine-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"RunLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "current_state": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "init",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "trace_log": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "empty_sequence",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "audit_log": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "empty_sequence",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "history": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "empty_sequence",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "running",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from observability_state_machine TLA+ spec"
+    }
+  },
+  "operations": {
+    "RunLoop": {
+      "function_id": "fn-observability_state_machine-RunLoop",
+      "acceptance_criteria_id": "ac-observability_state_machine-RunLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunLoop from observability_state_machine spec"
+    },
+    "Terminate": {
+      "function_id": "fn-observability_state_machine-Terminate",
+      "acceptance_criteria_id": "ac-observability_state_machine-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from observability_state_machine spec"
+    }
+  },
+  "verifiers": {
+    "ValidState": {
+      "function_id": "fn-observability_state_machine-verify-ValidState",
+      "acceptance_criteria_id": "ac-observability_state_machine-ValidState",
+      "conditions": [
+        "current_state \\in States"
+      ],
+      "message": "ValidState violation: current_state \\in States",
+      "applies_to": [
+        "current_state"
+      ],
+      "description": "Verifier for invariant ValidState from observability_state_machine spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-observability_state_machine-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-observability_state_machine-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from observability_state_machine spec"
+    },
+    "TraceComplete": {
+      "function_id": "fn-observability_state_machine-verify-TraceComplete",
+      "acceptance_criteria_id": "ac-observability_state_machine-TraceComplete",
+      "conditions": [
+        "step_count > 0 => Len(trace_log) >= step_count"
+      ],
+      "message": "TraceComplete violation: step_count > 0 => Len(trace_log) >= step_count",
+      "applies_to": [
+        "step_count",
+        "trace_log"
+      ],
+      "description": "Verifier for invariant TraceComplete from observability_state_machine spec"
+    },
+    "AuditComplete": {
+      "function_id": "fn-observability_state_machine-verify-AuditComplete",
+      "acceptance_criteria_id": "ac-observability_state_machine-AuditComplete",
+      "conditions": [
+        "Len(history) > 0 => Len(audit_log) >= Len(history"
+      ],
+      "message": "AuditComplete violation: Len(history) > 0 => Len(audit_log) >= Len(history)",
+      "applies_to": [
+        "audit_log",
+        "history"
+      ],
+      "description": "Verifier for invariant AuditComplete from observability_state_machine spec"
+    },
+    "TraceLogMonotonic": {
+      "function_id": "fn-observability_state_machine-verify-TraceLogMonotonic",
+      "acceptance_criteria_id": "ac-observability_state_machine-TraceLogMonotonic",
+      "conditions": [
+        "Len(trace_log) >= 0"
+      ],
+      "message": "TraceLogMonotonic violation: Len(trace_log) >= 0",
+      "applies_to": [
+        "trace_log"
+      ],
+      "description": "Verifier for invariant TraceLogMonotonic from observability_state_machine spec"
+    },
+    "AuditLogMonotonic": {
+      "function_id": "fn-observability_state_machine-verify-AuditLogMonotonic",
+      "acceptance_criteria_id": "ac-observability_state_machine-AuditLogMonotonic",
+      "conditions": [
+        "Len(audit_log) >= 0"
+      ],
+      "message": "AuditLogMonotonic violation: Len(audit_log) >= 0",
+      "applies_to": [
+        "audit_log"
+      ],
+      "description": "Verifier for invariant AuditLogMonotonic from observability_state_machine spec"
+    },
+    "BasePreserved": {
+      "function_id": "fn-observability_state_machine-verify-BasePreserved",
+      "acceptance_criteria_id": "ac-observability_state_machine-BasePreserved",
+      "conditions": [
+        "ValidState",
+        "BoundedExecution"
+      ],
+      "message": "BasePreserved violation: ValidState /\\ BoundedExecution",
+      "applies_to": [
+        "observability_state_machine"
+      ],
+      "description": "Verifier for invariant BasePreserved from observability_state_machine spec"
+    }
+  },
+  "assertions": {
+    "assert_ValidState": {
+      "condition": "current_state in States",
+      "message": "Assertion failed: ValidState \u2014 current_state \\in States",
+      "description": "Test assertion for ValidState from observability_state_machine spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from observability_state_machine spec"
+    },
+    "assert_TraceComplete": {
+      "condition": "step_count > 0 implies Len(trace_log) >= step_count",
+      "message": "Assertion failed: TraceComplete \u2014 step_count > 0 => Len(trace_log) >= step_count",
+      "description": "Test assertion for TraceComplete from observability_state_machine spec"
+    },
+    "assert_AuditComplete": {
+      "condition": "Len(history) > 0 implies Len(audit_log) >= Len(history)",
+      "message": "Assertion failed: AuditComplete \u2014 Len(history) > 0 => Len(audit_log) >= Len(history)",
+      "description": "Test assertion for AuditComplete from observability_state_machine spec"
+    },
+    "assert_TraceLogMonotonic": {
+      "condition": "Len(trace_log) >= 0",
+      "message": "Assertion failed: TraceLogMonotonic \u2014 Len(trace_log) >= 0",
+      "description": "Test assertion for TraceLogMonotonic from observability_state_machine spec"
+    },
+    "assert_AuditLogMonotonic": {
+      "condition": "Len(audit_log) >= 0",
+      "message": "Assertion failed: AuditLogMonotonic \u2014 Len(audit_log) >= 0",
+      "description": "Test assertion for AuditLogMonotonic from observability_state_machine spec"
+    },
+    "assert_BasePreserved": {
+      "condition": "ValidState and BoundedExecution",
+      "message": "Assertion failed: BasePreserved \u2014 ValidState /\\ BoundedExecution",
+      "description": "Test assertion for BasePreserved from observability_state_machine spec"
+    }
+  },
+  "test_scenarios": [
+    {
+      "name": "scenario_observability_state_machine_TraceComplete_0",
+      "setup": {
+        "current_state": "\"init\"",
+        "history": "<<>>",
+        "phase": "\"running\"",
+        "pc": "[main |-> \"RunLoop\"]",
+        "step_count": "0",
+        "audit_log": "<<>>",
+        "trace_log": "<<>>"
+      },
+      "steps": [],
+      "expected_outcome": "TraceComplete should hold but was violated at state 1",
+      "invariant_tested": "TraceComplete"
+    }
+  ],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "current_state": "\"init\"",
+          "history": "<<>>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "0",
+          "audit_log": "<<>>",
+          "trace_log": "<<>>"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"processing\"",
+          "history": "<<\"init\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "1",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1]>>",
+          "trace_log": "<<[ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"]>>"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunLoop\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunLoop",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "current_state": "\"done\"",
+          "history": "<<\"init\", \"processing\">>",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "step_count": "2",
+          "audit_log": "<<[from_state |-> \"init\", to_state |-> \"processing\", ts |-> 1], [from_state |-> \"processing\", to_state |-> \"done\", ts |-> 2]>>",
+          "trace_log": "<< [ts |-> 1, action |-> \"init_to_proc\", state |-> \"processing\"],"
+        }
+      }
+    ]
+  ]
+}

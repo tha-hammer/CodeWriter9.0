@@ -1,0 +1,1242 @@
+{
+  "gwt_id": "gwt-0072",
+  "module_name": "TemplateSelectedByAnnotation",
+  "data_structures": {
+    "TemplateSelectedByAnnotationState": {
+      "function_id": "fn-TemplateSelectedByAnnotation-state",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ChooseInput\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "gwt_metadata": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "NoMetadata",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "selected_template": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "DefaultTmpl",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "file_exists": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "template_loaded": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "error": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from TemplateSelectedByAnnotation TLA+ spec"
+    }
+  },
+  "operations": {
+    "ChooseInput": {
+      "function_id": "fn-TemplateSelectedByAnnotation-ChooseInput",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-ChooseInput",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ChooseInput from TemplateSelectedByAnnotation spec"
+    },
+    "ReadMeta": {
+      "function_id": "fn-TemplateSelectedByAnnotation-ReadMeta",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-ReadMeta",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ReadMeta from TemplateSelectedByAnnotation spec"
+    },
+    "CheckFile": {
+      "function_id": "fn-TemplateSelectedByAnnotation-CheckFile",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-CheckFile",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/CheckFileError",
+        "shared/error_definitions/CheckFileError"
+      ],
+      "error_handling": "raise",
+      "description": "Action CheckFile from TemplateSelectedByAnnotation spec"
+    },
+    "MaybeLoad": {
+      "function_id": "fn-TemplateSelectedByAnnotation-MaybeLoad",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-MaybeLoad",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action MaybeLoad from TemplateSelectedByAnnotation spec"
+    },
+    "LoadContent": {
+      "function_id": "fn-TemplateSelectedByAnnotation-LoadContent",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-LoadContent",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action LoadContent from TemplateSelectedByAnnotation spec"
+    },
+    "BuildPrompt": {
+      "function_id": "fn-TemplateSelectedByAnnotation-BuildPrompt",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-BuildPrompt",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action BuildPrompt from TemplateSelectedByAnnotation spec"
+    },
+    "Terminate": {
+      "function_id": "fn-TemplateSelectedByAnnotation-Terminate",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from TemplateSelectedByAnnotation spec"
+    }
+  },
+  "verifiers": {
+    "TypeOK": {
+      "function_id": "fn-TemplateSelectedByAnnotation-verify-TypeOK",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-TypeOK",
+      "conditions": [
+        "gwt_metadata \\in {NoMetadata, DefaultTmpl, ObsTmpl, UnknownTmpl}",
+        "selected_template \\in {DefaultTmpl, ObsTmpl, UnknownTmpl}",
+        "error \\in BOOLEAN",
+        "template_loaded \\in BOOLEAN",
+        "file_exists \\in BOOLEAN"
+      ],
+      "message": "TypeOK violation: /\\ gwt_metadata \\in {NoMetadata, DefaultTmpl, ObsTmpl, UnknownTmpl}\n    /\\ selected_template \\in {DefaultTmpl, ObsTmp...",
+      "applies_to": [
+        "error",
+        "file_exists",
+        "gwt_metadata",
+        "selected_template",
+        "template_loaded"
+      ],
+      "description": "Verifier for invariant TypeOK from TemplateSelectedByAnnotation spec"
+    },
+    "DefaultFallback": {
+      "function_id": "fn-TemplateSelectedByAnnotation-verify-DefaultFallback",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-DefaultFallback",
+      "conditions": [
+        "phase = \"prompt_built\"",
+        "gwt_metadata = NoMetadata) =>\n        selected_template = DefaultTmpl"
+      ],
+      "message": "DefaultFallback violation: (phase = \"prompt_built\" /\\ gwt_metadata = NoMetadata) =>\n        selected_template = DefaultTmpl",
+      "applies_to": [
+        "gwt_metadata",
+        "phase",
+        "selected_template"
+      ],
+      "description": "Verifier for invariant DefaultFallback from TemplateSelectedByAnnotation spec"
+    },
+    "AnnotationRespected": {
+      "function_id": "fn-TemplateSelectedByAnnotation-verify-AnnotationRespected",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-AnnotationRespected",
+      "conditions": [
+        "\\A t \\in KnownTemplates :\n        (phase = \"prompt_built\"",
+        "gwt_metadata = t) =>\n            selected_template = t"
+      ],
+      "message": "AnnotationRespected violation: \\A t \\in KnownTemplates :\n        (phase = \"prompt_built\" /\\ gwt_metadata = t) =>\n            selected_template = t",
+      "applies_to": [
+        "gwt_metadata",
+        "phase",
+        "selected_template"
+      ],
+      "description": "Verifier for invariant AnnotationRespected from TemplateSelectedByAnnotation spec"
+    },
+    "NoSilentFallback": {
+      "function_id": "fn-TemplateSelectedByAnnotation-verify-NoSilentFallback",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-NoSilentFallback",
+      "conditions": [
+        "~(gwt_metadata = UnknownTmpl",
+        "template_loaded = TRUE"
+      ],
+      "message": "NoSilentFallback violation: ~(gwt_metadata = UnknownTmpl /\\ template_loaded = TRUE)",
+      "applies_to": [
+        "gwt_metadata",
+        "template_loaded"
+      ],
+      "description": "Verifier for invariant NoSilentFallback from TemplateSelectedByAnnotation spec"
+    },
+    "PromptBuiltOnlyIfLoaded": {
+      "function_id": "fn-TemplateSelectedByAnnotation-verify-PromptBuiltOnlyIfLoaded",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-PromptBuiltOnlyIfLoaded",
+      "conditions": [
+        "phase = \"prompt_built\" => template_loaded = TRUE"
+      ],
+      "message": "PromptBuiltOnlyIfLoaded violation: phase = \"prompt_built\" => template_loaded = TRUE",
+      "applies_to": [
+        "phase",
+        "template_loaded"
+      ],
+      "description": "Verifier for invariant PromptBuiltOnlyIfLoaded from TemplateSelectedByAnnotation spec"
+    },
+    "ErrorMeansNoPrompt": {
+      "function_id": "fn-TemplateSelectedByAnnotation-verify-ErrorMeansNoPrompt",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-ErrorMeansNoPrompt",
+      "conditions": [
+        "error = TRUE => phase # \"prompt_built\""
+      ],
+      "message": "ErrorMeansNoPrompt violation: error = TRUE => phase # \"prompt_built\"",
+      "applies_to": [
+        "error",
+        "phase"
+      ],
+      "description": "Verifier for invariant ErrorMeansNoPrompt from TemplateSelectedByAnnotation spec"
+    },
+    "UnknownTemplateImpliesError": {
+      "function_id": "fn-TemplateSelectedByAnnotation-verify-UnknownTemplateImpliesError",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-UnknownTemplateImpliesError",
+      "conditions": [
+        "gwt_metadata = UnknownTmpl",
+        "phase \\notin {\"idle\", \"metadata_read\", \"template_resolved\"}) =>\n        error = TRUE"
+      ],
+      "message": "UnknownTemplateImpliesError violation: (gwt_metadata = UnknownTmpl /\\\n     phase \\notin {\"idle\", \"metadata_read\", \"template_resolved\"}) =>\n        error = TRUE",
+      "applies_to": [
+        "error",
+        "gwt_metadata",
+        "phase"
+      ],
+      "description": "Verifier for invariant UnknownTemplateImpliesError from TemplateSelectedByAnnotation spec"
+    },
+    "KnownTemplateNeverErrors": {
+      "function_id": "fn-TemplateSelectedByAnnotation-verify-KnownTemplateNeverErrors",
+      "acceptance_criteria_id": "ac-TemplateSelectedByAnnotation-KnownTemplateNeverErrors",
+      "conditions": [
+        "gwt_metadata \\in KnownTemplates",
+        "phase \\notin {\"idle\", \"metadata_read\"}) =>\n        error = FALSE"
+      ],
+      "message": "KnownTemplateNeverErrors violation: (gwt_metadata \\in KnownTemplates /\\\n     phase \\notin {\"idle\", \"metadata_read\"}) =>\n        error = FALSE",
+      "applies_to": [
+        "error",
+        "gwt_metadata",
+        "phase"
+      ],
+      "description": "Verifier for invariant KnownTemplateNeverErrors from TemplateSelectedByAnnotation spec"
+    }
+  },
+  "assertions": {
+    "assert_TypeOK": {
+      "condition": "and gwt_metadata in {NoMetadata, DefaultTmpl, ObsTmpl, UnknownTmpl}\n    and selected_template in {DefaultTmpl, ObsTmpl, UnknownTmpl}\n    and error in BOOLEAN\n    and template_loaded in BOOLEAN\n    and file_exists in BOOLEAN",
+      "message": "Assertion failed: TypeOK \u2014 /\\ gwt_metadata \\in {NoMetadata, DefaultTmpl, ObsTmpl, UnknownTmpl}\n    /\\ selected_template \\in {DefaultTmpl, ObsTmp...",
+      "description": "Test assertion for TypeOK from TemplateSelectedByAnnotation spec"
+    },
+    "assert_DefaultFallback": {
+      "condition": "(phase = \"prompt_built\" and gwt_metadata = NoMetadata) implies\n        selected_template = DefaultTmpl",
+      "message": "Assertion failed: DefaultFallback \u2014 (phase = \"prompt_built\" /\\ gwt_metadata = NoMetadata) =>\n        selected_template = DefaultTmpl",
+      "description": "Test assertion for DefaultFallback from TemplateSelectedByAnnotation spec"
+    },
+    "assert_AnnotationRespected": {
+      "condition": "\\A t in KnownTemplates :\n        (phase = \"prompt_built\" and gwt_metadata = t) implies\n            selected_template = t",
+      "message": "Assertion failed: AnnotationRespected \u2014 \\A t \\in KnownTemplates :\n        (phase = \"prompt_built\" /\\ gwt_metadata = t) =>\n            selected_template = t",
+      "description": "Test assertion for AnnotationRespected from TemplateSelectedByAnnotation spec"
+    },
+    "assert_NoSilentFallback": {
+      "condition": "~(gwt_metadata = UnknownTmpl and template_loaded = TRUE)",
+      "message": "Assertion failed: NoSilentFallback \u2014 ~(gwt_metadata = UnknownTmpl /\\ template_loaded = TRUE)",
+      "description": "Test assertion for NoSilentFallback from TemplateSelectedByAnnotation spec"
+    },
+    "assert_PromptBuiltOnlyIfLoaded": {
+      "condition": "phase = \"prompt_built\" implies template_loaded = TRUE",
+      "message": "Assertion failed: PromptBuiltOnlyIfLoaded \u2014 phase = \"prompt_built\" => template_loaded = TRUE",
+      "description": "Test assertion for PromptBuiltOnlyIfLoaded from TemplateSelectedByAnnotation spec"
+    },
+    "assert_ErrorMeansNoPrompt": {
+      "condition": "error = TRUE implies phase # \"prompt_built\"",
+      "message": "Assertion failed: ErrorMeansNoPrompt \u2014 error = TRUE => phase # \"prompt_built\"",
+      "description": "Test assertion for ErrorMeansNoPrompt from TemplateSelectedByAnnotation spec"
+    },
+    "assert_UnknownTemplateImpliesError": {
+      "condition": "(gwt_metadata = UnknownTmpl and\n     phase not in {\"idle\", \"metadata_read\", \"template_resolved\"}) implies\n        error = TRUE",
+      "message": "Assertion failed: UnknownTemplateImpliesError \u2014 (gwt_metadata = UnknownTmpl /\\\n     phase \\notin {\"idle\", \"metadata_read\", \"template_resolved\"}) =>\n        error = TRUE",
+      "description": "Test assertion for UnknownTemplateImpliesError from TemplateSelectedByAnnotation spec"
+    },
+    "assert_KnownTemplateNeverErrors": {
+      "condition": "(gwt_metadata in KnownTemplates and\n     phase not in {\"idle\", \"metadata_read\"}) implies\n        error = FALSE",
+      "message": "Assertion failed: KnownTemplateNeverErrors \u2014 (gwt_metadata \\in KnownTemplates /\\\n     phase \\notin {\"idle\", \"metadata_read\"}) =>\n        error = FALSE",
+      "description": "Test assertion for KnownTemplateNeverErrors from TemplateSelectedByAnnotation spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "2",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "2",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"LoadContent\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoadContent",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"content_loaded\"",
+          "pc": "[main |-> \"BuildPrompt\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "BuildPrompt",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "3",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "1",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "1",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "1",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "1",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"LoadContent\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoadContent",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "1",
+          "phase": "\"content_loaded\"",
+          "pc": "[main |-> \"BuildPrompt\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "BuildPrompt",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "1",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "1",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "3",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"LoadContent\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoadContent",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"content_loaded\"",
+          "pc": "[main |-> \"BuildPrompt\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "BuildPrompt",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "3",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "3",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "2",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "2",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"LoadContent\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoadContent",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"content_loaded\"",
+          "pc": "[main |-> \"BuildPrompt\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "BuildPrompt",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "2",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "2",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"exists_checked\"",
+          "pc": "[main |-> \"LoadContent\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "LoadContent",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"content_loaded\"",
+          "pc": "[main |-> \"BuildPrompt\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "BuildPrompt",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "TRUE",
+          "gwt_metadata": "0",
+          "phase": "\"prompt_built\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "0",
+          "phase": "\"idle\"",
+          "pc": "[main |-> \"ChooseInput\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ChooseInput",
+        "vars": {
+          "selected_template": "1",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"metadata_read\"",
+          "pc": "[main |-> \"ReadMeta\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ReadMeta",
+        "vars": {
+          "selected_template": "3",
+          "error": "FALSE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"template_resolved\"",
+          "pc": "[main |-> \"CheckFile\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckFile",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"MaybeLoad\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeLoad",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "template_loaded": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "selected_template": "3",
+          "error": "TRUE",
+          "file_exists": "FALSE",
+          "gwt_metadata": "3",
+          "phase": "\"error_raised\"",
+          "pc": "[main |-> \"Done\"]",
+          "template_loaded": "FALSE"
+        }
+      }
+    ]
+  ]
+}

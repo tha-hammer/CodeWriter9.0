@@ -1,0 +1,2893 @@
+{
+  "gwt_id": "gwt-0069",
+  "module_name": "BehavioralContracts",
+  "data_structures": {
+    "BehavioralContractsState": {
+      "function_id": "fn-BehavioralContracts-state",
+      "acceptance_criteria_id": "ac-BehavioralContracts-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"PickEdge\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "violations": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "satisfied_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "checked_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "pending_edges": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Edges",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "current_edge": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "DefaultVal",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "pending_rules": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "current_rule": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "DefaultVal",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "edge_matched": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "edge_has_violation": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "done": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from BehavioralContracts TLA+ spec"
+    }
+  },
+  "operations": {
+    "PickEdge": {
+      "function_id": "fn-BehavioralContracts-PickEdge",
+      "acceptance_criteria_id": "ac-BehavioralContracts-PickEdge",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action PickEdge from BehavioralContracts spec"
+    },
+    "CheckRules": {
+      "function_id": "fn-BehavioralContracts-CheckRules",
+      "acceptance_criteria_id": "ac-BehavioralContracts-CheckRules",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckRules from BehavioralContracts spec"
+    },
+    "CheckOuts": {
+      "function_id": "fn-BehavioralContracts-CheckOuts",
+      "acceptance_criteria_id": "ac-BehavioralContracts-CheckOuts",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckOuts from BehavioralContracts spec"
+    },
+    "FinalizeEdge": {
+      "function_id": "fn-BehavioralContracts-FinalizeEdge",
+      "acceptance_criteria_id": "ac-BehavioralContracts-FinalizeEdge",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FinalizeEdge from BehavioralContracts spec"
+    },
+    "AfterCheckedCount": {
+      "function_id": "fn-BehavioralContracts-AfterCheckedCount",
+      "acceptance_criteria_id": "ac-BehavioralContracts-AfterCheckedCount",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AfterCheckedCount from BehavioralContracts spec"
+    },
+    "Finish": {
+      "function_id": "fn-BehavioralContracts-Finish",
+      "acceptance_criteria_id": "ac-BehavioralContracts-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from BehavioralContracts spec"
+    }
+  },
+  "verifiers": {
+    "ViolatedEdges": {
+      "function_id": "fn-BehavioralContracts-verify-ViolatedEdges",
+      "acceptance_criteria_id": "ac-BehavioralContracts-ViolatedEdges",
+      "conditions": [
+        "{e \\in Edges : \\E v \\in violations : v.edge = e}"
+      ],
+      "message": "ViolatedEdges violation: {e \\in Edges : \\E v \\in violations : v.edge = e}",
+      "applies_to": [
+        "violations"
+      ],
+      "description": "Verifier for invariant ViolatedEdges from BehavioralContracts spec"
+    },
+    "CountConsistency": {
+      "function_id": "fn-BehavioralContracts-verify-CountConsistency",
+      "acceptance_criteria_id": "ac-BehavioralContracts-CountConsistency",
+      "conditions": [
+        "done =>\n        (checked_count = satisfied_count + Cardinality(ViolatedEdges"
+      ],
+      "message": "CountConsistency violation: done =>\n        (checked_count = satisfied_count + Cardinality(ViolatedEdges))",
+      "applies_to": [
+        "checked_count",
+        "done",
+        "satisfied_count"
+      ],
+      "description": "Verifier for invariant CountConsistency from BehavioralContracts spec"
+    },
+    "ViolationComplete": {
+      "function_id": "fn-BehavioralContracts-verify-ViolationComplete",
+      "acceptance_criteria_id": "ac-BehavioralContracts-ViolationComplete",
+      "conditions": [
+        "\\A v \\in violations :",
+        "v.rule        \\in Rules",
+        "v.edge        \\in Edges",
+        "v.missing_out \\in RuleRequiredOuts[v.rule]"
+      ],
+      "message": "ViolationComplete violation: \\A v \\in violations :\n        /\\ v.rule        \\in Rules\n        /\\ v.edge        \\in Edges\n        /\\ v.missing_out ...",
+      "applies_to": [
+        "violations"
+      ],
+      "description": "Verifier for invariant ViolationComplete from BehavioralContracts spec"
+    },
+    "NoFalsePositives": {
+      "function_id": "fn-BehavioralContracts-verify-NoFalsePositives",
+      "acceptance_criteria_id": "ac-BehavioralContracts-NoFalsePositives",
+      "conditions": [
+        "\\A v \\in violations :\n        v.missing_out \\notin FnOuts[v.callee]"
+      ],
+      "message": "NoFalsePositives violation: \\A v \\in violations :\n        v.missing_out \\notin FnOuts[v.callee]",
+      "applies_to": [
+        "violations"
+      ],
+      "description": "Verifier for invariant NoFalsePositives from BehavioralContracts spec"
+    },
+    "NoMatchNoViolation": {
+      "function_id": "fn-BehavioralContracts-verify-NoMatchNoViolation",
+      "acceptance_criteria_id": "ac-BehavioralContracts-NoMatchNoViolation",
+      "conditions": [
+        "\\A v \\in violations :\n        <<v.rule, v.edge>> \\in RuleMatches"
+      ],
+      "message": "NoMatchNoViolation violation: \\A v \\in violations :\n        <<v.rule, v.edge>> \\in RuleMatches",
+      "applies_to": [
+        "violations"
+      ],
+      "description": "Verifier for invariant NoMatchNoViolation from BehavioralContracts spec"
+    },
+    "EmptyEdgesImpliesEmptyReport": {
+      "function_id": "fn-BehavioralContracts-verify-EmptyEdgesImpliesEmptyReport",
+      "acceptance_criteria_id": "ac-BehavioralContracts-EmptyEdgesImpliesEmptyReport",
+      "conditions": [
+        "Edges = {} =>\n        (violations = {}",
+        "satisfied_count = 0",
+        "checked_count = 0"
+      ],
+      "message": "EmptyEdgesImpliesEmptyReport violation: Edges = {} =>\n        (violations = {} /\\ satisfied_count = 0 /\\ checked_count = 0)",
+      "applies_to": [
+        "checked_count",
+        "satisfied_count",
+        "violations"
+      ],
+      "description": "Verifier for invariant EmptyEdgesImpliesEmptyReport from BehavioralContracts spec"
+    },
+    "ZeroViolationsWhenAllCompliant": {
+      "function_id": "fn-BehavioralContracts-verify-ZeroViolationsWhenAllCompliant",
+      "acceptance_criteria_id": "ac-BehavioralContracts-ZeroViolationsWhenAllCompliant",
+      "conditions": [
+        "done",
+        "\\A e \\in Edges : \\A r \\in Rules :\n         <<r, e>> \\in RuleMatches =>\n         RuleRequiredOuts[r] \\subseteq FnOuts[EdgeCallee[e]]))\n    => (violations = {}"
+      ],
+      "message": "ZeroViolationsWhenAllCompliant violation: (done /\\\n     (\\A e \\in Edges : \\A r \\in Rules :\n         <<r, e>> \\in RuleMatches =>\n         RuleRequiredOuts[r] \\s...",
+      "applies_to": [
+        "done",
+        "violations"
+      ],
+      "description": "Verifier for invariant ZeroViolationsWhenAllCompliant from BehavioralContracts spec"
+    },
+    "NoMatchNoCount": {
+      "function_id": "fn-BehavioralContracts-verify-NoMatchNoCount",
+      "acceptance_criteria_id": "ac-BehavioralContracts-NoMatchNoCount",
+      "conditions": [
+        "done =>\n        (\\A e \\in Edges :\n            (\\A r \\in Rules : <<r, e>> \\notin RuleMatches) =>\n            e \\notin ViolatedEdges"
+      ],
+      "message": "NoMatchNoCount violation: done =>\n        (\\A e \\in Edges :\n            (\\A r \\in Rules : <<r, e>> \\notin RuleMatches) =>\n            e \\notin ...",
+      "applies_to": [
+        "done"
+      ],
+      "description": "Verifier for invariant NoMatchNoCount from BehavioralContracts spec"
+    }
+  },
+  "assertions": {
+    "assert_ViolatedEdges": {
+      "condition": "{e in Edges : \\E v in violations : v.edge = e}",
+      "message": "Assertion failed: ViolatedEdges \u2014 {e \\in Edges : \\E v \\in violations : v.edge = e}",
+      "description": "Test assertion for ViolatedEdges from BehavioralContracts spec"
+    },
+    "assert_CountConsistency": {
+      "condition": "done implies\n        (checked_count = satisfied_count + Cardinality(ViolatedEdges))",
+      "message": "Assertion failed: CountConsistency \u2014 done =>\n        (checked_count = satisfied_count + Cardinality(ViolatedEdges))",
+      "description": "Test assertion for CountConsistency from BehavioralContracts spec"
+    },
+    "assert_ViolationComplete": {
+      "condition": "\\A v in violations :\n        and v.rule        in Rules\n        and v.edge        in Edges\n        and v.missing_out in RuleRequiredOuts[v.rule]",
+      "message": "Assertion failed: ViolationComplete \u2014 \\A v \\in violations :\n        /\\ v.rule        \\in Rules\n        /\\ v.edge        \\in Edges\n        /\\ v.missing_out ...",
+      "description": "Test assertion for ViolationComplete from BehavioralContracts spec"
+    },
+    "assert_NoFalsePositives": {
+      "condition": "\\A v in violations :\n        v.missing_out not in FnOuts[v.callee]",
+      "message": "Assertion failed: NoFalsePositives \u2014 \\A v \\in violations :\n        v.missing_out \\notin FnOuts[v.callee]",
+      "description": "Test assertion for NoFalsePositives from BehavioralContracts spec"
+    },
+    "assert_NoMatchNoViolation": {
+      "condition": "\\A v in violations :\n        <<v.rule, v.edge>> in RuleMatches",
+      "message": "Assertion failed: NoMatchNoViolation \u2014 \\A v \\in violations :\n        <<v.rule, v.edge>> \\in RuleMatches",
+      "description": "Test assertion for NoMatchNoViolation from BehavioralContracts spec"
+    },
+    "assert_EmptyEdgesImpliesEmptyReport": {
+      "condition": "Edges = {} implies\n        (violations = {} and satisfied_count = 0 and checked_count = 0)",
+      "message": "Assertion failed: EmptyEdgesImpliesEmptyReport \u2014 Edges = {} =>\n        (violations = {} /\\ satisfied_count = 0 /\\ checked_count = 0)",
+      "description": "Test assertion for EmptyEdgesImpliesEmptyReport from BehavioralContracts spec"
+    },
+    "assert_ZeroViolationsWhenAllCompliant": {
+      "condition": "(done and\n     (\\A e in Edges : \\A r in Rules :\n         <<r, e>> in RuleMatches implies\n         RuleRequiredOuts[r] \\subseteq FnOuts[EdgeCallee[e]]))\n    implies (violations = {})",
+      "message": "Assertion failed: ZeroViolationsWhenAllCompliant \u2014 (done /\\\n     (\\A e \\in Edges : \\A r \\in Rules :\n         <<r, e>> \\in RuleMatches =>\n         RuleRequiredOuts[r] \\s...",
+      "description": "Test assertion for ZeroViolationsWhenAllCompliant from BehavioralContracts spec"
+    },
+    "assert_NoMatchNoCount": {
+      "condition": "done implies\n        (\\A e in Edges :\n            (\\A r in Rules : <<r, e>> not in RuleMatches) implies\n            e not in ViolatedEdges)",
+      "message": "Assertion failed: NoMatchNoCount \u2014 done =>\n        (\\A e \\in Edges :\n            (\\A r \\in Rules : <<r, e>> \\notin RuleMatches) =>\n            e \\notin ...",
+      "description": "Test assertion for NoMatchNoCount from BehavioralContracts spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_1}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_1}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_1}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_1}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_1}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_1}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "10",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1, Edges_2}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "10",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_2",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{Edges_1}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{Rules_1, Rules_2}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{Rules_1}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_2",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"CheckRules\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckRules",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"FinalizeEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "FinalizeEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"AfterCheckedCount\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "AfterCheckedCount",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"PickEdge\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "PickEdge",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "FALSE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Finish\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "Finish",
+        "vars": {
+          "pending_rules": "{}",
+          "done": "TRUE",
+          "current_edge": "Edges_1",
+          "current_rule": "Rules_1",
+          "edge_has_violation": "FALSE",
+          "checked_count": "0",
+          "satisfied_count": "0",
+          "pc": "[checker |-> \"Done\"]",
+          "violations": "{}",
+          "pending_edges": "{}",
+          "edge_matched": "FALSE"
+        }
+      }
+    ]
+  ]
+}

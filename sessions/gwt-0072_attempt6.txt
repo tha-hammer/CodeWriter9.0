@@ -1,0 +1,226 @@
+The ASSUME distinctness checks keep failing because the test harness assigns identical values to all CONSTANTS. The fix: eliminate CONSTANTS entirely and replace them with concrete module-level integer definitions. This gives TLC fixed distinct values without needing any ASSUME statements.
+
+---- MODULE TemplateSelectedByAnnotation ----
+
+EXTENDS Integers, TLC, FiniteSets
+
+NoMetadata    == 0
+DefaultTmpl   == 1
+ObsTmpl       == 2
+UnknownTmpl   == 3
+
+KnownTemplates == {DefaultTmpl, ObsTmpl}
+
+(* --algorithm TemplateSelectedByAnnotation
+
+variables
+    gwt_metadata     = NoMetadata,
+    selected_template = DefaultTmpl,
+    file_exists      = FALSE,
+    template_loaded  = FALSE,
+    error            = FALSE,
+    phase            = "idle";
+
+define
+
+    TypeOK ==
+        /\ gwt_metadata \in {NoMetadata, DefaultTmpl, ObsTmpl, UnknownTmpl}
+        /\ selected_template \in {DefaultTmpl, ObsTmpl, UnknownTmpl}
+        /\ error \in BOOLEAN
+        /\ template_loaded \in BOOLEAN
+        /\ file_exists \in BOOLEAN
+
+    DefaultFallback ==
+        (phase = "prompt_built" /\ gwt_metadata = NoMetadata) =>
+            selected_template = DefaultTmpl
+
+    AnnotationRespected ==
+        \A t \in KnownTemplates :
+            (phase = "prompt_built" /\ gwt_metadata = t) =>
+                selected_template = t
+
+    NoSilentFallback ==
+        ~(gwt_metadata = UnknownTmpl /\ template_loaded = TRUE)
+
+    PromptBuiltOnlyIfLoaded ==
+        phase = "prompt_built" => template_loaded = TRUE
+
+    ErrorMeansNoPrompt ==
+        error = TRUE => phase # "prompt_built"
+
+    UnknownTemplateImpliesError ==
+        (gwt_metadata = UnknownTmpl /\
+         phase \notin {"idle", "metadata_read", "template_resolved"}) =>
+            error = TRUE
+
+    KnownTemplateNeverErrors ==
+        (gwt_metadata \in KnownTemplates /\
+         phase \notin {"idle", "metadata_read"}) =>
+            error = FALSE
+
+end define;
+
+fair process runner = "main"
+begin
+    ChooseInput:
+        either
+            gwt_metadata := NoMetadata;
+        or
+            gwt_metadata := DefaultTmpl;
+        or
+            gwt_metadata := ObsTmpl;
+        or
+            gwt_metadata := UnknownTmpl;
+        end either;
+        phase := "metadata_read";
+
+    ReadMeta:
+        if gwt_metadata = NoMetadata then
+            selected_template := DefaultTmpl;
+        else
+            selected_template := gwt_metadata;
+        end if;
+        phase := "template_resolved";
+
+    CheckFile:
+        if selected_template \in KnownTemplates then
+            file_exists := TRUE;
+            phase := "exists_checked";
+        else
+            error := TRUE;
+            phase := "error_raised";
+        end if;
+
+    MaybeLoad:
+        if error = TRUE then
+            goto Terminate;
+        end if;
+
+    LoadContent:
+        template_loaded := TRUE;
+        phase := "content_loaded";
+
+    BuildPrompt:
+        phase := "prompt_built";
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+The ASSUME distinctness checks keep failing because the test harness assigns identical values to all CONSTANTS. The fix: eliminate CONSTANTS entirely and replace them with concrete module-level integer definitions. This gives TLC fixed distinct values without needing any ASSUME statements.
+
+---- MODULE TemplateSelectedByAnnotation ----
+
+EXTENDS Integers, TLC, FiniteSets
+
+NoMetadata    == 0
+DefaultTmpl   == 1
+ObsTmpl       == 2
+UnknownTmpl   == 3
+
+KnownTemplates == {DefaultTmpl, ObsTmpl}
+
+(* --algorithm TemplateSelectedByAnnotation
+
+variables
+    gwt_metadata     = NoMetadata,
+    selected_template = DefaultTmpl,
+    file_exists      = FALSE,
+    template_loaded  = FALSE,
+    error            = FALSE,
+    phase            = "idle";
+
+define
+
+    TypeOK ==
+        /\ gwt_metadata \in {NoMetadata, DefaultTmpl, ObsTmpl, UnknownTmpl}
+        /\ selected_template \in {DefaultTmpl, ObsTmpl, UnknownTmpl}
+        /\ error \in BOOLEAN
+        /\ template_loaded \in BOOLEAN
+        /\ file_exists \in BOOLEAN
+
+    DefaultFallback ==
+        (phase = "prompt_built" /\ gwt_metadata = NoMetadata) =>
+            selected_template = DefaultTmpl
+
+    AnnotationRespected ==
+        \A t \in KnownTemplates :
+            (phase = "prompt_built" /\ gwt_metadata = t) =>
+                selected_template = t
+
+    NoSilentFallback ==
+        ~(gwt_metadata = UnknownTmpl /\ template_loaded = TRUE)
+
+    PromptBuiltOnlyIfLoaded ==
+        phase = "prompt_built" => template_loaded = TRUE
+
+    ErrorMeansNoPrompt ==
+        error = TRUE => phase # "prompt_built"
+
+    UnknownTemplateImpliesError ==
+        (gwt_metadata = UnknownTmpl /\
+         phase \notin {"idle", "metadata_read", "template_resolved"}) =>
+            error = TRUE
+
+    KnownTemplateNeverErrors ==
+        (gwt_metadata \in KnownTemplates /\
+         phase \notin {"idle", "metadata_read"}) =>
+            error = FALSE
+
+end define;
+
+fair process runner = "main"
+begin
+    ChooseInput:
+        either
+            gwt_metadata := NoMetadata;
+        or
+            gwt_metadata := DefaultTmpl;
+        or
+            gwt_metadata := ObsTmpl;
+        or
+            gwt_metadata := UnknownTmpl;
+        end either;
+        phase := "metadata_read";
+
+    ReadMeta:
+        if gwt_metadata = NoMetadata then
+            selected_template := DefaultTmpl;
+        else
+            selected_template := gwt_metadata;
+        end if;
+        phase := "template_resolved";
+
+    CheckFile:
+        if selected_template \in KnownTemplates then
+            file_exists := TRUE;
+            phase := "exists_checked";
+        else
+            error := TRUE;
+            phase := "error_raised";
+        end if;
+
+    MaybeLoad:
+        if error = TRUE then
+            goto Terminate;
+        end if;
+
+    LoadContent:
+        template_loaded := TRUE;
+        phase := "content_loaded";
+
+    BuildPrompt:
+        phase := "prompt_built";
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

@@ -1,0 +1,1182 @@
+## Review Findings
+
+Four semantic defects were found. Here is the analysis, followed by the corrected test plan.
+
+---
+
+### Defect 1 — `test_json_object_not_array` is misclassified (semantic error)
+
+**Location:** `TestInvariantMalformedImpliesError`
+
+**Problem:** `MalformedImpliesError` fires on `~json_valid` (the bytes cannot be parsed as JSON at all). A top-level JSON object `{"resource_type": …}` **is** valid JSON — `json_valid = TRUE`. It fails because it violates the schema (`~all_fields_present`), so it belongs under `InvalidSchemaImpliesError`. Placing it in `MalformedImpliesError` verifies the wrong invariant antecedent, meaning a loader that distinguishes parse errors from schema errors would satisfy both invariants correctly yet still fail this test, or vice-versa.
+
+**Fix:** Move the test to `TestInvariantInvalidSchemaImpliesError`.
+
+---
+
+### Defect 2 — `TestInvariantPhaseValid` never asserts that an error was actually raised (missing assertion)
+
+**Location:** `TestInvariantPhaseValid.test_only_file_not_found_or_value_error_on_failure`
+
+**Problem:** The test only checks that *if* an exception is raised it is one of the two legal types. If `load_cross_cutting_rules` silently returns (e.g., returns `[]`) for a malformed file or missing file, the `try/except` block takes neither branch and the test passes without complaint. PhaseValid requires the call to *terminate* with either a return or a raise; this test fails to verify the raise side.
+
+**Fix:** Track whether each call raised, and `pytest.fail` if it did not for inputs that must raise.
+
+---
+
+### Defect 3 — `assert rules == [] or rules is None` weakens NoPartialResults and SafeResult
+
+**Location:** `assert_no_partial_results`, `assert_safe_result`
+
+**Problem:** The TLA+ invariant is `error /= "" => result = {}`. The Python equivalent is `result == []`. Accepting `None` permits a loader that returns `None` on error to pass both invariants, which is not conformant with the spec (the return type is always `list`). In all existing tests `rules` is initialised to `[]` and the `is None` branch is dead — but it is a latent hole that would allow a regression to slip through.
+
+**Fix:** Use `assert rules == []` only.
+
+---
+
+### Defect 4 — Dead statement inside `with pytest.raises` block (misleading code)
+
+**Location:** `test_trace1_missing_fields_raises_value_error`
+
+**Problem:** `error_raised = True` is placed *inside* the `with pytest.raises(ValueError):` block, after the call site. Because `pytest.raises` requires the exception to be raised, that line is unreachable. The comment tries to explain this, but the statement should simply be removed; its presence implies intent that isn't there.
+
+**Fix:** Remove the dead assignment.
+
+---
+
+## Corrected Test Plan
+
+```python
+import json
+import pytest
+from pathlib import Path
+from cross_cutting_rules_loader import load_cross_cutting_rules, CrossCuttingRule
+
+# ---------------------------------------------------------------------------
+# Constants mirroring the TLA+ spec
+# ---------------------------------------------------------------------------
+VALID_POSITIONS = {"pre", "post", "wrap"}
+
+GOOD_RULE = {
+    "resource_type": "database",
+    "required_outs": ["audit_event"],
+    "position": "wrap",
+}
+
+BAD_POSITION_RULE = {
+    "resource_type": "database",
+    "required_outs": ["audit_event"],
+    "position": "INVALID",
+}
+
+# ---------------------------------------------------------------------------
+# Invariant helpers (TLA+ invariants expressed as Python assertions)
+# ---------------------------------------------------------------------------
+
+def assert_no_partial_results(rules: list, error_raised: bool) -> None:
+    """NoPartialResults: error /= '' => result = {}"""
+    if error_raised:
+        # FIX (Defect 3): do not accept None — the contract always returns list
+        assert rules == [], (
+            "NoPartialResults violated: error was raised but result is non-empty"
+        )
+
+
+def assert_valid_position_only(rules: list) -> None:
+    """ValidPositionOnly: ∀ r ∈ result : r.position ∈ ValidPositions"""
+    for rule in rules:
+        assert rule.position in VALID_POSITIONS, (
+            f"ValidPositionOnly violated: position '{rule.position}' not in {VALID_POSITIONS}"
+        )
+
+
+def assert_complete_fields(rules: list) -> None:
+    """CompleteFields: ∀ r ∈ result : resource_type, required_outs, position all present"""
+    for rule in rules:
+        assert hasattr(rule, "resource_type"), "CompleteFields violated: missing resource_type"
+        assert hasattr(rule, "required_outs"), "CompleteFields violated: missing required_outs"
+        assert hasattr(rule, "position"),      "CompleteFields violated: missing position"
+
+
+def assert_safe_result(rules: list, error_raised: bool) -> None:
+    """SafeResult: in terminal phase → either (no error ∧ all positions valid) or (error ∧ empty result)"""
+    if error_raised:
+        # FIX (Defect 3): do not accept None — the contract always returns list
+        assert rules == [], (
+            "SafeResult violated: error raised but result non-empty"
+        )
+    else:
+        assert_valid_position_only(rules)
+
+
+def assert_all_invariants(rules: list, error_raised: bool) -> None:
+    """Verify all TLA+ invariants simultaneously against a terminal result."""
+    assert_no_partial_results(rules, error_raised)
+    assert_safe_result(rules, error_raised)
+    if not error_raised and rules:
+        assert_valid_position_only(rules)
+        assert_complete_fields(rules)
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — file exists, valid JSON, missing required fields → ValueError
+# (ChooseFileExists→ChooseJsonValid→ChooseSchema[no fields]→ReadFile→ParseJSON
+#  →ValidateRules→RaisedError→Finish)
+# ---------------------------------------------------------------------------
+
+def test_trace1_missing_fields_raises_value_error(tmp_path: Path) -> None:
+    """
+    Trace 1: file_exists=TRUE, json_valid=TRUE, all_fields_present=FALSE.
+    ValidateRules detects absent required keys and raises ValueError.
+    Invariants: NoPartialResults, InvalidSchemaImpliesError, SafeResult.
+    """
+    rules_file = tmp_path / "rules.json"
+    rules_file.write_text(json.dumps([{"extra_key": "value"}]))
+
+    error_raised = True
+    rules: list = []
+
+    with pytest.raises(ValueError):
+        # FIX (Defect 4): removed the dead `error_raised = True` statement that
+        # could never execute inside a passing pytest.raises block.
+        rules = load_cross_cutting_rules(str(rules_file))
+
+    assert_all_invariants(rules, error_raised)
+
+
+# ---------------------------------------------------------------------------
+# Traces 2–3, 5–8, 10 — file does not exist → FileNotFoundError
+# (ChooseFileExists[FALSE]→…→ReadFile→RaisedError→Finish)
+# ---------------------------------------------------------------------------
+
+def _assert_file_not_found(path: str) -> None:
+    error_raised = True
+    rules: list = []
+    with pytest.raises(FileNotFoundError):
+        rules = load_cross_cutting_rules(path)
+    assert_all_invariants(rules, error_raised)
+
+
+def test_trace2_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 2: file_exists=FALSE → FileNotFoundError (FileAbsentImpliesError)."""
+    _assert_file_not_found(str(tmp_path / "nonexistent_rules.json"))
+
+
+def test_trace3_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 3: file_exists=FALSE → FileNotFoundError (duplicate structural path)."""
+    _assert_file_not_found(str(tmp_path / "missing.json"))
+
+
+def test_trace5_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 5: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_5.json"))
+
+
+def test_trace6_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 6: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_6.json"))
+
+
+def test_trace7_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 7: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_7.json"))
+
+
+def test_trace8_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 8: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_8.json"))
+
+
+def test_trace10_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 10: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_10.json"))
+
+
+# ---------------------------------------------------------------------------
+# Trace 4 — happy path: single valid rule returns populated CrossCuttingRule
+# ---------------------------------------------------------------------------
+
+def test_trace4_valid_rule_returns_dataclass(tmp_path: Path) -> None:
+    """
+    Trace 4: file_exists=TRUE, json_valid=TRUE, all_fields_present=TRUE,
+    position="wrap" ∈ ValidPositions → result contains one CrossCuttingRule.
+    Invariants: CompleteFields, ValidPositionOnly, SafeResult, NoPartialResults.
+    """
+    rules_file = tmp_path / "rules.json"
+    rules_file.write_text(json.dumps([GOOD_RULE]))
+
+    rules = load_cross_cutting_rules(str(rules_file))
+    error_raised = False
+
+    assert isinstance(rules, list)
+    assert len(rules) == 1
+
+    rule = rules[0]
+    assert isinstance(rule, CrossCuttingRule)
+    assert rule.resource_type == "database"
+    assert rule.position == "wrap"
+    assert "audit_event" in rule.required_outs
+
+    assert_all_invariants(rules, error_raised)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9 — invalid position value → ValueError
+# ---------------------------------------------------------------------------
+
+def test_trace9_invalid_position_raises_value_error(tmp_path: Path) -> None:
+    """
+    Trace 9: file_exists=TRUE, json_valid=TRUE, all_fields_present=TRUE,
+    but position="INVALID" ∉ ValidPositions → ValueError at CheckPositions.
+    Invariants: ValidPositionOnly, NoPartialResults, SafeResult.
+    """
+    rules_file = tmp_path / "rules.json"
+    rules_file.write_text(json.dumps([BAD_POSITION_RULE]))
+
+    error_raised = True
+    rules: list = []
+
+    with pytest.raises(ValueError):
+        rules = load_cross_cutting_rules(str(rules_file))
+
+    assert_all_invariants(rules, error_raised)
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: NoPartialResults
+# ---------------------------------------------------------------------------
+
+class TestInvariantNoPartialResults:
+    def test_no_partial_results_on_file_not_found(self, tmp_path: Path) -> None:
+        rules: list = []
+        with pytest.raises(FileNotFoundError):
+            rules = load_cross_cutting_rules(str(tmp_path / "absent.json"))
+        assert rules == [], "NoPartialResults: FileNotFoundError must leave result empty"
+
+    def test_no_partial_results_on_invalid_position(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([BAD_POSITION_RULE]))
+        rules: list = []
+        with pytest.raises(ValueError):
+            rules = load_cross_cutting_rules(str(f))
+        assert rules == [], "NoPartialResults: ValueError must leave result empty"
+
+    def test_no_partial_results_on_missing_fields(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{"only_one_field": "x"}]))
+        rules: list = []
+        with pytest.raises(ValueError):
+            rules = load_cross_cutting_rules(str(f))
+        assert rules == [], "NoPartialResults: schema ValueError must leave result empty"
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: ValidPositionOnly
+# ---------------------------------------------------------------------------
+
+class TestInvariantValidPositionOnly:
+    @pytest.mark.parametrize("position", sorted(VALID_POSITIONS))
+    def test_all_valid_positions_accepted(self, tmp_path: Path, position: str) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{
+            "resource_type": "service",
+            "required_outs": ["log"],
+            "position": position,
+        }]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 1
+        assert rules[0].position in VALID_POSITIONS, (
+            f"ValidPositionOnly violated for position='{position}'"
+        )
+
+    def test_invalid_position_rejected(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([BAD_POSITION_RULE]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: CompleteFields
+# ---------------------------------------------------------------------------
+
+class TestInvariantCompleteFields:
+    def test_single_rule_all_fields_present(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([GOOD_RULE]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 1
+        r = rules[0]
+        assert hasattr(r, "resource_type")
+        assert hasattr(r, "required_outs")
+        assert hasattr(r, "position")
+
+    def test_multiple_rules_all_fields_present(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([
+            {"resource_type": "service", "required_outs": ["span"], "position": "pre"},
+            {"resource_type": "queue",   "required_outs": ["ack"],  "position": "post"},
+        ]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 2
+        for r in rules:
+            assert hasattr(r, "resource_type")
+            assert hasattr(r, "required_outs")
+            assert hasattr(r, "position")
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: FileAbsentImpliesError
+# ---------------------------------------------------------------------------
+
+class TestInvariantFileAbsentImpliesError:
+    def test_completely_absent_path(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            load_cross_cutting_rules(str(tmp_path / "no_such_file.json"))
+
+    def test_absent_nested_path(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            load_cross_cutting_rules(str(tmp_path / "sub" / "dir" / "rules.json"))
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: MalformedImpliesError
+# Antecedent: file_exists=TRUE, json_valid=FALSE.
+# Only inputs that are genuinely unparseable JSON belong here.
+# ---------------------------------------------------------------------------
+
+class TestInvariantMalformedImpliesError:
+    def test_completely_invalid_json(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text("this is not json {{{{")
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_truncated_json(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text('[{"resource_type": "db"')  # truncated
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    # FIX (Defect 1): test_json_object_not_array REMOVED from here.
+    # A top-level JSON object is syntactically valid JSON (json_valid=TRUE),
+    # so its antecedent is InvalidSchemaImpliesError, not MalformedImpliesError.
+    # It has been moved to TestInvariantInvalidSchemaImpliesError below.
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: InvalidSchemaImpliesError
+# Antecedent: file_exists=TRUE, json_valid=TRUE, all_fields_present=FALSE.
+# ---------------------------------------------------------------------------
+
+class TestInvariantInvalidSchemaImpliesError:
+    def test_rule_missing_position_field(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{"resource_type": "db", "required_outs": ["event"]}]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_rule_missing_resource_type_field(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{"required_outs": ["event"], "position": "pre"}]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_rule_missing_required_outs_field(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{"resource_type": "db", "position": "pre"}]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_rule_completely_empty_object(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{}]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    # FIX (Defect 1): moved here from TestInvariantMalformedImpliesError.
+    # json_valid=TRUE (a JSON object is valid JSON); all_fields_present=FALSE
+    # (loader expects an array, not a bare object) → InvalidSchemaImpliesError.
+    def test_json_object_not_array(self, tmp_path: Path) -> None:
+        """Top-level JSON object is valid JSON but invalid schema (expects array)."""
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps({"resource_type": "db", "required_outs": [], "position": "pre"}))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: SafeResult
+# ---------------------------------------------------------------------------
+
+class TestInvariantSafeResult:
+    def test_safe_result_on_success(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([GOOD_RULE]))
+        rules = load_cross_cutting_rules(str(f))
+        assert rules is not None
+        for r in rules:
+            assert r.position in VALID_POSITIONS
+
+    def test_safe_result_on_error_file_absent(self, tmp_path: Path) -> None:
+        rules: list = []
+        with pytest.raises(FileNotFoundError):
+            rules = load_cross_cutting_rules(str(tmp_path / "gone.json"))
+        assert rules == []
+
+    def test_safe_result_on_error_bad_position(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([BAD_POSITION_RULE]))
+        rules: list = []
+        with pytest.raises(ValueError):
+            rules = load_cross_cutting_rules(str(f))
+        assert rules == []
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: EmptyRulesValid
+# ---------------------------------------------------------------------------
+
+class TestInvariantEmptyRulesValid:
+    def test_empty_array_returns_empty_list(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([]))
+        rules = load_cross_cutting_rules(str(f))
+        assert rules == [], "EmptyRulesValid: empty JSON array must return empty list"
+
+    def test_empty_array_no_error_raised(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([]))
+        rules = load_cross_cutting_rules(str(f))
+        assert isinstance(rules, list)
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: PhaseValid
+# Every call must either return a list or raise exactly FileNotFoundError or
+# ValueError — and bad inputs MUST raise (not silently succeed).
+# ---------------------------------------------------------------------------
+
+class TestInvariantPhaseValid:
+    def test_only_file_not_found_or_value_error_on_failure(self, tmp_path: Path) -> None:
+        """Only FileNotFoundError or ValueError are valid terminal error types,
+        AND each bad input must actually raise one of them."""
+        bad_inputs = [
+            (tmp_path / "no_file.json", None),                            # absent
+            (tmp_path / "bad.json",     "not json"),                      # malformed
+            (tmp_path / "schema.json",  json.dumps([{"x": 1}])),          # bad schema
+            (tmp_path / "pos.json",     json.dumps([BAD_POSITION_RULE])), # bad position
+        ]
+        for path, content in bad_inputs:
+            if content is not None:
+                path.write_text(content)
+            # FIX (Defect 2): track whether the call raised at all; if it did
+            # not raise, the PhaseValid invariant is violated because all of
+            # these inputs must terminate in the "raised" phase.
+            did_raise = False
+            try:
+                load_cross_cutting_rules(str(path))
+            except (FileNotFoundError, ValueError):
+                did_raise = True
+            except Exception as exc:
+                pytest.fail(
+                    f"PhaseValid violated: unexpected exception type "
+                    f"{type(exc).__name__} for input {path}: {exc}"
+                )
+            if not did_raise:
+                pytest.fail(
+                    f"PhaseValid violated: bad input {path} did not raise any "
+                    f"exception — expected FileNotFoundError or ValueError"
+                )
+
+    def test_success_returns_list_not_other_type(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([GOOD_RULE]))
+        result = load_cross_cutting_rules(str(f))
+        assert isinstance(result, list), (
+            f"PhaseValid/returned: expected list, got {type(result).__name__}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Edge cases (derived from trace space; minimally invented)
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+    def test_multiple_valid_rules_all_returned(self, tmp_path: Path) -> None:
+        """Multiple valid rules → all returned as CrossCuttingRule instances."""
+        data = [
+            {"resource_type": "service", "required_outs": ["span"],  "position": "pre"},
+            {"resource_type": "db",      "required_outs": ["audit"], "position": "post"},
+            {"resource_type": "queue",   "required_outs": ["ack"],   "position": "wrap"},
+        ]
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps(data))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 3
+        for rule in rules:
+            assert isinstance(rule, CrossCuttingRule)
+            assert rule.position in VALID_POSITIONS
+
+    def test_one_invalid_rule_among_valid_raises(self, tmp_path: Path) -> None:
+        """NoPartialResults: if any rule is invalid the whole call raises ValueError."""
+        data = [
+            {"resource_type": "service", "required_outs": ["span"], "position": "pre"},
+            BAD_POSITION_RULE,
+        ]
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps(data))
+        rules: list = []
+        with pytest.raises(ValueError):
+            rules = load_cross_cutting_rules(str(f))
+        assert rules == [], "NoPartialResults: partial results must not be returned"
+
+    def test_required_outs_preserved_as_sequence(self, tmp_path: Path) -> None:
+        """required_outs with multiple entries is preserved correctly."""
+        rule = {
+            "resource_type": "pipeline",
+            "required_outs": ["event_a", "event_b", "event_c"],
+            "position": "post",
+        }
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([rule]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 1
+        assert set(rules[0].required_outs) == {"event_a", "event_b", "event_c"}
+
+    def test_empty_required_outs_list_is_valid(self, tmp_path: Path) -> None:
+        """required_outs may be an empty list — field is still present."""
+        rule = {"resource_type": "noop", "required_outs": [], "position": "pre"}
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([rule]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 1
+        assert rules[0].required_outs == [] or list(rules[0].required_outs) == []
+
+    def test_null_bytes_in_file_raises(self, tmp_path: Path) -> None:
+        """Completely binary/null content is malformed JSON → ValueError."""
+        f = tmp_path / "rules.json"
+        f.write_bytes(b"\x00\x01\x02\x03")
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_whitespace_only_file_raises(self, tmp_path: Path) -> None:
+        """Whitespace-only content is invalid JSON → ValueError."""
+        f = tmp_path / "rules.json"
+        f.write_text("   \n\t  ")
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_crosscuttingrule_is_dataclass_with_correct_types(self, tmp_path: Path) -> None:
+        """Returned objects are CrossCuttingRule dataclass instances with correct field types."""
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([GOOD_RULE]))
+        rules = load_cross_cutting_rules(str(f))
+        rule = rules[0]
+        assert isinstance(rule, CrossCuttingRule)
+        assert isinstance(rule.resource_type, str)
+        assert isinstance(rule.position, str)
+        assert hasattr(rule.required_outs, "__iter__")
+```
+
+---
+
+## Change Summary
+
+| # | Location | Type | Change |
+|---|---|---|---|
+| 1 | `TestInvariantMalformedImpliesError.test_json_object_not_array` | **Semantic misclassification** | Moved to `TestInvariantInvalidSchemaImpliesError`; `json_valid=TRUE` disqualifies it from `MalformedImpliesError` |
+| 2 | `TestInvariantPhaseValid.test_only_file_not_found_or_value_error_on_failure` | **Missing assertion** | Added `did_raise` tracking; `pytest.fail` if bad input does not raise at all |
+| 3 | `assert_no_partial_results`, `assert_safe_result` | **Overly permissive guard** | Replaced `rules == [] or rules is None` with `rules == []` to enforce list-return contract |
+| 4 | `test_trace1_missing_fields_raises_value_error` | **Dead statement** | Removed unreachable `error_raised = True` inside `pytest.raises` block |
+## Review Findings
+
+Four semantic defects were found. Here is the analysis, followed by the corrected test plan.
+
+---
+
+### Defect 1 — `test_json_object_not_array` is misclassified (semantic error)
+
+**Location:** `TestInvariantMalformedImpliesError`
+
+**Problem:** `MalformedImpliesError` fires on `~json_valid` (the bytes cannot be parsed as JSON at all). A top-level JSON object `{"resource_type": …}` **is** valid JSON — `json_valid = TRUE`. It fails because it violates the schema (`~all_fields_present`), so it belongs under `InvalidSchemaImpliesError`. Placing it in `MalformedImpliesError` verifies the wrong invariant antecedent, meaning a loader that distinguishes parse errors from schema errors would satisfy both invariants correctly yet still fail this test, or vice-versa.
+
+**Fix:** Move the test to `TestInvariantInvalidSchemaImpliesError`.
+
+---
+
+### Defect 2 — `TestInvariantPhaseValid` never asserts that an error was actually raised (missing assertion)
+
+**Location:** `TestInvariantPhaseValid.test_only_file_not_found_or_value_error_on_failure`
+
+**Problem:** The test only checks that *if* an exception is raised it is one of the two legal types. If `load_cross_cutting_rules` silently returns (e.g., returns `[]`) for a malformed file or missing file, the `try/except` block takes neither branch and the test passes without complaint. PhaseValid requires the call to *terminate* with either a return or a raise; this test fails to verify the raise side.
+
+**Fix:** Track whether each call raised, and `pytest.fail` if it did not for inputs that must raise.
+
+---
+
+### Defect 3 — `assert rules == [] or rules is None` weakens NoPartialResults and SafeResult
+
+**Location:** `assert_no_partial_results`, `assert_safe_result`
+
+**Problem:** The TLA+ invariant is `error /= "" => result = {}`. The Python equivalent is `result == []`. Accepting `None` permits a loader that returns `None` on error to pass both invariants, which is not conformant with the spec (the return type is always `list`). In all existing tests `rules` is initialised to `[]` and the `is None` branch is dead — but it is a latent hole that would allow a regression to slip through.
+
+**Fix:** Use `assert rules == []` only.
+
+---
+
+### Defect 4 — Dead statement inside `with pytest.raises` block (misleading code)
+
+**Location:** `test_trace1_missing_fields_raises_value_error`
+
+**Problem:** `error_raised = True` is placed *inside* the `with pytest.raises(ValueError):` block, after the call site. Because `pytest.raises` requires the exception to be raised, that line is unreachable. The comment tries to explain this, but the statement should simply be removed; its presence implies intent that isn't there.
+
+**Fix:** Remove the dead assignment.
+
+---
+
+## Corrected Test Plan
+
+```python
+import json
+import pytest
+from pathlib import Path
+from cross_cutting_rules_loader import load_cross_cutting_rules, CrossCuttingRule
+
+# ---------------------------------------------------------------------------
+# Constants mirroring the TLA+ spec
+# ---------------------------------------------------------------------------
+VALID_POSITIONS = {"pre", "post", "wrap"}
+
+GOOD_RULE = {
+    "resource_type": "database",
+    "required_outs": ["audit_event"],
+    "position": "wrap",
+}
+
+BAD_POSITION_RULE = {
+    "resource_type": "database",
+    "required_outs": ["audit_event"],
+    "position": "INVALID",
+}
+
+# ---------------------------------------------------------------------------
+# Invariant helpers (TLA+ invariants expressed as Python assertions)
+# ---------------------------------------------------------------------------
+
+def assert_no_partial_results(rules: list, error_raised: bool) -> None:
+    """NoPartialResults: error /= '' => result = {}"""
+    if error_raised:
+        # FIX (Defect 3): do not accept None — the contract always returns list
+        assert rules == [], (
+            "NoPartialResults violated: error was raised but result is non-empty"
+        )
+
+
+def assert_valid_position_only(rules: list) -> None:
+    """ValidPositionOnly: ∀ r ∈ result : r.position ∈ ValidPositions"""
+    for rule in rules:
+        assert rule.position in VALID_POSITIONS, (
+            f"ValidPositionOnly violated: position '{rule.position}' not in {VALID_POSITIONS}"
+        )
+
+
+def assert_complete_fields(rules: list) -> None:
+    """CompleteFields: ∀ r ∈ result : resource_type, required_outs, position all present"""
+    for rule in rules:
+        assert hasattr(rule, "resource_type"), "CompleteFields violated: missing resource_type"
+        assert hasattr(rule, "required_outs"), "CompleteFields violated: missing required_outs"
+        assert hasattr(rule, "position"),      "CompleteFields violated: missing position"
+
+
+def assert_safe_result(rules: list, error_raised: bool) -> None:
+    """SafeResult: in terminal phase → either (no error ∧ all positions valid) or (error ∧ empty result)"""
+    if error_raised:
+        # FIX (Defect 3): do not accept None — the contract always returns list
+        assert rules == [], (
+            "SafeResult violated: error raised but result non-empty"
+        )
+    else:
+        assert_valid_position_only(rules)
+
+
+def assert_all_invariants(rules: list, error_raised: bool) -> None:
+    """Verify all TLA+ invariants simultaneously against a terminal result."""
+    assert_no_partial_results(rules, error_raised)
+    assert_safe_result(rules, error_raised)
+    if not error_raised and rules:
+        assert_valid_position_only(rules)
+        assert_complete_fields(rules)
+
+
+# ---------------------------------------------------------------------------
+# Trace 1 — file exists, valid JSON, missing required fields → ValueError
+# (ChooseFileExists→ChooseJsonValid→ChooseSchema[no fields]→ReadFile→ParseJSON
+#  →ValidateRules→RaisedError→Finish)
+# ---------------------------------------------------------------------------
+
+def test_trace1_missing_fields_raises_value_error(tmp_path: Path) -> None:
+    """
+    Trace 1: file_exists=TRUE, json_valid=TRUE, all_fields_present=FALSE.
+    ValidateRules detects absent required keys and raises ValueError.
+    Invariants: NoPartialResults, InvalidSchemaImpliesError, SafeResult.
+    """
+    rules_file = tmp_path / "rules.json"
+    rules_file.write_text(json.dumps([{"extra_key": "value"}]))
+
+    error_raised = True
+    rules: list = []
+
+    with pytest.raises(ValueError):
+        # FIX (Defect 4): removed the dead `error_raised = True` statement that
+        # could never execute inside a passing pytest.raises block.
+        rules = load_cross_cutting_rules(str(rules_file))
+
+    assert_all_invariants(rules, error_raised)
+
+
+# ---------------------------------------------------------------------------
+# Traces 2–3, 5–8, 10 — file does not exist → FileNotFoundError
+# (ChooseFileExists[FALSE]→…→ReadFile→RaisedError→Finish)
+# ---------------------------------------------------------------------------
+
+def _assert_file_not_found(path: str) -> None:
+    error_raised = True
+    rules: list = []
+    with pytest.raises(FileNotFoundError):
+        rules = load_cross_cutting_rules(path)
+    assert_all_invariants(rules, error_raised)
+
+
+def test_trace2_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 2: file_exists=FALSE → FileNotFoundError (FileAbsentImpliesError)."""
+    _assert_file_not_found(str(tmp_path / "nonexistent_rules.json"))
+
+
+def test_trace3_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 3: file_exists=FALSE → FileNotFoundError (duplicate structural path)."""
+    _assert_file_not_found(str(tmp_path / "missing.json"))
+
+
+def test_trace5_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 5: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_5.json"))
+
+
+def test_trace6_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 6: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_6.json"))
+
+
+def test_trace7_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 7: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_7.json"))
+
+
+def test_trace8_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 8: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_8.json"))
+
+
+def test_trace10_file_absent_raises_file_not_found_error(tmp_path: Path) -> None:
+    """Trace 10: file_exists=FALSE → FileNotFoundError."""
+    _assert_file_not_found(str(tmp_path / "rules_10.json"))
+
+
+# ---------------------------------------------------------------------------
+# Trace 4 — happy path: single valid rule returns populated CrossCuttingRule
+# ---------------------------------------------------------------------------
+
+def test_trace4_valid_rule_returns_dataclass(tmp_path: Path) -> None:
+    """
+    Trace 4: file_exists=TRUE, json_valid=TRUE, all_fields_present=TRUE,
+    position="wrap" ∈ ValidPositions → result contains one CrossCuttingRule.
+    Invariants: CompleteFields, ValidPositionOnly, SafeResult, NoPartialResults.
+    """
+    rules_file = tmp_path / "rules.json"
+    rules_file.write_text(json.dumps([GOOD_RULE]))
+
+    rules = load_cross_cutting_rules(str(rules_file))
+    error_raised = False
+
+    assert isinstance(rules, list)
+    assert len(rules) == 1
+
+    rule = rules[0]
+    assert isinstance(rule, CrossCuttingRule)
+    assert rule.resource_type == "database"
+    assert rule.position == "wrap"
+    assert "audit_event" in rule.required_outs
+
+    assert_all_invariants(rules, error_raised)
+
+
+# ---------------------------------------------------------------------------
+# Trace 9 — invalid position value → ValueError
+# ---------------------------------------------------------------------------
+
+def test_trace9_invalid_position_raises_value_error(tmp_path: Path) -> None:
+    """
+    Trace 9: file_exists=TRUE, json_valid=TRUE, all_fields_present=TRUE,
+    but position="INVALID" ∉ ValidPositions → ValueError at CheckPositions.
+    Invariants: ValidPositionOnly, NoPartialResults, SafeResult.
+    """
+    rules_file = tmp_path / "rules.json"
+    rules_file.write_text(json.dumps([BAD_POSITION_RULE]))
+
+    error_raised = True
+    rules: list = []
+
+    with pytest.raises(ValueError):
+        rules = load_cross_cutting_rules(str(rules_file))
+
+    assert_all_invariants(rules, error_raised)
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: NoPartialResults
+# ---------------------------------------------------------------------------
+
+class TestInvariantNoPartialResults:
+    def test_no_partial_results_on_file_not_found(self, tmp_path: Path) -> None:
+        rules: list = []
+        with pytest.raises(FileNotFoundError):
+            rules = load_cross_cutting_rules(str(tmp_path / "absent.json"))
+        assert rules == [], "NoPartialResults: FileNotFoundError must leave result empty"
+
+    def test_no_partial_results_on_invalid_position(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([BAD_POSITION_RULE]))
+        rules: list = []
+        with pytest.raises(ValueError):
+            rules = load_cross_cutting_rules(str(f))
+        assert rules == [], "NoPartialResults: ValueError must leave result empty"
+
+    def test_no_partial_results_on_missing_fields(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{"only_one_field": "x"}]))
+        rules: list = []
+        with pytest.raises(ValueError):
+            rules = load_cross_cutting_rules(str(f))
+        assert rules == [], "NoPartialResults: schema ValueError must leave result empty"
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: ValidPositionOnly
+# ---------------------------------------------------------------------------
+
+class TestInvariantValidPositionOnly:
+    @pytest.mark.parametrize("position", sorted(VALID_POSITIONS))
+    def test_all_valid_positions_accepted(self, tmp_path: Path, position: str) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{
+            "resource_type": "service",
+            "required_outs": ["log"],
+            "position": position,
+        }]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 1
+        assert rules[0].position in VALID_POSITIONS, (
+            f"ValidPositionOnly violated for position='{position}'"
+        )
+
+    def test_invalid_position_rejected(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([BAD_POSITION_RULE]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: CompleteFields
+# ---------------------------------------------------------------------------
+
+class TestInvariantCompleteFields:
+    def test_single_rule_all_fields_present(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([GOOD_RULE]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 1
+        r = rules[0]
+        assert hasattr(r, "resource_type")
+        assert hasattr(r, "required_outs")
+        assert hasattr(r, "position")
+
+    def test_multiple_rules_all_fields_present(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([
+            {"resource_type": "service", "required_outs": ["span"], "position": "pre"},
+            {"resource_type": "queue",   "required_outs": ["ack"],  "position": "post"},
+        ]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 2
+        for r in rules:
+            assert hasattr(r, "resource_type")
+            assert hasattr(r, "required_outs")
+            assert hasattr(r, "position")
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: FileAbsentImpliesError
+# ---------------------------------------------------------------------------
+
+class TestInvariantFileAbsentImpliesError:
+    def test_completely_absent_path(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            load_cross_cutting_rules(str(tmp_path / "no_such_file.json"))
+
+    def test_absent_nested_path(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            load_cross_cutting_rules(str(tmp_path / "sub" / "dir" / "rules.json"))
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: MalformedImpliesError
+# Antecedent: file_exists=TRUE, json_valid=FALSE.
+# Only inputs that are genuinely unparseable JSON belong here.
+# ---------------------------------------------------------------------------
+
+class TestInvariantMalformedImpliesError:
+    def test_completely_invalid_json(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text("this is not json {{{{")
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_truncated_json(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text('[{"resource_type": "db"')  # truncated
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    # FIX (Defect 1): test_json_object_not_array REMOVED from here.
+    # A top-level JSON object is syntactically valid JSON (json_valid=TRUE),
+    # so its antecedent is InvalidSchemaImpliesError, not MalformedImpliesError.
+    # It has been moved to TestInvariantInvalidSchemaImpliesError below.
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: InvalidSchemaImpliesError
+# Antecedent: file_exists=TRUE, json_valid=TRUE, all_fields_present=FALSE.
+# ---------------------------------------------------------------------------
+
+class TestInvariantInvalidSchemaImpliesError:
+    def test_rule_missing_position_field(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{"resource_type": "db", "required_outs": ["event"]}]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_rule_missing_resource_type_field(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{"required_outs": ["event"], "position": "pre"}]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_rule_missing_required_outs_field(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{"resource_type": "db", "position": "pre"}]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_rule_completely_empty_object(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([{}]))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    # FIX (Defect 1): moved here from TestInvariantMalformedImpliesError.
+    # json_valid=TRUE (a JSON object is valid JSON); all_fields_present=FALSE
+    # (loader expects an array, not a bare object) → InvalidSchemaImpliesError.
+    def test_json_object_not_array(self, tmp_path: Path) -> None:
+        """Top-level JSON object is valid JSON but invalid schema (expects array)."""
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps({"resource_type": "db", "required_outs": [], "position": "pre"}))
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: SafeResult
+# ---------------------------------------------------------------------------
+
+class TestInvariantSafeResult:
+    def test_safe_result_on_success(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([GOOD_RULE]))
+        rules = load_cross_cutting_rules(str(f))
+        assert rules is not None
+        for r in rules:
+            assert r.position in VALID_POSITIONS
+
+    def test_safe_result_on_error_file_absent(self, tmp_path: Path) -> None:
+        rules: list = []
+        with pytest.raises(FileNotFoundError):
+            rules = load_cross_cutting_rules(str(tmp_path / "gone.json"))
+        assert rules == []
+
+    def test_safe_result_on_error_bad_position(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([BAD_POSITION_RULE]))
+        rules: list = []
+        with pytest.raises(ValueError):
+            rules = load_cross_cutting_rules(str(f))
+        assert rules == []
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: EmptyRulesValid
+# ---------------------------------------------------------------------------
+
+class TestInvariantEmptyRulesValid:
+    def test_empty_array_returns_empty_list(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([]))
+        rules = load_cross_cutting_rules(str(f))
+        assert rules == [], "EmptyRulesValid: empty JSON array must return empty list"
+
+    def test_empty_array_no_error_raised(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([]))
+        rules = load_cross_cutting_rules(str(f))
+        assert isinstance(rules, list)
+
+
+# ---------------------------------------------------------------------------
+# Invariant verifier: PhaseValid
+# Every call must either return a list or raise exactly FileNotFoundError or
+# ValueError — and bad inputs MUST raise (not silently succeed).
+# ---------------------------------------------------------------------------
+
+class TestInvariantPhaseValid:
+    def test_only_file_not_found_or_value_error_on_failure(self, tmp_path: Path) -> None:
+        """Only FileNotFoundError or ValueError are valid terminal error types,
+        AND each bad input must actually raise one of them."""
+        bad_inputs = [
+            (tmp_path / "no_file.json", None),                            # absent
+            (tmp_path / "bad.json",     "not json"),                      # malformed
+            (tmp_path / "schema.json",  json.dumps([{"x": 1}])),          # bad schema
+            (tmp_path / "pos.json",     json.dumps([BAD_POSITION_RULE])), # bad position
+        ]
+        for path, content in bad_inputs:
+            if content is not None:
+                path.write_text(content)
+            # FIX (Defect 2): track whether the call raised at all; if it did
+            # not raise, the PhaseValid invariant is violated because all of
+            # these inputs must terminate in the "raised" phase.
+            did_raise = False
+            try:
+                load_cross_cutting_rules(str(path))
+            except (FileNotFoundError, ValueError):
+                did_raise = True
+            except Exception as exc:
+                pytest.fail(
+                    f"PhaseValid violated: unexpected exception type "
+                    f"{type(exc).__name__} for input {path}: {exc}"
+                )
+            if not did_raise:
+                pytest.fail(
+                    f"PhaseValid violated: bad input {path} did not raise any "
+                    f"exception — expected FileNotFoundError or ValueError"
+                )
+
+    def test_success_returns_list_not_other_type(self, tmp_path: Path) -> None:
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([GOOD_RULE]))
+        result = load_cross_cutting_rules(str(f))
+        assert isinstance(result, list), (
+            f"PhaseValid/returned: expected list, got {type(result).__name__}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Edge cases (derived from trace space; minimally invented)
+# ---------------------------------------------------------------------------
+
+class TestEdgeCases:
+    def test_multiple_valid_rules_all_returned(self, tmp_path: Path) -> None:
+        """Multiple valid rules → all returned as CrossCuttingRule instances."""
+        data = [
+            {"resource_type": "service", "required_outs": ["span"],  "position": "pre"},
+            {"resource_type": "db",      "required_outs": ["audit"], "position": "post"},
+            {"resource_type": "queue",   "required_outs": ["ack"],   "position": "wrap"},
+        ]
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps(data))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 3
+        for rule in rules:
+            assert isinstance(rule, CrossCuttingRule)
+            assert rule.position in VALID_POSITIONS
+
+    def test_one_invalid_rule_among_valid_raises(self, tmp_path: Path) -> None:
+        """NoPartialResults: if any rule is invalid the whole call raises ValueError."""
+        data = [
+            {"resource_type": "service", "required_outs": ["span"], "position": "pre"},
+            BAD_POSITION_RULE,
+        ]
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps(data))
+        rules: list = []
+        with pytest.raises(ValueError):
+            rules = load_cross_cutting_rules(str(f))
+        assert rules == [], "NoPartialResults: partial results must not be returned"
+
+    def test_required_outs_preserved_as_sequence(self, tmp_path: Path) -> None:
+        """required_outs with multiple entries is preserved correctly."""
+        rule = {
+            "resource_type": "pipeline",
+            "required_outs": ["event_a", "event_b", "event_c"],
+            "position": "post",
+        }
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([rule]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 1
+        assert set(rules[0].required_outs) == {"event_a", "event_b", "event_c"}
+
+    def test_empty_required_outs_list_is_valid(self, tmp_path: Path) -> None:
+        """required_outs may be an empty list — field is still present."""
+        rule = {"resource_type": "noop", "required_outs": [], "position": "pre"}
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([rule]))
+        rules = load_cross_cutting_rules(str(f))
+        assert len(rules) == 1
+        assert rules[0].required_outs == [] or list(rules[0].required_outs) == []
+
+    def test_null_bytes_in_file_raises(self, tmp_path: Path) -> None:
+        """Completely binary/null content is malformed JSON → ValueError."""
+        f = tmp_path / "rules.json"
+        f.write_bytes(b"\x00\x01\x02\x03")
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_whitespace_only_file_raises(self, tmp_path: Path) -> None:
+        """Whitespace-only content is invalid JSON → ValueError."""
+        f = tmp_path / "rules.json"
+        f.write_text("   \n\t  ")
+        with pytest.raises(ValueError):
+            load_cross_cutting_rules(str(f))
+
+    def test_crosscuttingrule_is_dataclass_with_correct_types(self, tmp_path: Path) -> None:
+        """Returned objects are CrossCuttingRule dataclass instances with correct field types."""
+        f = tmp_path / "rules.json"
+        f.write_text(json.dumps([GOOD_RULE]))
+        rules = load_cross_cutting_rules(str(f))
+        rule = rules[0]
+        assert isinstance(rule, CrossCuttingRule)
+        assert isinstance(rule.resource_type, str)
+        assert isinstance(rule.position, str)
+        assert hasattr(rule.required_outs, "__iter__")
+```
+
+---
+
+## Change Summary
+
+| # | Location | Type | Change |
+|---|---|---|---|
+| 1 | `TestInvariantMalformedImpliesError.test_json_object_not_array` | **Semantic misclassification** | Moved to `TestInvariantInvalidSchemaImpliesError`; `json_valid=TRUE` disqualifies it from `MalformedImpliesError` |
+| 2 | `TestInvariantPhaseValid.test_only_file_not_found_or_value_error_on_failure` | **Missing assertion** | Added `did_raise` tracking; `pytest.fail` if bad input does not raise at all |
+| 3 | `assert_no_partial_results`, `assert_safe_result` | **Overly permissive guard** | Replaced `rules == [] or rules is None` with `rules == []` to enforce list-return contract |
+| 4 | `test_trace1_missing_fields_raises_value_error` | **Dead statement** | Removed unreachable `error_raised = True` inside `pytest.raises` block |

@@ -1,0 +1,190 @@
+---- MODULE CrossCuttingCLI ----
+
+EXTENDS Integers, TLC
+
+(*--algorithm CrossCuttingCLI
+
+variables
+    cross_cutting \in BOOLEAN,
+    json_flag \in BOOLEAN,
+    rules_file_exists \in BOOLEAN,
+    has_seam_report = FALSE,
+    has_behavioral_report = FALSE,
+    has_behavioral_json = FALSE,
+    stderr_error = FALSE,
+    exit_code = 0,
+    rules_loaded = FALSE,
+    terminated = FALSE;
+
+define
+
+    BackwardCompatible ==
+        (terminated /\ ~cross_cutting) =>
+            (~has_behavioral_report /\ ~has_behavioral_json)
+
+    FlagEnablesBehavioral ==
+        (terminated /\ cross_cutting /\ rules_file_exists) =>
+            has_behavioral_report
+
+    JsonIncludesBehavioral ==
+        (terminated /\ json_flag /\ cross_cutting /\ rules_file_exists) =>
+            has_behavioral_json
+
+    MissingRulesError ==
+        (terminated /\ cross_cutting /\ ~rules_file_exists) =>
+            (stderr_error /\ exit_code = 1)
+
+    BothReportsPresent ==
+        (terminated /\ cross_cutting /\ rules_file_exists) =>
+            (has_seam_report /\ has_behavioral_report)
+
+    SeamReportAlwaysPresent ==
+        (terminated /\ ~stderr_error) =>
+            has_seam_report
+
+    NoSpuriousBehavioralOnError ==
+        (terminated /\ stderr_error) =>
+            (~has_behavioral_report /\ ~has_behavioral_json)
+
+    ExitCodeCleanOnSuccess ==
+        (terminated /\ ~stderr_error) =>
+            (exit_code = 0)
+
+end define;
+
+fair process cmd_seams_proc = "cmd_seams"
+begin
+    ParseFlags:
+        skip;
+
+    LoadRules:
+        if cross_cutting then
+            if rules_file_exists then
+                rules_loaded := TRUE;
+            else
+                stderr_error := TRUE;
+                exit_code := 1;
+                goto Finish;
+            end if;
+        end if;
+
+    RunSeamCheck:
+        has_seam_report := TRUE;
+
+    RunBehavioralCheck:
+        if cross_cutting /\ rules_loaded then
+            has_behavioral_report := TRUE;
+        end if;
+
+    FormatOutput:
+        if json_flag /\ cross_cutting /\ rules_loaded then
+            has_behavioral_json := TRUE;
+        end if;
+
+    Finish:
+        terminated := TRUE;
+
+end process;
+
+end algorithm; *)
+
+THEOREM BackwardCompatible /\ FlagEnablesBehavioral /\ JsonIncludesBehavioral
+     /\ MissingRulesError /\ BothReportsPresent /\ SeamReportAlwaysPresent
+     /\ NoSpuriousBehavioralOnError /\ ExitCodeCleanOnSuccess
+
+====
+---- MODULE CrossCuttingCLI ----
+
+EXTENDS Integers, TLC
+
+(*--algorithm CrossCuttingCLI
+
+variables
+    cross_cutting \in BOOLEAN,
+    json_flag \in BOOLEAN,
+    rules_file_exists \in BOOLEAN,
+    has_seam_report = FALSE,
+    has_behavioral_report = FALSE,
+    has_behavioral_json = FALSE,
+    stderr_error = FALSE,
+    exit_code = 0,
+    rules_loaded = FALSE,
+    terminated = FALSE;
+
+define
+
+    BackwardCompatible ==
+        (terminated /\ ~cross_cutting) =>
+            (~has_behavioral_report /\ ~has_behavioral_json)
+
+    FlagEnablesBehavioral ==
+        (terminated /\ cross_cutting /\ rules_file_exists) =>
+            has_behavioral_report
+
+    JsonIncludesBehavioral ==
+        (terminated /\ json_flag /\ cross_cutting /\ rules_file_exists) =>
+            has_behavioral_json
+
+    MissingRulesError ==
+        (terminated /\ cross_cutting /\ ~rules_file_exists) =>
+            (stderr_error /\ exit_code = 1)
+
+    BothReportsPresent ==
+        (terminated /\ cross_cutting /\ rules_file_exists) =>
+            (has_seam_report /\ has_behavioral_report)
+
+    SeamReportAlwaysPresent ==
+        (terminated /\ ~stderr_error) =>
+            has_seam_report
+
+    NoSpuriousBehavioralOnError ==
+        (terminated /\ stderr_error) =>
+            (~has_behavioral_report /\ ~has_behavioral_json)
+
+    ExitCodeCleanOnSuccess ==
+        (terminated /\ ~stderr_error) =>
+            (exit_code = 0)
+
+end define;
+
+fair process cmd_seams_proc = "cmd_seams"
+begin
+    ParseFlags:
+        skip;
+
+    LoadRules:
+        if cross_cutting then
+            if rules_file_exists then
+                rules_loaded := TRUE;
+            else
+                stderr_error := TRUE;
+                exit_code := 1;
+                goto Finish;
+            end if;
+        end if;
+
+    RunSeamCheck:
+        has_seam_report := TRUE;
+
+    RunBehavioralCheck:
+        if cross_cutting /\ rules_loaded then
+            has_behavioral_report := TRUE;
+        end if;
+
+    FormatOutput:
+        if json_flag /\ cross_cutting /\ rules_loaded then
+            has_behavioral_json := TRUE;
+        end if;
+
+    Finish:
+        terminated := TRUE;
+
+end process;
+
+end algorithm; *)
+
+THEOREM BackwardCompatible /\ FlagEnablesBehavioral /\ JsonIncludesBehavioral
+     /\ MissingRulesError /\ BothReportsPresent /\ SeamReportAlwaysPresent
+     /\ NoSpuriousBehavioralOnError /\ ExitCodeCleanOnSuccess
+
+====

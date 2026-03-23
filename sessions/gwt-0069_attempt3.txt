@@ -1,0 +1,270 @@
+---- MODULE BehavioralContracts ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Rules,
+    Edges,
+    EdgeCallee,
+    EdgeCaller,
+    FnOuts,
+    RuleMatches,
+    RuleRequiredOuts,
+    DefaultVal
+
+(* --algorithm BehavioralContracts
+
+variables
+    violations         = {},
+    satisfied_count    = 0,
+    checked_count      = 0,
+    pending_edges      = Edges,
+    current_edge       = DefaultVal,
+    pending_rules      = {},
+    current_rule       = DefaultVal,
+    edge_matched       = FALSE,
+    edge_has_violation = FALSE,
+    done               = FALSE;
+
+define
+
+    ViolatedEdges ==
+        {e \in Edges : \E v \in violations : v.edge = e}
+
+    CountConsistency ==
+        done =>
+            (checked_count = satisfied_count + Cardinality(ViolatedEdges))
+
+    ViolationComplete ==
+        \A v \in violations :
+            /\ v.rule        \in Rules
+            /\ v.edge        \in Edges
+            /\ v.missing_out \in RuleRequiredOuts[v.rule]
+
+    NoFalsePositives ==
+        \A v \in violations :
+            v.missing_out \notin FnOuts[v.callee]
+
+    NoMatchNoViolation ==
+        \A v \in violations :
+            <<v.rule, v.edge>> \in RuleMatches
+
+    EmptyEdgesImpliesEmptyReport ==
+        Edges = {} =>
+            (violations = {} /\ satisfied_count = 0 /\ checked_count = 0)
+
+    ZeroViolationsWhenAllCompliant ==
+        (done /\
+         (\A e \in Edges : \A r \in Rules :
+             <<r, e>> \in RuleMatches =>
+             RuleRequiredOuts[r] \subseteq FnOuts[EdgeCallee[e]]))
+        => (violations = {})
+
+    NoMatchNoCount ==
+        done =>
+            (\A e \in Edges :
+                (\A r \in Rules : <<r, e>> \notin RuleMatches) =>
+                e \notin ViolatedEdges)
+
+end define;
+
+fair process checker = "checker"
+begin
+    PickEdge:
+        if pending_edges # {} then
+            with e \in pending_edges do
+                current_edge       := e;
+                pending_edges      := pending_edges \ {e};
+                pending_rules      := Rules;
+                edge_matched       := FALSE;
+                edge_has_violation := FALSE;
+            end with;
+            goto CheckRules;
+        else
+            goto Finish;
+        end if;
+
+    CheckRules:
+        if pending_rules # {} then
+            with r \in pending_rules do
+                current_rule  := r;
+                pending_rules := pending_rules \ {r};
+            end with;
+            if <<current_rule, current_edge>> \in RuleMatches then
+                edge_matched := TRUE;
+                goto CheckOuts;
+            else
+                goto CheckRules;
+            end if;
+        else
+            goto FinalizeEdge;
+        end if;
+
+    CheckOuts:
+        with missing = RuleRequiredOuts[current_rule] \ FnOuts[EdgeCallee[current_edge]] do
+            violations := violations \union
+                { [ rule        |-> current_rule,
+                    edge        |-> current_edge,
+                    callee      |-> EdgeCallee[current_edge],
+                    caller      |-> EdgeCaller[current_edge],
+                    missing_out |-> out ] : out \in missing };
+            if missing # {} then
+                edge_has_violation := TRUE;
+            end if;
+        end with;
+        goto CheckRules;
+
+    FinalizeEdge:
+        if edge_matched then
+            checked_count := checked_count + 1;
+        end if;
+
+    AfterCheckedCount:
+        if edge_matched /\ ~edge_has_violation then
+            satisfied_count := satisfied_count + 1;
+        end if;
+        goto PickEdge;
+
+    Finish:
+        done := TRUE;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE BehavioralContracts ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Rules,
+    Edges,
+    EdgeCallee,
+    EdgeCaller,
+    FnOuts,
+    RuleMatches,
+    RuleRequiredOuts,
+    DefaultVal
+
+(* --algorithm BehavioralContracts
+
+variables
+    violations         = {},
+    satisfied_count    = 0,
+    checked_count      = 0,
+    pending_edges      = Edges,
+    current_edge       = DefaultVal,
+    pending_rules      = {},
+    current_rule       = DefaultVal,
+    edge_matched       = FALSE,
+    edge_has_violation = FALSE,
+    done               = FALSE;
+
+define
+
+    ViolatedEdges ==
+        {e \in Edges : \E v \in violations : v.edge = e}
+
+    CountConsistency ==
+        done =>
+            (checked_count = satisfied_count + Cardinality(ViolatedEdges))
+
+    ViolationComplete ==
+        \A v \in violations :
+            /\ v.rule        \in Rules
+            /\ v.edge        \in Edges
+            /\ v.missing_out \in RuleRequiredOuts[v.rule]
+
+    NoFalsePositives ==
+        \A v \in violations :
+            v.missing_out \notin FnOuts[v.callee]
+
+    NoMatchNoViolation ==
+        \A v \in violations :
+            <<v.rule, v.edge>> \in RuleMatches
+
+    EmptyEdgesImpliesEmptyReport ==
+        Edges = {} =>
+            (violations = {} /\ satisfied_count = 0 /\ checked_count = 0)
+
+    ZeroViolationsWhenAllCompliant ==
+        (done /\
+         (\A e \in Edges : \A r \in Rules :
+             <<r, e>> \in RuleMatches =>
+             RuleRequiredOuts[r] \subseteq FnOuts[EdgeCallee[e]]))
+        => (violations = {})
+
+    NoMatchNoCount ==
+        done =>
+            (\A e \in Edges :
+                (\A r \in Rules : <<r, e>> \notin RuleMatches) =>
+                e \notin ViolatedEdges)
+
+end define;
+
+fair process checker = "checker"
+begin
+    PickEdge:
+        if pending_edges # {} then
+            with e \in pending_edges do
+                current_edge       := e;
+                pending_edges      := pending_edges \ {e};
+                pending_rules      := Rules;
+                edge_matched       := FALSE;
+                edge_has_violation := FALSE;
+            end with;
+            goto CheckRules;
+        else
+            goto Finish;
+        end if;
+
+    CheckRules:
+        if pending_rules # {} then
+            with r \in pending_rules do
+                current_rule  := r;
+                pending_rules := pending_rules \ {r};
+            end with;
+            if <<current_rule, current_edge>> \in RuleMatches then
+                edge_matched := TRUE;
+                goto CheckOuts;
+            else
+                goto CheckRules;
+            end if;
+        else
+            goto FinalizeEdge;
+        end if;
+
+    CheckOuts:
+        with missing = RuleRequiredOuts[current_rule] \ FnOuts[EdgeCallee[current_edge]] do
+            violations := violations \union
+                { [ rule        |-> current_rule,
+                    edge        |-> current_edge,
+                    callee      |-> EdgeCallee[current_edge],
+                    caller      |-> EdgeCaller[current_edge],
+                    missing_out |-> out ] : out \in missing };
+            if missing # {} then
+                edge_has_violation := TRUE;
+            end if;
+        end with;
+        goto CheckRules;
+
+    FinalizeEdge:
+        if edge_matched then
+            checked_count := checked_count + 1;
+        end if;
+
+    AfterCheckedCount:
+        if edge_matched /\ ~edge_has_violation then
+            satisfied_count := satisfied_count + 1;
+        end if;
+        goto PickEdge;
+
+    Finish:
+        done := TRUE;
+
+end process;
+
+end algorithm; *)
+
+====

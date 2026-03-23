@@ -999,6 +999,56 @@
       "when": "check_all_seams() runs to completion",
       "then": "SeamReport contains exactly M mismatches plus K unresolved plus (N-M-K) satisfied and total_edges equals N so every edge is accounted for"
     },
+    "gwt-0068": {
+      "id": "gwt-0068",
+      "kind": "behavior",
+      "name": "cross_cutting_rules_loaded",
+      "description": "",
+      "version": 1,
+      "given": "a JSON file at the configured rules path containing an array of rule objects, each with resource_type (string), required_outs (array of strings), and position (one of pre/post/wrap)",
+      "when": "load_cross_cutting_rules(path) is called",
+      "then": "returns a list of CrossCuttingRule dataclasses with fields populated from JSON; raises ValueError on missing fields, invalid position values, or malformed JSON; raises FileNotFoundError if file absent"
+    },
+    "gwt-0069": {
+      "id": "gwt-0069",
+      "kind": "behavior",
+      "name": "behavioral_contracts_checked",
+      "description": "",
+      "version": 1,
+      "given": "a list of CrossCuttingRule objects and a CrawlStore with dependency edges where some callees match a rule's resource_type but lack required OUT fields",
+      "when": "check_behavioral_contracts(store, rules) is called",
+      "then": "returns a BehavioralReport listing each violated rule-edge pair (with rule name, callee UUID, and missing contract), counting compliant edges as satisfied, and reporting zero violations when no edges match any rule or all matching edges are compliant"
+    },
+    "gwt-0070": {
+      "id": "gwt-0070",
+      "kind": "behavior",
+      "name": "cross_cutting_cli_integrated",
+      "description": "",
+      "version": 1,
+      "given": "cmd_seams() is invoked with --cross-cutting flag and a valid rules file exists",
+      "when": "cmd_seams() executes",
+      "then": "output includes both the standard seam report and a behavioral report section; with --json the output includes a behavioral_violations array; without --cross-cutting the output is unchanged from existing behavior; with --cross-cutting but missing rules file, prints error to stderr and exits non-zero"
+    },
+    "gwt-0071": {
+      "id": "gwt-0071",
+      "kind": "behavior",
+      "name": "observability_template_structure",
+      "description": "",
+      "version": 1,
+      "given": "templates/pluscal/observability_state_machine.tla exists with trace_log and audit_log VARIABLES and TraceComplete/AuditComplete invariants",
+      "when": "a PlusCal algorithm instantiated from this template omits a trace_log append in any action",
+      "then": "TLC reports a TraceComplete invariant violation identifying the action that failed to extend trace_log; similarly AuditComplete violations fire for state mutations missing audit_log appends"
+    },
+    "gwt-0072": {
+      "id": "gwt-0072",
+      "kind": "behavior",
+      "name": "template_selected_by_annotation",
+      "description": "",
+      "version": 1,
+      "given": "a GWT node with metadata field template set to 'observability_state_machine'",
+      "when": "run_loop() processes that GWT node",
+      "then": "loads observability_state_machine.tla instead of state_machine.tla for prompt construction; falls back to state_machine.tla when template field is absent; raises FileNotFoundError for unknown template names"
+    },
     "impact-0001": {
       "id": "impact-0001",
       "kind": "resource",
@@ -1212,6 +1262,22 @@
       "description": "",
       "version": 1,
       "text": "System needs seam verification: given two connected functions in crawl.db, detect when the caller output contract does not satisfy the callee input contract"
+    },
+    "req-0018": {
+      "id": "req-0018",
+      "kind": "requirement",
+      "name": "system_needs_cross-cutting_behavioral_co",
+      "description": "",
+      "version": 1,
+      "text": "System needs cross-cutting behavioral contract enforcement: load rules mapping resource types to required OUT contracts, verify those rules against crawl.db dependency edges, and surface violations in cw9 seams output"
+    },
+    "req-0019": {
+      "id": "req-0019",
+      "kind": "requirement",
+      "name": "system_needs_an_observability-aware_tla+",
+      "description": "",
+      "version": 1,
+      "text": "System needs an observability-aware TLA+ template variant with trace_log/audit_log variables and invariants, selectable via GWT metadata annotation for service boundary specs"
     },
     "res-0001": {
       "id": "res-0001",
@@ -3154,6 +3220,11 @@
     "gwt-0065": [],
     "gwt-0066": [],
     "gwt-0067": [],
+    "gwt-0068": [],
+    "gwt-0069": [],
+    "gwt-0070": [],
+    "gwt-0071": [],
+    "gwt-0072": [],
     "impact-0001": [
       "gwt-0012",
       "gwt-0013",
@@ -3415,6 +3486,8 @@
       "gwt-0063"
     ],
     "req-0017": [],
+    "req-0018": [],
+    "req-0019": [],
     "res-0001": [],
     "res-0002": [],
     "res-0003": [],
@@ -3703,10 +3776,31 @@
       "gwt-0067"
     ],
     "component-18": [
-      "req-0017"
+      "gwt-0068"
+    ],
+    "component-19": [
+      "gwt-0069"
     ],
     "component-2": [
       "cfg-l8y1"
+    ],
+    "component-20": [
+      "gwt-0070"
+    ],
+    "component-21": [
+      "gwt-0071"
+    ],
+    "component-22": [
+      "gwt-0072"
+    ],
+    "component-23": [
+      "req-0017"
+    ],
+    "component-24": [
+      "req-0018"
+    ],
+    "component-25": [
+      "req-0019"
     ],
     "component-3": [
       "cfg-m2z6"

@@ -1,0 +1,1464 @@
+{
+  "gwt_id": "gwt-0070",
+  "module_name": "CrossCuttingCLI",
+  "data_structures": {
+    "CrossCuttingCLIState": {
+      "function_id": "fn-CrossCuttingCLI-state",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ParseFlags\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "cross_cutting": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "json_flag": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "rules_file_exists": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "has_seam_report": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "has_behavioral_report": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "has_behavioral_json": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "stderr_error": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "exit_code": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "rules_loaded": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "terminated": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CrossCuttingCLI TLA+ spec"
+    }
+  },
+  "operations": {
+    "ParseFlags": {
+      "function_id": "fn-CrossCuttingCLI-ParseFlags",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-ParseFlags",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ParseFlags from CrossCuttingCLI spec"
+    },
+    "LoadRules": {
+      "function_id": "fn-CrossCuttingCLI-LoadRules",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-LoadRules",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/LoadRulesError"
+      ],
+      "error_handling": "raise",
+      "description": "Action LoadRules from CrossCuttingCLI spec"
+    },
+    "RunSeamCheck": {
+      "function_id": "fn-CrossCuttingCLI-RunSeamCheck",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-RunSeamCheck",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunSeamCheck from CrossCuttingCLI spec"
+    },
+    "RunBehavioralCheck": {
+      "function_id": "fn-CrossCuttingCLI-RunBehavioralCheck",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-RunBehavioralCheck",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunBehavioralCheck from CrossCuttingCLI spec"
+    },
+    "FormatOutput": {
+      "function_id": "fn-CrossCuttingCLI-FormatOutput",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-FormatOutput",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FormatOutput from CrossCuttingCLI spec"
+    },
+    "Finish": {
+      "function_id": "fn-CrossCuttingCLI-Finish",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from CrossCuttingCLI spec"
+    }
+  },
+  "verifiers": {
+    "BackwardCompatible": {
+      "function_id": "fn-CrossCuttingCLI-verify-BackwardCompatible",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-BackwardCompatible",
+      "conditions": [
+        "terminated",
+        "~cross_cutting) =>\n        (~has_behavioral_report",
+        "~has_behavioral_json"
+      ],
+      "message": "BackwardCompatible violation: (terminated /\\ ~cross_cutting) =>\n        (~has_behavioral_report /\\ ~has_behavioral_json)",
+      "applies_to": [
+        "cross_cutting",
+        "has_behavioral_json",
+        "has_behavioral_report",
+        "terminated"
+      ],
+      "description": "Verifier for invariant BackwardCompatible from CrossCuttingCLI spec"
+    },
+    "FlagEnablesBehavioral": {
+      "function_id": "fn-CrossCuttingCLI-verify-FlagEnablesBehavioral",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-FlagEnablesBehavioral",
+      "conditions": [
+        "terminated",
+        "cross_cutting",
+        "rules_file_exists) =>\n        has_behavioral_report"
+      ],
+      "message": "FlagEnablesBehavioral violation: (terminated /\\ cross_cutting /\\ rules_file_exists) =>\n        has_behavioral_report",
+      "applies_to": [
+        "cross_cutting",
+        "has_behavioral_report",
+        "rules_file_exists",
+        "terminated"
+      ],
+      "description": "Verifier for invariant FlagEnablesBehavioral from CrossCuttingCLI spec"
+    },
+    "JsonIncludesBehavioral": {
+      "function_id": "fn-CrossCuttingCLI-verify-JsonIncludesBehavioral",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-JsonIncludesBehavioral",
+      "conditions": [
+        "terminated",
+        "json_flag",
+        "cross_cutting",
+        "rules_file_exists) =>\n        has_behavioral_json"
+      ],
+      "message": "JsonIncludesBehavioral violation: (terminated /\\ json_flag /\\ cross_cutting /\\ rules_file_exists) =>\n        has_behavioral_json",
+      "applies_to": [
+        "cross_cutting",
+        "has_behavioral_json",
+        "json_flag",
+        "rules_file_exists",
+        "terminated"
+      ],
+      "description": "Verifier for invariant JsonIncludesBehavioral from CrossCuttingCLI spec"
+    },
+    "MissingRulesError": {
+      "function_id": "fn-CrossCuttingCLI-verify-MissingRulesError",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-MissingRulesError",
+      "conditions": [
+        "terminated",
+        "cross_cutting",
+        "~rules_file_exists) =>\n        (stderr_error",
+        "exit_code = 1"
+      ],
+      "message": "MissingRulesError violation: (terminated /\\ cross_cutting /\\ ~rules_file_exists) =>\n        (stderr_error /\\ exit_code = 1)",
+      "applies_to": [
+        "cross_cutting",
+        "exit_code",
+        "rules_file_exists",
+        "stderr_error",
+        "terminated"
+      ],
+      "description": "Verifier for invariant MissingRulesError from CrossCuttingCLI spec"
+    },
+    "BothReportsPresent": {
+      "function_id": "fn-CrossCuttingCLI-verify-BothReportsPresent",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-BothReportsPresent",
+      "conditions": [
+        "terminated",
+        "cross_cutting",
+        "rules_file_exists) =>\n        (has_seam_report",
+        "has_behavioral_report"
+      ],
+      "message": "BothReportsPresent violation: (terminated /\\ cross_cutting /\\ rules_file_exists) =>\n        (has_seam_report /\\ has_behavioral_report)",
+      "applies_to": [
+        "cross_cutting",
+        "has_behavioral_report",
+        "has_seam_report",
+        "rules_file_exists",
+        "terminated"
+      ],
+      "description": "Verifier for invariant BothReportsPresent from CrossCuttingCLI spec"
+    },
+    "SeamReportAlwaysPresent": {
+      "function_id": "fn-CrossCuttingCLI-verify-SeamReportAlwaysPresent",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-SeamReportAlwaysPresent",
+      "conditions": [
+        "terminated",
+        "~stderr_error) =>\n        has_seam_report"
+      ],
+      "message": "SeamReportAlwaysPresent violation: (terminated /\\ ~stderr_error) =>\n        has_seam_report",
+      "applies_to": [
+        "has_seam_report",
+        "stderr_error",
+        "terminated"
+      ],
+      "description": "Verifier for invariant SeamReportAlwaysPresent from CrossCuttingCLI spec"
+    },
+    "NoSpuriousBehavioralOnError": {
+      "function_id": "fn-CrossCuttingCLI-verify-NoSpuriousBehavioralOnError",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-NoSpuriousBehavioralOnError",
+      "conditions": [
+        "terminated",
+        "stderr_error) =>\n        (~has_behavioral_report",
+        "~has_behavioral_json"
+      ],
+      "message": "NoSpuriousBehavioralOnError violation: (terminated /\\ stderr_error) =>\n        (~has_behavioral_report /\\ ~has_behavioral_json)",
+      "applies_to": [
+        "has_behavioral_json",
+        "has_behavioral_report",
+        "stderr_error",
+        "terminated"
+      ],
+      "description": "Verifier for invariant NoSpuriousBehavioralOnError from CrossCuttingCLI spec"
+    },
+    "ExitCodeCleanOnSuccess": {
+      "function_id": "fn-CrossCuttingCLI-verify-ExitCodeCleanOnSuccess",
+      "acceptance_criteria_id": "ac-CrossCuttingCLI-ExitCodeCleanOnSuccess",
+      "conditions": [
+        "terminated",
+        "~stderr_error) =>\n        (exit_code = 0"
+      ],
+      "message": "ExitCodeCleanOnSuccess violation: (terminated /\\ ~stderr_error) =>\n        (exit_code = 0)",
+      "applies_to": [
+        "exit_code",
+        "stderr_error",
+        "terminated"
+      ],
+      "description": "Verifier for invariant ExitCodeCleanOnSuccess from CrossCuttingCLI spec"
+    }
+  },
+  "assertions": {
+    "assert_BackwardCompatible": {
+      "condition": "(terminated and ~cross_cutting) implies\n        (~has_behavioral_report and ~has_behavioral_json)",
+      "message": "Assertion failed: BackwardCompatible \u2014 (terminated /\\ ~cross_cutting) =>\n        (~has_behavioral_report /\\ ~has_behavioral_json)",
+      "description": "Test assertion for BackwardCompatible from CrossCuttingCLI spec"
+    },
+    "assert_FlagEnablesBehavioral": {
+      "condition": "(terminated and cross_cutting and rules_file_exists) implies\n        has_behavioral_report",
+      "message": "Assertion failed: FlagEnablesBehavioral \u2014 (terminated /\\ cross_cutting /\\ rules_file_exists) =>\n        has_behavioral_report",
+      "description": "Test assertion for FlagEnablesBehavioral from CrossCuttingCLI spec"
+    },
+    "assert_JsonIncludesBehavioral": {
+      "condition": "(terminated and json_flag and cross_cutting and rules_file_exists) implies\n        has_behavioral_json",
+      "message": "Assertion failed: JsonIncludesBehavioral \u2014 (terminated /\\ json_flag /\\ cross_cutting /\\ rules_file_exists) =>\n        has_behavioral_json",
+      "description": "Test assertion for JsonIncludesBehavioral from CrossCuttingCLI spec"
+    },
+    "assert_MissingRulesError": {
+      "condition": "(terminated and cross_cutting and ~rules_file_exists) implies\n        (stderr_error and exit_code = 1)",
+      "message": "Assertion failed: MissingRulesError \u2014 (terminated /\\ cross_cutting /\\ ~rules_file_exists) =>\n        (stderr_error /\\ exit_code = 1)",
+      "description": "Test assertion for MissingRulesError from CrossCuttingCLI spec"
+    },
+    "assert_BothReportsPresent": {
+      "condition": "(terminated and cross_cutting and rules_file_exists) implies\n        (has_seam_report and has_behavioral_report)",
+      "message": "Assertion failed: BothReportsPresent \u2014 (terminated /\\ cross_cutting /\\ rules_file_exists) =>\n        (has_seam_report /\\ has_behavioral_report)",
+      "description": "Test assertion for BothReportsPresent from CrossCuttingCLI spec"
+    },
+    "assert_SeamReportAlwaysPresent": {
+      "condition": "(terminated and ~stderr_error) implies\n        has_seam_report",
+      "message": "Assertion failed: SeamReportAlwaysPresent \u2014 (terminated /\\ ~stderr_error) =>\n        has_seam_report",
+      "description": "Test assertion for SeamReportAlwaysPresent from CrossCuttingCLI spec"
+    },
+    "assert_NoSpuriousBehavioralOnError": {
+      "condition": "(terminated and stderr_error) implies\n        (~has_behavioral_report and ~has_behavioral_json)",
+      "message": "Assertion failed: NoSpuriousBehavioralOnError \u2014 (terminated /\\ stderr_error) =>\n        (~has_behavioral_report /\\ ~has_behavioral_json)",
+      "description": "Test assertion for NoSpuriousBehavioralOnError from CrossCuttingCLI spec"
+    },
+    "assert_ExitCodeCleanOnSuccess": {
+      "condition": "(terminated and ~stderr_error) implies\n        (exit_code = 0)",
+      "message": "Assertion failed: ExitCodeCleanOnSuccess \u2014 (terminated /\\ ~stderr_error) =>\n        (exit_code = 0)",
+      "description": "Test assertion for ExitCodeCleanOnSuccess from CrossCuttingCLI spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"RunSeamCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunSeamCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"RunBehavioralCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunBehavioralCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"FormatOutput\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FormatOutput",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"RunSeamCheck\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunSeamCheck",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"RunBehavioralCheck\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunBehavioralCheck",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"FormatOutput\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "TRUE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FormatOutput",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "TRUE",
+          "exit_code": "0",
+          "has_behavioral_report": "TRUE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "TRUE",
+          "exit_code": "0",
+          "has_behavioral_report": "TRUE",
+          "terminated": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"RunSeamCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunSeamCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"RunBehavioralCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunBehavioralCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"FormatOutput\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FormatOutput",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"RunSeamCheck\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunSeamCheck",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"RunBehavioralCheck\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunBehavioralCheck",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"FormatOutput\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "TRUE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FormatOutput",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "TRUE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "TRUE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "TRUE",
+          "terminated": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"RunSeamCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunSeamCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"RunBehavioralCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunBehavioralCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"FormatOutput\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FormatOutput",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "TRUE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "TRUE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "1",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "TRUE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "1",
+          "has_behavioral_report": "FALSE",
+          "terminated": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"RunSeamCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunSeamCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"RunBehavioralCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunBehavioralCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"FormatOutput\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FormatOutput",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"RunSeamCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunSeamCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"RunBehavioralCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunBehavioralCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"FormatOutput\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FormatOutput",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "TRUE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"RunSeamCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunSeamCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"RunBehavioralCheck\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunBehavioralCheck",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"FormatOutput\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FormatOutput",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "TRUE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "FALSE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"ParseFlags\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseFlags",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "FALSE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"LoadRules\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "0",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "LoadRules",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "TRUE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"Finish\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "1",
+          "has_behavioral_report": "FALSE",
+          "terminated": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "rules_loaded": "FALSE",
+          "stderr_error": "TRUE",
+          "json_flag": "FALSE",
+          "rules_file_exists": "FALSE",
+          "has_seam_report": "FALSE",
+          "pc": "[cmd_seams |-> \"Done\"]",
+          "cross_cutting": "TRUE",
+          "has_behavioral_json": "FALSE",
+          "exit_code": "1",
+          "has_behavioral_report": "FALSE",
+          "terminated": "TRUE"
+        }
+      }
+    ]
+  ]
+}
