@@ -136,7 +136,13 @@ CW9 has two separate DAG contexts with independent GWT ID spaces:
 | gwt-0044..0045 | Crawl Bridge verification (Batch 2) |
 | gwt-0046..0055 | Scanner verification (Batch 3) |
 | gwt-0056..0063 | Language Profile verification (Batch 3) |
-| gwt-0064+ | Available for new features |
+| gwt-0064..0067 | Observability cross-cutting verification |
+| gwt-0068..0072 | Observability cross-cutting enforcement |
+| gwt-0073 | Entry point dispatch (remove non-Python gate) |
+| gwt-0074 | JS/TS entry point discovery |
+| gwt-0075 | Go entry point discovery |
+| gwt-0076 | Rust entry point discovery |
+| gwt-0077+ | Available for new features |
 
 ### Crawl DAG (repo root `dag.json`)
 

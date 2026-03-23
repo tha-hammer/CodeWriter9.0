@@ -155,7 +155,11 @@ class CrawlOrchestrator:
                     outs=len(result.outs),
                 )
                 return result
+            except (KeyboardInterrupt, asyncio.CancelledError):
+                raise
             except Exception as e:
+                if self._shutdown_requested:
+                    return None
                 error_feedback = str(e)
                 self._on_progress(
                     "retry",

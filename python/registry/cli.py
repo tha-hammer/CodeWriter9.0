@@ -837,7 +837,7 @@ def _ingest_scan(ingest_path: Path, lang: str, max_functions: int | None):
         if os.path.isabs(skel.file_path):
             skel.file_path = os.path.relpath(skel.file_path, ingest_path)
 
-    entry_points = discover_entry_points(ingest_path, codebase_type, lang=lang)
+    entry_points = discover_entry_points(ingest_path, codebase_type, lang=lang, skeletons=skeletons)
     for ep in entry_points:
         if os.path.isabs(ep.file_path):
             ep.file_path = os.path.relpath(ep.file_path, ingest_path)

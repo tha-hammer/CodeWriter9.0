@@ -1,7 +1,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Multi-Language Entry Point Discovery Implementation Plan       │
-│  Status: 📋 Draft  |  Date: 2026-03-20                         │
+│  Status: ✅ Revised  |  Date: 2026-03-20 (rev 2026-03-23)      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,8 +53,8 @@ All non-Python languages hit this and get nothing. The crawl then falls back to
 
 - `entry_points.py:148-177`: `discover_entry_points()` takes `root: Path` and
   `codebase_type: str` but does NOT take the already-scanned skeletons
-- `cli.py:847`: skeletons are produced first, then entry points are discovered
-  separately at line 861 — they never see each other
+- `cli.py:830` (inside `_ingest_scan()`): skeletons are produced first, then
+  entry points are discovered separately at line 840 — they never see each other
 - For Go and Rust, `visibility="public"` + `class_name is None` already identifies
   the public API surface without any new file scanning
 - For JS/TS, the same filter works for ESM exports, but framework patterns
@@ -141,7 +141,7 @@ def discover_entry_points(
     codebase_type: str | None = None,
     *,
     lang: str | None = None,
-    skeletons: list | None = None,
+    skeletons: list[Skeleton] | None = None,
 ) -> list[EntryPoint]:
     """Discover entry points for a codebase.
 
@@ -183,9 +183,9 @@ from registry.crawl_types import EntryPoint, EntryType, Skeleton
 Note: `Skeleton` is imported from `crawl_types` — check the actual location.
 If it's in a different module, adjust the import accordingly.
 
-#### 3. Update cmd_ingest to pass skeletons
+#### 3. Update _ingest_scan to pass skeletons
 **File**: `python/registry/cli.py`
-**Line**: 861
+**Line**: 840 (inside `_ingest_scan()`)
 
 Change:
 ```python
@@ -198,16 +198,16 @@ entry_points = discover_entry_points(ingest_path, codebase_type, lang=lang, skel
 ```
 
 This passes the already-computed skeleton list through. No other changes to
-`cmd_ingest` are needed — the skeletons variable is already in scope at line 847.
+`_ingest_scan` are needed — the skeletons variable is already in scope at line 830.
 
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] All existing Python entry point tests pass: `python3 -m pytest tests/test_scanner_python.py::TestDetectCodebaseType tests/test_scanner_python.py::TestDiscoverWebRoutes tests/test_scanner_python.py::TestDiscoverCliCommands tests/test_scanner_python.py::TestDiscoverMainFunctions tests/test_scanner_python.py::TestDiscoverPublicApi -v`
-- [ ] No import errors: `python3 -c "from registry.entry_points import discover_entry_points"`
+- [x] All existing Python entry point tests pass: `python3 -m pytest tests/test_scanner_python.py::TestDetectCodebaseType tests/test_scanner_python.py::TestDiscoverWebRoutes tests/test_scanner_python.py::TestDiscoverCliCommands tests/test_scanner_python.py::TestDiscoverMainFunctions tests/test_scanner_python.py::TestDiscoverPublicApi -v`
+- [x] No import errors: `python3 -c "from registry.entry_points import discover_entry_points"`
 
 #### Manual Verification:
-- [ ] `cw9 ingest .` on a Python project still shows non-zero entry points
+- [x] `cw9 ingest .` on a Python project still shows non-zero entry points
 
 ---
 
@@ -231,7 +231,7 @@ we need. `visibility="public"` means exported in both languages. `func main()` /
 
 ```python
 def _discover_entry_points_go(
-    root: Path, codebase_type: str, skeletons: list,
+    root: Path, codebase_type: str, skeletons: list[Skeleton],
 ) -> list[EntryPoint]:
     """Discover Go entry points from scanner output + framework patterns."""
     entry_points: list[EntryPoint] = []
@@ -324,7 +324,7 @@ def _discover_go_routes(
                     function_name=route,
                     entry_type=EntryType.HTTP_ROUTE,
                     route=route,
-                    method="GET",
+                    method=None,  # HandleFunc is method-agnostic
                 ))
     return entry_points
 
@@ -363,7 +363,7 @@ def _discover_go_cli_commands(
 
 ```python
 def _discover_entry_points_rust(
-    root: Path, codebase_type: str, skeletons: list,
+    root: Path, codebase_type: str, skeletons: list[Skeleton],
 ) -> list[EntryPoint]:
     """Discover Rust entry points from scanner output + framework patterns."""
     entry_points: list[EntryPoint] = []
@@ -520,9 +520,9 @@ def _discover_rust_cli(
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] All existing tests pass: `cd python && python3 -m pytest tests/test_scanner_python.py -v`
-- [ ] New Go tests pass (added in Phase 5)
-- [ ] New Rust tests pass (added in Phase 5)
+- [x] All existing tests pass: `cd python && python3 -m pytest tests/test_scanner_python.py -v`
+- [x] New Go tests pass (added in Phase 5)
+- [x] New Rust tests pass (added in Phase 5)
 
 #### Manual Verification:
 - [ ] `cw9 ingest <go-project>` shows non-zero entry points
@@ -550,7 +550,7 @@ shared discoverer handles both languages since their patterns overlap heavily.
 
 ```python
 def _discover_entry_points_js(
-    root: Path, codebase_type: str, skeletons: list, *, lang: str,
+    root: Path, codebase_type: str, skeletons: list[Skeleton], *, lang: str,
 ) -> list[EntryPoint]:
     """Discover JS/TS entry points from scanner output + framework patterns."""
     entry_points: list[EntryPoint] = []
@@ -703,11 +703,9 @@ def _discover_js_routes(
 **File**: `python/registry/entry_points.py`
 
 ```python
-_JS_COMMANDER_RE = re.compile(r'\.command\s*\(\s*["\'](\w+)["\']')
+_JS_CLI_COMMAND_RE = re.compile(r'\.command\s*\(\s*["\'](\w+)["\']')
 # Matches: program.command("build"), .command('serve')
-
-_JS_YARGS_RE = re.compile(r'\.command\s*\(\s*["\'](\w+)["\']')
-# Same pattern works for yargs .command("name", ...)
+# Works for both commander and yargs — same .command("name", ...) API
 
 
 def _discover_js_cli_commands(
@@ -727,7 +725,7 @@ def _discover_js_cli_commands(
             except (OSError, PermissionError):
                 continue
             rel = str(src_file.relative_to(root))
-            for match in _JS_COMMANDER_RE.finditer(text):
+            for match in _JS_CLI_COMMAND_RE.finditer(text):
                 cmd_name = match.group(1)
                 key = (rel, cmd_name)
                 if key not in seen:
@@ -743,9 +741,9 @@ def _discover_js_cli_commands(
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] All existing tests pass: `cd python && python3 -m pytest tests/test_scanner_python.py -v`
-- [ ] New JS tests pass (added in Phase 5)
-- [ ] New TS tests pass (added in Phase 5)
+- [x] All existing tests pass: `cd python && python3 -m pytest tests/test_scanner_python.py -v`
+- [x] New JS tests pass (added in Phase 5)
+- [x] New TS tests pass (added in Phase 5)
 
 #### Manual Verification:
 - [ ] `cw9 ingest <express-project>` shows HTTP_ROUTE entry points
@@ -763,13 +761,13 @@ def _discover_js_cli_commands(
 ### Overview
 
 This is the one-line change that connects everything. The skeletons computed at
-`cli.py:847` get passed into `discover_entry_points()` at line 861.
+`cli.py:830` (inside `_ingest_scan()`) get passed into `discover_entry_points()` at line 840.
 
 ### Changes Required
 
 #### 1. Pass skeletons through
 **File**: `python/registry/cli.py`
-**Line**: 861
+**Line**: 840 (inside `_ingest_scan()`)
 
 ```python
 # Before:
@@ -779,15 +777,15 @@ entry_points = discover_entry_points(ingest_path, codebase_type, lang=lang)
 entry_points = discover_entry_points(ingest_path, codebase_type, lang=lang, skeletons=skeletons)
 ```
 
-That's it. The `skeletons` variable is already in scope from line 847.
+That's it. The `skeletons` variable is already in scope from line 830.
 The new `skeletons` keyword argument is optional (defaults to `None`), so
 any other callers of `discover_entry_points` are unaffected.
 
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] Full test suite passes: `cd python && python3 -m pytest tests/ -v`
-- [ ] No import errors: `python3 -c "from registry.cli import cmd_ingest"`
+- [x] Full test suite passes: `cd python && python3 -m pytest tests/ -v`
+- [x] No import errors: `python3 -c "from registry.cli import cmd_ingest"`
 
 #### Manual Verification:
 - [ ] `cw9 ingest <go-project>` prints `Entry points: N` where N > 0
@@ -829,7 +827,7 @@ import pytest
 from pathlib import Path
 
 from registry.entry_points import discover_entry_points
-from registry.crawl_types import EntryType, Skeleton, SkeletonParam
+from registry.crawl_types import EntryType, Skeleton
 
 
 def _skel(file_path, function_name, *, visibility="public", class_name=None, **kw):
@@ -898,6 +896,16 @@ class TestGoRoutes:
         eps = discover_entry_points(tmp_path, "web_app", lang="go", skeletons=[])
         routes = [ep.route for ep in eps if ep.entry_type == EntryType.HTTP_ROUTE]
         assert "/health" in routes
+
+    def test_handle_func_method_is_none(self, tmp_path: Path):
+        """HandleFunc is method-agnostic — method should be None, not GET."""
+        (tmp_path / "main.go").write_text(
+            'package main\n\nimport "net/http"\n\nfunc main() {\n\thttp.HandleFunc("/api", handler)\n}\n'
+        )
+        eps = discover_entry_points(tmp_path, "web_app", lang="go", skeletons=[])
+        route_eps = [ep for ep in eps if ep.route == "/api"]
+        assert len(route_eps) == 1
+        assert route_eps[0].method is None
 
 
 class TestGoCli:
@@ -1023,6 +1031,22 @@ class TestJsCliCommands:
         assert "serve" in names
 
 
+class TestJsFallback:
+    def test_all_public_exports_when_nothing_else_found(self, tmp_path: Path):
+        """When no manifest, routes, or CLI commands found, fall back to all public exports."""
+        skels = [
+            _skel("index.js", "createApp", visibility="public"),
+            _skel("index.js", "_helper", visibility="private"),
+            _skel("utils.js", "formatDate", visibility="public"),
+        ]
+        # codebase_type="web_app" but no route files exist → no routes found → fallback
+        eps = discover_entry_points(tmp_path, "web_app", lang="javascript", skeletons=skels)
+        names = [ep.function_name for ep in eps]
+        assert "createApp" in names
+        assert "formatDate" in names
+        assert "_helper" not in names
+
+
 class TestJsPublicApi:
     def test_finds_exported_functions(self, tmp_path: Path):
         skels = [
@@ -1071,7 +1095,7 @@ class TestTsPublicApi:
 ### Success Criteria
 
 #### Automated Verification:
-- [ ] All tests pass: `cd python && python3 -m pytest tests/test_entry_points_multi_lang.py tests/test_scanner_python.py -v`
+- [x] All tests pass: `cd python && python3 -m pytest tests/test_entry_points_multi_lang.py tests/test_scanner_python.py -v`
 - [ ] Full suite still passes: `cd python && python3 -m pytest tests/ -v`
 
 #### Manual Verification:
@@ -1082,9 +1106,9 @@ class TestTsPublicApi:
 ## 🛡️ Testing Strategy
 
 ### Unit Tests (Phase 5)
-- **Go**: main detection, public API filtering, Gin/Echo routes, Cobra commands, method exclusion
+- **Go**: main detection, public API filtering, Gin/Echo routes, HandleFunc (method=None), Cobra commands, method exclusion
 - **Rust**: main detection, pub function filtering, Actix/Axum routes, Clap CLI, impl method exclusion
-- **JavaScript**: package.json bin/main, Express routes, commander commands, node_modules exclusion, public API from skeletons
+- **JavaScript**: package.json bin/main, Express routes, commander commands, node_modules exclusion, public API from skeletons, fallback behavior (all public exports when nothing else found)
 - **TypeScript**: Express routes in .ts files, public API from skeletons, .d.ts exclusion
 
 ### Key Edge Cases
