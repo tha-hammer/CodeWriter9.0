@@ -1,0 +1,1724 @@
+{
+  "gwt_id": "gwt-0076",
+  "module_name": "RustDiscovery",
+  "data_structures": {
+    "RustDiscoveryState": {
+      "function_id": "fn-RustDiscovery-state",
+      "acceptance_criteria_id": "ac-RustDiscovery-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"SkelCheckMain\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "codebase_type": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "skel_is_main": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "skel_is_public": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "skel_has_class": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "skel_dotfile": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "file_dotfile": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "file_has_actix": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "file_actix_method": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "file_has_axum": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "file_axum_method": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "file_has_clap": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "entry_points": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from RustDiscovery TLA+ spec"
+    }
+  },
+  "operations": {
+    "SkelCheckMain": {
+      "function_id": "fn-RustDiscovery-SkelCheckMain",
+      "acceptance_criteria_id": "ac-RustDiscovery-SkelCheckMain",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SkelCheckMain from RustDiscovery spec"
+    },
+    "SkelCheckPubAPI": {
+      "function_id": "fn-RustDiscovery-SkelCheckPubAPI",
+      "acceptance_criteria_id": "ac-RustDiscovery-SkelCheckPubAPI",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SkelCheckPubAPI from RustDiscovery spec"
+    },
+    "FileCheckActix": {
+      "function_id": "fn-RustDiscovery-FileCheckActix",
+      "acceptance_criteria_id": "ac-RustDiscovery-FileCheckActix",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FileCheckActix from RustDiscovery spec"
+    },
+    "FileCheckAxum": {
+      "function_id": "fn-RustDiscovery-FileCheckAxum",
+      "acceptance_criteria_id": "ac-RustDiscovery-FileCheckAxum",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FileCheckAxum from RustDiscovery spec"
+    },
+    "FileCheckClap": {
+      "function_id": "fn-RustDiscovery-FileCheckClap",
+      "acceptance_criteria_id": "ac-RustDiscovery-FileCheckClap",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action FileCheckClap from RustDiscovery spec"
+    },
+    "Finish": {
+      "function_id": "fn-RustDiscovery-Finish",
+      "acceptance_criteria_id": "ac-RustDiscovery-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from RustDiscovery spec"
+    }
+  },
+  "verifiers": {
+    "MainIsTopLevel": {
+      "function_id": "fn-RustDiscovery-verify-MainIsTopLevel",
+      "acceptance_criteria_id": "ac-RustDiscovery-MainIsTopLevel",
+      "conditions": [
+        "\\A ep \\in entry_points :\n    ep.etype = \"MAIN\" =>\n      ep.is_main = TRUE",
+        "ep.has_class = FALSE"
+      ],
+      "message": "MainIsTopLevel violation: \\A ep \\in entry_points :\n    ep.etype = \"MAIN\" =>\n      ep.is_main = TRUE /\\ ep.has_class = FALSE",
+      "applies_to": [
+        "entry_points"
+      ],
+      "description": "Verifier for invariant MainIsTopLevel from RustDiscovery spec"
+    },
+    "MainNotImpl": {
+      "function_id": "fn-RustDiscovery-verify-MainNotImpl",
+      "acceptance_criteria_id": "ac-RustDiscovery-MainNotImpl",
+      "conditions": [
+        "\\A ep \\in entry_points :\n    ep.etype = \"MAIN\" => ep.has_class = FALSE"
+      ],
+      "message": "MainNotImpl violation: \\A ep \\in entry_points :\n    ep.etype = \"MAIN\" => ep.has_class = FALSE",
+      "applies_to": [
+        "entry_points"
+      ],
+      "description": "Verifier for invariant MainNotImpl from RustDiscovery spec"
+    },
+    "PublicOnlyForLibrary": {
+      "function_id": "fn-RustDiscovery-verify-PublicOnlyForLibrary",
+      "acceptance_criteria_id": "ac-RustDiscovery-PublicOnlyForLibrary",
+      "conditions": [
+        "\\A ep \\in entry_points :\n    ep.etype = \"PUBLIC_API\" => codebase_type = \"library\""
+      ],
+      "message": "PublicOnlyForLibrary violation: \\A ep \\in entry_points :\n    ep.etype = \"PUBLIC_API\" => codebase_type = \"library\"",
+      "applies_to": [
+        "codebase_type",
+        "entry_points"
+      ],
+      "description": "Verifier for invariant PublicOnlyForLibrary from RustDiscovery spec"
+    },
+    "ImplMethodsExcluded": {
+      "function_id": "fn-RustDiscovery-verify-ImplMethodsExcluded",
+      "acceptance_criteria_id": "ac-RustDiscovery-ImplMethodsExcluded",
+      "conditions": [
+        "\\A ep \\in entry_points :\n    ep.etype = \"PUBLIC_API\" => ep.has_class = FALSE"
+      ],
+      "message": "ImplMethodsExcluded violation: \\A ep \\in entry_points :\n    ep.etype = \"PUBLIC_API\" => ep.has_class = FALSE",
+      "applies_to": [
+        "entry_points"
+      ],
+      "description": "Verifier for invariant ImplMethodsExcluded from RustDiscovery spec"
+    },
+    "DotfilesExcluded": {
+      "function_id": "fn-RustDiscovery-verify-DotfilesExcluded",
+      "acceptance_criteria_id": "ac-RustDiscovery-DotfilesExcluded",
+      "conditions": [
+        "\\A ep \\in entry_points : ep.is_dotfile = FALSE"
+      ],
+      "message": "DotfilesExcluded violation: \\A ep \\in entry_points : ep.is_dotfile = FALSE",
+      "applies_to": [
+        "entry_points"
+      ],
+      "description": "Verifier for invariant DotfilesExcluded from RustDiscovery spec"
+    },
+    "HttpRouteHasMethod": {
+      "function_id": "fn-RustDiscovery-verify-HttpRouteHasMethod",
+      "acceptance_criteria_id": "ac-RustDiscovery-HttpRouteHasMethod",
+      "conditions": [
+        "\\A ep \\in entry_points :\n    ep.etype = \"HTTP_ROUTE\" =>\n      ep.method \\in {\"GET\", \"POST\", \"PUT\", \"DELETE\", \"PATCH\", \"HEAD\"}"
+      ],
+      "message": "HttpRouteHasMethod violation: \\A ep \\in entry_points :\n    ep.etype = \"HTTP_ROUTE\" =>\n      ep.method \\in {\"GET\", \"POST\", \"PUT\", \"DELETE\", \"PATCH\",...",
+      "applies_to": [
+        "entry_points"
+      ],
+      "description": "Verifier for invariant HttpRouteHasMethod from RustDiscovery spec"
+    },
+    "ValidEntryTypes": {
+      "function_id": "fn-RustDiscovery-verify-ValidEntryTypes",
+      "acceptance_criteria_id": "ac-RustDiscovery-ValidEntryTypes",
+      "conditions": [
+        "\\A ep \\in entry_points :\n    ep.etype \\in {\"MAIN\", \"PUBLIC_API\", \"HTTP_ROUTE\", \"CLI_COMMAND\"}"
+      ],
+      "message": "ValidEntryTypes violation: \\A ep \\in entry_points :\n    ep.etype \\in {\"MAIN\", \"PUBLIC_API\", \"HTTP_ROUTE\", \"CLI_COMMAND\"}",
+      "applies_to": [
+        "entry_points"
+      ],
+      "description": "Verifier for invariant ValidEntryTypes from RustDiscovery spec"
+    },
+    "NoMainFromImpl": {
+      "function_id": "fn-RustDiscovery-verify-NoMainFromImpl",
+      "acceptance_criteria_id": "ac-RustDiscovery-NoMainFromImpl",
+      "conditions": [
+        "\\A ep \\in entry_points :\n    ep.has_class = TRUE => ep.etype /= \"MAIN\""
+      ],
+      "message": "NoMainFromImpl violation: \\A ep \\in entry_points :\n    ep.has_class = TRUE => ep.etype /= \"MAIN\"",
+      "applies_to": [
+        "entry_points"
+      ],
+      "description": "Verifier for invariant NoMainFromImpl from RustDiscovery spec"
+    },
+    "NoPublicAPIFromImpl": {
+      "function_id": "fn-RustDiscovery-verify-NoPublicAPIFromImpl",
+      "acceptance_criteria_id": "ac-RustDiscovery-NoPublicAPIFromImpl",
+      "conditions": [
+        "\\A ep \\in entry_points :\n    ep.has_class = TRUE => ep.etype /= \"PUBLIC_API\""
+      ],
+      "message": "NoPublicAPIFromImpl violation: \\A ep \\in entry_points :\n    ep.has_class = TRUE => ep.etype /= \"PUBLIC_API\"",
+      "applies_to": [
+        "entry_points"
+      ],
+      "description": "Verifier for invariant NoPublicAPIFromImpl from RustDiscovery spec"
+    },
+    "AllInvariants": {
+      "function_id": "fn-RustDiscovery-verify-AllInvariants",
+      "acceptance_criteria_id": "ac-RustDiscovery-AllInvariants",
+      "conditions": [
+        "MainIsTopLevel",
+        "MainNotImpl",
+        "PublicOnlyForLibrary",
+        "ImplMethodsExcluded",
+        "DotfilesExcluded",
+        "HttpRouteHasMethod",
+        "ValidEntryTypes",
+        "NoMainFromImpl",
+        "NoPublicAPIFromImpl"
+      ],
+      "message": "AllInvariants violation: /\\ MainIsTopLevel\n  /\\ MainNotImpl\n  /\\ PublicOnlyForLibrary\n  /\\ ImplMethodsExcluded\n  /\\ DotfilesExcluded\n  /\\ Http...",
+      "applies_to": [
+        "RustDiscovery"
+      ],
+      "description": "Verifier for invariant AllInvariants from RustDiscovery spec"
+    }
+  },
+  "assertions": {
+    "assert_MainIsTopLevel": {
+      "condition": "\\A ep in entry_points :\n    ep.etype = \"MAIN\" implies\n      ep.is_main = TRUE and ep.has_class = FALSE",
+      "message": "Assertion failed: MainIsTopLevel \u2014 \\A ep \\in entry_points :\n    ep.etype = \"MAIN\" =>\n      ep.is_main = TRUE /\\ ep.has_class = FALSE",
+      "description": "Test assertion for MainIsTopLevel from RustDiscovery spec"
+    },
+    "assert_MainNotImpl": {
+      "condition": "\\A ep in entry_points :\n    ep.etype = \"MAIN\" implies ep.has_class = FALSE",
+      "message": "Assertion failed: MainNotImpl \u2014 \\A ep \\in entry_points :\n    ep.etype = \"MAIN\" => ep.has_class = FALSE",
+      "description": "Test assertion for MainNotImpl from RustDiscovery spec"
+    },
+    "assert_PublicOnlyForLibrary": {
+      "condition": "\\A ep in entry_points :\n    ep.etype = \"PUBLIC_API\" implies codebase_type = \"library\"",
+      "message": "Assertion failed: PublicOnlyForLibrary \u2014 \\A ep \\in entry_points :\n    ep.etype = \"PUBLIC_API\" => codebase_type = \"library\"",
+      "description": "Test assertion for PublicOnlyForLibrary from RustDiscovery spec"
+    },
+    "assert_ImplMethodsExcluded": {
+      "condition": "\\A ep in entry_points :\n    ep.etype = \"PUBLIC_API\" implies ep.has_class = FALSE",
+      "message": "Assertion failed: ImplMethodsExcluded \u2014 \\A ep \\in entry_points :\n    ep.etype = \"PUBLIC_API\" => ep.has_class = FALSE",
+      "description": "Test assertion for ImplMethodsExcluded from RustDiscovery spec"
+    },
+    "assert_DotfilesExcluded": {
+      "condition": "\\A ep in entry_points : ep.is_dotfile = FALSE",
+      "message": "Assertion failed: DotfilesExcluded \u2014 \\A ep \\in entry_points : ep.is_dotfile = FALSE",
+      "description": "Test assertion for DotfilesExcluded from RustDiscovery spec"
+    },
+    "assert_HttpRouteHasMethod": {
+      "condition": "\\A ep in entry_points :\n    ep.etype = \"HTTP_ROUTE\" implies\n      ep.method in {\"GET\", \"POST\", \"PUT\", \"DELETE\", \"PATCH\", \"HEAD\"}",
+      "message": "Assertion failed: HttpRouteHasMethod \u2014 \\A ep \\in entry_points :\n    ep.etype = \"HTTP_ROUTE\" =>\n      ep.method \\in {\"GET\", \"POST\", \"PUT\", \"DELETE\", \"PATCH\",...",
+      "description": "Test assertion for HttpRouteHasMethod from RustDiscovery spec"
+    },
+    "assert_ValidEntryTypes": {
+      "condition": "\\A ep in entry_points :\n    ep.etype in {\"MAIN\", \"PUBLIC_API\", \"HTTP_ROUTE\", \"CLI_COMMAND\"}",
+      "message": "Assertion failed: ValidEntryTypes \u2014 \\A ep \\in entry_points :\n    ep.etype \\in {\"MAIN\", \"PUBLIC_API\", \"HTTP_ROUTE\", \"CLI_COMMAND\"}",
+      "description": "Test assertion for ValidEntryTypes from RustDiscovery spec"
+    },
+    "assert_NoMainFromImpl": {
+      "condition": "\\A ep in entry_points :\n    ep.has_class = TRUE implies ep.etype /= \"MAIN\"",
+      "message": "Assertion failed: NoMainFromImpl \u2014 \\A ep \\in entry_points :\n    ep.has_class = TRUE => ep.etype /= \"MAIN\"",
+      "description": "Test assertion for NoMainFromImpl from RustDiscovery spec"
+    },
+    "assert_NoPublicAPIFromImpl": {
+      "condition": "\\A ep in entry_points :\n    ep.has_class = TRUE implies ep.etype /= \"PUBLIC_API\"",
+      "message": "Assertion failed: NoPublicAPIFromImpl \u2014 \\A ep \\in entry_points :\n    ep.has_class = TRUE => ep.etype /= \"PUBLIC_API\"",
+      "description": "Test assertion for NoPublicAPIFromImpl from RustDiscovery spec"
+    },
+    "assert_AllInvariants": {
+      "condition": "and MainIsTopLevel\n  and MainNotImpl\n  and PublicOnlyForLibrary\n  and ImplMethodsExcluded\n  and DotfilesExcluded\n  and HttpRouteHasMethod\n  and ValidEntryTypes\n  and NoMainFromImpl\n  and NoPublicAPIFromImpl",
+      "message": "Assertion failed: AllInvariants \u2014 /\\ MainIsTopLevel\n  /\\ MainNotImpl\n  /\\ PublicOnlyForLibrary\n  /\\ ImplMethodsExcluded\n  /\\ DotfilesExcluded\n  /\\ Http...",
+      "description": "Test assertion for AllInvariants from RustDiscovery spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "TRUE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "TRUE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"GET\"",
+          "skel_has_class": "FALSE",
+          "file_has_clap": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{[etype |-> \"HTTP_ROUTE\", is_main |-> FALSE, has_class |-> FALSE, is_dotfile |-> FALSE, method |-> \"POST\", is_public |-> FALSE, src |-> \"actix\"]}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{[etype |-> \"HTTP_ROUTE\", is_main |-> FALSE, has_class |-> FALSE, is_dotfile |-> FALSE, method |-> \"GET\", is_public |-> FALSE, src |-> \"axum\"], [etype |-> \"HTTP_ROUTE\", is_main |-> FALSE, has_class |-> FALSE, is_dotfile |-> FALSE, method |-> \"POST\", is_public |-> FALSE, src |-> \"actix\"]}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{[etype |-> \"HTTP_ROUTE\", is_main |-> FALSE, has_class |-> FALSE, is_dotfile |-> FALSE, method |-> \"GET\", is_public |-> FALSE, src |-> \"axum\"], [etype |-> \"HTTP_ROUTE\", is_main |-> FALSE, has_class |-> FALSE, is_dotfile |-> FALSE, method |-> \"POST\", is_public |-> FALSE, src |-> \"actix\"], [etype |-> \"CLI_COMMAND\", is_main |-> FALSE, has_class |-> FALSE, is_dotfile |-> FALSE, method |-> \"NONE\", is_public |-> FALSE, src |-> \"clap\"]}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "TRUE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "TRUE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{[etype |-> \"HTTP_ROUTE\", is_main |-> FALSE, has_class |-> FALSE, is_dotfile |-> FALSE, method |-> \"GET\", is_public |-> FALSE, src |-> \"axum\"], [etype |-> \"HTTP_ROUTE\", is_main |-> FALSE, has_class |-> FALSE, is_dotfile |-> FALSE, method |-> \"POST\", is_public |-> FALSE, src |-> \"actix\"], [etype |-> \"CLI_COMMAND\", is_main |-> FALSE, has_class |-> FALSE, is_dotfile |-> FALSE, method |-> \"NONE\", is_public |-> FALSE, src |-> \"clap\"]}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "FALSE",
+          "file_axum_method": "\"POST\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"web_app\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "TRUE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"cli\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckMain\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SkelCheckMain",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"SkelCheckPubAPI\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SkelCheckPubAPI",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckActix\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "FileCheckActix",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckAxum\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "FileCheckAxum",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"FileCheckClap\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "FileCheckClap",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Finish\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "skel_dotfile": "FALSE",
+          "skel_is_public": "TRUE",
+          "file_axum_method": "\"GET\"",
+          "file_has_actix": "FALSE",
+          "skel_is_main": "FALSE",
+          "file_dotfile": "FALSE",
+          "codebase_type": "\"library\"",
+          "file_has_axum": "FALSE",
+          "pc": "[discoverer |-> \"Done\"]",
+          "entry_points": "{}",
+          "file_actix_method": "\"POST\"",
+          "skel_has_class": "TRUE",
+          "file_has_clap": "FALSE"
+        }
+      }
+    ]
+  ]
+}

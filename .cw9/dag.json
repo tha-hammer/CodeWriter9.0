@@ -1049,6 +1049,46 @@
       "when": "run_loop() processes that GWT node",
       "then": "loads observability_state_machine.tla instead of state_machine.tla for prompt construction; falls back to state_machine.tla when template field is absent; raises FileNotFoundError for unknown template names"
     },
+    "gwt-0073": {
+      "id": "gwt-0073",
+      "kind": "behavior",
+      "name": "the_language_is_go_rust_javascript_or_ty",
+      "description": "",
+      "version": 1,
+      "given": "discover_entry_points() is called with a non-Python lang and optional skeletons list",
+      "when": "the language is go, rust, javascript, or typescript",
+      "then": "the call is dispatched to the corresponding language-specific discoverer; when lang is python or None, existing Python discovery behavior is preserved unchanged; when lang is an unknown value, an empty list is returned safely"
+    },
+    "gwt-0074": {
+      "id": "gwt-0074",
+      "kind": "behavior",
+      "name": "the_js_ts_discoverer_runs",
+      "description": "",
+      "version": 1,
+      "given": "a JavaScript or TypeScript project root with skeletons from the scanner and source files on disk",
+      "when": "the JS/TS discoverer runs",
+      "then": "it returns EntryPoint objects for: Express/Fastify/Koa route handlers (entry_type=HTTP_ROUTE with route and method), exported functions from index files (entry_type=PUBLIC_API for library codebase type), and bin targets from package.json (entry_type=CLI_COMMAND); node_modules and .min.js and .d.ts files are excluded; missing package.json does not cause errors"
+    },
+    "gwt-0075": {
+      "id": "gwt-0075",
+      "kind": "behavior",
+      "name": "the_go_discoverer_runs",
+      "description": "",
+      "version": 1,
+      "given": "a Go project root with skeletons from the scanner and source files on disk",
+      "when": "the Go discoverer runs",
+      "then": "it returns EntryPoint objects for: func main() in package main with no receiver (entry_type=MAIN), exported (capitalized) package-level functions with no receiver (entry_type=PUBLIC_API for library codebase type), and HTTP route registrations via http.HandleFunc, Gin r.GET/POST, Echo e.GET/POST, or Chi r.Get/Post patterns (entry_type=HTTP_ROUTE with route and method); Cobra command registrations are detected as entry_type=CLI_COMMAND; _test.go files are excluded"
+    },
+    "gwt-0076": {
+      "id": "gwt-0076",
+      "kind": "behavior",
+      "name": "the_rust_discoverer_runs",
+      "description": "",
+      "version": 1,
+      "given": "a Rust project root with skeletons from the scanner and source files on disk",
+      "when": "the Rust discoverer runs",
+      "then": "it returns EntryPoint objects for: fn main() with no impl block (entry_type=MAIN), pub fn in lib.rs with no impl block (entry_type=PUBLIC_API for library codebase type), and #[get]/#[post]/#[put]/#[delete] attribute macros mapping to the following fn (entry_type=HTTP_ROUTE with route and method); Axum .route() builder patterns are also detected; #[derive(Parser)] structs are detected as entry_type=CLI_COMMAND"
+    },
     "impact-0001": {
       "id": "impact-0001",
       "kind": "resource",
@@ -3225,6 +3265,10 @@
     "gwt-0070": [],
     "gwt-0071": [],
     "gwt-0072": [],
+    "gwt-0073": [],
+    "gwt-0074": [],
+    "gwt-0075": [],
+    "gwt-0076": [],
     "impact-0001": [
       "gwt-0012",
       "gwt-0013",
@@ -3794,12 +3838,24 @@
       "gwt-0072"
     ],
     "component-23": [
-      "req-0017"
+      "gwt-0073"
     ],
     "component-24": [
-      "req-0018"
+      "gwt-0074"
     ],
     "component-25": [
+      "gwt-0075"
+    ],
+    "component-26": [
+      "gwt-0076"
+    ],
+    "component-27": [
+      "req-0017"
+    ],
+    "component-28": [
+      "req-0018"
+    ],
+    "component-29": [
       "req-0019"
     ],
     "component-3": [

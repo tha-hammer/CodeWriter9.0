@@ -53,6 +53,14 @@
     {
       "id": "req-0017",
       "text": "System needs horizontal contract verification: cross-reference caller outputs against callee inputs in crawl.db to detect type mismatches, flag unresolved dependencies, and produce a complete seam report where every edge is accounted for"
+    },
+    {
+      "id": "req-0018",
+      "text": "Entry point discovery must route non-Python languages to language-specific discoverers, accepting scanner skeleton output to avoid redundant file scanning, while preserving existing Python discovery behavior"
+    },
+    {
+      "id": "req-0019",
+      "text": "Entry point discovery must identify framework-specific entry points (HTTP routes, CLI commands, package manifests, attribute macros) for JavaScript, TypeScript, Go, and Rust projects"
     }
   ],
   "behaviors": [
@@ -454,6 +462,34 @@
       "given": "crawl.db with N dependency edges, M type mismatches, K unresolved, and (N-M-K) satisfied seams",
       "when": "check_all_seams() runs to completion",
       "then": "SeamReport contains exactly M mismatches plus K unresolved plus (N-M-K) satisfied and total_edges equals N so every edge is accounted for"
+    },
+    {
+      "id": "gwt-0073",
+      "name": "entry_point_dispatch",
+      "given": "discover_entry_points() is called with a non-Python lang and optional skeletons list",
+      "when": "the language is go, rust, javascript, or typescript",
+      "then": "the call is dispatched to the corresponding language-specific discoverer; when lang is python or None, existing Python discovery behavior is preserved unchanged; when lang is an unknown value, an empty list is returned safely"
+    },
+    {
+      "id": "gwt-0074",
+      "name": "js_ts_entry_points",
+      "given": "a JavaScript or TypeScript project root with skeletons from the scanner and source files on disk",
+      "when": "the JS/TS discoverer runs",
+      "then": "it returns EntryPoint objects for Express/Fastify/Koa route handlers (HTTP_ROUTE), exported functions from index files (PUBLIC_API for library type), and bin targets from package.json (CLI_COMMAND); node_modules and .min.js and .d.ts files are excluded; missing package.json does not cause errors"
+    },
+    {
+      "id": "gwt-0075",
+      "name": "go_entry_points",
+      "given": "a Go project root with skeletons from the scanner and source files on disk",
+      "when": "the Go discoverer runs",
+      "then": "it returns EntryPoint objects for func main() with no receiver (MAIN), exported package-level functions with no receiver (PUBLIC_API for library type), HTTP route registrations via HandleFunc/Gin/Echo/Chi (HTTP_ROUTE), and Cobra commands (CLI_COMMAND); _test.go files are excluded"
+    },
+    {
+      "id": "gwt-0076",
+      "name": "rust_entry_points",
+      "given": "a Rust project root with skeletons from the scanner and source files on disk",
+      "when": "the Rust discoverer runs",
+      "then": "it returns EntryPoint objects for fn main() with no impl block (MAIN), pub fn with no impl block (PUBLIC_API for library type), #[get]/#[post] attribute macros (HTTP_ROUTE), Axum .route() patterns (HTTP_ROUTE), and #[derive(Parser)] structs (CLI_COMMAND)"
     }
   ],
   "edges": [
@@ -1505,6 +1541,26 @@
     {
       "from": "req-0017",
       "to": "gwt-0067",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0018",
+      "to": "gwt-0073",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0019",
+      "to": "gwt-0074",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0019",
+      "to": "gwt-0075",
+      "type": "decomposes"
+    },
+    {
+      "from": "req-0019",
+      "to": "gwt-0076",
       "type": "decomposes"
     },
     {

@@ -1,0 +1,900 @@
+from registry.types import Edge, EdgeType, Node, NodeKind
+from registry.dag import RegistryDag, NodeNotFoundError
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Constants – match TLA+ NumSkeletons / NumSourceFiles
+# ─────────────────────────────────────────────────────────────────────────────
+
+NUM_SKELETONS = 2
+NUM_SOURCE_FILES = 2
+VALID_ENTRY_TYPES = {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Entry-point record helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _ep(entry_type, function_name, route, route_type, method, file_path, has_receiver=False):
+    return {
+        "entry_type": entry_type,
+        "function_name": function_name,
+        "route": route,
+        "route_type": route_type,
+        "method": method,
+        "file_path": file_path,
+        "has_receiver": has_receiver,
+    }
+
+
+def _as_frozen(ep):
+    return frozenset(ep.items())
+
+
+def _eps_as_set(eps):
+    return {_as_frozen(e) for e in eps}
+
+
+def _eps_equal(actual, expected):
+    return _eps_as_set(actual) == _eps_as_set(expected)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TLA+ algorithm translated to Python
+# ClassifySkel / ProcessGinRoute / ProcessHttpHandle / ProcessCobraCmd
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _classify_skel(skel_idx, is_main, is_public, has_receiver, is_test_file, codebase_type):
+    if is_test_file:
+        return None
+    if is_main and not has_receiver:
+        return _ep("MAIN", "main", "none", "none", "none", skel_idx)
+    if is_public and not has_receiver and not is_main and codebase_type == "library":
+        return _ep("PUBLIC_API", "ExportedFunc", "none", "none", "none", skel_idx)
+    return None
+
+
+def _scan_file(file_idx, num_skeletons, is_test, has_gin_route, has_http_handle, has_cobra):
+    if is_test:
+        return []
+    fp = num_skeletons + file_idx
+    results = []
+    if has_gin_route:
+        results.append(_ep("HTTP_ROUTE", "ginRouteHandler", "/api", "gin", "GET", fp))
+    if has_http_handle:
+        results.append(_ep("HTTP_ROUTE", "httpHandleFunc", "/health", "handlefunc", "none", fp))
+    if has_cobra:
+        results.append(_ep("CLI_COMMAND", "cobraCommand", "none", "none", "none", fp))
+    return results
+
+
+def _run_discoverer(codebase_type, skeletons, source_files):
+    dag = RegistryDag()
+    entry_points = []
+    num_sk = len(skeletons)
+
+    for idx, skel in enumerate(skeletons, 1):
+        ep = _classify_skel(
+            idx,
+            skel["is_main"], skel["is_public"],
+            skel["has_receiver"], skel["is_test_file"],
+            codebase_type,
+        )
+        if ep is not None and ep not in entry_points:
+            entry_points.append(ep)
+            dag.add_node(Node.behavior(
+                f"ep__{ep['entry_type']}__{ep['function_name']}__{ep['file_path']}",
+                ep["function_name"],
+                given=f"skeleton at skel_idx={ep['file_path']}",
+                when=f"entry_type={ep['entry_type']} codebase={codebase_type}",
+                then=f"route={ep['route']} method={ep['method']} route_type={ep['route_type']}",
+            ))
+
+    for idx, f in enumerate(source_files, 1):
+        for ep in _scan_file(idx, num_sk, f["is_test"], f["has_gin_route"],
+                             f["has_http_handle"], f["has_cobra"]):
+            if ep not in entry_points:
+                entry_points.append(ep)
+                dag.add_node(Node.behavior(
+                    f"ep__{ep['entry_type']}__{ep['function_name']}__{ep['file_path']}",
+                    ep["function_name"],
+                    given=f"source file at file_idx={idx}",
+                    when=f"entry_type={ep['entry_type']} codebase={codebase_type}",
+                    then=f"route={ep['route']} method={ep['method']} route_type={ep['route_type']}",
+                ))
+
+    return dag, entry_points
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# All-invariants verifier
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _assert_all_invariants(entry_points, codebase_type):
+    seen = {}
+    for ep in entry_points:
+        assert ep["entry_type"] in VALID_ENTRY_TYPES, (
+            f"ValidEntryTypes violated: {ep['entry_type']!r} not in {VALID_ENTRY_TYPES}"
+        )
+        if ep["entry_type"] == "MAIN":
+            assert ep["function_name"] == "main", (
+                f"MainHasCorrectName violated: MAIN entry named {ep['function_name']!r}"
+            )
+        if ep["function_name"] == "main":
+            assert ep["entry_type"] != "PUBLIC_API", (
+                "MainNeverPublicApi violated: main() classified as PUBLIC_API"
+            )
+        if ep["entry_type"] == "PUBLIC_API":
+            assert codebase_type == "library", (
+                f"PublicOnlyForLibrary violated: PUBLIC_API exists for codebase_type={codebase_type!r}"
+            )
+        if ep["entry_type"] == "HTTP_ROUTE":
+            assert ep["route"] != "none", (
+                "HttpRouteHasRoute violated: HTTP_ROUTE has route='none'"
+            )
+        if ep["entry_type"] == "HTTP_ROUTE" and ep["route_type"] == "handlefunc":
+            assert ep["method"] == "none", (
+                "HandleFuncMethodAgnostic violated: handlefunc route has non-none method"
+            )
+        if ep["route_type"] == "gin":
+            assert ep["method"] != "none", (
+                "GinRouteHasMethod violated: gin route has method='none'"
+            )
+        if ep["entry_type"] == "PUBLIC_API":
+            assert ep["has_receiver"] is False, (
+                "MethodsNeverPublicApi violated: PUBLIC_API entry has has_receiver=True"
+            )
+        key = (ep["file_path"], ep["function_name"])
+        if key in seen:
+            assert ep == seen[key], (
+                f"NoDuplicates violated: two different records for key {key}"
+            )
+        seen[key] = ep
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 1
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace1:
+    CODEBASE_TYPE = "library"
+    SKELETONS = [
+        {"is_main": True,  "is_public": True,  "has_receiver": False, "is_test_file": True},
+        {"is_main": True,  "is_public": False, "has_receiver": True,  "is_test_file": False},
+    ]
+    SOURCE_FILES = [
+        {"is_test": False, "has_gin_route": False, "has_http_handle": True,  "has_cobra": False},
+        {"is_test": True,  "has_gin_route": True,  "has_http_handle": True,  "has_cobra": False},
+    ]
+    EXPECTED = [
+        _ep("HTTP_ROUTE", "httpHandleFunc", "/health", "handlefunc", "none", 3),
+    ]
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert _eps_equal(eps, self.EXPECTED)
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_test_skel_file_excluded(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["entry_type"] != "MAIN" for e in eps)
+
+    def test_receiver_skeleton_excluded(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert len(eps) == 1
+
+    def test_test_source_file_excluded(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["file_path"] != 4 for e in eps)
+
+    def test_handlefunc_method_is_none(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        for ep in eps:
+            if ep["route_type"] == "handlefunc":
+                assert ep["method"] == "none"
+
+    def test_dag_encodes_entry_points(self):
+        dag, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert dag.node_count == len(self.EXPECTED)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 2
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace2:
+    CODEBASE_TYPE = "cli"
+    SKELETONS = [
+        {"is_main": False, "is_public": False, "has_receiver": True,  "is_test_file": True},
+        {"is_main": True,  "is_public": False, "has_receiver": False, "is_test_file": False},
+    ]
+    SOURCE_FILES = [
+        {"is_test": False, "has_gin_route": False, "has_http_handle": True,  "has_cobra": True},
+        {"is_test": False, "has_gin_route": True,  "has_http_handle": False, "has_cobra": False},
+    ]
+    EXPECTED = [
+        _ep("MAIN",        "main",            "none",    "none",       "none", 2),
+        _ep("HTTP_ROUTE",  "httpHandleFunc",  "/health", "handlefunc", "none", 3),
+        _ep("CLI_COMMAND", "cobraCommand",    "none",    "none",       "none", 3),
+        _ep("HTTP_ROUTE",  "ginRouteHandler", "/api",    "gin",        "GET",  4),
+    ]
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert _eps_equal(eps, self.EXPECTED)
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_main_at_file_path_2(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        main_eps = [e for e in eps if e["entry_type"] == "MAIN"]
+        assert len(main_eps) == 1
+        assert main_eps[0]["function_name"] == "main"
+        assert main_eps[0]["file_path"] == 2
+
+    def test_no_public_api_for_cli(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["entry_type"] != "PUBLIC_API" for e in eps)
+
+    def test_gin_route_has_get_method(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        gin_eps = [e for e in eps if e["route_type"] == "gin"]
+        assert len(gin_eps) == 1
+        assert gin_eps[0]["method"] == "GET"
+        assert gin_eps[0]["route"] == "/api"
+        assert gin_eps[0]["file_path"] == 4
+
+    def test_cli_command_present(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        cli_eps = [e for e in eps if e["entry_type"] == "CLI_COMMAND"]
+        assert len(cli_eps) == 1
+        assert cli_eps[0]["function_name"] == "cobraCommand"
+
+    def test_dag_node_count(self):
+        dag, _ = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert dag.node_count == 4
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 3
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace3:
+    CODEBASE_TYPE = "cli"
+    SKELETONS = [
+        {"is_main": True,  "is_public": True,  "has_receiver": True,  "is_test_file": True},
+        {"is_main": False, "is_public": True,  "has_receiver": False, "is_test_file": True},
+    ]
+    SOURCE_FILES = [
+        {"is_test": True, "has_gin_route": True, "has_http_handle": True, "has_cobra": False},
+        {"is_test": True, "has_gin_route": True, "has_http_handle": True, "has_cobra": False},
+    ]
+    EXPECTED = []
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert eps == self.EXPECTED
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_empty_dag(self):
+        dag, _ = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert dag.node_count == 0
+
+    def test_both_test_source_files_produce_nothing(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert len(eps) == 0
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 4
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace4:
+    CODEBASE_TYPE = "cli"
+    SKELETONS = [
+        {"is_main": True,  "is_public": True,  "has_receiver": True,  "is_test_file": False},
+        {"is_main": True,  "is_public": False, "has_receiver": False, "is_test_file": True},
+    ]
+    SOURCE_FILES = [
+        {"is_test": False, "has_gin_route": True,  "has_http_handle": True,  "has_cobra": True},
+        {"is_test": True,  "has_gin_route": False, "has_http_handle": True,  "has_cobra": True},
+    ]
+    EXPECTED = [
+        _ep("HTTP_ROUTE",  "ginRouteHandler", "/api",    "gin",        "GET",  3),
+        _ep("HTTP_ROUTE",  "httpHandleFunc",  "/health", "handlefunc", "none", 3),
+        _ep("CLI_COMMAND", "cobraCommand",    "none",    "none",       "none", 3),
+    ]
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert _eps_equal(eps, self.EXPECTED)
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_receiver_suppresses_main(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["entry_type"] != "MAIN" for e in eps)
+
+    def test_test_source_file_2_excluded(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["file_path"] != 4 for e in eps)
+
+    def test_all_three_from_single_file(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["file_path"] == 3 for e in eps)
+
+    def test_no_duplicate_keys(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        keys = [(e["file_path"], e["function_name"]) for e in eps]
+        assert len(keys) == len(set(keys))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 5
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace5:
+    CODEBASE_TYPE = "cli"
+    SKELETONS = [
+        {"is_main": False, "is_public": True,  "has_receiver": True,  "is_test_file": False},
+        {"is_main": True,  "is_public": True,  "has_receiver": False, "is_test_file": False},
+    ]
+    SOURCE_FILES = [
+        {"is_test": False, "has_gin_route": True,  "has_http_handle": False, "has_cobra": True},
+        {"is_test": True,  "has_gin_route": True,  "has_http_handle": True,  "has_cobra": False},
+    ]
+    EXPECTED = [
+        _ep("MAIN",        "main",            "none", "none", "none", 2),
+        _ep("HTTP_ROUTE",  "ginRouteHandler", "/api", "gin",  "GET",  3),
+        _ep("CLI_COMMAND", "cobraCommand",    "none", "none", "none", 3),
+    ]
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert _eps_equal(eps, self.EXPECTED)
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_main_file_path_is_skel_idx(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        main_eps = [e for e in eps if e["entry_type"] == "MAIN"]
+        assert main_eps[0]["file_path"] == 2
+
+    def test_public_receiver_does_not_emit_public_api(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["entry_type"] != "PUBLIC_API" for e in eps)
+
+    def test_test_file_2_excluded(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["file_path"] != 4 for e in eps)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 6
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace6:
+    CODEBASE_TYPE = "library"
+    SKELETONS = [
+        {"is_main": False, "is_public": False, "has_receiver": False, "is_test_file": False},
+        {"is_main": True,  "is_public": True,  "has_receiver": True,  "is_test_file": False},
+    ]
+    SOURCE_FILES = [
+        {"is_test": True,  "has_gin_route": True,  "has_http_handle": True,  "has_cobra": True},
+        {"is_test": False, "has_gin_route": False, "has_http_handle": False, "has_cobra": True},
+    ]
+    EXPECTED = [
+        _ep("CLI_COMMAND", "cobraCommand", "none", "none", "none", 4),
+    ]
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert _eps_equal(eps, self.EXPECTED)
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_first_file_test_excluded(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["file_path"] != 3 for e in eps)
+
+    def test_cobra_file_path_4(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert eps[0]["file_path"] == 4
+        assert eps[0]["entry_type"] == "CLI_COMMAND"
+
+    def test_receiver_suppresses_main_in_library(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["entry_type"] != "MAIN" for e in eps)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 7
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace7:
+    CODEBASE_TYPE = "web_app"
+    SKELETONS = [
+        {"is_main": True,  "is_public": False, "has_receiver": True, "is_test_file": False},
+        {"is_main": False, "is_public": False, "has_receiver": True, "is_test_file": True},
+    ]
+    SOURCE_FILES = [
+        {"is_test": False, "has_gin_route": False, "has_http_handle": False, "has_cobra": True},
+        {"is_test": True,  "has_gin_route": True,  "has_http_handle": False, "has_cobra": False},
+    ]
+    EXPECTED = [
+        _ep("CLI_COMMAND", "cobraCommand", "none", "none", "none", 3),
+    ]
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert _eps_equal(eps, self.EXPECTED)
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_no_public_api_for_web_app(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["entry_type"] != "PUBLIC_API" for e in eps)
+
+    def test_cobra_file_path_3(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert eps[0]["file_path"] == 3
+
+    def test_test_file_2_excluded(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["file_path"] != 4 for e in eps)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 8
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace8:
+    CODEBASE_TYPE = "library"
+    SKELETONS = [
+        {"is_main": False, "is_public": False, "has_receiver": True,  "is_test_file": True},
+        {"is_main": False, "is_public": False, "has_receiver": False, "is_test_file": False},
+    ]
+    SOURCE_FILES = [
+        {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": True},
+        {"is_test": True, "has_gin_route": False, "has_http_handle": True,  "has_cobra": False},
+    ]
+    EXPECTED = []
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert eps == self.EXPECTED
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_empty_dag(self):
+        dag, _ = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert dag.node_count == 0
+
+    def test_non_public_non_main_skel_produces_nothing(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert eps == []
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 9
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace9:
+    CODEBASE_TYPE = "web_app"
+    SKELETONS = [
+        {"is_main": True,  "is_public": False, "has_receiver": False, "is_test_file": True},
+        {"is_main": False, "is_public": True,  "has_receiver": False, "is_test_file": False},
+    ]
+    SOURCE_FILES = [
+        {"is_test": False, "has_gin_route": True,  "has_http_handle": True,  "has_cobra": False},
+        {"is_test": True,  "has_gin_route": False, "has_http_handle": False, "has_cobra": True},
+    ]
+    EXPECTED = [
+        _ep("HTTP_ROUTE", "ginRouteHandler", "/api",    "gin",        "GET",  3),
+        _ep("HTTP_ROUTE", "httpHandleFunc",  "/health", "handlefunc", "none", 3),
+    ]
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert _eps_equal(eps, self.EXPECTED)
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_public_skel_not_emitted_for_web_app(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["entry_type"] != "PUBLIC_API" for e in eps)
+
+    def test_both_routes_at_file_path_3(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        file3 = [e for e in eps if e["file_path"] == 3]
+        assert len(file3) == 2
+
+    def test_gin_has_method_handlefunc_has_none(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        gin = next(e for e in eps if e["route_type"] == "gin")
+        hf = next(e for e in eps if e["route_type"] == "handlefunc")
+        assert gin["method"] == "GET"
+        assert hf["method"] == "none"
+
+    def test_test_file_2_excluded(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["file_path"] != 4 for e in eps)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Trace 10
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestTrace10:
+    CODEBASE_TYPE = "library"
+    SKELETONS = [
+        {"is_main": False, "is_public": True, "has_receiver": True, "is_test_file": True},
+        {"is_main": False, "is_public": True, "has_receiver": True, "is_test_file": False},
+    ]
+    SOURCE_FILES = [
+        {"is_test": False, "has_gin_route": True,  "has_http_handle": False, "has_cobra": False},
+        {"is_test": True,  "has_gin_route": False, "has_http_handle": True,  "has_cobra": True},
+    ]
+    EXPECTED = [
+        _ep("HTTP_ROUTE", "ginRouteHandler", "/api", "gin", "GET", 3),
+    ]
+
+    def test_expected_entry_points(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert _eps_equal(eps, self.EXPECTED)
+
+    def test_all_invariants(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        _assert_all_invariants(eps, self.CODEBASE_TYPE)
+
+    def test_receiver_suppresses_public_api_in_library(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["entry_type"] != "PUBLIC_API" for e in eps)
+
+    def test_test_file_2_excluded(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert all(e["file_path"] != 4 for e in eps)
+
+    def test_gin_route_correct_fields(self):
+        _, eps = _run_discoverer(self.CODEBASE_TYPE, self.SKELETONS, self.SOURCE_FILES)
+        assert eps[0]["route"] == "/api"
+        assert eps[0]["method"] == "GET"
+        assert eps[0]["route_type"] == "gin"
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Dedicated invariant verifiers
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestInvariantValidEntryTypes:
+
+    def test_trace2_all_four_types(self):
+        _, eps = _run_discoverer("cli", [
+            {"is_main": False, "is_public": False, "has_receiver": True,  "is_test_file": True},
+            {"is_main": True,  "is_public": False, "has_receiver": False, "is_test_file": False},
+        ], [
+            {"is_test": False, "has_gin_route": False, "has_http_handle": True,  "has_cobra": True},
+            {"is_test": False, "has_gin_route": True,  "has_http_handle": False, "has_cobra": False},
+        ])
+        for ep in eps:
+            assert ep["entry_type"] in VALID_ENTRY_TYPES
+
+    def test_trace6_cli_command_only(self):
+        _, eps = _run_discoverer("library", [
+            {"is_main": False, "is_public": False, "has_receiver": False, "is_test_file": False},
+            {"is_main": True,  "is_public": True,  "has_receiver": True,  "is_test_file": False},
+        ], [
+            {"is_test": True,  "has_gin_route": True,  "has_http_handle": True, "has_cobra": True},
+            {"is_test": False, "has_gin_route": False, "has_http_handle": False, "has_cobra": True},
+        ])
+        for ep in eps:
+            assert ep["entry_type"] in VALID_ENTRY_TYPES
+
+
+class TestInvariantMainHasCorrectName:
+
+    def test_trace2(self):
+        _, eps = _run_discoverer("cli", [
+            {"is_main": False, "is_public": False, "has_receiver": True,  "is_test_file": True},
+            {"is_main": True,  "is_public": False, "has_receiver": False, "is_test_file": False},
+        ], [
+            {"is_test": False, "has_gin_route": False, "has_http_handle": True,  "has_cobra": True},
+            {"is_test": False, "has_gin_route": True,  "has_http_handle": False, "has_cobra": False},
+        ])
+        for ep in eps:
+            if ep["entry_type"] == "MAIN":
+                assert ep["function_name"] == "main"
+
+    def test_trace5(self):
+        _, eps = _run_discoverer("cli", [
+            {"is_main": False, "is_public": True,  "has_receiver": True,  "is_test_file": False},
+            {"is_main": True,  "is_public": True,  "has_receiver": False, "is_test_file": False},
+        ], [
+            {"is_test": False, "has_gin_route": True,  "has_http_handle": False, "has_cobra": True},
+            {"is_test": True,  "has_gin_route": True,  "has_http_handle": True,  "has_cobra": False},
+        ])
+        for ep in eps:
+            if ep["entry_type"] == "MAIN":
+                assert ep["function_name"] == "main"
+
+
+class TestInvariantMainNeverPublicApi:
+
+    def test_trace2_main_is_main_not_public_api(self):
+        _, eps = _run_discoverer("cli", [
+            {"is_main": False, "is_public": False, "has_receiver": True,  "is_test_file": True},
+            {"is_main": True,  "is_public": False, "has_receiver": False, "is_test_file": False},
+        ], [
+            {"is_test": False, "has_gin_route": False, "has_http_handle": True,  "has_cobra": True},
+            {"is_test": False, "has_gin_route": True,  "has_http_handle": False, "has_cobra": False},
+        ])
+        for ep in eps:
+            if ep["function_name"] == "main":
+                assert ep["entry_type"] != "PUBLIC_API"
+
+    def test_trace5_main_is_main_not_public_api(self):
+        _, eps = _run_discoverer("cli", [
+            {"is_main": False, "is_public": True,  "has_receiver": True,  "is_test_file": False},
+            {"is_main": True,  "is_public": True,  "has_receiver": False, "is_test_file": False},
+        ], [
+            {"is_test": False, "has_gin_route": True,  "has_http_handle": False, "has_cobra": True},
+            {"is_test": True,  "has_gin_route": True,  "has_http_handle": True,  "has_cobra": False},
+        ])
+        for ep in eps:
+            if ep["function_name"] == "main":
+                assert ep["entry_type"] != "PUBLIC_API"
+
+
+class TestInvariantPublicOnlyForLibrary:
+
+    def test_cli_never_produces_public_api(self):
+        _, eps = _run_discoverer("cli", [
+            {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+            {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+        ], [
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+        ])
+        assert all(e["entry_type"] != "PUBLIC_API" for e in eps)
+
+    def test_web_app_never_produces_public_api(self):
+        _, eps = _run_discoverer("web_app", [
+            {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+            {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+        ], [
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+        ])
+        assert all(e["entry_type"] != "PUBLIC_API" for e in eps)
+
+    def test_library_can_produce_public_api(self):
+        _, eps = _run_discoverer("library", [
+            {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+            {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+        ], [
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+        ])
+        pub = [e for e in eps if e["entry_type"] == "PUBLIC_API"]
+        assert len(pub) == 2
+        for ep in pub:
+            assert ep["has_receiver"] is False
+
+
+class TestInvariantHttpRouteHasRoute:
+
+    def test_trace1_handlefunc_has_route(self):
+        _, eps = _run_discoverer("library",
+            TestTrace1.SKELETONS, TestTrace1.SOURCE_FILES)
+        for ep in eps:
+            if ep["entry_type"] == "HTTP_ROUTE":
+                assert ep["route"] != "none"
+
+    def test_trace9_gin_and_handlefunc_have_routes(self):
+        _, eps = _run_discoverer("web_app",
+            TestTrace9.SKELETONS, TestTrace9.SOURCE_FILES)
+        for ep in eps:
+            if ep["entry_type"] == "HTTP_ROUTE":
+                assert ep["route"] != "none"
+                assert ep["route"].startswith("/")
+
+
+class TestInvariantHandleFuncMethodAgnostic:
+
+    def test_trace1(self):
+        _, eps = _run_discoverer("library",
+            TestTrace1.SKELETONS, TestTrace1.SOURCE_FILES)
+        for ep in eps:
+            if ep["entry_type"] == "HTTP_ROUTE" and ep["route_type"] == "handlefunc":
+                assert ep["method"] == "none"
+
+    def test_trace4(self):
+        _, eps = _run_discoverer("cli",
+            TestTrace4.SKELETONS, TestTrace4.SOURCE_FILES)
+        for ep in eps:
+            if ep["entry_type"] == "HTTP_ROUTE" and ep["route_type"] == "handlefunc":
+                assert ep["method"] == "none"
+
+
+class TestInvariantGinRouteHasMethod:
+
+    def test_trace2_gin(self):
+        _, eps = _run_discoverer("cli",
+            TestTrace2.SKELETONS, TestTrace2.SOURCE_FILES)
+        for ep in eps:
+            if ep["route_type"] == "gin":
+                assert ep["method"] != "none"
+
+    def test_trace10_gin(self):
+        _, eps = _run_discoverer("library",
+            TestTrace10.SKELETONS, TestTrace10.SOURCE_FILES)
+        for ep in eps:
+            if ep["route_type"] == "gin":
+                assert ep["method"] != "none"
+
+
+class TestInvariantNoDuplicates:
+
+    def test_trace4_three_eps_same_file_no_dup(self):
+        _, eps = _run_discoverer("cli",
+            TestTrace4.SKELETONS, TestTrace4.SOURCE_FILES)
+        keys = [(e["file_path"], e["function_name"]) for e in eps]
+        assert len(keys) == len(set(keys))
+
+    def test_trace9_two_eps_same_file_no_dup(self):
+        _, eps = _run_discoverer("web_app",
+            TestTrace9.SKELETONS, TestTrace9.SOURCE_FILES)
+        keys = [(e["file_path"], e["function_name"]) for e in eps]
+        assert len(keys) == len(set(keys))
+
+    def test_trace2_four_eps_no_dup(self):
+        _, eps = _run_discoverer("cli",
+            TestTrace2.SKELETONS, TestTrace2.SOURCE_FILES)
+        keys = [(e["file_path"], e["function_name"]) for e in eps]
+        assert len(keys) == len(set(keys))
+
+
+class TestInvariantMethodsNeverPublicApi:
+
+    def test_library_public_api_no_receiver(self):
+        _, eps = _run_discoverer("library", [
+            {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+            {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+        ], [
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+        ])
+        for ep in eps:
+            if ep["entry_type"] == "PUBLIC_API":
+                assert ep["has_receiver"] is False
+
+    def test_receiver_suppresses_public_api_entirely(self):
+        _, eps = _run_discoverer("library", [
+            {"is_main": False, "is_public": True, "has_receiver": True, "is_test_file": False},
+            {"is_main": False, "is_public": True, "has_receiver": True, "is_test_file": False},
+        ], [
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+            {"is_test": True, "has_gin_route": False, "has_http_handle": False, "has_cobra": False},
+        ])
+        pub_eps = [e for e in eps if e["entry_type"] == "PUBLIC_API"]
+        assert pub_eps == []
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Edge cases
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestEdgeCases:
+
+    def test_empty_dag_baseline(self):
+        dag = RegistryDag()
+        assert dag.node_count == 0
+        assert dag.edge_count == 0
+
+    def test_no_skeletons_no_source_files_all_codetypes(self):
+        for ct in ("library", "cli", "web_app"):
+            dag, eps = _run_discoverer(ct, [], [])
+            assert eps == []
+            assert dag.node_count == 0
+
+    def test_invariants_on_empty_entry_points(self):
+        _assert_all_invariants([], "library")
+        _assert_all_invariants([], "cli")
+        _assert_all_invariants([], "web_app")
+
+    def test_single_main_skeleton(self):
+        _, eps = _run_discoverer("cli", [
+            {"is_main": True, "is_public": False, "has_receiver": False, "is_test_file": False},
+        ], [])
+        assert len(eps) == 1
+        assert eps[0]["entry_type"] == "MAIN"
+        assert eps[0]["function_name"] == "main"
+        assert eps[0]["file_path"] == 1
+        _assert_all_invariants(eps, "cli")
+
+    def test_main_with_receiver_produces_nothing(self):
+        _, eps = _run_discoverer("cli", [
+            {"is_main": True, "is_public": False, "has_receiver": True, "is_test_file": False},
+        ], [])
+        assert eps == []
+
+    def test_all_patterns_in_single_non_test_file(self):
+        _, eps = _run_discoverer("web_app", [], [
+            {"is_test": False, "has_gin_route": True, "has_http_handle": True, "has_cobra": True},
+        ])
+        assert len(eps) == 3
+        types = {e["entry_type"] for e in eps}
+        assert types == {"HTTP_ROUTE", "CLI_COMMAND"}
+        _assert_all_invariants(eps, "web_app")
+
+    def test_public_api_requires_library_for_all_non_library_types(self):
+        for ct in ("cli", "web_app"):
+            _, eps = _run_discoverer(ct, [
+                {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+                {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+            ], [])
+            assert all(e["entry_type"] != "PUBLIC_API" for e in eps), (
+                f"PUBLIC_API must not appear for codebase_type={ct!r}"
+            )
+
+    def test_diamond_dag_structure(self):
+        dag = RegistryDag()
+        for nid in ("A", "B", "C", "D"):
+            dag.add_node(Node.resource(nid, nid))
+        dag.add_edge(Edge("A", "B", EdgeType.IMPORTS))
+        dag.add_edge(Edge("A", "C", EdgeType.IMPORTS))
+        dag.add_edge(Edge("B", "D", EdgeType.IMPORTS))
+        dag.add_edge(Edge("C", "D", EdgeType.IMPORTS))
+        assert dag.node_count == 4
+        assert dag.edge_count == 4
+
+    def test_test_file_skeleton_suppresses_even_main(self):
+        _, eps = _run_discoverer("cli", [
+            {"is_main": True, "is_public": False, "has_receiver": False, "is_test_file": True},
+        ], [])
+        assert eps == []
+
+    def test_isolated_node_in_dag(self):
+        dag = RegistryDag()
+        dag.add_node(Node.resource("isolated", "IsolatedFunc"))
+        assert dag.node_count == 1
+        assert dag.edge_count == 0
+
+    def test_public_api_no_receiver_library_one_skel(self):
+        _, eps = _run_discoverer("library", [
+            {"is_main": False, "is_public": True, "has_receiver": False, "is_test_file": False},
+        ], [])
+        assert len(eps) == 1
+        assert eps[0]["entry_type"] == "PUBLIC_API"
+        assert eps[0]["has_receiver"] is False
+        assert eps[0]["function_name"] == "ExportedFunc"
+        _assert_all_invariants(eps, "library")
+
+    def test_gin_and_handlefunc_coexist_different_function_names(self):
+        _, eps = _run_discoverer("web_app", [], [
+            {"is_test": False, "has_gin_route": True, "has_http_handle": True, "has_cobra": False},
+        ])
+        names = {e["function_name"] for e in eps}
+        assert "ginRouteHandler" in names
+        assert "httpHandleFunc" in names
+        assert len(eps) == 2
+        _assert_all_invariants(eps, "web_app")
