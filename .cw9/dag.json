@@ -1089,6 +1089,56 @@
       "when": "the Rust discoverer runs",
       "then": "it returns EntryPoint objects for: fn main() with no impl block (entry_type=MAIN), pub fn in lib.rs with no impl block (entry_type=PUBLIC_API for library codebase type), and #[get]/#[post]/#[put]/#[delete] attribute macros mapping to the following fn (entry_type=HTTP_ROUTE with route and method); Axum .route() builder patterns are also detected; #[derive(Parser)] structs are detected as entry_type=CLI_COMMAND"
     },
+    "gwt-0077": {
+      "id": "gwt-0077",
+      "kind": "behavior",
+      "name": "orchestrate_reviews_executes_with_phase",
+      "description": "",
+      "version": 1,
+      "given": "a set of review passes with dependency constraints: artifacts gates all, coverage and interaction are parallel, abstraction_gap follows parallel, imports is post-only",
+      "when": "_orchestrate_reviews() executes with phase='all' and mode='self' and artifacts passes",
+      "then": "artifacts runs first; coverage and interaction run concurrently after artifacts passes; abstraction_gap runs only after both parallel passes complete; imports runs last; total_cost_usd accumulates from all passes"
+    },
+    "gwt-0078": {
+      "id": "gwt-0078",
+      "kind": "behavior",
+      "name": "orchestrate_reviews_checks_the_artifacts",
+      "description": "",
+      "version": 1,
+      "given": "the artifacts review pass returns verdict 'fail'",
+      "when": "_orchestrate_reviews() checks the artifacts gate",
+      "then": "no further passes execute; the function returns status='blocked' with blocked_by='artifacts' and only the artifacts result in results"
+    },
+    "gwt-0079": {
+      "id": "gwt-0079",
+      "kind": "behavior",
+      "name": "cmd_plan_review_determines_the_mode",
+      "description": "",
+      "version": 1,
+      "given": "neither --self nor --external flag is supplied",
+      "when": "cmd_plan_review() determines the mode",
+      "then": "if .cw9/ directory exists under target_dir mode is 'external' (using EXTERNAL_REVIEWS); otherwise mode is 'self' (using SELF_REVIEWS); explicit flags override auto-detection"
+    },
+    "gwt-0080": {
+      "id": "gwt-0080",
+      "kind": "behavior",
+      "name": "orchestrate_reviews_selects_which_passes",
+      "description": "",
+      "version": 1,
+      "given": "phase is one of 'pre', 'post', or 'all'",
+      "when": "_orchestrate_reviews() selects which passes to run",
+      "then": "phase='pre' runs artifacts+coverage+interaction+abstraction_gap but NOT imports; phase='post' runs ONLY imports; phase='all' runs everything; external mode never includes interaction regardless of phase"
+    },
+    "gwt-0081": {
+      "id": "gwt-0081",
+      "kind": "behavior",
+      "name": "orchestrate_reviews_computes_the_overall",
+      "description": "",
+      "version": 1,
+      "given": "all applicable review passes have completed with individual verdicts",
+      "when": "_orchestrate_reviews() computes the overall status",
+      "then": "if any verdict is 'fail' then status='fail'; else if any verdict is 'warning' then status='warning'; else status='pass'; cmd_plan_review returns exit code 0 for pass/warning and 1 for fail"
+    },
     "impact-0001": {
       "id": "impact-0001",
       "kind": "resource",
@@ -3269,6 +3319,11 @@
     "gwt-0074": [],
     "gwt-0075": [],
     "gwt-0076": [],
+    "gwt-0077": [],
+    "gwt-0078": [],
+    "gwt-0079": [],
+    "gwt-0080": [],
+    "gwt-0081": [],
     "impact-0001": [
       "gwt-0012",
       "gwt-0013",
@@ -3850,16 +3905,31 @@
       "gwt-0076"
     ],
     "component-27": [
-      "req-0017"
+      "gwt-0077"
     ],
     "component-28": [
-      "req-0018"
+      "gwt-0078"
     ],
     "component-29": [
-      "req-0019"
+      "gwt-0079"
     ],
     "component-3": [
       "cfg-m2z6"
+    ],
+    "component-30": [
+      "gwt-0080"
+    ],
+    "component-31": [
+      "gwt-0081"
+    ],
+    "component-32": [
+      "req-0017"
+    ],
+    "component-33": [
+      "req-0018"
+    ],
+    "component-34": [
+      "req-0019"
     ],
     "component-4": [
       "cfg-n7a3"

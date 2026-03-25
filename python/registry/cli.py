@@ -1323,15 +1323,79 @@ def _build_llm_fn(
 
 
 _EXTRACT_SYSTEM_PROMPT = """\
-You are a code analysis expert. Given a function's skeleton (signature) and body, \
-extract its behavioral IN:DO:OUT card.
+You are a code analysis expert. You will receive a function's signature and body. \
+Your job is to produce a JSON object describing the function's behavioral contract. \
+Do NOT attempt to read files or use tools — the function body is already provided. \
+Respond ONLY with the JSON object matching the schema.
 
-For "source" field on inputs:
-- "parameter": comes from function arguments
-- "state": reads from instance/global state
-- "literal": hardcoded constant
-- "internal_call": return value of another function in this codebase (set source_function and source_file)
-- "external": return value from an external library/service (set source_function to the call expression)\
+The JSON object has these fields:
+
+## ins (array) — every data dependency the function reads
+Each input has:
+- "name": the variable/parameter name (e.g. "self.db_path", "config", "args")
+- "type_str": the Python type (e.g. "Path", "dict[str, Any]", "argparse.Namespace")
+- "source": how this value enters the function. One of:
+  - "parameter": comes from function arguments (including self)
+  - "state": reads from instance attributes or global/module state
+  - "literal": a hardcoded constant in the function body
+  - "internal_call": return value of another function in this codebase \
+(set source_function to the function name and source_file to its file path)
+  - "external": return value from an external library/service \
+(set source_function to the call expression, e.g. "json.loads()")
+- "source_function": (string or null) the function that produces this value, if source is internal_call or external
+- "source_file": (string or null) file path of the source function, if source is internal_call
+- "description": brief description of what this input represents
+
+## do_description (string) — one-sentence summary of what the function does
+
+## do_steps (array of strings) — ordered list of steps the function performs
+Each step is a sentence like "1. Open the database connection" or "2. Parse the JSON config file".
+
+## outs (array) — every output or effect the function produces
+Each output has:
+- "name": the category of output. One of:
+  - "ok": a successful return value
+  - "err": an error/exception the function raises
+  - "side_effect": an external effect (file write, network call, print, database write)
+  - "mutation": modification of an object passed in (e.g. self.field = value)
+- "type_str": the Python type of the output (e.g. "list[str]", "None", "FileNotFoundError")
+- "description": what this output represents and when it occurs
+
+## failure_modes (array of strings) — ways the function can fail
+Each is a sentence describing an error condition, e.g. "FileNotFoundError if the config path does not exist."
+
+## operational_claim (string) — one-sentence contract statement
+Summarizes the function's guarantee, e.g. "connect() opens the SQLite database and initialises the schema, \
+leaving self._conn ready for queries."
+
+## Example
+
+For a function `def connect(self)` that opens a database:
+
+```json
+{
+  "ins": [
+    {"name": "self", "type_str": "CrawlStore", "source": "parameter", "source_function": null, "source_file": null, "description": "the store instance"},
+    {"name": "self.db_path", "type_str": "Path", "source": "state", "source_function": null, "source_file": null, "description": "path to the SQLite database file"}
+  ],
+  "do_description": "Opens a SQLite connection and applies the schema DDL.",
+  "do_steps": [
+    "1. Call sqlite3.connect(self.db_path) to open the database.",
+    "2. Set row_factory to sqlite3.Row for column-name access.",
+    "3. Execute _SCHEMA_SQL to create tables if they don't exist."
+  ],
+  "outs": [
+    {"name": "mutation", "type_str": "None", "description": "Assigns sqlite3.Connection to self._conn."},
+    {"name": "side_effect", "type_str": "SQLite database file", "description": "Creates the database file on disk if it does not exist."},
+    {"name": "err", "type_str": "sqlite3.OperationalError", "description": "Raised if the path is not writable."}
+  ],
+  "failure_modes": [
+    "sqlite3.OperationalError if the path is not writable.",
+    "sqlite3.DatabaseError if the file is not a valid SQLite database."
+  ],
+  "operational_claim": "connect() opens the SQLite database at db_path, initialises the schema, and leaves self._conn ready for queries."
+}
+```\
 """
 
 # JSON Schema for structured output — enforced by the Agent SDK
@@ -2032,8 +2096,263 @@ def cmd_loop_status(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# plan-review: orchestrated review passes via Claude Agent SDK
+# ---------------------------------------------------------------------------
+
+SELF_REVIEWS = [
+    ("artifacts",       ".claude/commands/cw9_review_01_artifacts.md"),
+    ("coverage",        ".claude/commands/cw9_review_02_coverage.md"),
+    ("abstraction_gap", ".claude/commands/cw9_review_03_abstraction_gap.md"),
+    ("interaction",     ".claude/commands/cw9_review_04_interaction.md"),
+    ("imports",         ".claude/commands/cw9_review_05_imports.md"),
+]
+
+EXTERNAL_REVIEWS = [
+    ("artifacts",       "~/.claude/commands/cw9_review_01_artifacts.md"),
+    ("coverage",        "~/.claude/commands/cw9_review_02_coverage.md"),
+    ("abstraction_gap", "~/.claude/commands/cw9_review_03_abstraction_gap.md"),
+    ("imports",         "~/.claude/commands/cw9_review_04_imports.md"),
+]
+
+
+def _detect_review_mode(
+    self_flag: bool, external_flag: bool, target_dir: Path,
+) -> tuple[str, list[tuple[str, str]]]:
+    """Determine review mode and review list from flags and directory layout."""
+    if self_flag:
+        return "self", SELF_REVIEWS
+    if external_flag:
+        return "external", EXTERNAL_REVIEWS
+    if (target_dir / ".cw9").is_dir():
+        return "external", EXTERNAL_REVIEWS
+    return "self", SELF_REVIEWS
+
+
+def _parse_verdict(result_text: str) -> str:
+    """Parse PASS/FAIL/WARNING/CRITICAL from result text."""
+    upper = result_text.upper()
+    if "FAIL" in upper or "CRITICAL" in upper:
+        return "fail"
+    if "WARNING" in upper:
+        return "warning"
+    if "PASS" in upper:
+        return "pass"
+    return "unknown"
+
+
+def _aggregate_verdicts(results: dict[str, dict]) -> tuple[str, int]:
+    """Compute overall status and exit code from per-pass results.
+
+    Returns (status, exit_code) where:
+      - status is 'fail' if any verdict is 'fail', else 'warning' if any, else 'pass'
+      - exit_code is 1 for 'fail', 0 otherwise
+    """
+    overall = "pass"
+    for r in results.values():
+        v = r.get("verdict", "unknown")
+        if v == "fail":
+            overall = "fail"
+            break
+        if v == "warning" and overall == "pass":
+            overall = "warning"
+    exit_code = 1 if overall == "fail" else 0
+    return overall, exit_code
+
+
+async def _run_review_pass(
+    name: str,
+    prompt_file: Path,
+    plan_path: str,
+    cwd: str,
+    json_mode: bool,
+) -> dict:
+    """Run a single review pass via Claude Agent SDK."""
+    import os as _os
+    _os.environ.pop("CLAUDECODE", None)
+    from claude_agent_sdk import (
+        query as _query, ClaudeAgentOptions, AssistantMessage,
+        ResultMessage, TextBlock,
+    )
+    _cli_mod = sys.modules[__name__]
+    _cli_mod.review_query = _query
+
+    prompt_text = prompt_file.read_text()
+    full_prompt = f"{prompt_text}\n\n$ARGUMENTS: {plan_path}"
+
+    result_text = ""
+    cost = 0.0
+    session_id = ""
+
+    options = ClaudeAgentOptions(
+        allowed_tools=["Read", "Grep", "Glob", "Bash"],
+        system_prompt="You are a CW9 plan reviewer. Follow the review instructions precisely.",
+        max_turns=20,
+        model="claude-sonnet-4-6",
+    )
+
+    async for message in _cli_mod.review_query(prompt=full_prompt, options=options):
+        if isinstance(message, ResultMessage):
+            result_text = message.result or ""
+            cost = getattr(message, "total_cost_usd", 0.0) or 0.0
+            session_id = getattr(message, "session_id", "") or ""
+        elif isinstance(message, AssistantMessage) and not json_mode:
+            for block in message.content:
+                if isinstance(block, TextBlock):
+                    sys.stdout.write(block.text)
+                    sys.stdout.flush()
+
+    verdict = _parse_verdict(result_text)
+    return {
+        "name": name,
+        "verdict": verdict,
+        "session_id": session_id,
+        "cost_usd": cost,
+        "result_length": len(result_text),
+        "result_text": result_text,
+    }
+
+
+async def _orchestrate_reviews(
+    mode: str,
+    plan_path: str,
+    cwd: str,
+    phase: str,
+    json_mode: bool,
+) -> dict:
+    """Run all review passes in dependency order."""
+    import asyncio
+    from datetime import datetime, timezone
+
+    reviews = SELF_REVIEWS if mode == "self" else EXTERNAL_REVIEWS
+    review_dict = dict(reviews)
+    results: dict[str, dict] = {}
+    total_cost = 0.0
+
+    def resolve(rel_path: str) -> Path:
+        if rel_path.startswith("~"):
+            return Path(rel_path).expanduser()
+        return Path(cwd) / rel_path
+
+    # Phase 1: Artifacts (gate)
+    if phase in ("pre", "all"):
+        if not json_mode:
+            print(f"\n{'='*60}")
+            print("  REVIEW PASS 1: Artifacts")
+            print(f"{'='*60}\n")
+
+        r = await _run_review_pass(
+            "artifacts", resolve(review_dict["artifacts"]),
+            plan_path, cwd, json_mode,
+        )
+        results["artifacts"] = r
+        total_cost += r["cost_usd"]
+
+        if r["verdict"] == "fail":
+            if not json_mode:
+                print("\n  Artifacts review FAILED -- stopping.")
+            return {
+                "status": "blocked",
+                "blocked_by": "artifacts",
+                "results": results,
+                "total_cost_usd": total_cost,
+            }
+
+        # Phase 2: Parallel passes
+        parallel_names = ["coverage"]
+        if mode == "self" and "interaction" in review_dict:
+            parallel_names.append("interaction")
+
+        if not json_mode:
+            names_str = " + ".join(parallel_names)
+            print(f"\n{'='*60}")
+            print(f"  REVIEW PASS 2: {names_str} (parallel)")
+            print(f"{'='*60}\n")
+
+        parallel_tasks = [
+            _run_review_pass(n, resolve(review_dict[n]), plan_path, cwd, json_mode)
+            for n in parallel_names
+        ]
+        parallel_results = await asyncio.gather(*parallel_tasks)
+        for pr in parallel_results:
+            results[pr["name"]] = pr
+            total_cost += pr["cost_usd"]
+
+        # Phase 3: Abstraction Gap
+        if not json_mode:
+            print(f"\n{'='*60}")
+            print("  REVIEW PASS 3: Abstraction Gap")
+            print(f"{'='*60}\n")
+
+        r = await _run_review_pass(
+            "abstraction_gap", resolve(review_dict["abstraction_gap"]),
+            plan_path, cwd, json_mode,
+        )
+        results["abstraction_gap"] = r
+        total_cost += r["cost_usd"]
+
+    # Phase 4: Imports (post-impl only)
+    if phase in ("post", "all") and "imports" in review_dict:
+        if not json_mode:
+            print(f"\n{'='*60}")
+            print("  REVIEW PASS 4: Import Audit")
+            print(f"{'='*60}\n")
+
+        r = await _run_review_pass(
+            "imports", resolve(review_dict["imports"]),
+            plan_path, cwd, json_mode,
+        )
+        results["imports"] = r
+        total_cost += r["cost_usd"]
+
+    overall, _ = _aggregate_verdicts(results)
+
+    return {
+        "status": overall,
+        "mode": mode,
+        "plan_path": plan_path,
+        "phase": phase,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "results": {
+            k: {kk: vv for kk, vv in v.items() if kk != "result_text"}
+            for k, v in results.items()
+        },
+        "total_cost_usd": total_cost,
+    }
+
+
+def cmd_plan_review(args: argparse.Namespace) -> int:
+    """Orchestrate cw9 plan-review passes via Claude Agent SDK."""
+    import asyncio
+
+    target = Path(args.target_dir).resolve()
+    mode, _reviews = _detect_review_mode(args.self_hosting, args.external, target)
+    phase = args.phase
+    json_mode = args.json_output
+
+    summary = asyncio.run(
+        _orchestrate_reviews(mode, args.plan_path, str(target), phase, json_mode)
+    )
+
+    if json_mode:
+        print(json.dumps(summary, indent=2))
+    else:
+        print(f"\n{'='*60}")
+        print(f"  SUMMARY: {summary['status'].upper()}")
+        print(f"  Total cost: ${summary['total_cost_usd']:.4f}")
+        print(f"{'='*60}")
+        icon_map = {"pass": "+", "fail": "X", "warning": "!", "unknown": "?"}
+        for name, r in summary["results"].items():
+            print(f"  [{icon_map.get(r['verdict'], '?')}] {name}: {r['verdict']}")
+
+    _, exit_code = _aggregate_verdicts(
+        {k: v for k, v in summary["results"].items()}
+    )
+    return exit_code
+
+
 def _add_utility_commands(sub: argparse._SubParsersAction) -> None:
-    """Add utility subcommands: cleanup, loop-status."""
+    """Add utility subcommands: cleanup, loop-status, plan-review."""
     p_cleanup = sub.add_parser("cleanup", help="Remove stale cw9 temp directories from /tmp")
     p_cleanup.add_argument("--max-age", type=int, default=24,
                            help="Remove dirs older than N hours (default: 24, use 0 for all)")
@@ -2044,6 +2363,18 @@ def _add_utility_commands(sub: argparse._SubParsersAction) -> None:
     p_loop_status.add_argument("target_dir", nargs="?", default=".")
     p_loop_status.add_argument("--json", dest="json_output", action="store_true",
                                help="Output as JSON")
+
+    p_plan_review = sub.add_parser("plan-review", help="Orchestrate plan review passes")
+    p_plan_review.add_argument("plan_path", help="Path to CW9 TDD plan")
+    p_plan_review.add_argument("target_dir", nargs="?", default=".")
+    p_plan_review.add_argument("--self", dest="self_hosting", action="store_true",
+                               help="Use self-hosting review commands")
+    p_plan_review.add_argument("--external", action="store_true",
+                               help="Use external project review commands")
+    p_plan_review.add_argument("--json", dest="json_output", action="store_true",
+                               help="Machine-readable JSON output")
+    p_plan_review.add_argument("--phase", choices=["pre", "post", "all"], default="all",
+                               help="Which review phases to run (default: all)")
 
 
 # Dispatch table mapping subcommand names to handler functions.
@@ -2065,6 +2396,7 @@ _DISPATCH: dict[str, Callable[[argparse.Namespace], int]] = {
     "gwt-author": cmd_gwt_author,
     "cleanup": cmd_cleanup,
     "loop-status": cmd_loop_status,
+    "plan-review": cmd_plan_review,
 }
 
 
