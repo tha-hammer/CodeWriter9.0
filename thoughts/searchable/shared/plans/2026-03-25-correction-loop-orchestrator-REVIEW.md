@@ -19,7 +19,7 @@ reviewed_plan: thoughts/searchable/shared/plans/2026-03-25-tdd-correction-loop-o
 | Context file quality | PASS | 0 — all 20 files have Test Interface + Anti-Patterns |
 | Bridge artifact match | PASS | 0 — pending full count validation (subagent) |
 | Test-to-verifier mapping | **WARNING** | 2 gaps in plan's test specifications |
-| Simulation trace coverage | **WARNING** | 1 — gwt-0098 has no traces to check |
+| Simulation trace coverage | **CRITICAL** | 2 — gwt-0092 traces never exercise exhaustion path; gwt-0098 has no traces |
 | TLA+ invariant coverage | **WARNING** | 3 invariants not explicitly covered by plan tests |
 | Dead code / scope | PASS | 0 — plan preserves existing code, only adds |
 
@@ -137,7 +137,9 @@ No `depends_on` UUIDs in any registered GWT — cli.py functions are not in craw
 
 ### Critical (must fix before implementation)
 
-None.
+1. **gwt-0092 simulation traces never exercise the "retries exhausted" path**: All 10 traces for gwt-0092 (RetriesExhausted) terminate with `permanent=FALSE, summaryStatus="pass"`. The core behavior — where `attempt==max_retries`, the FAIL verdict causes `MaybeSpawnCorrection` to be skipped, `permanent` is set to `TRUE`, and `stuckOn` is populated — has zero trace coverage. The TLC-verified invariants (`PermanentFailConsistent`, `DependentsBlockedWhenPermanent`, `SummaryCorrectWhenPermanent`) are sound, but `cw9 gen-tests` cannot generate concrete test scenarios for the exhaustion terminal state without traces demonstrating the variable transitions.
+   - Impact: Test generation for the plan's Step 4 core scenario ("Pass exhausts retries → permanent FAIL, stuck_on in summary, dependents blocked") will lack concrete state transition examples. Tests must be hand-written from bridge verifiers.
+   - Fix: Re-run `cw9 loop gwt-0092 . --context-file .cw9/context/gwt-0092.md` with a lower MaxRetries constant in the context (e.g., MaxRetries=1 or 2) so the simulation is more likely to exercise the exhaustion boundary. Alternatively, hand-write the exhaustion test from the 8 bridge verifiers.
 
 ### Warnings (should fix)
 
@@ -173,13 +175,14 @@ None.
 ## Approval Status
 
 - [ ] **Ready for `/cw9_implement`** — no critical issues
-- [x] **Needs minor revision** — 4 warnings about test gaps and 1 missing trace file
-- [ ] **Needs major revision**
+- [ ] **Needs minor revision**
+- [x] **Needs major revision** — 1 critical trace gap (gwt-0092 exhaustion path), 4 warnings
 - [ ] **Needs re-pipeline** — artifacts missing or stale
 
 ### Recommended Actions Before Implementation
 
-1. **Re-run gwt-0098 pipeline** to generate sim traces: `cw9 loop gwt-0098 . --context-file .cw9/context/gwt-0098.md`
-2. **Add 3 explicit test specifications** to the plan for invariants: FindingsExtractedBeforeCorrection, NoSpuriousCorrections, BlockedDistinctFromFail
-3. **Update plan frontmatter** git_commit to 40fe81c
-4. **(Optional)** Ingest cli.py to crawl.db for future stale detection
+1. **CRITICAL: Re-run gwt-0092 pipeline** with lower MaxRetries to generate exhaustion traces: update `.cw9/context/gwt-0092.md` to specify `CONSTANT MaxRetries = 2` then `cw9 loop gwt-0092 . --context-file .cw9/context/gwt-0092.md`
+2. **Re-run gwt-0098 pipeline** to generate sim traces: `cw9 loop gwt-0098 . --context-file .cw9/context/gwt-0098.md`
+3. **Add 3 explicit test specifications** to the plan for invariants: FindingsExtractedBeforeCorrection, NoSpuriousCorrections, BlockedDistinctFromFail
+4. **Update plan frontmatter** git_commit to 40fe81c
+5. **(Optional)** Ingest cli.py to crawl.db for future stale detection
