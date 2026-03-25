@@ -1,0 +1,1419 @@
+{
+  "gwt_id": "gwt-0085",
+  "module_name": "CmdPlanReviewMaxRetries",
+  "data_structures": {
+    "CmdPlanReviewMaxRetriesState": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-state",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"SetupAutoFix\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "init",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "auto_fix": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "cli_retries_omitted": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "cli_retries_value": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "parsed_max_retries": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "error_raised": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "forwarded": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "orchestrator_retries": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CmdPlanReviewMaxRetries TLA+ spec"
+    }
+  },
+  "operations": {
+    "SetupAutoFix": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-SetupAutoFix",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-SetupAutoFix",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SetupAutoFix from CmdPlanReviewMaxRetries spec"
+    },
+    "ChooseRetries": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-ChooseRetries",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-ChooseRetries",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ChooseRetries from CmdPlanReviewMaxRetries spec"
+    },
+    "ParseMaxRetries": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-ParseMaxRetries",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-ParseMaxRetries",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ParseMaxRetries from CmdPlanReviewMaxRetries spec"
+    },
+    "ValidateNonNegative": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-ValidateNonNegative",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-ValidateNonNegative",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/ValidateNonNegativeError"
+      ],
+      "error_handling": "raise",
+      "description": "Action ValidateNonNegative from CmdPlanReviewMaxRetries spec"
+    },
+    "ForwardToOrchestrator": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-ForwardToOrchestrator",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-ForwardToOrchestrator",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ForwardToOrchestrator from CmdPlanReviewMaxRetries spec"
+    },
+    "SetComplete": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-SetComplete",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-SetComplete",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SetComplete from CmdPlanReviewMaxRetries spec"
+    },
+    "Terminate": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-Terminate",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from CmdPlanReviewMaxRetries spec"
+    }
+  },
+  "verifiers": {
+    "TypeOK": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-verify-TypeOK",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-TypeOK",
+      "conditions": [
+        "phase \\in {\"init\", \"parsed\", \"validated\", \"forwarded\", \"complete\", \"rejected\"}",
+        "error_raised \\in BOOLEAN",
+        "forwarded \\in BOOLEAN",
+        "auto_fix \\in BOOLEAN",
+        "cli_retries_omitted \\in BOOLEAN"
+      ],
+      "message": "TypeOK violation: /\\ phase \\in {\"init\", \"parsed\", \"validated\", \"forwarded\", \"complete\", \"rejected\"}\n    /\\ error_raised \\in BOOLEAN\n   ...",
+      "applies_to": [
+        "auto_fix",
+        "cli_retries_omitted",
+        "error_raised",
+        "forwarded",
+        "phase"
+      ],
+      "description": "Verifier for invariant TypeOK from CmdPlanReviewMaxRetries spec"
+    },
+    "NegativeRejected": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-verify-NegativeRejected",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-NegativeRejected",
+      "conditions": [
+        "cli_retries_omitted = FALSE",
+        "cli_retries_value < 0",
+        "phase \\notin {\"init\", \"parsed\"})\n        => error_raised = TRUE"
+      ],
+      "message": "NegativeRejected violation: (/\\ cli_retries_omitted = FALSE\n     /\\ cli_retries_value < 0\n     /\\ phase \\notin {\"init\", \"parsed\"})\n        => err...",
+      "applies_to": [
+        "cli_retries_omitted",
+        "cli_retries_value",
+        "error_raised",
+        "phase"
+      ],
+      "description": "Verifier for invariant NegativeRejected from CmdPlanReviewMaxRetries spec"
+    },
+    "MaxRetriesForwarded": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-verify-MaxRetriesForwarded",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-MaxRetriesForwarded",
+      "conditions": [
+        "auto_fix",
+        "phase = \"complete\")\n        => (forwarded",
+        "orchestrator_retries = parsed_max_retries"
+      ],
+      "message": "MaxRetriesForwarded violation: (auto_fix /\\ phase = \"complete\")\n        => (forwarded /\\ orchestrator_retries = parsed_max_retries)",
+      "applies_to": [
+        "auto_fix",
+        "forwarded",
+        "orchestrator_retries",
+        "parsed_max_retries",
+        "phase"
+      ],
+      "description": "Verifier for invariant MaxRetriesForwarded from CmdPlanReviewMaxRetries spec"
+    },
+    "ZeroMeansSinglePass": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-verify-ZeroMeansSinglePass",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-ZeroMeansSinglePass",
+      "conditions": [
+        "forwarded",
+        "parsed_max_retries = 0)\n        => orchestrator_retries = 0"
+      ],
+      "message": "ZeroMeansSinglePass violation: (forwarded /\\ parsed_max_retries = 0)\n        => orchestrator_retries = 0",
+      "applies_to": [
+        "forwarded",
+        "orchestrator_retries",
+        "parsed_max_retries"
+      ],
+      "description": "Verifier for invariant ZeroMeansSinglePass from CmdPlanReviewMaxRetries spec"
+    },
+    "DefaultWhenOmitted": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-verify-DefaultWhenOmitted",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-DefaultWhenOmitted",
+      "conditions": [
+        "cli_retries_omitted",
+        "phase \\notin {\"init\", \"rejected\"})\n        => parsed_max_retries = 2"
+      ],
+      "message": "DefaultWhenOmitted violation: (cli_retries_omitted /\\ phase \\notin {\"init\", \"rejected\"})\n        => parsed_max_retries = 2",
+      "applies_to": [
+        "cli_retries_omitted",
+        "parsed_max_retries",
+        "phase"
+      ],
+      "description": "Verifier for invariant DefaultWhenOmitted from CmdPlanReviewMaxRetries spec"
+    },
+    "IgnoredWithoutAutoFix": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-verify-IgnoredWithoutAutoFix",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-IgnoredWithoutAutoFix",
+      "conditions": [
+        "auto_fix = FALSE",
+        "phase = \"complete\")\n        => forwarded = FALSE"
+      ],
+      "message": "IgnoredWithoutAutoFix violation: (auto_fix = FALSE /\\ phase = \"complete\")\n        => forwarded = FALSE",
+      "applies_to": [
+        "auto_fix",
+        "forwarded",
+        "phase"
+      ],
+      "description": "Verifier for invariant IgnoredWithoutAutoFix from CmdPlanReviewMaxRetries spec"
+    },
+    "ValidParsedRetries": {
+      "function_id": "fn-CmdPlanReviewMaxRetries-verify-ValidParsedRetries",
+      "acceptance_criteria_id": "ac-CmdPlanReviewMaxRetries-ValidParsedRetries",
+      "conditions": [
+        "error_raised = FALSE",
+        "phase \\notin {\"init\", \"parsed\", \"rejected\"})\n        => parsed_max_retries >= 0"
+      ],
+      "message": "ValidParsedRetries violation: (error_raised = FALSE /\\ phase \\notin {\"init\", \"parsed\", \"rejected\"})\n        => parsed_max_retries >= 0",
+      "applies_to": [
+        "error_raised",
+        "parsed_max_retries",
+        "phase"
+      ],
+      "description": "Verifier for invariant ValidParsedRetries from CmdPlanReviewMaxRetries spec"
+    }
+  },
+  "assertions": {
+    "assert_TypeOK": {
+      "condition": "and phase in {\"init\", \"parsed\", \"validated\", \"forwarded\", \"complete\", \"rejected\"}\n    and error_raised in BOOLEAN\n    and forwarded in BOOLEAN\n    and auto_fix in BOOLEAN\n    and cli_retries_omitted in BOOLEAN",
+      "message": "Assertion failed: TypeOK \u2014 /\\ phase \\in {\"init\", \"parsed\", \"validated\", \"forwarded\", \"complete\", \"rejected\"}\n    /\\ error_raised \\in BOOLEAN\n   ...",
+      "description": "Test assertion for TypeOK from CmdPlanReviewMaxRetries spec"
+    },
+    "assert_NegativeRejected": {
+      "condition": "(and cli_retries_omitted = FALSE\n     and cli_retries_value < 0\n     and phase not in {\"init\", \"parsed\"})\n        implies error_raised = TRUE",
+      "message": "Assertion failed: NegativeRejected \u2014 (/\\ cli_retries_omitted = FALSE\n     /\\ cli_retries_value < 0\n     /\\ phase \\notin {\"init\", \"parsed\"})\n        => err...",
+      "description": "Test assertion for NegativeRejected from CmdPlanReviewMaxRetries spec"
+    },
+    "assert_MaxRetriesForwarded": {
+      "condition": "(auto_fix and phase = \"complete\")\n        implies (forwarded and orchestrator_retries = parsed_max_retries)",
+      "message": "Assertion failed: MaxRetriesForwarded \u2014 (auto_fix /\\ phase = \"complete\")\n        => (forwarded /\\ orchestrator_retries = parsed_max_retries)",
+      "description": "Test assertion for MaxRetriesForwarded from CmdPlanReviewMaxRetries spec"
+    },
+    "assert_ZeroMeansSinglePass": {
+      "condition": "(forwarded and parsed_max_retries = 0)\n        implies orchestrator_retries = 0",
+      "message": "Assertion failed: ZeroMeansSinglePass \u2014 (forwarded /\\ parsed_max_retries = 0)\n        => orchestrator_retries = 0",
+      "description": "Test assertion for ZeroMeansSinglePass from CmdPlanReviewMaxRetries spec"
+    },
+    "assert_DefaultWhenOmitted": {
+      "condition": "(cli_retries_omitted and phase not in {\"init\", \"rejected\"})\n        implies parsed_max_retries = 2",
+      "message": "Assertion failed: DefaultWhenOmitted \u2014 (cli_retries_omitted /\\ phase \\notin {\"init\", \"rejected\"})\n        => parsed_max_retries = 2",
+      "description": "Test assertion for DefaultWhenOmitted from CmdPlanReviewMaxRetries spec"
+    },
+    "assert_IgnoredWithoutAutoFix": {
+      "condition": "(auto_fix = FALSE and phase = \"complete\")\n        implies forwarded = FALSE",
+      "message": "Assertion failed: IgnoredWithoutAutoFix \u2014 (auto_fix = FALSE /\\ phase = \"complete\")\n        => forwarded = FALSE",
+      "description": "Test assertion for IgnoredWithoutAutoFix from CmdPlanReviewMaxRetries spec"
+    },
+    "assert_ValidParsedRetries": {
+      "condition": "(error_raised = FALSE and phase not in {\"init\", \"parsed\", \"rejected\"})\n        implies parsed_max_retries >= 0",
+      "message": "Assertion failed: ValidParsedRetries \u2014 (error_raised = FALSE /\\ phase \\notin {\"init\", \"parsed\", \"rejected\"})\n        => parsed_max_retries >= 0",
+      "description": "Test assertion for ValidParsedRetries from CmdPlanReviewMaxRetries spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"validated\"",
+          "pc": "[main |-> \"ForwardToOrchestrator\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ForwardToOrchestrator",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "2"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "-1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "-1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "-1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "-1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "TRUE",
+          "phase": "\"rejected\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "-1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "-1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "TRUE",
+          "phase": "\"rejected\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "-1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "3",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "3",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "3"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "3",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"validated\"",
+          "pc": "[main |-> \"ForwardToOrchestrator\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "3"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ForwardToOrchestrator",
+        "vars": {
+          "cli_retries_value": "3",
+          "orchestrator_retries": "3",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"forwarded\"",
+          "pc": "[main |-> \"SetComplete\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "3"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SetComplete",
+        "vars": {
+          "cli_retries_value": "3",
+          "orchestrator_retries": "3",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "3",
+          "orchestrator_retries": "3",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"validated\"",
+          "pc": "[main |-> \"ForwardToOrchestrator\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ForwardToOrchestrator",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "2",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"forwarded\"",
+          "pc": "[main |-> \"SetComplete\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SetComplete",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "2",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "2"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "2",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "TRUE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "2"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"validated\"",
+          "pc": "[main |-> \"ForwardToOrchestrator\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ForwardToOrchestrator",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"forwarded\"",
+          "pc": "[main |-> \"SetComplete\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SetComplete",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"validated\"",
+          "pc": "[main |-> \"ForwardToOrchestrator\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ForwardToOrchestrator",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"validated\"",
+          "pc": "[main |-> \"ForwardToOrchestrator\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ForwardToOrchestrator",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"validated\"",
+          "pc": "[main |-> \"ForwardToOrchestrator\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ForwardToOrchestrator",
+        "vars": {
+          "cli_retries_value": "1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "1"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"validated\"",
+          "pc": "[main |-> \"ForwardToOrchestrator\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ForwardToOrchestrator",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"forwarded\"",
+          "pc": "[main |-> \"SetComplete\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SetComplete",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "TRUE",
+          "error_raised": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "TRUE",
+          "parsed_max_retries": "0"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"SetupAutoFix\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetupAutoFix",
+        "vars": {
+          "cli_retries_value": "0",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ChooseRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseRetries",
+        "vars": {
+          "cli_retries_value": "-1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"ParseMaxRetries\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "0"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ParseMaxRetries",
+        "vars": {
+          "cli_retries_value": "-1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "FALSE",
+          "phase": "\"parsed\"",
+          "pc": "[main |-> \"ValidateNonNegative\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "-1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ValidateNonNegative",
+        "vars": {
+          "cli_retries_value": "-1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "TRUE",
+          "phase": "\"rejected\"",
+          "pc": "[main |-> \"Terminate\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "-1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "cli_retries_value": "-1",
+          "orchestrator_retries": "0",
+          "forwarded": "FALSE",
+          "error_raised": "TRUE",
+          "phase": "\"rejected\"",
+          "pc": "[main |-> \"Done\"]",
+          "cli_retries_omitted": "FALSE",
+          "auto_fix": "FALSE",
+          "parsed_max_retries": "-1"
+        }
+      }
+    ]
+  ]
+}

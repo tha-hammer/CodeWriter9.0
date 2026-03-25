@@ -1,0 +1,414 @@
+{
+  "gwt_id": "gwt-0098",
+  "module_name": "AggregateVerdictsBlocked",
+  "data_structures": {
+    "AggregateVerdictsBlockedState": {
+      "function_id": "fn-AggregateVerdictsBlocked-state",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ProcessNext\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "pass_verdicts": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "aggregated": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "overall": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "passed_bucket": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "failed_bucket": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "blocked_bucket": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "stuck_on": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "idx": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from AggregateVerdictsBlocked TLA+ spec"
+    }
+  },
+  "operations": {
+    "ProcessNext": {
+      "function_id": "fn-AggregateVerdictsBlocked-ProcessNext",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-ProcessNext",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/ProcessNextFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action ProcessNext from AggregateVerdictsBlocked spec"
+    },
+    "ComputeOverall": {
+      "function_id": "fn-AggregateVerdictsBlocked-ComputeOverall",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-ComputeOverall",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ComputeOverall from AggregateVerdictsBlocked spec"
+    },
+    "SetAggregated": {
+      "function_id": "fn-AggregateVerdictsBlocked-SetAggregated",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-SetAggregated",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SetAggregated from AggregateVerdictsBlocked spec"
+    },
+    "Finish": {
+      "function_id": "fn-AggregateVerdictsBlocked-Finish",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from AggregateVerdictsBlocked spec"
+    }
+  },
+  "verifiers": {
+    "BlockedImpliesFail": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-BlockedImpliesFail",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-BlockedImpliesFail",
+      "conditions": [
+        "aggregated =>\n    ((\\E p \\in Passes : pass_verdicts[p] = \"blocked\") => overall = \"fail\""
+      ],
+      "message": "BlockedImpliesFail violation: aggregated =>\n    ((\\E p \\in Passes : pass_verdicts[p] = \"blocked\") => overall = \"fail\")",
+      "applies_to": [
+        "aggregated",
+        "overall",
+        "pass_verdicts"
+      ],
+      "description": "Verifier for invariant BlockedImpliesFail from AggregateVerdictsBlocked spec"
+    },
+    "FailImpliesFail": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-FailImpliesFail",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-FailImpliesFail",
+      "conditions": [
+        "aggregated =>\n    ((\\E p \\in Passes : pass_verdicts[p] = \"fail\") => overall = \"fail\""
+      ],
+      "message": "FailImpliesFail violation: aggregated =>\n    ((\\E p \\in Passes : pass_verdicts[p] = \"fail\") => overall = \"fail\")",
+      "applies_to": [
+        "aggregated",
+        "overall",
+        "pass_verdicts"
+      ],
+      "description": "Verifier for invariant FailImpliesFail from AggregateVerdictsBlocked spec"
+    },
+    "BucketPartition": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-BucketPartition",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-BucketPartition",
+      "conditions": [
+        "aggregated =>\n    (passed_bucket \\union failed_bucket \\union blocked_bucket = Passes"
+      ],
+      "message": "BucketPartition violation: aggregated =>\n    (passed_bucket \\union failed_bucket \\union blocked_bucket = Passes)",
+      "applies_to": [
+        "aggregated",
+        "blocked_bucket",
+        "failed_bucket",
+        "passed_bucket"
+      ],
+      "description": "Verifier for invariant BucketPartition from AggregateVerdictsBlocked spec"
+    },
+    "BucketDisjoint": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-BucketDisjoint",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-BucketDisjoint",
+      "conditions": [
+        "aggregated =>\n    (passed_bucket \\cap failed_bucket  = {}",
+        "passed_bucket \\cap blocked_bucket = {}",
+        "failed_bucket \\cap blocked_bucket = {}"
+      ],
+      "message": "BucketDisjoint violation: aggregated =>\n    (passed_bucket \\cap failed_bucket  = {} /\\\n     passed_bucket \\cap blocked_bucket = {} /\\\n     fail...",
+      "applies_to": [
+        "aggregated",
+        "blocked_bucket",
+        "failed_bucket",
+        "passed_bucket"
+      ],
+      "description": "Verifier for invariant BucketDisjoint from AggregateVerdictsBlocked spec"
+    },
+    "BlockedNotStuckOn": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-BlockedNotStuckOn",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-BlockedNotStuckOn",
+      "conditions": [
+        "aggregated =>\n    (\\A p \\in blocked_bucket : p \\notin stuck_on"
+      ],
+      "message": "BlockedNotStuckOn violation: aggregated =>\n    (\\A p \\in blocked_bucket : p \\notin stuck_on)",
+      "applies_to": [
+        "aggregated",
+        "blocked_bucket",
+        "stuck_on"
+      ],
+      "description": "Verifier for invariant BlockedNotStuckOn from AggregateVerdictsBlocked spec"
+    },
+    "FailIsStuckOn": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-FailIsStuckOn",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-FailIsStuckOn",
+      "conditions": [
+        "aggregated =>\n    (\\A p \\in failed_bucket : p \\in stuck_on"
+      ],
+      "message": "FailIsStuckOn violation: aggregated =>\n    (\\A p \\in failed_bucket : p \\in stuck_on)",
+      "applies_to": [
+        "aggregated",
+        "failed_bucket",
+        "stuck_on"
+      ],
+      "description": "Verifier for invariant FailIsStuckOn from AggregateVerdictsBlocked spec"
+    },
+    "StuckOnExactlyFails": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-StuckOnExactlyFails",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-StuckOnExactlyFails",
+      "conditions": [
+        "aggregated => (stuck_on = failed_bucket"
+      ],
+      "message": "StuckOnExactlyFails violation: aggregated => (stuck_on = failed_bucket)",
+      "applies_to": [
+        "aggregated",
+        "failed_bucket",
+        "stuck_on"
+      ],
+      "description": "Verifier for invariant StuckOnExactlyFails from AggregateVerdictsBlocked spec"
+    },
+    "WarningInPassed": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-WarningInPassed",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-WarningInPassed",
+      "conditions": [
+        "aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"warning\" => p \\in passed_bucket"
+      ],
+      "message": "WarningInPassed violation: aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"warning\" => p \\in passed_bucket)",
+      "applies_to": [
+        "aggregated",
+        "pass_verdicts",
+        "passed_bucket"
+      ],
+      "description": "Verifier for invariant WarningInPassed from AggregateVerdictsBlocked spec"
+    },
+    "PassInPassed": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-PassInPassed",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-PassInPassed",
+      "conditions": [
+        "aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"pass\" => p \\in passed_bucket"
+      ],
+      "message": "PassInPassed violation: aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"pass\" => p \\in passed_bucket)",
+      "applies_to": [
+        "aggregated",
+        "pass_verdicts",
+        "passed_bucket"
+      ],
+      "description": "Verifier for invariant PassInPassed from AggregateVerdictsBlocked spec"
+    },
+    "FailInFailed": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-FailInFailed",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-FailInFailed",
+      "conditions": [
+        "aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"fail\" => p \\in failed_bucket"
+      ],
+      "message": "FailInFailed violation: aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"fail\" => p \\in failed_bucket)",
+      "applies_to": [
+        "aggregated",
+        "failed_bucket",
+        "pass_verdicts"
+      ],
+      "description": "Verifier for invariant FailInFailed from AggregateVerdictsBlocked spec"
+    },
+    "BlockedInBlocked": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-BlockedInBlocked",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-BlockedInBlocked",
+      "conditions": [
+        "aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"blocked\" => p \\in blocked_bucket"
+      ],
+      "message": "BlockedInBlocked violation: aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"blocked\" => p \\in blocked_bucket)",
+      "applies_to": [
+        "aggregated",
+        "blocked_bucket",
+        "pass_verdicts"
+      ],
+      "description": "Verifier for invariant BlockedInBlocked from AggregateVerdictsBlocked spec"
+    },
+    "NoFailOrBlockedMeansPassOrWarning": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-NoFailOrBlockedMeansPassOrWarning",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-NoFailOrBlockedMeansPassOrWarning",
+      "conditions": [
+        "aggregated =>\n    ((\\A p \\in Passes : pass_verdicts[p] \\in {\"pass\", \"warning\"})\n     => overall \\in {\"pass\", \"warning\"}"
+      ],
+      "message": "NoFailOrBlockedMeansPassOrWarning violation: aggregated =>\n    ((\\A p \\in Passes : pass_verdicts[p] \\in {\"pass\", \"warning\"})\n     => overall \\in {\"pass\", \"warning\"})",
+      "applies_to": [
+        "aggregated",
+        "overall",
+        "pass_verdicts"
+      ],
+      "description": "Verifier for invariant NoFailOrBlockedMeansPassOrWarning from AggregateVerdictsBlocked spec"
+    },
+    "OverallIsValid": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-OverallIsValid",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-OverallIsValid",
+      "conditions": [
+        "aggregated => overall \\in {\"pass\", \"fail\", \"warning\"}"
+      ],
+      "message": "OverallIsValid violation: aggregated => overall \\in {\"pass\", \"fail\", \"warning\"}",
+      "applies_to": [
+        "aggregated",
+        "overall"
+      ],
+      "description": "Verifier for invariant OverallIsValid from AggregateVerdictsBlocked spec"
+    },
+    "BucketsSubsetPasses": {
+      "function_id": "fn-AggregateVerdictsBlocked-verify-BucketsSubsetPasses",
+      "acceptance_criteria_id": "ac-AggregateVerdictsBlocked-BucketsSubsetPasses",
+      "conditions": [
+        "passed_bucket  \\subseteq Passes",
+        "failed_bucket  \\subseteq Passes",
+        "blocked_bucket \\subseteq Passes",
+        "stuck_on       \\subseteq Passes"
+      ],
+      "message": "BucketsSubsetPasses violation: passed_bucket  \\subseteq Passes /\\\n  failed_bucket  \\subseteq Passes /\\\n  blocked_bucket \\subseteq Passes /\\\n  stuck_...",
+      "applies_to": [
+        "blocked_bucket",
+        "failed_bucket",
+        "passed_bucket",
+        "stuck_on"
+      ],
+      "description": "Verifier for invariant BucketsSubsetPasses from AggregateVerdictsBlocked spec"
+    }
+  },
+  "assertions": {
+    "assert_BlockedImpliesFail": {
+      "condition": "aggregated implies\n    ((\\E p in Passes : pass_verdicts[p] = \"blocked\") implies overall = \"fail\")",
+      "message": "Assertion failed: BlockedImpliesFail \u2014 aggregated =>\n    ((\\E p \\in Passes : pass_verdicts[p] = \"blocked\") => overall = \"fail\")",
+      "description": "Test assertion for BlockedImpliesFail from AggregateVerdictsBlocked spec"
+    },
+    "assert_FailImpliesFail": {
+      "condition": "aggregated implies\n    ((\\E p in Passes : pass_verdicts[p] = \"fail\") implies overall = \"fail\")",
+      "message": "Assertion failed: FailImpliesFail \u2014 aggregated =>\n    ((\\E p \\in Passes : pass_verdicts[p] = \"fail\") => overall = \"fail\")",
+      "description": "Test assertion for FailImpliesFail from AggregateVerdictsBlocked spec"
+    },
+    "assert_BucketPartition": {
+      "condition": "aggregated implies\n    (passed_bucket \\union failed_bucket \\union blocked_bucket = Passes)",
+      "message": "Assertion failed: BucketPartition \u2014 aggregated =>\n    (passed_bucket \\union failed_bucket \\union blocked_bucket = Passes)",
+      "description": "Test assertion for BucketPartition from AggregateVerdictsBlocked spec"
+    },
+    "assert_BucketDisjoint": {
+      "condition": "aggregated implies\n    (passed_bucket \\cap failed_bucket  = {} and\n     passed_bucket \\cap blocked_bucket = {} and\n     failed_bucket \\cap blocked_bucket = {})",
+      "message": "Assertion failed: BucketDisjoint \u2014 aggregated =>\n    (passed_bucket \\cap failed_bucket  = {} /\\\n     passed_bucket \\cap blocked_bucket = {} /\\\n     fail...",
+      "description": "Test assertion for BucketDisjoint from AggregateVerdictsBlocked spec"
+    },
+    "assert_BlockedNotStuckOn": {
+      "condition": "aggregated implies\n    (\\A p in blocked_bucket : p not in stuck_on)",
+      "message": "Assertion failed: BlockedNotStuckOn \u2014 aggregated =>\n    (\\A p \\in blocked_bucket : p \\notin stuck_on)",
+      "description": "Test assertion for BlockedNotStuckOn from AggregateVerdictsBlocked spec"
+    },
+    "assert_FailIsStuckOn": {
+      "condition": "aggregated implies\n    (\\A p in failed_bucket : p in stuck_on)",
+      "message": "Assertion failed: FailIsStuckOn \u2014 aggregated =>\n    (\\A p \\in failed_bucket : p \\in stuck_on)",
+      "description": "Test assertion for FailIsStuckOn from AggregateVerdictsBlocked spec"
+    },
+    "assert_StuckOnExactlyFails": {
+      "condition": "aggregated implies (stuck_on = failed_bucket)",
+      "message": "Assertion failed: StuckOnExactlyFails \u2014 aggregated => (stuck_on = failed_bucket)",
+      "description": "Test assertion for StuckOnExactlyFails from AggregateVerdictsBlocked spec"
+    },
+    "assert_WarningInPassed": {
+      "condition": "aggregated implies\n    (\\A p in Passes : pass_verdicts[p] = \"warning\" implies p in passed_bucket)",
+      "message": "Assertion failed: WarningInPassed \u2014 aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"warning\" => p \\in passed_bucket)",
+      "description": "Test assertion for WarningInPassed from AggregateVerdictsBlocked spec"
+    },
+    "assert_PassInPassed": {
+      "condition": "aggregated implies\n    (\\A p in Passes : pass_verdicts[p] = \"pass\" implies p in passed_bucket)",
+      "message": "Assertion failed: PassInPassed \u2014 aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"pass\" => p \\in passed_bucket)",
+      "description": "Test assertion for PassInPassed from AggregateVerdictsBlocked spec"
+    },
+    "assert_FailInFailed": {
+      "condition": "aggregated implies\n    (\\A p in Passes : pass_verdicts[p] = \"fail\" implies p in failed_bucket)",
+      "message": "Assertion failed: FailInFailed \u2014 aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"fail\" => p \\in failed_bucket)",
+      "description": "Test assertion for FailInFailed from AggregateVerdictsBlocked spec"
+    },
+    "assert_BlockedInBlocked": {
+      "condition": "aggregated implies\n    (\\A p in Passes : pass_verdicts[p] = \"blocked\" implies p in blocked_bucket)",
+      "message": "Assertion failed: BlockedInBlocked \u2014 aggregated =>\n    (\\A p \\in Passes : pass_verdicts[p] = \"blocked\" => p \\in blocked_bucket)",
+      "description": "Test assertion for BlockedInBlocked from AggregateVerdictsBlocked spec"
+    },
+    "assert_NoFailOrBlockedMeansPassOrWarning": {
+      "condition": "aggregated implies\n    ((\\A p in Passes : pass_verdicts[p] in {\"pass\", \"warning\"})\n     implies overall in {\"pass\", \"warning\"})",
+      "message": "Assertion failed: NoFailOrBlockedMeansPassOrWarning \u2014 aggregated =>\n    ((\\A p \\in Passes : pass_verdicts[p] \\in {\"pass\", \"warning\"})\n     => overall \\in {\"pass\", \"warning\"})",
+      "description": "Test assertion for NoFailOrBlockedMeansPassOrWarning from AggregateVerdictsBlocked spec"
+    },
+    "assert_OverallIsValid": {
+      "condition": "aggregated implies overall in {\"pass\", \"fail\", \"warning\"}",
+      "message": "Assertion failed: OverallIsValid \u2014 aggregated => overall \\in {\"pass\", \"fail\", \"warning\"}",
+      "description": "Test assertion for OverallIsValid from AggregateVerdictsBlocked spec"
+    },
+    "assert_BucketsSubsetPasses": {
+      "condition": "passed_bucket  \\subseteq Passes and\n  failed_bucket  \\subseteq Passes and\n  blocked_bucket \\subseteq Passes and\n  stuck_on       \\subseteq Passes",
+      "message": "Assertion failed: BucketsSubsetPasses \u2014 passed_bucket  \\subseteq Passes /\\\n  failed_bucket  \\subseteq Passes /\\\n  blocked_bucket \\subseteq Passes /\\\n  stuck_...",
+      "description": "Test assertion for BucketsSubsetPasses from AggregateVerdictsBlocked spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": []
+}

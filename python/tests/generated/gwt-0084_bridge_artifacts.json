@@ -1,0 +1,2068 @@
+{
+  "gwt_id": "gwt-0084",
+  "module_name": "OrchestrateReviewsInit",
+  "data_structures": {
+    "OrchestrateReviewsInitState": {
+      "function_id": "fn-OrchestrateReviewsInit-state",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"InitBudget\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "max_retries": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "MaxRetries",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "attempt_counts": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[p \\in PassNames |-> 0]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "budget_exhausted": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "completed_passes": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "active_pass": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "(CHOOSE p \\in PassNames : TRUE)",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "init",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from OrchestrateReviewsInit TLA+ spec"
+    }
+  },
+  "operations": {
+    "InitBudget": {
+      "function_id": "fn-OrchestrateReviewsInit-InitBudget",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-InitBudget",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action InitBudget from OrchestrateReviewsInit spec"
+    },
+    "RunPasses": {
+      "function_id": "fn-OrchestrateReviewsInit-RunPasses",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-RunPasses",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunPasses from OrchestrateReviewsInit spec"
+    },
+    "AttemptAndOutcome": {
+      "function_id": "fn-OrchestrateReviewsInit-AttemptAndOutcome",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-AttemptAndOutcome",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AttemptAndOutcome from OrchestrateReviewsInit spec"
+    },
+    "Finish": {
+      "function_id": "fn-OrchestrateReviewsInit-Finish",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from OrchestrateReviewsInit spec"
+    }
+  },
+  "verifiers": {
+    "TypeOK": {
+      "function_id": "fn-OrchestrateReviewsInit-verify-TypeOK",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-TypeOK",
+      "conditions": [
+        "max_retries \\in Nat",
+        "\\A p \\in PassNames : attempt_counts[p] \\in Nat",
+        "budget_exhausted \\subseteq PassNames",
+        "completed_passes \\subseteq PassNames",
+        "phase \\in {\"init\", \"running\", \"done\"}"
+      ],
+      "message": "TypeOK violation: /\\ max_retries \\in Nat\n    /\\ \\A p \\in PassNames : attempt_counts[p] \\in Nat\n    /\\ budget_exhausted \\subseteq PassNa...",
+      "applies_to": [
+        "attempt_counts",
+        "budget_exhausted",
+        "completed_passes",
+        "max_retries",
+        "phase"
+      ],
+      "description": "Verifier for invariant TypeOK from OrchestrateReviewsInit spec"
+    },
+    "DefaultRetries": {
+      "function_id": "fn-OrchestrateReviewsInit-verify-DefaultRetries",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-DefaultRetries",
+      "conditions": [
+        "max_retries = MaxRetries"
+      ],
+      "message": "DefaultRetries violation: max_retries = MaxRetries",
+      "applies_to": [
+        "max_retries"
+      ],
+      "description": "Verifier for invariant DefaultRetries from OrchestrateReviewsInit spec"
+    },
+    "TotalAttemptsPerPass": {
+      "function_id": "fn-OrchestrateReviewsInit-verify-TotalAttemptsPerPass",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-TotalAttemptsPerPass",
+      "conditions": [
+        "\\A p \\in PassNames : attempt_counts[p] <= max_retries + 1"
+      ],
+      "message": "TotalAttemptsPerPass violation: \\A p \\in PassNames : attempt_counts[p] <= max_retries + 1",
+      "applies_to": [
+        "attempt_counts",
+        "max_retries"
+      ],
+      "description": "Verifier for invariant TotalAttemptsPerPass from OrchestrateReviewsInit spec"
+    },
+    "CountsNonNegative": {
+      "function_id": "fn-OrchestrateReviewsInit-verify-CountsNonNegative",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-CountsNonNegative",
+      "conditions": [
+        "\\A p \\in PassNames : attempt_counts[p] >= 0"
+      ],
+      "message": "CountsNonNegative violation: \\A p \\in PassNames : attempt_counts[p] >= 0",
+      "applies_to": [
+        "attempt_counts"
+      ],
+      "description": "Verifier for invariant CountsNonNegative from OrchestrateReviewsInit spec"
+    },
+    "BudgetExhaustionSound": {
+      "function_id": "fn-OrchestrateReviewsInit-verify-BudgetExhaustionSound",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-BudgetExhaustionSound",
+      "conditions": [
+        "\\A p \\in PassNames :\n        p \\in budget_exhausted => attempt_counts[p] > max_retries"
+      ],
+      "message": "BudgetExhaustionSound violation: \\A p \\in PassNames :\n        p \\in budget_exhausted => attempt_counts[p] > max_retries",
+      "applies_to": [
+        "attempt_counts",
+        "budget_exhausted",
+        "max_retries"
+      ],
+      "description": "Verifier for invariant BudgetExhaustionSound from OrchestrateReviewsInit spec"
+    },
+    "BudgetExhaustionComplete": {
+      "function_id": "fn-OrchestrateReviewsInit-verify-BudgetExhaustionComplete",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-BudgetExhaustionComplete",
+      "conditions": [
+        "\\A p \\in PassNames :\n        (attempt_counts[p] > max_retries",
+        "p \\notin completed_passes)\n            => p \\in budget_exhausted"
+      ],
+      "message": "BudgetExhaustionComplete violation: \\A p \\in PassNames :\n        (attempt_counts[p] > max_retries /\\ p \\notin completed_passes)\n            => p \\in budg...",
+      "applies_to": [
+        "attempt_counts",
+        "budget_exhausted",
+        "completed_passes",
+        "max_retries"
+      ],
+      "description": "Verifier for invariant BudgetExhaustionComplete from OrchestrateReviewsInit spec"
+    },
+    "DisjointTermination": {
+      "function_id": "fn-OrchestrateReviewsInit-verify-DisjointTermination",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-DisjointTermination",
+      "conditions": [
+        "budget_exhausted \\intersect completed_passes = {}"
+      ],
+      "message": "DisjointTermination violation: budget_exhausted \\intersect completed_passes = {}",
+      "applies_to": [
+        "budget_exhausted",
+        "completed_passes"
+      ],
+      "description": "Verifier for invariant DisjointTermination from OrchestrateReviewsInit spec"
+    },
+    "InitialCountsZero": {
+      "function_id": "fn-OrchestrateReviewsInit-verify-InitialCountsZero",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsInit-InitialCountsZero",
+      "conditions": [
+        "phase = \"init\" =>\n        \\A p \\in PassNames : attempt_counts[p] = 0"
+      ],
+      "message": "InitialCountsZero violation: phase = \"init\" =>\n        \\A p \\in PassNames : attempt_counts[p] = 0",
+      "applies_to": [
+        "attempt_counts",
+        "phase"
+      ],
+      "description": "Verifier for invariant InitialCountsZero from OrchestrateReviewsInit spec"
+    }
+  },
+  "assertions": {
+    "assert_TypeOK": {
+      "condition": "and max_retries in Nat\n    and \\A p in PassNames : attempt_counts[p] in Nat\n    and budget_exhausted \\subseteq PassNames\n    and completed_passes \\subseteq PassNames\n    and phase in {\"init\", \"running\", \"done\"}",
+      "message": "Assertion failed: TypeOK \u2014 /\\ max_retries \\in Nat\n    /\\ \\A p \\in PassNames : attempt_counts[p] \\in Nat\n    /\\ budget_exhausted \\subseteq PassNa...",
+      "description": "Test assertion for TypeOK from OrchestrateReviewsInit spec"
+    },
+    "assert_DefaultRetries": {
+      "condition": "max_retries = MaxRetries",
+      "message": "Assertion failed: DefaultRetries \u2014 max_retries = MaxRetries",
+      "description": "Test assertion for DefaultRetries from OrchestrateReviewsInit spec"
+    },
+    "assert_TotalAttemptsPerPass": {
+      "condition": "\\A p in PassNames : attempt_counts[p] <= max_retries + 1",
+      "message": "Assertion failed: TotalAttemptsPerPass \u2014 \\A p \\in PassNames : attempt_counts[p] <= max_retries + 1",
+      "description": "Test assertion for TotalAttemptsPerPass from OrchestrateReviewsInit spec"
+    },
+    "assert_CountsNonNegative": {
+      "condition": "\\A p in PassNames : attempt_counts[p] >= 0",
+      "message": "Assertion failed: CountsNonNegative \u2014 \\A p \\in PassNames : attempt_counts[p] >= 0",
+      "description": "Test assertion for CountsNonNegative from OrchestrateReviewsInit spec"
+    },
+    "assert_BudgetExhaustionSound": {
+      "condition": "\\A p in PassNames :\n        p in budget_exhausted implies attempt_counts[p] > max_retries",
+      "message": "Assertion failed: BudgetExhaustionSound \u2014 \\A p \\in PassNames :\n        p \\in budget_exhausted => attempt_counts[p] > max_retries",
+      "description": "Test assertion for BudgetExhaustionSound from OrchestrateReviewsInit spec"
+    },
+    "assert_BudgetExhaustionComplete": {
+      "condition": "\\A p in PassNames :\n        (attempt_counts[p] > max_retries and p not in completed_passes)\n            implies p in budget_exhausted",
+      "message": "Assertion failed: BudgetExhaustionComplete \u2014 \\A p \\in PassNames :\n        (attempt_counts[p] > max_retries /\\ p \\notin completed_passes)\n            => p \\in budg...",
+      "description": "Test assertion for BudgetExhaustionComplete from OrchestrateReviewsInit spec"
+    },
+    "assert_DisjointTermination": {
+      "condition": "budget_exhausted intersect completed_passes = {}",
+      "message": "Assertion failed: DisjointTermination \u2014 budget_exhausted \\intersect completed_passes = {}",
+      "description": "Test assertion for DisjointTermination from OrchestrateReviewsInit spec"
+    },
+    "assert_InitialCountsZero": {
+      "condition": "phase = \"init\" implies\n        \\A p in PassNames : attempt_counts[p] = 0",
+      "message": "Assertion failed: InitialCountsZero \u2014 phase = \"init\" =>\n        \\A p \\in PassNames : attempt_counts[p] = 0",
+      "description": "Test assertion for InitialCountsZero from OrchestrateReviewsInit spec"
+    }
+  },
+  "test_scenarios": [
+    {
+      "name": "scenario_OrchestrateReviewsInit_BudgetExhaustionComplete_0",
+      "setup": {
+        "completed_passes": "{}",
+        "budget_exhausted": "{}",
+        "active_pass": "PassNames_1",
+        "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+        "phase": "\"init\"",
+        "pc": "[main |-> \"InitBudget\"]",
+        "max_retries": "10"
+      },
+      "steps": [],
+      "expected_outcome": "BudgetExhaustionComplete should hold but was violated at state 1",
+      "invariant_tested": "BudgetExhaustionComplete"
+    },
+    {
+      "name": "scenario_OrchestrateReviewsInit_BudgetExhaustionComplete_1",
+      "setup": {
+        "completed_passes": "{}",
+        "budget_exhausted": "{}",
+        "active_pass": "PassNames_1",
+        "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+        "phase": "\"init\"",
+        "pc": "[main |-> \"InitBudget\"]",
+        "max_retries": "10"
+      },
+      "steps": [],
+      "expected_outcome": "BudgetExhaustionComplete should hold but was violated at state 1",
+      "invariant_tested": "BudgetExhaustionComplete"
+    }
+  ],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 3)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 2)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 3 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 3 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 4 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 4 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 5 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 5 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 6 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 6 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 6 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 6 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 6 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 6 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 7 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 7 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 7 @@ PassNames_2 :> 3)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 3 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 3 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 4 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 4 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 4 @@ PassNames_2 :> 1)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 5)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 5)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 5)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"init\"",
+          "pc": "[main |-> \"InitBudget\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitBudget",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 0)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 1)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 2)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 3)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_2",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 0 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 1 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"AttemptAndOutcome\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "AttemptAndOutcome",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"RunPasses\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "RunPasses",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 4)",
+          "phase": "\"running\"",
+          "pc": "[main |-> \"Finish\"]",
+          "max_retries": "10"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Finish",
+        "vars": {
+          "completed_passes": "{PassNames_1, PassNames_2}",
+          "budget_exhausted": "{}",
+          "active_pass": "PassNames_1",
+          "attempt_counts": "(PassNames_1 :> 2 @@ PassNames_2 :> 4)",
+          "phase": "\"done\"",
+          "pc": "[main |-> \"Done\"]",
+          "max_retries": "10"
+        }
+      }
+    ]
+  ]
+}

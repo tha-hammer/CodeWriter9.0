@@ -1,0 +1,1067 @@
+{
+  "gwt_id": "gwt-0100",
+  "module_name": "CorrectionAgentOptions",
+  "data_structures": {
+    "CorrectionAgentOptionsState": {
+      "function_id": "fn-CorrectionAgentOptions-state",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Assemble\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "allowed_tools": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "max_turns": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "model": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "system_prompt": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "output_format": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "UNSET",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "options_valid": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CorrectionAgentOptions TLA+ spec"
+    }
+  },
+  "operations": {
+    "Assemble": {
+      "function_id": "fn-CorrectionAgentOptions-Assemble",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-Assemble",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Assemble from CorrectionAgentOptions spec"
+    },
+    "Validate": {
+      "function_id": "fn-CorrectionAgentOptions-Validate",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-Validate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Validate from CorrectionAgentOptions spec"
+    },
+    "Finish": {
+      "function_id": "fn-CorrectionAgentOptions-Finish",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from CorrectionAgentOptions spec"
+    }
+  },
+  "verifiers": {
+    "TurnLimit": {
+      "function_id": "fn-CorrectionAgentOptions-verify-TurnLimit",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-TurnLimit",
+      "conditions": [
+        "phase = \"assembled\" => max_turns = 20"
+      ],
+      "message": "TurnLimit violation: phase = \"assembled\" => max_turns = 20",
+      "applies_to": [
+        "max_turns",
+        "phase"
+      ],
+      "description": "Verifier for invariant TurnLimit from CorrectionAgentOptions spec"
+    },
+    "ModelFixed": {
+      "function_id": "fn-CorrectionAgentOptions-verify-ModelFixed",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-ModelFixed",
+      "conditions": [
+        "phase = \"assembled\" => model = \"claude-sonnet-4-6\""
+      ],
+      "message": "ModelFixed violation: phase = \"assembled\" => model = \"claude-sonnet-4-6\"",
+      "applies_to": [
+        "model",
+        "phase"
+      ],
+      "description": "Verifier for invariant ModelFixed from CorrectionAgentOptions spec"
+    },
+    "SystemPromptIdentity": {
+      "function_id": "fn-CorrectionAgentOptions-verify-SystemPromptIdentity",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-SystemPromptIdentity",
+      "conditions": [
+        "phase = \"assembled\" => system_prompt = \"CW9 correction agent\""
+      ],
+      "message": "SystemPromptIdentity violation: phase = \"assembled\" => system_prompt = \"CW9 correction agent\"",
+      "applies_to": [
+        "phase",
+        "system_prompt"
+      ],
+      "description": "Verifier for invariant SystemPromptIdentity from CorrectionAgentOptions spec"
+    },
+    "NoWebSearch": {
+      "function_id": "fn-CorrectionAgentOptions-verify-NoWebSearch",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-NoWebSearch",
+      "conditions": [
+        "\"WebSearch\" \\notin allowed_tools"
+      ],
+      "message": "NoWebSearch violation: \"WebSearch\" \\notin allowed_tools",
+      "applies_to": [
+        "allowed_tools"
+      ],
+      "description": "Verifier for invariant NoWebSearch from CorrectionAgentOptions spec"
+    },
+    "NoWebFetch": {
+      "function_id": "fn-CorrectionAgentOptions-verify-NoWebFetch",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-NoWebFetch",
+      "conditions": [
+        "\"WebFetch\" \\notin allowed_tools"
+      ],
+      "message": "NoWebFetch violation: \"WebFetch\" \\notin allowed_tools",
+      "applies_to": [
+        "allowed_tools"
+      ],
+      "description": "Verifier for invariant NoWebFetch from CorrectionAgentOptions spec"
+    },
+    "NoSubAgentTools": {
+      "function_id": "fn-CorrectionAgentOptions-verify-NoSubAgentTools",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-NoSubAgentTools",
+      "conditions": [
+        "\"TodoWrite\" \\notin allowed_tools",
+        "\"Agent\" \\notin allowed_tools"
+      ],
+      "message": "NoSubAgentTools violation: \"TodoWrite\" \\notin allowed_tools /\\ \"Agent\" \\notin allowed_tools",
+      "applies_to": [
+        "allowed_tools"
+      ],
+      "description": "Verifier for invariant NoSubAgentTools from CorrectionAgentOptions spec"
+    },
+    "OutputFormatUnset": {
+      "function_id": "fn-CorrectionAgentOptions-verify-OutputFormatUnset",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-OutputFormatUnset",
+      "conditions": [
+        "phase = \"assembled\" => output_format = \"UNSET\""
+      ],
+      "message": "OutputFormatUnset violation: phase = \"assembled\" => output_format = \"UNSET\"",
+      "applies_to": [
+        "output_format",
+        "phase"
+      ],
+      "description": "Verifier for invariant OutputFormatUnset from CorrectionAgentOptions spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-CorrectionAgentOptions-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-BoundedExecution",
+      "conditions": [
+        "step_count <= BoundSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= BoundSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from CorrectionAgentOptions spec"
+    },
+    "AllInvariants": {
+      "function_id": "fn-CorrectionAgentOptions-verify-AllInvariants",
+      "acceptance_criteria_id": "ac-CorrectionAgentOptions-AllInvariants",
+      "conditions": [
+        "ExactToolSet",
+        "TurnLimit",
+        "ModelFixed",
+        "SystemPromptIdentity",
+        "NoWebSearch",
+        "NoWebFetch",
+        "NoSubAgentTools",
+        "OutputFormatUnset",
+        "BoundedExecution"
+      ],
+      "message": "AllInvariants violation: /\\ ExactToolSet\n    /\\ TurnLimit\n    /\\ ModelFixed\n    /\\ SystemPromptIdentity\n    /\\ NoWebSearch\n    /\\ NoWebFetch\n ...",
+      "applies_to": [
+        "CorrectionAgentOptions"
+      ],
+      "description": "Verifier for invariant AllInvariants from CorrectionAgentOptions spec"
+    }
+  },
+  "assertions": {
+    "assert_TurnLimit": {
+      "condition": "phase = \"assembled\" implies max_turns = 20",
+      "message": "Assertion failed: TurnLimit \u2014 phase = \"assembled\" => max_turns = 20",
+      "description": "Test assertion for TurnLimit from CorrectionAgentOptions spec"
+    },
+    "assert_ModelFixed": {
+      "condition": "phase = \"assembled\" implies model = \"claude-sonnet-4-6\"",
+      "message": "Assertion failed: ModelFixed \u2014 phase = \"assembled\" => model = \"claude-sonnet-4-6\"",
+      "description": "Test assertion for ModelFixed from CorrectionAgentOptions spec"
+    },
+    "assert_SystemPromptIdentity": {
+      "condition": "phase = \"assembled\" implies system_prompt = \"CW9 correction agent\"",
+      "message": "Assertion failed: SystemPromptIdentity \u2014 phase = \"assembled\" => system_prompt = \"CW9 correction agent\"",
+      "description": "Test assertion for SystemPromptIdentity from CorrectionAgentOptions spec"
+    },
+    "assert_NoWebSearch": {
+      "condition": "\"WebSearch\" not in allowed_tools",
+      "message": "Assertion failed: NoWebSearch \u2014 \"WebSearch\" \\notin allowed_tools",
+      "description": "Test assertion for NoWebSearch from CorrectionAgentOptions spec"
+    },
+    "assert_NoWebFetch": {
+      "condition": "\"WebFetch\" not in allowed_tools",
+      "message": "Assertion failed: NoWebFetch \u2014 \"WebFetch\" \\notin allowed_tools",
+      "description": "Test assertion for NoWebFetch from CorrectionAgentOptions spec"
+    },
+    "assert_NoSubAgentTools": {
+      "condition": "\"TodoWrite\" not in allowed_tools and \"Agent\" not in allowed_tools",
+      "message": "Assertion failed: NoSubAgentTools \u2014 \"TodoWrite\" \\notin allowed_tools /\\ \"Agent\" \\notin allowed_tools",
+      "description": "Test assertion for NoSubAgentTools from CorrectionAgentOptions spec"
+    },
+    "assert_OutputFormatUnset": {
+      "condition": "phase = \"assembled\" implies output_format = \"UNSET\"",
+      "message": "Assertion failed: OutputFormatUnset \u2014 phase = \"assembled\" => output_format = \"UNSET\"",
+      "description": "Test assertion for OutputFormatUnset from CorrectionAgentOptions spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= BoundSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= BoundSteps",
+      "description": "Test assertion for BoundedExecution from CorrectionAgentOptions spec"
+    },
+    "assert_AllInvariants": {
+      "condition": "and ExactToolSet\n    and TurnLimit\n    and ModelFixed\n    and SystemPromptIdentity\n    and NoWebSearch\n    and NoWebFetch\n    and NoSubAgentTools\n    and OutputFormatUnset\n    and BoundedExecution",
+      "message": "Assertion failed: AllInvariants \u2014 /\\ ExactToolSet\n    /\\ TurnLimit\n    /\\ ModelFixed\n    /\\ SystemPromptIdentity\n    /\\ NoWebSearch\n    /\\ NoWebFetch\n ...",
+      "description": "Test assertion for AllInvariants from CorrectionAgentOptions spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"idle\"",
+          "model": "\"\"",
+          "system_prompt": "\"\"",
+          "step_count": "0",
+          "max_turns": "0",
+          "allowed_tools": "{}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Assemble\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Assemble",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "1",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "FALSE",
+          "pc": "[correction_agent |-> \"Validate\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Validate",
+        "vars": {
+          "phase": "\"assembled\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "2",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Invoke\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Invoke",
+        "vars": {
+          "phase": "\"query_invoked\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "3",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Finish\"]",
+          "output_format": "\"UNSET\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Finish",
+        "vars": {
+          "phase": "\"complete\"",
+          "model": "\"claude-sonnet-4-6\"",
+          "system_prompt": "\"CW9 correction agent\"",
+          "step_count": "4",
+          "max_turns": "20",
+          "allowed_tools": "{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"}",
+          "options_valid": "TRUE",
+          "pc": "[correction_agent |-> \"Done\"]",
+          "output_format": "\"UNSET\""
+        }
+      }
+    ]
+  ]
+}

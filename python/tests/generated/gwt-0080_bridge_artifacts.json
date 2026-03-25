@@ -1,16 +1,16 @@
 {
   "gwt_id": "gwt-0080",
-  "module_name": "PlanReviewPhaseFiltering",
+  "module_name": "OrchestrateReviewsSelectsPasses",
   "data_structures": {
-    "PlanReviewPhaseFilteringState": {
-      "function_id": "fn-PlanReviewPhaseFiltering-state",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-state",
+    "OrchestrateReviewsSelectsPassesState": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-state",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-state",
       "fields": {
         "pc": {
           "type": "shared/data_types/Record",
           "required": true,
           "unique": false,
-          "default": "[self \\in ProcSet |-> \"Orchestrate\"]",
+          "default": "[self \\in ProcSet |-> \"ChoosePhase\"]",
           "validation": [
             "NotNull"
           ]
@@ -19,27 +19,18 @@
           "type": "shared/data_types/String",
           "required": true,
           "unique": false,
-          "default": "null",
+          "default": "pre",
           "validation": [
-            "NotNull"
+            "IsString"
           ]
         },
         "Mode": {
           "type": "shared/data_types/String",
           "required": true,
           "unique": false,
-          "default": "null",
+          "default": "self",
           "validation": [
-            "NotNull"
-          ]
-        },
-        "ArtifactsVerdict": {
-          "type": "shared/data_types/String",
-          "required": true,
-          "unique": false,
-          "default": "null",
-          "validation": [
-            "NotNull"
+            "IsString"
           ]
         },
         "executed": {
@@ -51,25 +42,7 @@
             "IsSet"
           ]
         },
-        "remaining": {
-          "type": "shared/data_types/String",
-          "required": true,
-          "unique": false,
-          "default": "null",
-          "validation": [
-            "NotNull"
-          ]
-        },
-        "current_pass": {
-          "type": "shared/data_types/String",
-          "required": true,
-          "unique": false,
-          "default": "",
-          "validation": [
-            "IsString"
-          ]
-        },
-        "orchestration_done": {
+        "exec_done": {
           "type": "shared/data_types/Boolean",
           "required": true,
           "unique": false,
@@ -80,230 +53,235 @@
         }
       },
       "relations": {},
-      "description": "State model derived from PlanReviewPhaseFiltering TLA+ spec"
+      "description": "State model derived from OrchestrateReviewsSelectsPasses TLA+ spec"
     }
   },
   "operations": {
-    "Orchestrate": {
-      "function_id": "fn-PlanReviewPhaseFiltering-Orchestrate",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-Orchestrate",
+    "ChoosePhase": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-ChoosePhase",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-ChoosePhase",
       "parameters": {},
       "returns": "shared/data_types/Record",
       "error_types": [],
       "error_handling": "none",
-      "description": "Action Orchestrate from PlanReviewPhaseFiltering spec"
+      "description": "Action ChoosePhase from OrchestrateReviewsSelectsPasses spec"
     },
-    "RunOrSkip": {
-      "function_id": "fn-PlanReviewPhaseFiltering-RunOrSkip",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-RunOrSkip",
+    "ChooseMode": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-ChooseMode",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-ChooseMode",
       "parameters": {},
       "returns": "shared/data_types/Record",
       "error_types": [],
       "error_handling": "none",
-      "description": "Action RunOrSkip from PlanReviewPhaseFiltering spec"
+      "description": "Action ChooseMode from OrchestrateReviewsSelectsPasses spec"
+    },
+    "Select": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-Select",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-Select",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Select from OrchestrateReviewsSelectsPasses spec"
     },
     "Finish": {
-      "function_id": "fn-PlanReviewPhaseFiltering-Finish",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-Finish",
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-Finish",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-Finish",
       "parameters": {},
       "returns": "shared/data_types/Record",
       "error_types": [],
       "error_handling": "none",
-      "description": "Action Finish from PlanReviewPhaseFiltering spec"
+      "description": "Action Finish from OrchestrateReviewsSelectsPasses spec"
     }
   },
   "verifiers": {
-    "PreSkipsImports": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-PreSkipsImports",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-PreSkipsImports",
-      "conditions": [
-        "Phase = \"pre\" => \"imports\" \\notin executed"
-      ],
-      "message": "PreSkipsImports violation: Phase = \"pre\" => \"imports\" \\notin executed",
-      "applies_to": [
-        "executed"
-      ],
-      "description": "Verifier for invariant PreSkipsImports from PlanReviewPhaseFiltering spec"
-    },
-    "ExternalNoInteraction": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-ExternalNoInteraction",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-ExternalNoInteraction",
-      "conditions": [
-        "Mode = \"external\" => \"interaction\" \\notin executed"
-      ],
-      "message": "ExternalNoInteraction violation: Mode = \"external\" => \"interaction\" \\notin executed",
-      "applies_to": [
-        "executed"
-      ],
-      "description": "Verifier for invariant ExternalNoInteraction from PlanReviewPhaseFiltering spec"
-    },
-    "PreExternalSubset": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-PreExternalSubset",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-PreExternalSubset",
-      "conditions": [
-        "Phase = \"pre\"",
-        "Mode = \"external\") =>\n        executed \\subseteq {\"artifacts\", \"coverage\", \"abstraction_gap\"}"
-      ],
-      "message": "PreExternalSubset violation: (Phase = \"pre\" /\\ Mode = \"external\") =>\n        executed \\subseteq {\"artifacts\", \"coverage\", \"abstraction_gap\"}",
-      "applies_to": [
-        "executed"
-      ],
-      "description": "Verifier for invariant PreExternalSubset from PlanReviewPhaseFiltering spec"
-    },
-    "PostOnlyImports": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-PostOnlyImports",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-PostOnlyImports",
-      "conditions": [
-        "Phase = \"post\"",
-        "orchestration_done) => executed = {\"imports\"}"
-      ],
-      "message": "PostOnlyImports violation: (Phase = \"post\" /\\ orchestration_done) => executed = {\"imports\"}",
-      "applies_to": [
-        "executed",
-        "orchestration_done"
-      ],
-      "description": "Verifier for invariant PostOnlyImports from PlanReviewPhaseFiltering spec"
-    },
-    "AllSelfComplete": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-AllSelfComplete",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-AllSelfComplete",
-      "conditions": [
-        "Phase = \"all\"",
-        "Mode = \"self\"",
-        "ArtifactsVerdict = \"pass\"",
-        "orchestration_done) =>\n        executed = AllPasses"
-      ],
-      "message": "AllSelfComplete violation: (Phase = \"all\" /\\ Mode = \"self\" /\\\n     ArtifactsVerdict = \"pass\" /\\ orchestration_done) =>\n        executed = AllPasses",
-      "applies_to": [
-        "executed",
-        "orchestration_done"
-      ],
-      "description": "Verifier for invariant AllSelfComplete from PlanReviewPhaseFiltering spec"
-    },
-    "AllExternalComplete": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-AllExternalComplete",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-AllExternalComplete",
-      "conditions": [
-        "Phase = \"all\"",
-        "Mode = \"external\"",
-        "ArtifactsVerdict = \"pass\"",
-        "orchestration_done) =>\n        executed = {\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"}"
-      ],
-      "message": "AllExternalComplete violation: (Phase = \"all\" /\\ Mode = \"external\" /\\\n     ArtifactsVerdict = \"pass\" /\\ orchestration_done) =>\n        executed = {\"...",
-      "applies_to": [
-        "executed",
-        "orchestration_done"
-      ],
-      "description": "Verifier for invariant AllExternalComplete from PlanReviewPhaseFiltering spec"
-    },
-    "PreSelfComplete": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-PreSelfComplete",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-PreSelfComplete",
-      "conditions": [
-        "Phase = \"pre\"",
-        "Mode = \"self\"",
-        "ArtifactsVerdict = \"pass\"",
-        "orchestration_done) =>\n        executed = {\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}"
-      ],
-      "message": "PreSelfComplete violation: (Phase = \"pre\" /\\ Mode = \"self\" /\\\n     ArtifactsVerdict = \"pass\" /\\ orchestration_done) =>\n        executed = {\"arti...",
-      "applies_to": [
-        "executed",
-        "orchestration_done"
-      ],
-      "description": "Verifier for invariant PreSelfComplete from PlanReviewPhaseFiltering spec"
-    },
-    "PreExternalComplete": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-PreExternalComplete",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-PreExternalComplete",
-      "conditions": [
-        "Phase = \"pre\"",
-        "Mode = \"external\"",
-        "ArtifactsVerdict = \"pass\"",
-        "orchestration_done) =>\n        executed = {\"artifacts\", \"coverage\", \"abstraction_gap\"}"
-      ],
-      "message": "PreExternalComplete violation: (Phase = \"pre\" /\\ Mode = \"external\" /\\\n     ArtifactsVerdict = \"pass\" /\\ orchestration_done) =>\n        executed = {\"...",
-      "applies_to": [
-        "executed",
-        "orchestration_done"
-      ],
-      "description": "Verifier for invariant PreExternalComplete from PlanReviewPhaseFiltering spec"
-    },
-    "FinalSetCorrect": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-FinalSetCorrect",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-FinalSetCorrect",
-      "conditions": [
-        "orchestration_done =>\n        executed = ExpectedPassesFor(Phase, Mode, ArtifactsVerdict"
-      ],
-      "message": "FinalSetCorrect violation: orchestration_done =>\n        executed = ExpectedPassesFor(Phase, Mode, ArtifactsVerdict)",
-      "applies_to": [
-        "executed",
-        "orchestration_done"
-      ],
-      "description": "Verifier for invariant FinalSetCorrect from PlanReviewPhaseFiltering spec"
-    },
-    "ExecutedSubsetAllPasses": {
-      "function_id": "fn-PlanReviewPhaseFiltering-verify-ExecutedSubsetAllPasses",
-      "acceptance_criteria_id": "ac-PlanReviewPhaseFiltering-ExecutedSubsetAllPasses",
+    "TypeOK": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-TypeOK",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-TypeOK",
       "conditions": [
         "executed \\subseteq AllPasses"
       ],
-      "message": "ExecutedSubsetAllPasses violation: executed \\subseteq AllPasses",
+      "message": "TypeOK violation: executed \\subseteq AllPasses",
       "applies_to": [
         "executed"
       ],
-      "description": "Verifier for invariant ExecutedSubsetAllPasses from PlanReviewPhaseFiltering spec"
+      "description": "Verifier for invariant TypeOK from OrchestrateReviewsSelectsPasses spec"
+    },
+    "PreSkipsImports": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-PreSkipsImports",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-PreSkipsImports",
+      "conditions": [
+        "Phase = \"pre\" => ~(\"imports\" \\in executed"
+      ],
+      "message": "PreSkipsImports violation: Phase = \"pre\" => ~(\"imports\" \\in executed)",
+      "applies_to": [
+        "executed"
+      ],
+      "description": "Verifier for invariant PreSkipsImports from OrchestrateReviewsSelectsPasses spec"
+    },
+    "PostOnlyImports": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-PostOnlyImports",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-PostOnlyImports",
+      "conditions": [
+        "Phase = \"post\"",
+        "exec_done) => (executed = {\"imports\"}"
+      ],
+      "message": "PostOnlyImports violation: (Phase = \"post\" /\\ exec_done) => (executed = {\"imports\"})",
+      "applies_to": [
+        "exec_done",
+        "executed"
+      ],
+      "description": "Verifier for invariant PostOnlyImports from OrchestrateReviewsSelectsPasses spec"
+    },
+    "ExternalNoInteraction": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-ExternalNoInteraction",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-ExternalNoInteraction",
+      "conditions": [
+        "Mode = \"external\" => ~(\"interaction\" \\in executed"
+      ],
+      "message": "ExternalNoInteraction violation: Mode = \"external\" => ~(\"interaction\" \\in executed)",
+      "applies_to": [
+        "executed"
+      ],
+      "description": "Verifier for invariant ExternalNoInteraction from OrchestrateReviewsSelectsPasses spec"
+    },
+    "AllSelfComplete": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-AllSelfComplete",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-AllSelfComplete",
+      "conditions": [
+        "Phase = \"all\"",
+        "Mode = \"self\"",
+        "exec_done) =>\n    (executed = AllPasses"
+      ],
+      "message": "AllSelfComplete violation: (Phase = \"all\" /\\ Mode = \"self\" /\\ exec_done) =>\n    (executed = AllPasses)",
+      "applies_to": [
+        "exec_done",
+        "executed"
+      ],
+      "description": "Verifier for invariant AllSelfComplete from OrchestrateReviewsSelectsPasses spec"
+    },
+    "AllExternalComplete": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-AllExternalComplete",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-AllExternalComplete",
+      "conditions": [
+        "Phase = \"all\"",
+        "Mode = \"external\"",
+        "exec_done) =>\n    (executed = {\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"}"
+      ],
+      "message": "AllExternalComplete violation: (Phase = \"all\" /\\ Mode = \"external\" /\\ exec_done) =>\n    (executed = {\"artifacts\", \"coverage\", \"abstraction_gap\", \"im...",
+      "applies_to": [
+        "exec_done",
+        "executed"
+      ],
+      "description": "Verifier for invariant AllExternalComplete from OrchestrateReviewsSelectsPasses spec"
+    },
+    "PreSelfComplete": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-PreSelfComplete",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-PreSelfComplete",
+      "conditions": [
+        "Phase = \"pre\"",
+        "Mode = \"self\"",
+        "exec_done) =>\n    (executed = {\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}"
+      ],
+      "message": "PreSelfComplete violation: (Phase = \"pre\" /\\ Mode = \"self\" /\\ exec_done) =>\n    (executed = {\"artifacts\", \"coverage\", \"interaction\", \"abstractio...",
+      "applies_to": [
+        "exec_done",
+        "executed"
+      ],
+      "description": "Verifier for invariant PreSelfComplete from OrchestrateReviewsSelectsPasses spec"
+    },
+    "PreExternalSubset": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-PreExternalSubset",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-PreExternalSubset",
+      "conditions": [
+        "Phase = \"pre\"",
+        "Mode = \"external\") =>\n    (executed \\subseteq {\"artifacts\", \"coverage\", \"abstraction_gap\"}"
+      ],
+      "message": "PreExternalSubset violation: (Phase = \"pre\" /\\ Mode = \"external\") =>\n    (executed \\subseteq {\"artifacts\", \"coverage\", \"abstraction_gap\"})",
+      "applies_to": [
+        "executed"
+      ],
+      "description": "Verifier for invariant PreExternalSubset from OrchestrateReviewsSelectsPasses spec"
+    },
+    "PreExternalComplete": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-PreExternalComplete",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-PreExternalComplete",
+      "conditions": [
+        "Phase = \"pre\"",
+        "Mode = \"external\"",
+        "exec_done) =>\n    (executed = {\"artifacts\", \"coverage\", \"abstraction_gap\"}"
+      ],
+      "message": "PreExternalComplete violation: (Phase = \"pre\" /\\ Mode = \"external\" /\\ exec_done) =>\n    (executed = {\"artifacts\", \"coverage\", \"abstraction_gap\"})",
+      "applies_to": [
+        "exec_done",
+        "executed"
+      ],
+      "description": "Verifier for invariant PreExternalComplete from OrchestrateReviewsSelectsPasses spec"
+    },
+    "SelectionCorrect": {
+      "function_id": "fn-OrchestrateReviewsSelectsPasses-verify-SelectionCorrect",
+      "acceptance_criteria_id": "ac-OrchestrateReviewsSelectsPasses-SelectionCorrect",
+      "conditions": [
+        "exec_done =>\n    (executed =\n        IF Phase = \"pre\"\n        THEN (IF Mode = \"self\"\n              THEN AllPasses \\ {\"imports\"}\n              ELSE (AllPasses \\ {\"interaction\"}) \\ {\"imports\"})\n        ELSE IF Phase = \"post\"\n             THEN {\"imports\"}\n             ELSE (IF Mode = \"self\"\n                   THEN AllPasses\n                   ELSE AllPasses \\ {\"interaction\"}"
+      ],
+      "message": "SelectionCorrect violation: exec_done =>\n    (executed =\n        IF Phase = \"pre\"\n        THEN (IF Mode = \"self\"\n              THEN AllPasses \\ {...",
+      "applies_to": [
+        "exec_done",
+        "executed"
+      ],
+      "description": "Verifier for invariant SelectionCorrect from OrchestrateReviewsSelectsPasses spec"
     }
   },
   "assertions": {
+    "assert_TypeOK": {
+      "condition": "executed \\subseteq AllPasses",
+      "message": "Assertion failed: TypeOK \u2014 executed \\subseteq AllPasses",
+      "description": "Test assertion for TypeOK from OrchestrateReviewsSelectsPasses spec"
+    },
     "assert_PreSkipsImports": {
-      "condition": "Phase = \"pre\" implies \"imports\" not in executed",
-      "message": "Assertion failed: PreSkipsImports \u2014 Phase = \"pre\" => \"imports\" \\notin executed",
-      "description": "Test assertion for PreSkipsImports from PlanReviewPhaseFiltering spec"
-    },
-    "assert_ExternalNoInteraction": {
-      "condition": "Mode = \"external\" implies \"interaction\" not in executed",
-      "message": "Assertion failed: ExternalNoInteraction \u2014 Mode = \"external\" => \"interaction\" \\notin executed",
-      "description": "Test assertion for ExternalNoInteraction from PlanReviewPhaseFiltering spec"
-    },
-    "assert_PreExternalSubset": {
-      "condition": "(Phase = \"pre\" and Mode = \"external\") implies\n        executed \\subseteq {\"artifacts\", \"coverage\", \"abstraction_gap\"}",
-      "message": "Assertion failed: PreExternalSubset \u2014 (Phase = \"pre\" /\\ Mode = \"external\") =>\n        executed \\subseteq {\"artifacts\", \"coverage\", \"abstraction_gap\"}",
-      "description": "Test assertion for PreExternalSubset from PlanReviewPhaseFiltering spec"
+      "condition": "Phase = \"pre\" implies ~(\"imports\" in executed)",
+      "message": "Assertion failed: PreSkipsImports \u2014 Phase = \"pre\" => ~(\"imports\" \\in executed)",
+      "description": "Test assertion for PreSkipsImports from OrchestrateReviewsSelectsPasses spec"
     },
     "assert_PostOnlyImports": {
-      "condition": "(Phase = \"post\" and orchestration_done) implies executed = {\"imports\"}",
-      "message": "Assertion failed: PostOnlyImports \u2014 (Phase = \"post\" /\\ orchestration_done) => executed = {\"imports\"}",
-      "description": "Test assertion for PostOnlyImports from PlanReviewPhaseFiltering spec"
+      "condition": "(Phase = \"post\" and exec_done) implies (executed = {\"imports\"})",
+      "message": "Assertion failed: PostOnlyImports \u2014 (Phase = \"post\" /\\ exec_done) => (executed = {\"imports\"})",
+      "description": "Test assertion for PostOnlyImports from OrchestrateReviewsSelectsPasses spec"
+    },
+    "assert_ExternalNoInteraction": {
+      "condition": "Mode = \"external\" implies ~(\"interaction\" in executed)",
+      "message": "Assertion failed: ExternalNoInteraction \u2014 Mode = \"external\" => ~(\"interaction\" \\in executed)",
+      "description": "Test assertion for ExternalNoInteraction from OrchestrateReviewsSelectsPasses spec"
     },
     "assert_AllSelfComplete": {
-      "condition": "(Phase = \"all\" and Mode = \"self\" and\n     ArtifactsVerdict = \"pass\" and orchestration_done) implies\n        executed = AllPasses",
-      "message": "Assertion failed: AllSelfComplete \u2014 (Phase = \"all\" /\\ Mode = \"self\" /\\\n     ArtifactsVerdict = \"pass\" /\\ orchestration_done) =>\n        executed = AllPasses",
-      "description": "Test assertion for AllSelfComplete from PlanReviewPhaseFiltering spec"
+      "condition": "(Phase = \"all\" and Mode = \"self\" and exec_done) implies\n    (executed = AllPasses)",
+      "message": "Assertion failed: AllSelfComplete \u2014 (Phase = \"all\" /\\ Mode = \"self\" /\\ exec_done) =>\n    (executed = AllPasses)",
+      "description": "Test assertion for AllSelfComplete from OrchestrateReviewsSelectsPasses spec"
     },
     "assert_AllExternalComplete": {
-      "condition": "(Phase = \"all\" and Mode = \"external\" and\n     ArtifactsVerdict = \"pass\" and orchestration_done) implies\n        executed = {\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"}",
-      "message": "Assertion failed: AllExternalComplete \u2014 (Phase = \"all\" /\\ Mode = \"external\" /\\\n     ArtifactsVerdict = \"pass\" /\\ orchestration_done) =>\n        executed = {\"...",
-      "description": "Test assertion for AllExternalComplete from PlanReviewPhaseFiltering spec"
+      "condition": "(Phase = \"all\" and Mode = \"external\" and exec_done) implies\n    (executed = {\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"})",
+      "message": "Assertion failed: AllExternalComplete \u2014 (Phase = \"all\" /\\ Mode = \"external\" /\\ exec_done) =>\n    (executed = {\"artifacts\", \"coverage\", \"abstraction_gap\", \"im...",
+      "description": "Test assertion for AllExternalComplete from OrchestrateReviewsSelectsPasses spec"
     },
     "assert_PreSelfComplete": {
-      "condition": "(Phase = \"pre\" and Mode = \"self\" and\n     ArtifactsVerdict = \"pass\" and orchestration_done) implies\n        executed = {\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
-      "message": "Assertion failed: PreSelfComplete \u2014 (Phase = \"pre\" /\\ Mode = \"self\" /\\\n     ArtifactsVerdict = \"pass\" /\\ orchestration_done) =>\n        executed = {\"arti...",
-      "description": "Test assertion for PreSelfComplete from PlanReviewPhaseFiltering spec"
+      "condition": "(Phase = \"pre\" and Mode = \"self\" and exec_done) implies\n    (executed = {\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"})",
+      "message": "Assertion failed: PreSelfComplete \u2014 (Phase = \"pre\" /\\ Mode = \"self\" /\\ exec_done) =>\n    (executed = {\"artifacts\", \"coverage\", \"interaction\", \"abstractio...",
+      "description": "Test assertion for PreSelfComplete from OrchestrateReviewsSelectsPasses spec"
+    },
+    "assert_PreExternalSubset": {
+      "condition": "(Phase = \"pre\" and Mode = \"external\") implies\n    (executed \\subseteq {\"artifacts\", \"coverage\", \"abstraction_gap\"})",
+      "message": "Assertion failed: PreExternalSubset \u2014 (Phase = \"pre\" /\\ Mode = \"external\") =>\n    (executed \\subseteq {\"artifacts\", \"coverage\", \"abstraction_gap\"})",
+      "description": "Test assertion for PreExternalSubset from OrchestrateReviewsSelectsPasses spec"
     },
     "assert_PreExternalComplete": {
-      "condition": "(Phase = \"pre\" and Mode = \"external\" and\n     ArtifactsVerdict = \"pass\" and orchestration_done) implies\n        executed = {\"artifacts\", \"coverage\", \"abstraction_gap\"}",
-      "message": "Assertion failed: PreExternalComplete \u2014 (Phase = \"pre\" /\\ Mode = \"external\" /\\\n     ArtifactsVerdict = \"pass\" /\\ orchestration_done) =>\n        executed = {\"...",
-      "description": "Test assertion for PreExternalComplete from PlanReviewPhaseFiltering spec"
+      "condition": "(Phase = \"pre\" and Mode = \"external\" and exec_done) implies\n    (executed = {\"artifacts\", \"coverage\", \"abstraction_gap\"})",
+      "message": "Assertion failed: PreExternalComplete \u2014 (Phase = \"pre\" /\\ Mode = \"external\" /\\ exec_done) =>\n    (executed = {\"artifacts\", \"coverage\", \"abstraction_gap\"})",
+      "description": "Test assertion for PreExternalComplete from OrchestrateReviewsSelectsPasses spec"
     },
-    "assert_FinalSetCorrect": {
-      "condition": "orchestration_done implies\n        executed = ExpectedPassesFor(Phase, Mode, ArtifactsVerdict)",
-      "message": "Assertion failed: FinalSetCorrect \u2014 orchestration_done =>\n        executed = ExpectedPassesFor(Phase, Mode, ArtifactsVerdict)",
-      "description": "Test assertion for FinalSetCorrect from PlanReviewPhaseFiltering spec"
-    },
-    "assert_ExecutedSubsetAllPasses": {
-      "condition": "executed \\subseteq AllPasses",
-      "message": "Assertion failed: ExecutedSubsetAllPasses \u2014 executed \\subseteq AllPasses",
-      "description": "Test assertion for ExecutedSubsetAllPasses from PlanReviewPhaseFiltering spec"
+    "assert_SelectionCorrect": {
+      "condition": "exec_done implies\n    (executed =\n        IF Phase = \"pre\"\n        THEN (IF Mode = \"self\"\n              THEN AllPasses \\ {\"imports\"}\n              ELSE (AllPasses \\ {\"interaction\"}) \\ {\"imports\"})\n        ELSE IF Phase = \"post\"\n             THEN {\"imports\"}\n             ELSE (IF Mode = \"self\"\n                   THEN AllPasses\n                   ELSE AllPasses \\ {\"interaction\"}))",
+      "message": "Assertion failed: SelectionCorrect \u2014 exec_done =>\n    (executed =\n        IF Phase = \"pre\"\n        THEN (IF Mode = \"self\"\n              THEN AllPasses \\ {...",
+      "description": "Test assertion for SelectionCorrect from OrchestrateReviewsSelectsPasses spec"
     }
   },
   "test_scenarios": [],
@@ -313,182 +291,55 @@
         "state_num": 1,
         "label": "Init",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"all\"",
+          "exec_done": "FALSE",
+          "Phase": "\"pre\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
         "state_num": 2,
-        "label": "Orchestrate",
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
           "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChooseMode\"]"
         }
       },
       {
         "state_num": 3,
-        "label": "RunOrSkip",
+        "label": "ChooseMode",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Select\"]"
         }
       },
       {
         "state_num": 4,
-        "label": "Orchestrate",
+        "label": "Select",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"abstraction_gap\"}",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
         "state_num": 5,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 6,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 7,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"coverage\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"coverage\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 12,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 13,
         "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
           "Mode": "\"self\"",
-          "remaining": "{}",
+          "exec_done": "TRUE",
           "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
+          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "pc": "[main |-> \"Done\"]"
         }
       }
     ],
@@ -497,182 +348,55 @@
         "state_num": 1,
         "label": "Init",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "exec_done": "FALSE",
           "Phase": "\"pre\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
         "state_num": 2,
-        "label": "Orchestrate",
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
+          "exec_done": "FALSE",
+          "Phase": "\"all\"",
           "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChooseMode\"]"
         }
       },
       {
         "state_num": 3,
-        "label": "RunOrSkip",
+        "label": "ChooseMode",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
+          "exec_done": "FALSE",
+          "Phase": "\"all\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Select\"]"
         }
       },
       {
         "state_num": 4,
-        "label": "Orchestrate",
+        "label": "Select",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "exec_done": "FALSE",
+          "Phase": "\"all\"",
+          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
         "state_num": 5,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 6,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 7,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"abstraction_gap\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"abstraction_gap\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 12,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 13,
         "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
           "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
+          "exec_done": "TRUE",
+          "Phase": "\"all\"",
+          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "pc": "[main |-> \"Done\"]"
         }
       }
     ],
@@ -681,182 +405,55 @@
         "state_num": 1,
         "label": "Init",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"all\"",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
+          "Phase": "\"pre\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
         "state_num": 2,
-        "label": "Orchestrate",
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
           "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChooseMode\"]"
         }
       },
       {
         "state_num": 3,
-        "label": "RunOrSkip",
+        "label": "ChooseMode",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Select\"]"
         }
       },
       {
         "state_num": 4,
-        "label": "Orchestrate",
+        "label": "Select",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\"}",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
         "state_num": 5,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 6,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 7,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"interaction\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"interaction\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 12,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 13,
         "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
+          "Mode": "\"self\"",
+          "exec_done": "TRUE",
           "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
+          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "pc": "[main |-> \"Done\"]"
         }
       }
     ],
@@ -865,366 +462,169 @@
         "state_num": 1,
         "label": "Init",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"all\"",
+          "exec_done": "FALSE",
+          "Phase": "\"pre\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
         "state_num": 2,
-        "label": "Orchestrate",
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"imports\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
+          "exec_done": "FALSE",
+          "Phase": "\"post\"",
           "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChooseMode\"]"
         }
       },
       {
         "state_num": 3,
-        "label": "RunOrSkip",
+        "label": "ChooseMode",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
+          "Mode": "\"external\"",
+          "exec_done": "FALSE",
+          "Phase": "\"post\"",
+          "executed": "{}",
+          "pc": "[main |-> \"Select\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Select",
+        "vars": {
+          "Mode": "\"external\"",
+          "exec_done": "FALSE",
+          "Phase": "\"post\"",
           "executed": "{\"imports\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
-        "state_num": 4,
-        "label": "Orchestrate",
+        "state_num": 5,
+        "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"interaction\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
+          "Mode": "\"external\"",
+          "exec_done": "TRUE",
+          "Phase": "\"post\"",
           "executed": "{\"imports\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
+          "Phase": "\"pre\"",
+          "executed": "{}",
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
-        "state_num": 5,
-        "label": "RunOrSkip",
+        "state_num": 2,
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"artifacts\"",
           "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"interaction\", \"abstraction_gap\"}",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
-          "executed": "{\"artifacts\", \"imports\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "executed": "{}",
+          "pc": "[main |-> \"ChooseMode\"]"
         }
       },
       {
-        "state_num": 6,
-        "label": "Orchestrate",
+        "state_num": 3,
+        "label": "ChooseMode",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"abstraction_gap\"",
           "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"interaction\"}",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
-          "executed": "{\"artifacts\", \"imports\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "executed": "{}",
+          "pc": "[main |-> \"Select\"]"
         }
       },
       {
-        "state_num": 7,
-        "label": "RunOrSkip",
+        "state_num": 4,
+        "label": "Select",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"abstraction_gap\"",
           "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"interaction\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\", \"abstraction_gap\", \"imports\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"interaction\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\", \"abstraction_gap\", \"imports\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"interaction\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
           "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
-        "state_num": 12,
-        "label": "Orchestrate",
+        "state_num": 5,
+        "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"interaction\"",
           "Mode": "\"self\"",
-          "remaining": "{}",
+          "exec_done": "TRUE",
           "Phase": "\"all\"",
           "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
+          "Phase": "\"pre\"",
+          "executed": "{}",
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
-        "state_num": 13,
-        "label": "Finish",
+        "state_num": 2,
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"interaction\"",
           "Mode": "\"self\"",
-          "remaining": "{}",
+          "exec_done": "FALSE",
+          "Phase": "\"all\"",
+          "executed": "{}",
+          "pc": "[main |-> \"ChooseMode\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ChooseMode",
+        "vars": {
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
+          "Phase": "\"all\"",
+          "executed": "{}",
+          "pc": "[main |-> \"Select\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Select",
+        "vars": {
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
           "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
-        }
-      }
-    ],
-    [
-      {
-        "state_num": 1,
-        "label": "Init",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 2,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 3,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 4,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
         "state_num": 5,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 6,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 7,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 12,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 13,
         "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
+          "Mode": "\"self\"",
+          "exec_done": "TRUE",
           "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
+          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "pc": "[main |-> \"Done\"]"
         }
       }
     ],
@@ -1233,182 +633,55 @@
         "state_num": 1,
         "label": "Init",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "exec_done": "FALSE",
           "Phase": "\"pre\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
         "state_num": 2,
-        "label": "Orchestrate",
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
           "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
+          "exec_done": "FALSE",
+          "Phase": "\"post\"",
           "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChooseMode\"]"
         }
       },
       {
         "state_num": 3,
-        "label": "RunOrSkip",
+        "label": "ChooseMode",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "Mode": "\"external\"",
+          "exec_done": "FALSE",
+          "Phase": "\"post\"",
+          "executed": "{}",
+          "pc": "[main |-> \"Select\"]"
         }
       },
       {
         "state_num": 4,
-        "label": "Orchestrate",
+        "label": "Select",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "Mode": "\"external\"",
+          "exec_done": "FALSE",
+          "Phase": "\"post\"",
+          "executed": "{\"imports\"}",
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
         "state_num": 5,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 6,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"interaction\", \"abstraction_gap\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 7,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"interaction\", \"abstraction_gap\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"abstraction_gap\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"abstraction_gap\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 12,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 13,
         "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
+          "Mode": "\"external\"",
+          "exec_done": "TRUE",
+          "Phase": "\"post\"",
+          "executed": "{\"imports\"}",
+          "pc": "[main |-> \"Done\"]"
         }
       }
     ],
@@ -1417,182 +690,55 @@
         "state_num": 1,
         "label": "Init",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "exec_done": "FALSE",
           "Phase": "\"pre\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
         "state_num": 2,
-        "label": "Orchestrate",
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
+          "exec_done": "FALSE",
+          "Phase": "\"post\"",
           "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChooseMode\"]"
         }
       },
       {
         "state_num": 3,
-        "label": "RunOrSkip",
+        "label": "ChooseMode",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
+          "exec_done": "FALSE",
+          "Phase": "\"post\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Select\"]"
         }
       },
       {
         "state_num": 4,
-        "label": "Orchestrate",
+        "label": "Select",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
           "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "exec_done": "FALSE",
+          "Phase": "\"post\"",
+          "executed": "{\"imports\"}",
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
         "state_num": 5,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 6,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"interaction\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 7,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"interaction\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 12,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 13,
         "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
           "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
+          "exec_done": "TRUE",
+          "Phase": "\"post\"",
+          "executed": "{\"imports\"}",
+          "pc": "[main |-> \"Done\"]"
         }
       }
     ],
@@ -1601,182 +747,55 @@
         "state_num": 1,
         "label": "Init",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"all\"",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
+          "Phase": "\"pre\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
         "state_num": 2,
-        "label": "Orchestrate",
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
           "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChooseMode\"]"
         }
       },
       {
         "state_num": 3,
-        "label": "RunOrSkip",
+        "label": "ChooseMode",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Select\"]"
         }
       },
       {
         "state_num": 4,
-        "label": "Orchestrate",
+        "label": "Select",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\"}",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
           "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
         "state_num": 5,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 6,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"interaction\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 7,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"interaction\", \"abstraction_gap\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"interaction\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"interaction\"}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 12,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 13,
         "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"fail\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
+          "Mode": "\"self\"",
+          "exec_done": "TRUE",
           "Phase": "\"all\"",
-          "executed": "{\"artifacts\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
+          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "pc": "[main |-> \"Done\"]"
         }
       }
     ],
@@ -1785,366 +804,55 @@
         "state_num": 1,
         "label": "Init",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
           "Phase": "\"pre\"",
           "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChoosePhase\"]"
         }
       },
       {
         "state_num": 2,
-        "label": "Orchestrate",
+        "label": "ChoosePhase",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "Mode": "\"self\"",
+          "exec_done": "FALSE",
           "Phase": "\"pre\"",
           "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"ChooseMode\"]"
         }
       },
       {
         "state_num": 3,
-        "label": "RunOrSkip",
+        "label": "ChooseMode",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"coverage\"",
           "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"abstraction_gap\", \"imports\"}",
+          "exec_done": "FALSE",
           "Phase": "\"pre\"",
-          "executed": "{\"coverage\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
+          "executed": "{}",
+          "pc": "[main |-> \"Select\"]"
         }
       },
       {
         "state_num": 4,
-        "label": "Orchestrate",
+        "label": "Select",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"abstraction_gap\"",
           "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"coverage\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 5,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"coverage\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 6,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"coverage\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 7,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\", \"interaction\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"coverage\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"coverage\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"external\"",
-          "remaining": "{\"artifacts\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"coverage\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"coverage\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
+          "exec_done": "FALSE",
           "Phase": "\"pre\"",
           "executed": "{\"artifacts\", \"coverage\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 12,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\", \"coverage\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 13,
-        "label": "Finish",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"external\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\", \"coverage\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
-        }
-      }
-    ],
-    [
-      {
-        "state_num": 1,
-        "label": "Init",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 2,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 3,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"abstraction_gap\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"interaction\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"abstraction_gap\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 4,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"abstraction_gap\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
+          "pc": "[main |-> \"Finish\"]"
         }
       },
       {
         "state_num": 5,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"interaction\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"artifacts\", \"coverage\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"interaction\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 6,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"interaction\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 7,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"artifacts\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"coverage\", \"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\", \"interaction\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 8,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\", \"interaction\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 9,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"coverage\"",
-          "Mode": "\"self\"",
-          "remaining": "{\"imports\"}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 10,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"RunOrSkip\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 11,
-        "label": "RunOrSkip",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Orchestrate\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 12,
-        "label": "Orchestrate",
-        "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
-          "Phase": "\"pre\"",
-          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Finish\"]",
-          "orchestration_done": "FALSE"
-        }
-      },
-      {
-        "state_num": 13,
         "label": "Finish",
         "vars": {
-          "ArtifactsVerdict": "\"pass\"",
-          "current_pass": "\"imports\"",
-          "Mode": "\"self\"",
-          "remaining": "{}",
+          "Mode": "\"external\"",
+          "exec_done": "TRUE",
           "Phase": "\"pre\"",
-          "executed": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}",
-          "pc": "[main |-> \"Done\"]",
-          "orchestration_done": "TRUE"
+          "executed": "{\"artifacts\", \"coverage\", \"abstraction_gap\"}",
+          "pc": "[main |-> \"Done\"]"
         }
       }
     ]

@@ -1,0 +1,796 @@
+{
+  "gwt_id": "gwt-0097",
+  "module_name": "ImportsGating",
+  "data_structures": {
+    "ImportsGatingState": {
+      "function_id": "fn-ImportsGating-state",
+      "acceptance_criteria_id": "ac-ImportsGating-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"SetAbstractionGapVerdict\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "ag_present": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "ag_verdict": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "imports_verdict": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "pending",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "check_invoked": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from ImportsGating TLA+ spec"
+    }
+  },
+  "operations": {
+    "SetAbstractionGapVerdict": {
+      "function_id": "fn-ImportsGating-SetAbstractionGapVerdict",
+      "acceptance_criteria_id": "ac-ImportsGating-SetAbstractionGapVerdict",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SetAbstractionGapVerdict from ImportsGating spec"
+    },
+    "EvaluateImports": {
+      "function_id": "fn-ImportsGating-EvaluateImports",
+      "acceptance_criteria_id": "ac-ImportsGating-EvaluateImports",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action EvaluateImports from ImportsGating spec"
+    },
+    "Finish": {
+      "function_id": "fn-ImportsGating-Finish",
+      "acceptance_criteria_id": "ac-ImportsGating-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from ImportsGating spec"
+    }
+  },
+  "verifiers": {
+    "Verdict": {
+      "function_id": "fn-ImportsGating-verify-Verdict",
+      "acceptance_criteria_id": "ac-ImportsGating-Verdict",
+      "conditions": [
+        "{\"pass\", \"fail\", \"warning\", \"blocked\"}"
+      ],
+      "message": "Verdict violation: {\"pass\", \"fail\", \"warning\", \"blocked\"}",
+      "applies_to": [
+        "ImportsGating"
+      ],
+      "description": "Verifier for invariant Verdict from ImportsGating spec"
+    },
+    "PermitsScheduling": {
+      "function_id": "fn-ImportsGating-verify-PermitsScheduling",
+      "acceptance_criteria_id": "ac-ImportsGating-PermitsScheduling",
+      "conditions": [
+        "{\"pass\", \"warning\"}"
+      ],
+      "message": "PermitsScheduling violation: {\"pass\", \"warning\"}",
+      "applies_to": [
+        "ImportsGating"
+      ],
+      "description": "Verifier for invariant PermitsScheduling from ImportsGating spec"
+    },
+    "ImportsIsResolved": {
+      "function_id": "fn-ImportsGating-verify-ImportsIsResolved",
+      "acceptance_criteria_id": "ac-ImportsGating-ImportsIsResolved",
+      "conditions": [
+        "check_invoked => imports_verdict \\in {\"scheduled\", \"blocked\"}"
+      ],
+      "message": "ImportsIsResolved violation: check_invoked => imports_verdict \\in {\"scheduled\", \"blocked\"}",
+      "applies_to": [
+        "check_invoked",
+        "imports_verdict"
+      ],
+      "description": "Verifier for invariant ImportsIsResolved from ImportsGating spec"
+    },
+    "SingleDependency": {
+      "function_id": "fn-ImportsGating-verify-SingleDependency",
+      "acceptance_criteria_id": "ac-ImportsGating-SingleDependency",
+      "conditions": [
+        "imports_verdict = \"scheduled\" =>\n        (ag_present",
+        "ag_verdict \\in PermitsScheduling"
+      ],
+      "message": "SingleDependency violation: imports_verdict = \"scheduled\" =>\n        (ag_present /\\ ag_verdict \\in PermitsScheduling)",
+      "applies_to": [
+        "ag_present",
+        "ag_verdict",
+        "imports_verdict"
+      ],
+      "description": "Verifier for invariant SingleDependency from ImportsGating spec"
+    },
+    "FailBlocks": {
+      "function_id": "fn-ImportsGating-verify-FailBlocks",
+      "acceptance_criteria_id": "ac-ImportsGating-FailBlocks",
+      "conditions": [
+        "ag_present",
+        "ag_verdict = \"fail\") =>\n        (check_invoked => imports_verdict = \"blocked\""
+      ],
+      "message": "FailBlocks violation: (ag_present /\\ ag_verdict = \"fail\") =>\n        (check_invoked => imports_verdict = \"blocked\")",
+      "applies_to": [
+        "ag_present",
+        "ag_verdict",
+        "check_invoked",
+        "imports_verdict"
+      ],
+      "description": "Verifier for invariant FailBlocks from ImportsGating spec"
+    },
+    "BlockedCascades": {
+      "function_id": "fn-ImportsGating-verify-BlockedCascades",
+      "acceptance_criteria_id": "ac-ImportsGating-BlockedCascades",
+      "conditions": [
+        "ag_present",
+        "ag_verdict = \"blocked\") =>\n        (check_invoked => imports_verdict = \"blocked\""
+      ],
+      "message": "BlockedCascades violation: (ag_present /\\ ag_verdict = \"blocked\") =>\n        (check_invoked => imports_verdict = \"blocked\")",
+      "applies_to": [
+        "ag_present",
+        "ag_verdict",
+        "check_invoked",
+        "imports_verdict"
+      ],
+      "description": "Verifier for invariant BlockedCascades from ImportsGating spec"
+    },
+    "WarningPermits": {
+      "function_id": "fn-ImportsGating-verify-WarningPermits",
+      "acceptance_criteria_id": "ac-ImportsGating-WarningPermits",
+      "conditions": [
+        "ag_present",
+        "ag_verdict = \"warning\") =>\n        (check_invoked => imports_verdict = \"scheduled\""
+      ],
+      "message": "WarningPermits violation: (ag_present /\\ ag_verdict = \"warning\") =>\n        (check_invoked => imports_verdict = \"scheduled\")",
+      "applies_to": [
+        "ag_present",
+        "ag_verdict",
+        "check_invoked",
+        "imports_verdict"
+      ],
+      "description": "Verifier for invariant WarningPermits from ImportsGating spec"
+    },
+    "PassPermits": {
+      "function_id": "fn-ImportsGating-verify-PassPermits",
+      "acceptance_criteria_id": "ac-ImportsGating-PassPermits",
+      "conditions": [
+        "ag_present",
+        "ag_verdict = \"pass\") =>\n        (check_invoked => imports_verdict = \"scheduled\""
+      ],
+      "message": "PassPermits violation: (ag_present /\\ ag_verdict = \"pass\") =>\n        (check_invoked => imports_verdict = \"scheduled\")",
+      "applies_to": [
+        "ag_present",
+        "ag_verdict",
+        "check_invoked",
+        "imports_verdict"
+      ],
+      "description": "Verifier for invariant PassPermits from ImportsGating spec"
+    },
+    "MissingBlocks": {
+      "function_id": "fn-ImportsGating-verify-MissingBlocks",
+      "acceptance_criteria_id": "ac-ImportsGating-MissingBlocks",
+      "conditions": [
+        "~ag_present) =>\n        (check_invoked => imports_verdict = \"blocked\""
+      ],
+      "message": "MissingBlocks violation: (~ag_present) =>\n        (check_invoked => imports_verdict = \"blocked\")",
+      "applies_to": [
+        "ag_present",
+        "check_invoked",
+        "imports_verdict"
+      ],
+      "description": "Verifier for invariant MissingBlocks from ImportsGating spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-ImportsGating-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-ImportsGating-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from ImportsGating spec"
+    }
+  },
+  "assertions": {
+    "assert_Verdict": {
+      "condition": "{\"pass\", \"fail\", \"warning\", \"blocked\"}",
+      "message": "Assertion failed: Verdict \u2014 {\"pass\", \"fail\", \"warning\", \"blocked\"}",
+      "description": "Test assertion for Verdict from ImportsGating spec"
+    },
+    "assert_PermitsScheduling": {
+      "condition": "{\"pass\", \"warning\"}",
+      "message": "Assertion failed: PermitsScheduling \u2014 {\"pass\", \"warning\"}",
+      "description": "Test assertion for PermitsScheduling from ImportsGating spec"
+    },
+    "assert_ImportsIsResolved": {
+      "condition": "check_invoked implies imports_verdict in {\"scheduled\", \"blocked\"}",
+      "message": "Assertion failed: ImportsIsResolved \u2014 check_invoked => imports_verdict \\in {\"scheduled\", \"blocked\"}",
+      "description": "Test assertion for ImportsIsResolved from ImportsGating spec"
+    },
+    "assert_SingleDependency": {
+      "condition": "imports_verdict = \"scheduled\" implies\n        (ag_present and ag_verdict in PermitsScheduling)",
+      "message": "Assertion failed: SingleDependency \u2014 imports_verdict = \"scheduled\" =>\n        (ag_present /\\ ag_verdict \\in PermitsScheduling)",
+      "description": "Test assertion for SingleDependency from ImportsGating spec"
+    },
+    "assert_FailBlocks": {
+      "condition": "(ag_present and ag_verdict = \"fail\") implies\n        (check_invoked implies imports_verdict = \"blocked\")",
+      "message": "Assertion failed: FailBlocks \u2014 (ag_present /\\ ag_verdict = \"fail\") =>\n        (check_invoked => imports_verdict = \"blocked\")",
+      "description": "Test assertion for FailBlocks from ImportsGating spec"
+    },
+    "assert_BlockedCascades": {
+      "condition": "(ag_present and ag_verdict = \"blocked\") implies\n        (check_invoked implies imports_verdict = \"blocked\")",
+      "message": "Assertion failed: BlockedCascades \u2014 (ag_present /\\ ag_verdict = \"blocked\") =>\n        (check_invoked => imports_verdict = \"blocked\")",
+      "description": "Test assertion for BlockedCascades from ImportsGating spec"
+    },
+    "assert_WarningPermits": {
+      "condition": "(ag_present and ag_verdict = \"warning\") implies\n        (check_invoked implies imports_verdict = \"scheduled\")",
+      "message": "Assertion failed: WarningPermits \u2014 (ag_present /\\ ag_verdict = \"warning\") =>\n        (check_invoked => imports_verdict = \"scheduled\")",
+      "description": "Test assertion for WarningPermits from ImportsGating spec"
+    },
+    "assert_PassPermits": {
+      "condition": "(ag_present and ag_verdict = \"pass\") implies\n        (check_invoked implies imports_verdict = \"scheduled\")",
+      "message": "Assertion failed: PassPermits \u2014 (ag_present /\\ ag_verdict = \"pass\") =>\n        (check_invoked => imports_verdict = \"scheduled\")",
+      "description": "Test assertion for PassPermits from ImportsGating spec"
+    },
+    "assert_MissingBlocks": {
+      "condition": "(~ag_present) implies\n        (check_invoked implies imports_verdict = \"blocked\")",
+      "message": "Assertion failed: MissingBlocks \u2014 (~ag_present) =>\n        (check_invoked => imports_verdict = \"blocked\")",
+      "description": "Test assertion for MissingBlocks from ImportsGating spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from ImportsGating spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"blocked\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"blocked\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"blocked\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"warning\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"warning\"",
+          "imports_verdict": "\"scheduled\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"warning\"",
+          "imports_verdict": "\"scheduled\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"fail\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"warning\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"warning\"",
+          "imports_verdict": "\"scheduled\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"warning\"",
+          "imports_verdict": "\"scheduled\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"warning\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"warning\"",
+          "imports_verdict": "\"scheduled\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"warning\"",
+          "imports_verdict": "\"scheduled\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"SetAbstractionGapVerdict\"]",
+          "check_invoked": "FALSE",
+          "step_count": "0",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SetAbstractionGapVerdict",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"pending\"",
+          "pc": "[main |-> \"EvaluateImports\"]",
+          "check_invoked": "FALSE",
+          "step_count": "1",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "EvaluateImports",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Finish\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "ag_verdict": "\"none\"",
+          "imports_verdict": "\"blocked\"",
+          "pc": "[main |-> \"Done\"]",
+          "check_invoked": "TRUE",
+          "step_count": "2",
+          "ag_present": "FALSE"
+        }
+      }
+    ]
+  ]
+}

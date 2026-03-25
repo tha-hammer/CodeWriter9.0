@@ -1,0 +1,1093 @@
+{
+  "gwt_id": "gwt-0082",
+  "module_name": "CmdPlanReviewDispatch",
+  "data_structures": {
+    "CmdPlanReviewDispatchState": {
+      "function_id": "fn-CmdPlanReviewDispatch-state",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ParseArgs\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "auto_fix": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "dispatch_target": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "called_function": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "exit_code": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "-1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "Idle",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CmdPlanReviewDispatch TLA+ spec"
+    }
+  },
+  "operations": {
+    "ParseArgs": {
+      "function_id": "fn-CmdPlanReviewDispatch-ParseArgs",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-ParseArgs",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ParseArgs from CmdPlanReviewDispatch spec"
+    },
+    "Dispatch": {
+      "function_id": "fn-CmdPlanReviewDispatch-Dispatch",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-Dispatch",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Dispatch from CmdPlanReviewDispatch spec"
+    },
+    "Execute": {
+      "function_id": "fn-CmdPlanReviewDispatch-Execute",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-Execute",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Execute from CmdPlanReviewDispatch spec"
+    },
+    "Aggregate": {
+      "function_id": "fn-CmdPlanReviewDispatch-Aggregate",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-Aggregate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Aggregate from CmdPlanReviewDispatch spec"
+    },
+    "Finish": {
+      "function_id": "fn-CmdPlanReviewDispatch-Finish",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from CmdPlanReviewDispatch spec"
+    }
+  },
+  "verifiers": {
+    "ValidDispatchTarget": {
+      "function_id": "fn-CmdPlanReviewDispatch-verify-ValidDispatchTarget",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-ValidDispatchTarget",
+      "conditions": [
+        "dispatch_target \\in {\"none\", \"orchestrate_reviews\", \"orchestrate_reviews_with_correction\"}"
+      ],
+      "message": "ValidDispatchTarget violation: dispatch_target \\in {\"none\", \"orchestrate_reviews\", \"orchestrate_reviews_with_correction\"}",
+      "applies_to": [
+        "dispatch_target"
+      ],
+      "description": "Verifier for invariant ValidDispatchTarget from CmdPlanReviewDispatch spec"
+    },
+    "ValidPhase": {
+      "function_id": "fn-CmdPlanReviewDispatch-verify-ValidPhase",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-ValidPhase",
+      "conditions": [
+        "phase \\in {\"Idle\", \"Parsed\", \"Dispatched\", \"Executed\", \"Aggregated\", \"Complete\"}"
+      ],
+      "message": "ValidPhase violation: phase \\in {\"Idle\", \"Parsed\", \"Dispatched\", \"Executed\", \"Aggregated\", \"Complete\"}",
+      "applies_to": [
+        "phase"
+      ],
+      "description": "Verifier for invariant ValidPhase from CmdPlanReviewDispatch spec"
+    },
+    "ValidCalledFunction": {
+      "function_id": "fn-CmdPlanReviewDispatch-verify-ValidCalledFunction",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-ValidCalledFunction",
+      "conditions": [
+        "called_function \\in {\"none\", \"orchestrate_reviews\", \"orchestrate_reviews_with_correction\"}"
+      ],
+      "message": "ValidCalledFunction violation: called_function \\in {\"none\", \"orchestrate_reviews\", \"orchestrate_reviews_with_correction\"}",
+      "applies_to": [
+        "called_function"
+      ],
+      "description": "Verifier for invariant ValidCalledFunction from CmdPlanReviewDispatch spec"
+    },
+    "DefaultDispatch": {
+      "function_id": "fn-CmdPlanReviewDispatch-verify-DefaultDispatch",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-DefaultDispatch",
+      "conditions": [
+        " auto_fix = FALSE",
+        "phase \\in {\"Dispatched\", \"Executed\", \"Aggregated\", \"Complete\"} )\n        => dispatch_target = \"orchestrate_reviews\""
+      ],
+      "message": "DefaultDispatch violation: ( auto_fix = FALSE /\\\n      phase \\in {\"Dispatched\", \"Executed\", \"Aggregated\", \"Complete\"} )\n        => dispatch_targ...",
+      "applies_to": [
+        "auto_fix",
+        "dispatch_target",
+        "phase"
+      ],
+      "description": "Verifier for invariant DefaultDispatch from CmdPlanReviewDispatch spec"
+    },
+    "NoCorrection": {
+      "function_id": "fn-CmdPlanReviewDispatch-verify-NoCorrection",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-NoCorrection",
+      "conditions": [
+        " auto_fix = FALSE",
+        "phase \\in {\"Executed\", \"Aggregated\", \"Complete\"} )\n        => called_function = \"orchestrate_reviews\""
+      ],
+      "message": "NoCorrection violation: ( auto_fix = FALSE /\\\n      phase \\in {\"Executed\", \"Aggregated\", \"Complete\"} )\n        => called_function = \"orchestr...",
+      "applies_to": [
+        "auto_fix",
+        "called_function",
+        "phase"
+      ],
+      "description": "Verifier for invariant NoCorrection from CmdPlanReviewDispatch spec"
+    },
+    "BackwardCompatible": {
+      "function_id": "fn-CmdPlanReviewDispatch-verify-BackwardCompatible",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-BackwardCompatible",
+      "conditions": [
+        "auto_fix = FALSE\n        => ( dispatch_target = \"orchestrate_reviews\" \\/ dispatch_target = \"none\" "
+      ],
+      "message": "BackwardCompatible violation: auto_fix = FALSE\n        => ( dispatch_target = \"orchestrate_reviews\" \\/ dispatch_target = \"none\" )",
+      "applies_to": [
+        "auto_fix",
+        "dispatch_target"
+      ],
+      "description": "Verifier for invariant BackwardCompatible from CmdPlanReviewDispatch spec"
+    },
+    "NoCorrectionFunctionDispatched": {
+      "function_id": "fn-CmdPlanReviewDispatch-verify-NoCorrectionFunctionDispatched",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-NoCorrectionFunctionDispatched",
+      "conditions": [
+        "auto_fix = FALSE\n        => called_function /= \"orchestrate_reviews_with_correction\""
+      ],
+      "message": "NoCorrectionFunctionDispatched violation: auto_fix = FALSE\n        => called_function /= \"orchestrate_reviews_with_correction\"",
+      "applies_to": [
+        "auto_fix",
+        "called_function"
+      ],
+      "description": "Verifier for invariant NoCorrectionFunctionDispatched from CmdPlanReviewDispatch spec"
+    },
+    "CorrectExitCode": {
+      "function_id": "fn-CmdPlanReviewDispatch-verify-CorrectExitCode",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-CorrectExitCode",
+      "conditions": [
+        "phase = \"Complete\" => exit_code = 0"
+      ],
+      "message": "CorrectExitCode violation: phase = \"Complete\" => exit_code = 0",
+      "applies_to": [
+        "exit_code",
+        "phase"
+      ],
+      "description": "Verifier for invariant CorrectExitCode from CmdPlanReviewDispatch spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-CmdPlanReviewDispatch-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-CmdPlanReviewDispatch-BoundedExecution",
+      "conditions": [
+        "step_count <= 10"
+      ],
+      "message": "BoundedExecution violation: step_count <= 10",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from CmdPlanReviewDispatch spec"
+    }
+  },
+  "assertions": {
+    "assert_ValidDispatchTarget": {
+      "condition": "dispatch_target in {\"none\", \"orchestrate_reviews\", \"orchestrate_reviews_with_correction\"}",
+      "message": "Assertion failed: ValidDispatchTarget \u2014 dispatch_target \\in {\"none\", \"orchestrate_reviews\", \"orchestrate_reviews_with_correction\"}",
+      "description": "Test assertion for ValidDispatchTarget from CmdPlanReviewDispatch spec"
+    },
+    "assert_ValidPhase": {
+      "condition": "phase in {\"Idle\", \"Parsed\", \"Dispatched\", \"Executed\", \"Aggregated\", \"Complete\"}",
+      "message": "Assertion failed: ValidPhase \u2014 phase \\in {\"Idle\", \"Parsed\", \"Dispatched\", \"Executed\", \"Aggregated\", \"Complete\"}",
+      "description": "Test assertion for ValidPhase from CmdPlanReviewDispatch spec"
+    },
+    "assert_ValidCalledFunction": {
+      "condition": "called_function in {\"none\", \"orchestrate_reviews\", \"orchestrate_reviews_with_correction\"}",
+      "message": "Assertion failed: ValidCalledFunction \u2014 called_function \\in {\"none\", \"orchestrate_reviews\", \"orchestrate_reviews_with_correction\"}",
+      "description": "Test assertion for ValidCalledFunction from CmdPlanReviewDispatch spec"
+    },
+    "assert_DefaultDispatch": {
+      "condition": "( auto_fix = FALSE and\n      phase in {\"Dispatched\", \"Executed\", \"Aggregated\", \"Complete\"} )\n        implies dispatch_target = \"orchestrate_reviews\"",
+      "message": "Assertion failed: DefaultDispatch \u2014 ( auto_fix = FALSE /\\\n      phase \\in {\"Dispatched\", \"Executed\", \"Aggregated\", \"Complete\"} )\n        => dispatch_targ...",
+      "description": "Test assertion for DefaultDispatch from CmdPlanReviewDispatch spec"
+    },
+    "assert_NoCorrection": {
+      "condition": "( auto_fix = FALSE and\n      phase in {\"Executed\", \"Aggregated\", \"Complete\"} )\n        implies called_function = \"orchestrate_reviews\"",
+      "message": "Assertion failed: NoCorrection \u2014 ( auto_fix = FALSE /\\\n      phase \\in {\"Executed\", \"Aggregated\", \"Complete\"} )\n        => called_function = \"orchestr...",
+      "description": "Test assertion for NoCorrection from CmdPlanReviewDispatch spec"
+    },
+    "assert_BackwardCompatible": {
+      "condition": "auto_fix = FALSE\n        implies ( dispatch_target = \"orchestrate_reviews\" or dispatch_target = \"none\" )",
+      "message": "Assertion failed: BackwardCompatible \u2014 auto_fix = FALSE\n        => ( dispatch_target = \"orchestrate_reviews\" \\/ dispatch_target = \"none\" )",
+      "description": "Test assertion for BackwardCompatible from CmdPlanReviewDispatch spec"
+    },
+    "assert_NoCorrectionFunctionDispatched": {
+      "condition": "auto_fix = FALSE\n        implies called_function /= \"orchestrate_reviews_with_correction\"",
+      "message": "Assertion failed: NoCorrectionFunctionDispatched \u2014 auto_fix = FALSE\n        => called_function /= \"orchestrate_reviews_with_correction\"",
+      "description": "Test assertion for NoCorrectionFunctionDispatched from CmdPlanReviewDispatch spec"
+    },
+    "assert_CorrectExitCode": {
+      "condition": "phase = \"Complete\" implies exit_code = 0",
+      "message": "Assertion failed: CorrectExitCode \u2014 phase = \"Complete\" => exit_code = 0",
+      "description": "Test assertion for CorrectExitCode from CmdPlanReviewDispatch spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= 10",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= 10",
+      "description": "Test assertion for BoundedExecution from CmdPlanReviewDispatch spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "FALSE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "TRUE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "FALSE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "FALSE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "TRUE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "TRUE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "TRUE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews_with_correction\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "TRUE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews_with_correction\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "FALSE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "FALSE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Idle\"",
+          "pc": "[cmd_plan_review |-> \"ParseArgs\"]",
+          "step_count": "0",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ParseArgs",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Parsed\"",
+          "pc": "[cmd_plan_review |-> \"Dispatch\"]",
+          "step_count": "1",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"none\""
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Dispatch",
+        "vars": {
+          "called_function": "\"none\"",
+          "phase": "\"Dispatched\"",
+          "pc": "[cmd_plan_review |-> \"Execute\"]",
+          "step_count": "2",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Execute",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Executed\"",
+          "pc": "[cmd_plan_review |-> \"Aggregate\"]",
+          "step_count": "3",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Aggregate",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Aggregated\"",
+          "pc": "[cmd_plan_review |-> \"Finish\"]",
+          "step_count": "4",
+          "auto_fix": "FALSE",
+          "exit_code": "-1",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "called_function": "\"orchestrate_reviews\"",
+          "phase": "\"Complete\"",
+          "pc": "[cmd_plan_review |-> \"Done\"]",
+          "step_count": "5",
+          "auto_fix": "FALSE",
+          "exit_code": "0",
+          "dispatch_target": "\"orchestrate_reviews\""
+        }
+      }
+    ]
+  ]
+}

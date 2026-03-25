@@ -1,0 +1,620 @@
+{
+  "gwt_id": "gwt-0096",
+  "module_name": "AbstractionGapGating",
+  "data_structures": {
+    "AbstractionGapGatingState": {
+      "function_id": "fn-AbstractionGapGating-state",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"Evaluate\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "coverage_verdict": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "interaction_verdict": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "ag_scheduled": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "ag_blocked": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "evaluated": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from AbstractionGapGating TLA+ spec"
+    }
+  },
+  "operations": {
+    "Evaluate": {
+      "function_id": "fn-AbstractionGapGating-Evaluate",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-Evaluate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Evaluate from AbstractionGapGating spec"
+    },
+    "Finish": {
+      "function_id": "fn-AbstractionGapGating-Finish",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from AbstractionGapGating spec"
+    }
+  },
+  "verifiers": {
+    "BothTerminal": {
+      "function_id": "fn-AbstractionGapGating-verify-BothTerminal",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-BothTerminal",
+      "conditions": [
+        "coverage_verdict \\in TerminalVerdicts",
+        "interaction_verdict \\in TerminalVerdicts"
+      ],
+      "message": "BothTerminal violation: coverage_verdict \\in TerminalVerdicts /\\ interaction_verdict \\in TerminalVerdicts",
+      "applies_to": [
+        "coverage_verdict",
+        "interaction_verdict"
+      ],
+      "description": "Verifier for invariant BothTerminal from AbstractionGapGating spec"
+    },
+    "BothRequired": {
+      "function_id": "fn-AbstractionGapGating-verify-BothRequired",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-BothRequired",
+      "conditions": [
+        "ag_scheduled =>\n        coverage_verdict \\in PermittedVerdicts",
+        "interaction_verdict \\in PermittedVerdicts"
+      ],
+      "message": "BothRequired violation: ag_scheduled =>\n        coverage_verdict \\in PermittedVerdicts /\\\n        interaction_verdict \\in PermittedVerdicts",
+      "applies_to": [
+        "ag_scheduled",
+        "coverage_verdict",
+        "interaction_verdict"
+      ],
+      "description": "Verifier for invariant BothRequired from AbstractionGapGating spec"
+    },
+    "FailBlocks": {
+      "function_id": "fn-AbstractionGapGating-verify-FailBlocks",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-FailBlocks",
+      "conditions": [
+        "coverage_verdict = \"fail\" \\/ interaction_verdict = \"fail\") =>\n        ~ag_scheduled",
+        "evaluated => ag_blocked"
+      ],
+      "message": "FailBlocks violation: (coverage_verdict = \"fail\" \\/ interaction_verdict = \"fail\") =>\n        ~ag_scheduled /\\ (evaluated => ag_blocked)",
+      "applies_to": [
+        "ag_blocked",
+        "ag_scheduled",
+        "coverage_verdict",
+        "evaluated",
+        "interaction_verdict"
+      ],
+      "description": "Verifier for invariant FailBlocks from AbstractionGapGating spec"
+    },
+    "BlockedPropagates": {
+      "function_id": "fn-AbstractionGapGating-verify-BlockedPropagates",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-BlockedPropagates",
+      "conditions": [
+        "coverage_verdict = \"blocked\" \\/ interaction_verdict = \"blocked\") =>\n        ~ag_scheduled",
+        "evaluated => ag_blocked"
+      ],
+      "message": "BlockedPropagates violation: (coverage_verdict = \"blocked\" \\/ interaction_verdict = \"blocked\") =>\n        ~ag_scheduled /\\ (evaluated => ag_blocked)",
+      "applies_to": [
+        "ag_blocked",
+        "ag_scheduled",
+        "coverage_verdict",
+        "evaluated",
+        "interaction_verdict"
+      ],
+      "description": "Verifier for invariant BlockedPropagates from AbstractionGapGating spec"
+    },
+    "WarningPermits": {
+      "function_id": "fn-AbstractionGapGating-verify-WarningPermits",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-WarningPermits",
+      "conditions": [
+        "coverage_verdict = \"warning\"",
+        "interaction_verdict = \"warning\"",
+        "evaluated) =>\n        ag_scheduled",
+        "~ag_blocked"
+      ],
+      "message": "WarningPermits violation: (coverage_verdict = \"warning\" /\\ interaction_verdict = \"warning\" /\\ evaluated) =>\n        ag_scheduled /\\ ~ag_blocked",
+      "applies_to": [
+        "ag_blocked",
+        "ag_scheduled",
+        "coverage_verdict",
+        "evaluated",
+        "interaction_verdict"
+      ],
+      "description": "Verifier for invariant WarningPermits from AbstractionGapGating spec"
+    },
+    "MutualExclusion": {
+      "function_id": "fn-AbstractionGapGating-verify-MutualExclusion",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-MutualExclusion",
+      "conditions": [
+        "~(ag_scheduled",
+        "ag_blocked"
+      ],
+      "message": "MutualExclusion violation: ~(ag_scheduled /\\ ag_blocked)",
+      "applies_to": [
+        "ag_blocked",
+        "ag_scheduled"
+      ],
+      "description": "Verifier for invariant MutualExclusion from AbstractionGapGating spec"
+    },
+    "EvaluatedFinal": {
+      "function_id": "fn-AbstractionGapGating-verify-EvaluatedFinal",
+      "acceptance_criteria_id": "ac-AbstractionGapGating-EvaluatedFinal",
+      "conditions": [
+        "evaluated => (ag_scheduled \\/ ag_blocked"
+      ],
+      "message": "EvaluatedFinal violation: evaluated => (ag_scheduled \\/ ag_blocked)",
+      "applies_to": [
+        "ag_blocked",
+        "ag_scheduled",
+        "evaluated"
+      ],
+      "description": "Verifier for invariant EvaluatedFinal from AbstractionGapGating spec"
+    }
+  },
+  "assertions": {
+    "assert_BothTerminal": {
+      "condition": "coverage_verdict in TerminalVerdicts and interaction_verdict in TerminalVerdicts",
+      "message": "Assertion failed: BothTerminal \u2014 coverage_verdict \\in TerminalVerdicts /\\ interaction_verdict \\in TerminalVerdicts",
+      "description": "Test assertion for BothTerminal from AbstractionGapGating spec"
+    },
+    "assert_BothRequired": {
+      "condition": "ag_scheduled implies\n        coverage_verdict in PermittedVerdicts and\n        interaction_verdict in PermittedVerdicts",
+      "message": "Assertion failed: BothRequired \u2014 ag_scheduled =>\n        coverage_verdict \\in PermittedVerdicts /\\\n        interaction_verdict \\in PermittedVerdicts",
+      "description": "Test assertion for BothRequired from AbstractionGapGating spec"
+    },
+    "assert_FailBlocks": {
+      "condition": "(coverage_verdict = \"fail\" or interaction_verdict = \"fail\") implies\n        ~ag_scheduled and (evaluated implies ag_blocked)",
+      "message": "Assertion failed: FailBlocks \u2014 (coverage_verdict = \"fail\" \\/ interaction_verdict = \"fail\") =>\n        ~ag_scheduled /\\ (evaluated => ag_blocked)",
+      "description": "Test assertion for FailBlocks from AbstractionGapGating spec"
+    },
+    "assert_BlockedPropagates": {
+      "condition": "(coverage_verdict = \"blocked\" or interaction_verdict = \"blocked\") implies\n        ~ag_scheduled and (evaluated implies ag_blocked)",
+      "message": "Assertion failed: BlockedPropagates \u2014 (coverage_verdict = \"blocked\" \\/ interaction_verdict = \"blocked\") =>\n        ~ag_scheduled /\\ (evaluated => ag_blocked)",
+      "description": "Test assertion for BlockedPropagates from AbstractionGapGating spec"
+    },
+    "assert_WarningPermits": {
+      "condition": "(coverage_verdict = \"warning\" and interaction_verdict = \"warning\" and evaluated) implies\n        ag_scheduled and ~ag_blocked",
+      "message": "Assertion failed: WarningPermits \u2014 (coverage_verdict = \"warning\" /\\ interaction_verdict = \"warning\" /\\ evaluated) =>\n        ag_scheduled /\\ ~ag_blocked",
+      "description": "Test assertion for WarningPermits from AbstractionGapGating spec"
+    },
+    "assert_MutualExclusion": {
+      "condition": "~(ag_scheduled and ag_blocked)",
+      "message": "Assertion failed: MutualExclusion \u2014 ~(ag_scheduled /\\ ag_blocked)",
+      "description": "Test assertion for MutualExclusion from AbstractionGapGating spec"
+    },
+    "assert_EvaluatedFinal": {
+      "condition": "evaluated implies (ag_scheduled or ag_blocked)",
+      "message": "Assertion failed: EvaluatedFinal \u2014 evaluated => (ag_scheduled \\/ ag_blocked)",
+      "description": "Test assertion for EvaluatedFinal from AbstractionGapGating spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"warning\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"warning\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"warning\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"blocked\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"blocked\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"blocked\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"blocked\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"blocked\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"blocked\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"pass\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"pass\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"pass\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"warning\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"warning\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"warning\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"warning\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"warning\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"warning\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"blocked\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"blocked\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"blocked\"",
+          "interaction_verdict": "\"blocked\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "FALSE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Evaluate\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "Evaluate",
+        "vars": {
+          "evaluated": "FALSE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "evaluated": "TRUE",
+          "ag_blocked": "TRUE",
+          "coverage_verdict": "\"fail\"",
+          "interaction_verdict": "\"fail\"",
+          "ag_scheduled": "FALSE",
+          "pc": "[checker |-> \"Done\"]"
+        }
+      }
+    ]
+  ]
+}

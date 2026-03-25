@@ -1,0 +1,890 @@
+{
+  "gwt_id": "gwt-0087",
+  "module_name": "ExtractFindings",
+  "data_structures": {
+    "ExtractFindingsState": {
+      "function_id": "fn-ExtractFindings-state",
+      "acceptance_criteria_id": "ac-ExtractFindings-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"AttemptParse\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "input_valid": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "input_has_issues": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "parsed": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "pass_name": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "issues_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "report_path": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "exception_raised": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "result_ready": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from ExtractFindings TLA+ spec"
+    }
+  },
+  "operations": {
+    "AttemptParse": {
+      "function_id": "fn-ExtractFindings-AttemptParse",
+      "acceptance_criteria_id": "ac-ExtractFindings-AttemptParse",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AttemptParse from ExtractFindings spec"
+    },
+    "BuildResult": {
+      "function_id": "fn-ExtractFindings-BuildResult",
+      "acceptance_criteria_id": "ac-ExtractFindings-BuildResult",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action BuildResult from ExtractFindings spec"
+    },
+    "Finish": {
+      "function_id": "fn-ExtractFindings-Finish",
+      "acceptance_criteria_id": "ac-ExtractFindings-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from ExtractFindings spec"
+    }
+  },
+  "verifiers": {
+    "IssuesListType": {
+      "function_id": "fn-ExtractFindings-verify-IssuesListType",
+      "acceptance_criteria_id": "ac-ExtractFindings-IssuesListType",
+      "conditions": [
+        "issues_count >= 0"
+      ],
+      "message": "IssuesListType violation: issues_count >= 0",
+      "applies_to": [
+        "issues_count"
+      ],
+      "description": "Verifier for invariant IssuesListType from ExtractFindings spec"
+    },
+    "NoExceptionLeaks": {
+      "function_id": "fn-ExtractFindings-verify-NoExceptionLeaks",
+      "acceptance_criteria_id": "ac-ExtractFindings-NoExceptionLeaks",
+      "conditions": [
+        "~exception_raised"
+      ],
+      "message": "NoExceptionLeaks violation: ~exception_raised",
+      "applies_to": [
+        "exception_raised"
+      ],
+      "description": "Verifier for invariant NoExceptionLeaks from ExtractFindings spec"
+    },
+    "GracefulDegradation": {
+      "function_id": "fn-ExtractFindings-verify-GracefulDegradation",
+      "acceptance_criteria_id": "ac-ExtractFindings-GracefulDegradation",
+      "conditions": [
+        "result_ready",
+        "~parsed) =>\n        (issues_count = 0",
+        "report_path = \"null\""
+      ],
+      "message": "GracefulDegradation violation: (result_ready /\\ ~parsed) =>\n        (issues_count = 0 /\\ report_path = \"null\")",
+      "applies_to": [
+        "issues_count",
+        "parsed",
+        "report_path",
+        "result_ready"
+      ],
+      "description": "Verifier for invariant GracefulDegradation from ExtractFindings spec"
+    },
+    "StructuredOutput": {
+      "function_id": "fn-ExtractFindings-verify-StructuredOutput",
+      "acceptance_criteria_id": "ac-ExtractFindings-StructuredOutput",
+      "conditions": [
+        "result_ready",
+        "parsed) =>\n        (pass_name # \"\"",
+        "issues_count >= 0",
+        "report_path # \"null\""
+      ],
+      "message": "StructuredOutput violation: (result_ready /\\ parsed) =>\n        (pass_name # \"\" /\\ issues_count >= 0 /\\ report_path # \"null\")",
+      "applies_to": [
+        "issues_count",
+        "parsed",
+        "pass_name",
+        "report_path",
+        "result_ready"
+      ],
+      "description": "Verifier for invariant StructuredOutput from ExtractFindings spec"
+    },
+    "PassNamePreserved": {
+      "function_id": "fn-ExtractFindings-verify-PassNamePreserved",
+      "acceptance_criteria_id": "ac-ExtractFindings-PassNamePreserved",
+      "conditions": [
+        "result_ready",
+        "parsed) => (pass_name # \"\""
+      ],
+      "message": "PassNamePreserved violation: (result_ready /\\ parsed) => (pass_name # \"\")",
+      "applies_to": [
+        "parsed",
+        "pass_name",
+        "result_ready"
+      ],
+      "description": "Verifier for invariant PassNamePreserved from ExtractFindings spec"
+    },
+    "EmptyStringHandled": {
+      "function_id": "fn-ExtractFindings-verify-EmptyStringHandled",
+      "acceptance_criteria_id": "ac-ExtractFindings-EmptyStringHandled",
+      "conditions": [
+        "~input_valid",
+        "result_ready) =>\n        (issues_count = 0",
+        "report_path = \"null\""
+      ],
+      "message": "EmptyStringHandled violation: (~input_valid /\\ result_ready) =>\n        (issues_count = 0 /\\ report_path = \"null\")",
+      "applies_to": [
+        "input_valid",
+        "issues_count",
+        "report_path",
+        "result_ready"
+      ],
+      "description": "Verifier for invariant EmptyStringHandled from ExtractFindings spec"
+    },
+    "IssuesNonNegative": {
+      "function_id": "fn-ExtractFindings-verify-IssuesNonNegative",
+      "acceptance_criteria_id": "ac-ExtractFindings-IssuesNonNegative",
+      "conditions": [
+        "issues_count >= 0"
+      ],
+      "message": "IssuesNonNegative violation: issues_count >= 0",
+      "applies_to": [
+        "issues_count"
+      ],
+      "description": "Verifier for invariant IssuesNonNegative from ExtractFindings spec"
+    }
+  },
+  "assertions": {
+    "assert_IssuesListType": {
+      "condition": "issues_count >= 0",
+      "message": "Assertion failed: IssuesListType \u2014 issues_count >= 0",
+      "description": "Test assertion for IssuesListType from ExtractFindings spec"
+    },
+    "assert_NoExceptionLeaks": {
+      "condition": "~exception_raised",
+      "message": "Assertion failed: NoExceptionLeaks \u2014 ~exception_raised",
+      "description": "Test assertion for NoExceptionLeaks from ExtractFindings spec"
+    },
+    "assert_GracefulDegradation": {
+      "condition": "(result_ready and ~parsed) implies\n        (issues_count = 0 and report_path = \"null\")",
+      "message": "Assertion failed: GracefulDegradation \u2014 (result_ready /\\ ~parsed) =>\n        (issues_count = 0 /\\ report_path = \"null\")",
+      "description": "Test assertion for GracefulDegradation from ExtractFindings spec"
+    },
+    "assert_StructuredOutput": {
+      "condition": "(result_ready and parsed) implies\n        (pass_name # \"\" and issues_count >= 0 and report_path # \"null\")",
+      "message": "Assertion failed: StructuredOutput \u2014 (result_ready /\\ parsed) =>\n        (pass_name # \"\" /\\ issues_count >= 0 /\\ report_path # \"null\")",
+      "description": "Test assertion for StructuredOutput from ExtractFindings spec"
+    },
+    "assert_PassNamePreserved": {
+      "condition": "(result_ready and parsed) implies (pass_name # \"\")",
+      "message": "Assertion failed: PassNamePreserved \u2014 (result_ready /\\ parsed) => (pass_name # \"\")",
+      "description": "Test assertion for PassNamePreserved from ExtractFindings spec"
+    },
+    "assert_EmptyStringHandled": {
+      "condition": "(~input_valid and result_ready) implies\n        (issues_count = 0 and report_path = \"null\")",
+      "message": "Assertion failed: EmptyStringHandled \u2014 (~input_valid /\\ result_ready) =>\n        (issues_count = 0 /\\ report_path = \"null\")",
+      "description": "Test assertion for EmptyStringHandled from ExtractFindings spec"
+    },
+    "assert_IssuesNonNegative": {
+      "condition": "issues_count >= 0",
+      "message": "Assertion failed: IssuesNonNegative \u2014 issues_count >= 0",
+      "description": "Test assertion for IssuesNonNegative from ExtractFindings spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "TRUE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"coverage\"",
+          "issues_count": "1",
+          "input_has_issues": "TRUE",
+          "parsed": "TRUE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"thoughts/searchable/shared/plans/coverage_report.md\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"coverage\"",
+          "issues_count": "1",
+          "input_has_issues": "TRUE",
+          "parsed": "TRUE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"thoughts/searchable/shared/plans/coverage_report.md\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "TRUE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"coverage\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "TRUE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"thoughts/searchable/shared/plans/coverage_report.md\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"coverage\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "TRUE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"thoughts/searchable/shared/plans/coverage_report.md\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "FALSE",
+          "parsed": "FALSE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "FALSE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "TRUE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"coverage\"",
+          "issues_count": "1",
+          "input_has_issues": "TRUE",
+          "parsed": "TRUE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"thoughts/searchable/shared/plans/coverage_report.md\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"coverage\"",
+          "issues_count": "1",
+          "input_has_issues": "TRUE",
+          "parsed": "TRUE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"thoughts/searchable/shared/plans/coverage_report.md\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "FALSE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"AttemptParse\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "AttemptParse",
+        "vars": {
+          "pass_name": "\"\"",
+          "issues_count": "0",
+          "input_has_issues": "TRUE",
+          "parsed": "TRUE",
+          "result_ready": "FALSE",
+          "pc": "[extractor |-> \"BuildResult\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"null\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildResult",
+        "vars": {
+          "pass_name": "\"coverage\"",
+          "issues_count": "1",
+          "input_has_issues": "TRUE",
+          "parsed": "TRUE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Finish\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"thoughts/searchable/shared/plans/coverage_report.md\"",
+          "exception_raised": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Finish",
+        "vars": {
+          "pass_name": "\"coverage\"",
+          "issues_count": "1",
+          "input_has_issues": "TRUE",
+          "parsed": "TRUE",
+          "result_ready": "TRUE",
+          "pc": "[extractor |-> \"Done\"]",
+          "input_valid": "TRUE",
+          "report_path": "\"thoughts/searchable/shared/plans/coverage_report.md\"",
+          "exception_raised": "FALSE"
+        }
+      }
+    ]
+  ]
+}

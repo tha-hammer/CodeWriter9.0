@@ -1,0 +1,2706 @@
+{
+  "gwt_id": "gwt-0088",
+  "module_name": "PassVerdictBreaksRetryLoop",
+  "data_structures": {
+    "PassVerdictBreaksRetryLoopState": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-state",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"RetryLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "attempt": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "verdict": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "pending",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "correctionInvoked": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "passComplete": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "passHistory": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "empty_sequence",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "nextScheduled": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "autoFixActive": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "true",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from PassVerdictBreaksRetryLoop TLA+ spec"
+    }
+  },
+  "operations": {
+    "RetryLoop": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-RetryLoop",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-RetryLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RetryLoop from PassVerdictBreaksRetryLoop spec"
+    },
+    "StartAttempt": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-StartAttempt",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-StartAttempt",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action StartAttempt from PassVerdictBreaksRetryLoop spec"
+    },
+    "RunReview": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-RunReview",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-RunReview",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunReview from PassVerdictBreaksRetryLoop spec"
+    },
+    "AppendHistory": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-AppendHistory",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-AppendHistory",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action AppendHistory from PassVerdictBreaksRetryLoop spec"
+    },
+    "CheckVerdict": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-CheckVerdict",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-CheckVerdict",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckVerdict from PassVerdictBreaksRetryLoop spec"
+    },
+    "Finish": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-Finish",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from PassVerdictBreaksRetryLoop spec"
+    }
+  },
+  "verifiers": {
+    "DependentsOfArtifacts": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-verify-DependentsOfArtifacts",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-DependentsOfArtifacts",
+      "conditions": [
+        "{\"coverage\", \"interaction\"}"
+      ],
+      "message": "DependentsOfArtifacts violation: {\"coverage\", \"interaction\"}",
+      "applies_to": [
+        "PassVerdictBreaksRetryLoop"
+      ],
+      "description": "Verifier for invariant DependentsOfArtifacts from PassVerdictBreaksRetryLoop spec"
+    },
+    "TypeInvariant": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-verify-TypeInvariant",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-TypeInvariant",
+      "conditions": [
+        "attempt \\in 1 .. (MaxRetries + 1",
+        "verdict \\in VerdictSet",
+        "correctionInvoked \\in BOOLEAN",
+        "passComplete \\in BOOLEAN",
+        "nextScheduled \\subseteq DependentsOfArtifacts"
+      ],
+      "message": "TypeInvariant violation: /\\ attempt \\in 1 .. (MaxRetries + 1)\n  /\\ verdict \\in VerdictSet\n  /\\ correctionInvoked \\in BOOLEAN\n  /\\ passComplete...",
+      "applies_to": [
+        "attempt",
+        "correctionInvoked",
+        "nextScheduled",
+        "passComplete",
+        "verdict"
+      ],
+      "description": "Verifier for invariant TypeInvariant from PassVerdictBreaksRetryLoop spec"
+    },
+    "NoCorrection_OnPass": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-verify-NoCorrection_OnPass",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-NoCorrection_OnPass",
+      "conditions": [
+        "verdict = \"PASS\" => ~correctionInvoked"
+      ],
+      "message": "NoCorrection_OnPass violation: verdict = \"PASS\" => ~correctionInvoked",
+      "applies_to": [
+        "correctionInvoked",
+        "verdict"
+      ],
+      "description": "Verifier for invariant NoCorrection_OnPass from PassVerdictBreaksRetryLoop spec"
+    },
+    "PassRecorded": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-verify-PassRecorded",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-PassRecorded",
+      "conditions": [
+        "passComplete",
+        "verdict = \"PASS\") =>\n    (Len(passHistory) >= 1",
+        "passHistory[Len(passHistory)] = \"PASS\""
+      ],
+      "message": "PassRecorded violation: (passComplete /\\ verdict = \"PASS\") =>\n    (Len(passHistory) >= 1 /\\ passHistory[Len(passHistory)] = \"PASS\")",
+      "applies_to": [
+        "passComplete",
+        "passHistory",
+        "verdict"
+      ],
+      "description": "Verifier for invariant PassRecorded from PassVerdictBreaksRetryLoop spec"
+    },
+    "LoopTermination": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-verify-LoopTermination",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-LoopTermination",
+      "conditions": [
+        "passComplete => attempt \\in 1 .. (MaxRetries + 1"
+      ],
+      "message": "LoopTermination violation: passComplete => attempt \\in 1 .. (MaxRetries + 1)",
+      "applies_to": [
+        "attempt",
+        "passComplete"
+      ],
+      "description": "Verifier for invariant LoopTermination from PassVerdictBreaksRetryLoop spec"
+    },
+    "ScheduleNext": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-verify-ScheduleNext",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-ScheduleNext",
+      "conditions": [
+        "passComplete",
+        "verdict = \"PASS\") =>\n    nextScheduled = DependentsOfArtifacts"
+      ],
+      "message": "ScheduleNext violation: (passComplete /\\ verdict = \"PASS\") =>\n    nextScheduled = DependentsOfArtifacts",
+      "applies_to": [
+        "nextScheduled",
+        "passComplete",
+        "verdict"
+      ],
+      "description": "Verifier for invariant ScheduleNext from PassVerdictBreaksRetryLoop spec"
+    },
+    "BoundedAttempts": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-verify-BoundedAttempts",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-BoundedAttempts",
+      "conditions": [
+        "attempt \\in 1 .. (MaxRetries + 1"
+      ],
+      "message": "BoundedAttempts violation: attempt \\in 1 .. (MaxRetries + 1)",
+      "applies_to": [
+        "attempt"
+      ],
+      "description": "Verifier for invariant BoundedAttempts from PassVerdictBreaksRetryLoop spec"
+    },
+    "AttemptNotIncrementedOnPass": {
+      "function_id": "fn-PassVerdictBreaksRetryLoop-verify-AttemptNotIncrementedOnPass",
+      "acceptance_criteria_id": "ac-PassVerdictBreaksRetryLoop-AttemptNotIncrementedOnPass",
+      "conditions": [
+        "passComplete",
+        "verdict = \"PASS\") =>\n    Len(passHistory) = attempt"
+      ],
+      "message": "AttemptNotIncrementedOnPass violation: (passComplete /\\ verdict = \"PASS\") =>\n    Len(passHistory) = attempt",
+      "applies_to": [
+        "attempt",
+        "passComplete",
+        "passHistory",
+        "verdict"
+      ],
+      "description": "Verifier for invariant AttemptNotIncrementedOnPass from PassVerdictBreaksRetryLoop spec"
+    }
+  },
+  "assertions": {
+    "assert_DependentsOfArtifacts": {
+      "condition": "{\"coverage\", \"interaction\"}",
+      "message": "Assertion failed: DependentsOfArtifacts \u2014 {\"coverage\", \"interaction\"}",
+      "description": "Test assertion for DependentsOfArtifacts from PassVerdictBreaksRetryLoop spec"
+    },
+    "assert_TypeInvariant": {
+      "condition": "and attempt in 1 .. (MaxRetries + 1)\n  and verdict in VerdictSet\n  and correctionInvoked in BOOLEAN\n  and passComplete in BOOLEAN\n  and nextScheduled \\subseteq DependentsOfArtifacts",
+      "message": "Assertion failed: TypeInvariant \u2014 /\\ attempt \\in 1 .. (MaxRetries + 1)\n  /\\ verdict \\in VerdictSet\n  /\\ correctionInvoked \\in BOOLEAN\n  /\\ passComplete...",
+      "description": "Test assertion for TypeInvariant from PassVerdictBreaksRetryLoop spec"
+    },
+    "assert_NoCorrection_OnPass": {
+      "condition": "verdict = \"PASS\" implies ~correctionInvoked",
+      "message": "Assertion failed: NoCorrection_OnPass \u2014 verdict = \"PASS\" => ~correctionInvoked",
+      "description": "Test assertion for NoCorrection_OnPass from PassVerdictBreaksRetryLoop spec"
+    },
+    "assert_PassRecorded": {
+      "condition": "(passComplete and verdict = \"PASS\") implies\n    (Len(passHistory) >= 1 and passHistory[Len(passHistory)] = \"PASS\")",
+      "message": "Assertion failed: PassRecorded \u2014 (passComplete /\\ verdict = \"PASS\") =>\n    (Len(passHistory) >= 1 /\\ passHistory[Len(passHistory)] = \"PASS\")",
+      "description": "Test assertion for PassRecorded from PassVerdictBreaksRetryLoop spec"
+    },
+    "assert_LoopTermination": {
+      "condition": "passComplete implies attempt in 1 .. (MaxRetries + 1)",
+      "message": "Assertion failed: LoopTermination \u2014 passComplete => attempt \\in 1 .. (MaxRetries + 1)",
+      "description": "Test assertion for LoopTermination from PassVerdictBreaksRetryLoop spec"
+    },
+    "assert_ScheduleNext": {
+      "condition": "(passComplete and verdict = \"PASS\") implies\n    nextScheduled = DependentsOfArtifacts",
+      "message": "Assertion failed: ScheduleNext \u2014 (passComplete /\\ verdict = \"PASS\") =>\n    nextScheduled = DependentsOfArtifacts",
+      "description": "Test assertion for ScheduleNext from PassVerdictBreaksRetryLoop spec"
+    },
+    "assert_BoundedAttempts": {
+      "condition": "attempt in 1 .. (MaxRetries + 1)",
+      "message": "Assertion failed: BoundedAttempts \u2014 attempt \\in 1 .. (MaxRetries + 1)",
+      "description": "Test assertion for BoundedAttempts from PassVerdictBreaksRetryLoop spec"
+    },
+    "assert_AttemptNotIncrementedOnPass": {
+      "condition": "(passComplete and verdict = \"PASS\") implies\n    Len(passHistory) = attempt",
+      "message": "Assertion failed: AttemptNotIncrementedOnPass \u2014 (passComplete /\\ verdict = \"PASS\") =>\n    Len(passHistory) = attempt",
+      "description": "Test assertion for AttemptNotIncrementedOnPass from PassVerdictBreaksRetryLoop spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"WARNING\", \"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "4",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"WARNING\", \"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "4",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"WARNING\", \"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "4",
+          "passHistory": "<<\"WARNING\", \"FAIL\", \"WARNING\", \"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"WARNING\", \"FAIL\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "1",
+          "passHistory": "<<\"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<>>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "1",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "2",
+          "passHistory": "<<\"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "3",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 17,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 18,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 19,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 20,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "4",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 21,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 22,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 23,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 24,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 25,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "5",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 26,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "6",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 27,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "6",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 28,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "6",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 29,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "6",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 30,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "6",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 31,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "7",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 32,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "7",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 33,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "7",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 34,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "7",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 35,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "7",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 36,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "8",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 37,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "correctionInvoked": "TRUE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "8",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"StartAttempt\"]"
+        }
+      },
+      {
+        "state_num": 38,
+        "label": "StartAttempt",
+        "vars": {
+          "verdict": "\"pending\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "8",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"RunReview\"]"
+        }
+      },
+      {
+        "state_num": 39,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "8",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\", \"FAIL\">>",
+          "pc": "[orch |-> \"AppendHistory\"]"
+        }
+      },
+      {
+        "state_num": 40,
+        "label": "AppendHistory",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{}",
+          "autoFixActive": "TRUE",
+          "passComplete": "FALSE",
+          "attempt": "8",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"CheckVerdict\"]"
+        }
+      },
+      {
+        "state_num": 41,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "8",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"RetryLoop\"]"
+        }
+      },
+      {
+        "state_num": 42,
+        "label": "RetryLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "8",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Finish\"]"
+        }
+      },
+      {
+        "state_num": 43,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "correctionInvoked": "FALSE",
+          "nextScheduled": "{\"coverage\", \"interaction\"}",
+          "autoFixActive": "TRUE",
+          "passComplete": "TRUE",
+          "attempt": "8",
+          "passHistory": "<<\"FAIL\", \"FAIL\", \"WARNING\", \"WARNING\", \"WARNING\", \"FAIL\", \"FAIL\", \"PASS\">>",
+          "pc": "[orch |-> \"Done\"]"
+        }
+      }
+    ]
+  ]
+}

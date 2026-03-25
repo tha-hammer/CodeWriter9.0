@@ -1,0 +1,1205 @@
+{
+  "gwt_id": "gwt-0099",
+  "module_name": "CorrectionAgentFreshContext",
+  "data_structures": {
+    "CorrectionAgentFreshContextState": {
+      "function_id": "fn-CorrectionAgentFreshContext-state",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ReviewFails\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "idle",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "review_session_id": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "review-session-abc123",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "review_findings": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "review_report_path": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "/tmp/reviews/coverage_report.md",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "query_args": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "correction_input": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "construction_done": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CorrectionAgentFreshContext TLA+ spec"
+    }
+  },
+  "operations": {
+    "ReviewFails": {
+      "function_id": "fn-CorrectionAgentFreshContext-ReviewFails",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-ReviewFails",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/ReviewFailsFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action ReviewFails from CorrectionAgentFreshContext spec"
+    },
+    "BuildCorrectionInput": {
+      "function_id": "fn-CorrectionAgentFreshContext-BuildCorrectionInput",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-BuildCorrectionInput",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action BuildCorrectionInput from CorrectionAgentFreshContext spec"
+    },
+    "ConstructQuery": {
+      "function_id": "fn-CorrectionAgentFreshContext-ConstructQuery",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-ConstructQuery",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ConstructQuery from CorrectionAgentFreshContext spec"
+    },
+    "MarkConstructionDone": {
+      "function_id": "fn-CorrectionAgentFreshContext-MarkConstructionDone",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-MarkConstructionDone",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action MarkConstructionDone from CorrectionAgentFreshContext spec"
+    },
+    "Finish": {
+      "function_id": "fn-CorrectionAgentFreshContext-Finish",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from CorrectionAgentFreshContext spec"
+    }
+  },
+  "verifiers": {
+    "NoResume": {
+      "function_id": "fn-CorrectionAgentFreshContext-verify-NoResume",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-NoResume",
+      "conditions": [
+        "construction_done => (query_args.resume = FALSE"
+      ],
+      "message": "NoResume violation: construction_done => (query_args.resume = FALSE)",
+      "applies_to": [
+        "construction_done",
+        "query_args"
+      ],
+      "description": "Verifier for invariant NoResume from CorrectionAgentFreshContext spec"
+    },
+    "NoSessionCarryover": {
+      "function_id": "fn-CorrectionAgentFreshContext-verify-NoSessionCarryover",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-NoSessionCarryover",
+      "conditions": [
+        "construction_done => (query_args.session_id = \"ABSENT\""
+      ],
+      "message": "NoSessionCarryover violation: construction_done => (query_args.session_id = \"ABSENT\")",
+      "applies_to": [
+        "construction_done",
+        "query_args"
+      ],
+      "description": "Verifier for invariant NoSessionCarryover from CorrectionAgentFreshContext spec"
+    },
+    "FindingsPresent": {
+      "function_id": "fn-CorrectionAgentFreshContext-verify-FindingsPresent",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-FindingsPresent",
+      "conditions": [
+        "construction_done =>\n        (correction_input.findings = review_findings",
+        "correction_input.findings # [missing |-> \"\", coverage |-> \"\"]"
+      ],
+      "message": "FindingsPresent violation: construction_done =>\n        (correction_input.findings = review_findings /\\\n         correction_input.findings # [mi...",
+      "applies_to": [
+        "construction_done",
+        "correction_input",
+        "review_findings"
+      ],
+      "description": "Verifier for invariant FindingsPresent from CorrectionAgentFreshContext spec"
+    },
+    "ReportPathPresent": {
+      "function_id": "fn-CorrectionAgentFreshContext-verify-ReportPathPresent",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-ReportPathPresent",
+      "conditions": [
+        "construction_done =>\n        (correction_input.report_path = review_report_path",
+        "correction_input.report_path # \"\""
+      ],
+      "message": "ReportPathPresent violation: construction_done =>\n        (correction_input.report_path = review_report_path /\\\n         correction_input.report_p...",
+      "applies_to": [
+        "construction_done",
+        "correction_input",
+        "review_report_path"
+      ],
+      "description": "Verifier for invariant ReportPathPresent from CorrectionAgentFreshContext spec"
+    },
+    "CleanContext": {
+      "function_id": "fn-CorrectionAgentFreshContext-verify-CleanContext",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-CleanContext",
+      "conditions": [
+        "construction_done =>\n        (query_args.session_id = \"ABSENT\"",
+        "query_args.resume = FALSE"
+      ],
+      "message": "CleanContext violation: construction_done =>\n        (query_args.session_id = \"ABSENT\" /\\\n         query_args.resume = FALSE)",
+      "applies_to": [
+        "construction_done",
+        "query_args"
+      ],
+      "description": "Verifier for invariant CleanContext from CorrectionAgentFreshContext spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-CorrectionAgentFreshContext-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from CorrectionAgentFreshContext spec"
+    },
+    "AllInvariants": {
+      "function_id": "fn-CorrectionAgentFreshContext-verify-AllInvariants",
+      "acceptance_criteria_id": "ac-CorrectionAgentFreshContext-AllInvariants",
+      "conditions": [
+        "NoResume",
+        "NoSessionCarryover",
+        "FindingsPresent",
+        "ReportPathPresent",
+        "CleanContext",
+        "BoundedExecution"
+      ],
+      "message": "AllInvariants violation: NoResume /\\\n    NoSessionCarryover /\\\n    FindingsPresent /\\\n    ReportPathPresent /\\\n    CleanContext /\\\n    Bounded...",
+      "applies_to": [
+        "CorrectionAgentFreshContext"
+      ],
+      "description": "Verifier for invariant AllInvariants from CorrectionAgentFreshContext spec"
+    }
+  },
+  "assertions": {
+    "assert_NoResume": {
+      "condition": "construction_done implies (query_args.resume = FALSE)",
+      "message": "Assertion failed: NoResume \u2014 construction_done => (query_args.resume = FALSE)",
+      "description": "Test assertion for NoResume from CorrectionAgentFreshContext spec"
+    },
+    "assert_NoSessionCarryover": {
+      "condition": "construction_done implies (query_args.session_id = \"ABSENT\")",
+      "message": "Assertion failed: NoSessionCarryover \u2014 construction_done => (query_args.session_id = \"ABSENT\")",
+      "description": "Test assertion for NoSessionCarryover from CorrectionAgentFreshContext spec"
+    },
+    "assert_FindingsPresent": {
+      "condition": "construction_done implies\n        (correction_input.findings = review_findings and\n         correction_input.findings # [missing |-> \"\", coverage |-> \"\"])",
+      "message": "Assertion failed: FindingsPresent \u2014 construction_done =>\n        (correction_input.findings = review_findings /\\\n         correction_input.findings # [mi...",
+      "description": "Test assertion for FindingsPresent from CorrectionAgentFreshContext spec"
+    },
+    "assert_ReportPathPresent": {
+      "condition": "construction_done implies\n        (correction_input.report_path = review_report_path and\n         correction_input.report_path # \"\")",
+      "message": "Assertion failed: ReportPathPresent \u2014 construction_done =>\n        (correction_input.report_path = review_report_path /\\\n         correction_input.report_p...",
+      "description": "Test assertion for ReportPathPresent from CorrectionAgentFreshContext spec"
+    },
+    "assert_CleanContext": {
+      "condition": "construction_done implies\n        (query_args.session_id = \"ABSENT\" and\n         query_args.resume = FALSE)",
+      "message": "Assertion failed: CleanContext \u2014 construction_done =>\n        (query_args.session_id = \"ABSENT\" /\\\n         query_args.resume = FALSE)",
+      "description": "Test assertion for CleanContext from CorrectionAgentFreshContext spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from CorrectionAgentFreshContext spec"
+    },
+    "assert_AllInvariants": {
+      "condition": "NoResume and\n    NoSessionCarryover and\n    FindingsPresent and\n    ReportPathPresent and\n    CleanContext and\n    BoundedExecution",
+      "message": "Assertion failed: AllInvariants \u2014 NoResume /\\\n    NoSessionCarryover /\\\n    FindingsPresent /\\\n    ReportPathPresent /\\\n    CleanContext /\\\n    Bounded...",
+      "description": "Test assertion for AllInvariants from CorrectionAgentFreshContext spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"idle\"",
+          "pc": "[spawner |-> \"ReviewFails\"]",
+          "step_count": "0",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ReviewFails",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"\", coverage |-> \"\"], report_path |-> \"\", pass_name |-> \"\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"review_failed\"",
+          "pc": "[spawner |-> \"BuildCorrectionInput\"]",
+          "step_count": "1",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "BuildCorrectionInput",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"correction_input_built\"",
+          "pc": "[spawner |-> \"ConstructQuery\"]",
+          "step_count": "2",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> TRUE, session_id |-> \"review-session-abc123\", prompt |-> \"\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ConstructQuery",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"query_constructed\"",
+          "pc": "[spawner |-> \"MarkConstructionDone\"]",
+          "step_count": "3",
+          "construction_done": "FALSE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MarkConstructionDone",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"ready_to_dispatch\"",
+          "pc": "[spawner |-> \"Finish\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "correction_input": "[findings |-> [missing |-> \"test_foo\", coverage |-> \"low\"], report_path |-> \"/tmp/reviews/coverage_report.md\", pass_name |-> \"coverage\"]",
+          "review_session_id": "\"review-session-abc123\"",
+          "review_report_path": "\"/tmp/reviews/coverage_report.md\"",
+          "review_findings": "[missing |-> \"test_foo\", coverage |-> \"low\"]",
+          "phase": "\"dispatched\"",
+          "pc": "[spawner |-> \"Done\"]",
+          "step_count": "4",
+          "construction_done": "TRUE",
+          "query_args": "[resume |-> FALSE, session_id |-> \"ABSENT\", prompt |-> \"findings=test_foo report=/tmp/reviews/coverage_report.md\", options |-> \"default\"]"
+        }
+      }
+    ]
+  ]
+}

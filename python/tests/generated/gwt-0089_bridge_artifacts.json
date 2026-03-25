@@ -1,0 +1,1207 @@
+{
+  "gwt_id": "gwt-0089",
+  "module_name": "WarningVerdictOrchestration",
+  "data_structures": {
+    "WarningVerdictOrchestrationState": {
+      "function_id": "fn-WarningVerdictOrchestration-state",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"OrchestratorStart\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "verdict": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[p \\in PASSES |-> \"pending\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "correctionInvoked": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[p \\in PASSES |-> FALSE]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "autoFix": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "true",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "summaryStatus": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "pending",
+          "validation": [
+            "IsString"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from WarningVerdictOrchestration TLA+ spec"
+    }
+  },
+  "operations": {
+    "OrchestratorStart": {
+      "function_id": "fn-WarningVerdictOrchestration-OrchestratorStart",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-OrchestratorStart",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action OrchestratorStart from WarningVerdictOrchestration spec"
+    },
+    "SelectPass": {
+      "function_id": "fn-WarningVerdictOrchestration-SelectPass",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-SelectPass",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/SelectPassFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action SelectPass from WarningVerdictOrchestration spec"
+    },
+    "ComputeSummary": {
+      "function_id": "fn-WarningVerdictOrchestration-ComputeSummary",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-ComputeSummary",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ComputeSummary from WarningVerdictOrchestration spec"
+    },
+    "Finish": {
+      "function_id": "fn-WarningVerdictOrchestration-Finish",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from WarningVerdictOrchestration spec"
+    }
+  },
+  "verifiers": {
+    "NoCorrection_OnWarning": {
+      "function_id": "fn-WarningVerdictOrchestration-verify-NoCorrection_OnWarning",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-NoCorrection_OnWarning",
+      "conditions": [
+        "\\A p \\in PASSES : verdict[p] = \"WARNING\" => ~correctionInvoked[p]"
+      ],
+      "message": "NoCorrection_OnWarning violation: \\A p \\in PASSES : verdict[p] = \"WARNING\" => ~correctionInvoked[p]",
+      "applies_to": [
+        "correctionInvoked",
+        "verdict"
+      ],
+      "description": "Verifier for invariant NoCorrection_OnWarning from WarningVerdictOrchestration spec"
+    },
+    "WarningIsNonBlocking": {
+      "function_id": "fn-WarningVerdictOrchestration-verify-WarningIsNonBlocking",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-WarningIsNonBlocking",
+      "conditions": [
+        "\\A p \\in PASSES : verdict[p] = \"WARNING\" => NonBlocking(verdict[p]"
+      ],
+      "message": "WarningIsNonBlocking violation: \\A p \\in PASSES : verdict[p] = \"WARNING\" => NonBlocking(verdict[p])",
+      "applies_to": [
+        "verdict"
+      ],
+      "description": "Verifier for invariant WarningIsNonBlocking from WarningVerdictOrchestration spec"
+    },
+    "WarningRecorded": {
+      "function_id": "fn-WarningVerdictOrchestration-verify-WarningRecorded",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-WarningRecorded",
+      "conditions": [
+        "\\A p \\in PASSES : verdict[p] \\in {\"pending\", \"PASS\", \"WARNING\", \"FAIL\"}"
+      ],
+      "message": "WarningRecorded violation: \\A p \\in PASSES : verdict[p] \\in {\"pending\", \"PASS\", \"WARNING\", \"FAIL\"}",
+      "applies_to": [
+        "verdict"
+      ],
+      "description": "Verifier for invariant WarningRecorded from WarningVerdictOrchestration spec"
+    },
+    "WarningEnablesDependents": {
+      "function_id": "fn-WarningVerdictOrchestration-verify-WarningEnablesDependents",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-WarningEnablesDependents",
+      "conditions": [
+        "\\A p \\in PASSES : verdict[p] = \"WARNING\" =>\n    \\A q \\in PASSES :\n      ( p \\in Deps(q",
+        "\\A d \\in Deps(q) \\ {p} : NonBlocking(verdict[d]) ) =>\n        ( Schedulable(q) \\/ IsComplete(q) "
+      ],
+      "message": "WarningEnablesDependents violation: \\A p \\in PASSES : verdict[p] = \"WARNING\" =>\n    \\A q \\in PASSES :\n      ( p \\in Deps(q) /\\ \\A d \\in Deps(q) \\ {p} : N...",
+      "applies_to": [
+        "verdict"
+      ],
+      "description": "Verifier for invariant WarningEnablesDependents from WarningVerdictOrchestration spec"
+    },
+    "CorrectionOnlyOnFail": {
+      "function_id": "fn-WarningVerdictOrchestration-verify-CorrectionOnlyOnFail",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-CorrectionOnlyOnFail",
+      "conditions": [
+        "\\A p \\in PASSES : correctionInvoked[p] => verdict[p] = \"FAIL\""
+      ],
+      "message": "CorrectionOnlyOnFail violation: \\A p \\in PASSES : correctionInvoked[p] => verdict[p] = \"FAIL\"",
+      "applies_to": [
+        "correctionInvoked",
+        "verdict"
+      ],
+      "description": "Verifier for invariant CorrectionOnlyOnFail from WarningVerdictOrchestration spec"
+    },
+    "SummaryReflectsWarning": {
+      "function_id": "fn-WarningVerdictOrchestration-verify-SummaryReflectsWarning",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-SummaryReflectsWarning",
+      "conditions": [
+        "summaryStatus = \"warning\" =>\n    ( \\E p \\in PASSES : verdict[p] = \"WARNING\" ",
+        "~( \\E p \\in PASSES : verdict[p] = \"FAIL\" "
+      ],
+      "message": "SummaryReflectsWarning violation: summaryStatus = \"warning\" =>\n    ( \\E p \\in PASSES : verdict[p] = \"WARNING\" ) /\\\n    ~( \\E p \\in PASSES : verdict[p] ...",
+      "applies_to": [
+        "summaryStatus",
+        "verdict"
+      ],
+      "description": "Verifier for invariant SummaryReflectsWarning from WarningVerdictOrchestration spec"
+    },
+    "SummaryReflectsFail": {
+      "function_id": "fn-WarningVerdictOrchestration-verify-SummaryReflectsFail",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-SummaryReflectsFail",
+      "conditions": [
+        "summaryStatus = \"fail\" =>\n    \\E p \\in PASSES : verdict[p] = \"FAIL\""
+      ],
+      "message": "SummaryReflectsFail violation: summaryStatus = \"fail\" =>\n    \\E p \\in PASSES : verdict[p] = \"FAIL\"",
+      "applies_to": [
+        "summaryStatus",
+        "verdict"
+      ],
+      "description": "Verifier for invariant SummaryReflectsFail from WarningVerdictOrchestration spec"
+    },
+    "SummaryReflectsPass": {
+      "function_id": "fn-WarningVerdictOrchestration-verify-SummaryReflectsPass",
+      "acceptance_criteria_id": "ac-WarningVerdictOrchestration-SummaryReflectsPass",
+      "conditions": [
+        "summaryStatus = \"pass\" =>\n    \\A p \\in PASSES : verdict[p] = \"PASS\""
+      ],
+      "message": "SummaryReflectsPass violation: summaryStatus = \"pass\" =>\n    \\A p \\in PASSES : verdict[p] = \"PASS\"",
+      "applies_to": [
+        "summaryStatus",
+        "verdict"
+      ],
+      "description": "Verifier for invariant SummaryReflectsPass from WarningVerdictOrchestration spec"
+    }
+  },
+  "assertions": {
+    "assert_NoCorrection_OnWarning": {
+      "condition": "\\A p in PASSES : verdict[p] = \"WARNING\" implies ~correctionInvoked[p]",
+      "message": "Assertion failed: NoCorrection_OnWarning \u2014 \\A p \\in PASSES : verdict[p] = \"WARNING\" => ~correctionInvoked[p]",
+      "description": "Test assertion for NoCorrection_OnWarning from WarningVerdictOrchestration spec"
+    },
+    "assert_WarningIsNonBlocking": {
+      "condition": "\\A p in PASSES : verdict[p] = \"WARNING\" implies NonBlocking(verdict[p])",
+      "message": "Assertion failed: WarningIsNonBlocking \u2014 \\A p \\in PASSES : verdict[p] = \"WARNING\" => NonBlocking(verdict[p])",
+      "description": "Test assertion for WarningIsNonBlocking from WarningVerdictOrchestration spec"
+    },
+    "assert_WarningRecorded": {
+      "condition": "\\A p in PASSES : verdict[p] in {\"pending\", \"PASS\", \"WARNING\", \"FAIL\"}",
+      "message": "Assertion failed: WarningRecorded \u2014 \\A p \\in PASSES : verdict[p] \\in {\"pending\", \"PASS\", \"WARNING\", \"FAIL\"}",
+      "description": "Test assertion for WarningRecorded from WarningVerdictOrchestration spec"
+    },
+    "assert_WarningEnablesDependents": {
+      "condition": "\\A p in PASSES : verdict[p] = \"WARNING\" implies\n    \\A q in PASSES :\n      ( p in Deps(q) and \\A d in Deps(q) \\ {p} : NonBlocking(verdict[d]) ) implies\n        ( Schedulable(q) or IsComplete(q) )",
+      "message": "Assertion failed: WarningEnablesDependents \u2014 \\A p \\in PASSES : verdict[p] = \"WARNING\" =>\n    \\A q \\in PASSES :\n      ( p \\in Deps(q) /\\ \\A d \\in Deps(q) \\ {p} : N...",
+      "description": "Test assertion for WarningEnablesDependents from WarningVerdictOrchestration spec"
+    },
+    "assert_CorrectionOnlyOnFail": {
+      "condition": "\\A p in PASSES : correctionInvoked[p] implies verdict[p] = \"FAIL\"",
+      "message": "Assertion failed: CorrectionOnlyOnFail \u2014 \\A p \\in PASSES : correctionInvoked[p] => verdict[p] = \"FAIL\"",
+      "description": "Test assertion for CorrectionOnlyOnFail from WarningVerdictOrchestration spec"
+    },
+    "assert_SummaryReflectsWarning": {
+      "condition": "summaryStatus = \"warning\" implies\n    ( \\E p in PASSES : verdict[p] = \"WARNING\" ) and\n    ~( \\E p in PASSES : verdict[p] = \"FAIL\" )",
+      "message": "Assertion failed: SummaryReflectsWarning \u2014 summaryStatus = \"warning\" =>\n    ( \\E p \\in PASSES : verdict[p] = \"WARNING\" ) /\\\n    ~( \\E p \\in PASSES : verdict[p] ...",
+      "description": "Test assertion for SummaryReflectsWarning from WarningVerdictOrchestration spec"
+    },
+    "assert_SummaryReflectsFail": {
+      "condition": "summaryStatus = \"fail\" implies\n    \\E p in PASSES : verdict[p] = \"FAIL\"",
+      "message": "Assertion failed: SummaryReflectsFail \u2014 summaryStatus = \"fail\" =>\n    \\E p \\in PASSES : verdict[p] = \"FAIL\"",
+      "description": "Test assertion for SummaryReflectsFail from WarningVerdictOrchestration spec"
+    },
+    "assert_SummaryReflectsPass": {
+      "condition": "summaryStatus = \"pass\" implies\n    \\A p in PASSES : verdict[p] = \"PASS\"",
+      "message": "Assertion failed: SummaryReflectsPass \u2014 summaryStatus = \"pass\" =>\n    \\A p \\in PASSES : verdict[p] = \"PASS\"",
+      "description": "Test assertion for SummaryReflectsPass from WarningVerdictOrchestration spec"
+    }
+  },
+  "test_scenarios": [
+    {
+      "name": "scenario_WarningVerdictOrchestration_AnySchedulable_0",
+      "setup": {
+        "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+        "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+        "summaryStatus": "\"pending\"",
+        "pc": "[orch |-> \"OrchestratorStart\"]",
+        "autoFix": "TRUE"
+      },
+      "steps": [],
+      "expected_outcome": "AnySchedulable should hold but was violated at state 1",
+      "invariant_tested": "AnySchedulable"
+    }
+  ],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"PASS\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"PASS\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"PASS\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"PASS\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"WARNING\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"WARNING\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"WARNING\", abstraction_gap |-> \"PASS\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"WARNING\", abstraction_gap |-> \"PASS\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"WARNING\", abstraction_gap |-> \"PASS\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"WARNING\", abstraction_gap |-> \"PASS\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"PASS\", abstraction_gap |-> \"FAIL\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> TRUE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"PASS\", abstraction_gap |-> \"FAIL\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> TRUE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"PASS\", abstraction_gap |-> \"FAIL\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> TRUE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"PASS\", coverage |-> \"PASS\", abstraction_gap |-> \"FAIL\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> TRUE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> TRUE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"fail\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"pending\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"pending\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"SelectPass\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "SelectPass",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"OrchestratorStart\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorStart",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"pending\"",
+          "pc": "[orch |-> \"ComputeSummary\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "ComputeSummary",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Finish\"]",
+          "autoFix": "TRUE"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Finish",
+        "vars": {
+          "verdict": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", abstraction_gap |-> \"WARNING\"]",
+          "correctionInvoked": "[artifacts |-> FALSE, coverage |-> FALSE, abstraction_gap |-> FALSE]",
+          "summaryStatus": "\"warning\"",
+          "pc": "[orch |-> \"Done\"]",
+          "autoFix": "TRUE"
+        }
+      }
+    ]
+  ]
+}

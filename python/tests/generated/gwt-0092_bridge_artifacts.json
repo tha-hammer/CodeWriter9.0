@@ -1,0 +1,1803 @@
+{
+  "gwt_id": "gwt-0092",
+  "module_name": "RetriesExhausted",
+  "data_structures": {
+    "RetriesExhaustedState": {
+      "function_id": "fn-RetriesExhausted-state",
+      "acceptance_criteria_id": "ac-RetriesExhausted-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"RetryStart\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "attempt": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "verdict": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "permanent": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "correctionCount": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "blockedPasses": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "summaryStatus": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "stuckOn": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "findingsPreserved": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "lastAttemptMade": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from RetriesExhausted TLA+ spec"
+    }
+  },
+  "operations": {
+    "RetryStart": {
+      "function_id": "fn-RetriesExhausted-RetryStart",
+      "acceptance_criteria_id": "ac-RetriesExhausted-RetryStart",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RetryStart from RetriesExhausted spec"
+    },
+    "RunReview": {
+      "function_id": "fn-RetriesExhausted-RunReview",
+      "acceptance_criteria_id": "ac-RetriesExhausted-RunReview",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunReview from RetriesExhausted spec"
+    },
+    "CheckVerdict": {
+      "function_id": "fn-RetriesExhausted-CheckVerdict",
+      "acceptance_criteria_id": "ac-RetriesExhausted-CheckVerdict",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckVerdict from RetriesExhausted spec"
+    },
+    "MaybeSpawnCorrection": {
+      "function_id": "fn-RetriesExhausted-MaybeSpawnCorrection",
+      "acceptance_criteria_id": "ac-RetriesExhausted-MaybeSpawnCorrection",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action MaybeSpawnCorrection from RetriesExhausted spec"
+    },
+    "IncrementAttempt": {
+      "function_id": "fn-RetriesExhausted-IncrementAttempt",
+      "acceptance_criteria_id": "ac-RetriesExhausted-IncrementAttempt",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action IncrementAttempt from RetriesExhausted spec"
+    },
+    "PostLoop": {
+      "function_id": "fn-RetriesExhausted-PostLoop",
+      "acceptance_criteria_id": "ac-RetriesExhausted-PostLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action PostLoop from RetriesExhausted spec"
+    },
+    "Finish": {
+      "function_id": "fn-RetriesExhausted-Finish",
+      "acceptance_criteria_id": "ac-RetriesExhausted-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from RetriesExhausted spec"
+    }
+  },
+  "verifiers": {
+    "ValidAttemptBounds": {
+      "function_id": "fn-RetriesExhausted-verify-ValidAttemptBounds",
+      "acceptance_criteria_id": "ac-RetriesExhausted-ValidAttemptBounds",
+      "conditions": [
+        "attempt >= 1",
+        "attempt <= MaxRetries + 1"
+      ],
+      "message": "ValidAttemptBounds violation: attempt >= 1 /\\ attempt <= MaxRetries + 1",
+      "applies_to": [
+        "attempt"
+      ],
+      "description": "Verifier for invariant ValidAttemptBounds from RetriesExhausted spec"
+    },
+    "PermanentFailConsistent": {
+      "function_id": "fn-RetriesExhausted-verify-PermanentFailConsistent",
+      "acceptance_criteria_id": "ac-RetriesExhausted-PermanentFailConsistent",
+      "conditions": [
+        "permanent => (verdict = \"FAIL\"",
+        "lastAttemptMade = MaxRetries"
+      ],
+      "message": "PermanentFailConsistent violation: permanent => (verdict = \"FAIL\" /\\ lastAttemptMade = MaxRetries)",
+      "applies_to": [
+        "lastAttemptMade",
+        "permanent",
+        "verdict"
+      ],
+      "description": "Verifier for invariant PermanentFailConsistent from RetriesExhausted spec"
+    },
+    "CorrectionCountConsistent": {
+      "function_id": "fn-RetriesExhausted-verify-CorrectionCountConsistent",
+      "acceptance_criteria_id": "ac-RetriesExhausted-CorrectionCountConsistent",
+      "conditions": [
+        "permanent => correctionCount = MaxRetries - 1"
+      ],
+      "message": "CorrectionCountConsistent violation: permanent => correctionCount = MaxRetries - 1",
+      "applies_to": [
+        "correctionCount",
+        "permanent"
+      ],
+      "description": "Verifier for invariant CorrectionCountConsistent from RetriesExhausted spec"
+    },
+    "NoCorrectionExceedsMax": {
+      "function_id": "fn-RetriesExhausted-verify-NoCorrectionExceedsMax",
+      "acceptance_criteria_id": "ac-RetriesExhausted-NoCorrectionExceedsMax",
+      "conditions": [
+        "correctionCount <= MaxRetries - 1"
+      ],
+      "message": "NoCorrectionExceedsMax violation: correctionCount <= MaxRetries - 1",
+      "applies_to": [
+        "correctionCount"
+      ],
+      "description": "Verifier for invariant NoCorrectionExceedsMax from RetriesExhausted spec"
+    },
+    "DependentsBlockedWhenPermanent": {
+      "function_id": "fn-RetriesExhausted-verify-DependentsBlockedWhenPermanent",
+      "acceptance_criteria_id": "ac-RetriesExhausted-DependentsBlockedWhenPermanent",
+      "conditions": [
+        "permanent => (CoverageDependents \\subseteq blockedPasses"
+      ],
+      "message": "DependentsBlockedWhenPermanent violation: permanent => (CoverageDependents \\subseteq blockedPasses)",
+      "applies_to": [
+        "blockedPasses",
+        "permanent"
+      ],
+      "description": "Verifier for invariant DependentsBlockedWhenPermanent from RetriesExhausted spec"
+    },
+    "SummaryCorrectWhenPermanent": {
+      "function_id": "fn-RetriesExhausted-verify-SummaryCorrectWhenPermanent",
+      "acceptance_criteria_id": "ac-RetriesExhausted-SummaryCorrectWhenPermanent",
+      "conditions": [
+        "permanent =>\n        (summaryStatus    = \"fail\"",
+        "stuckOn       = \"coverage\"",
+        "findingsPreserved = TRUE"
+      ],
+      "message": "SummaryCorrectWhenPermanent violation: permanent =>\n        (summaryStatus    = \"fail\"\n         /\\ stuckOn       = \"coverage\"\n         /\\ findingsPreserved ...",
+      "applies_to": [
+        "findingsPreserved",
+        "permanent",
+        "stuckOn",
+        "summaryStatus"
+      ],
+      "description": "Verifier for invariant SummaryCorrectWhenPermanent from RetriesExhausted spec"
+    },
+    "BlockedPassesDistinctFromFailed": {
+      "function_id": "fn-RetriesExhausted-verify-BlockedPassesDistinctFromFailed",
+      "acceptance_criteria_id": "ac-RetriesExhausted-BlockedPassesDistinctFromFailed",
+      "conditions": [
+        "\\A p \\in blockedPasses : p # \"coverage\""
+      ],
+      "message": "BlockedPassesDistinctFromFailed violation: \\A p \\in blockedPasses : p # \"coverage\"",
+      "applies_to": [
+        "blockedPasses"
+      ],
+      "description": "Verifier for invariant BlockedPassesDistinctFromFailed from RetriesExhausted spec"
+    },
+    "FindingsPreservedMonotone": {
+      "function_id": "fn-RetriesExhausted-verify-FindingsPreservedMonotone",
+      "acceptance_criteria_id": "ac-RetriesExhausted-FindingsPreservedMonotone",
+      "conditions": [
+        "findingsPreserved = TRUE =>\n        (summaryStatus = \"fail\" \\/ summaryStatus = \"none\""
+      ],
+      "message": "FindingsPreservedMonotone violation: findingsPreserved = TRUE =>\n        (summaryStatus = \"fail\" \\/ summaryStatus = \"none\")",
+      "applies_to": [
+        "findingsPreserved",
+        "summaryStatus"
+      ],
+      "description": "Verifier for invariant FindingsPreservedMonotone from RetriesExhausted spec"
+    }
+  },
+  "assertions": {
+    "assert_ValidAttemptBounds": {
+      "condition": "attempt >= 1 and attempt <= MaxRetries + 1",
+      "message": "Assertion failed: ValidAttemptBounds \u2014 attempt >= 1 /\\ attempt <= MaxRetries + 1",
+      "description": "Test assertion for ValidAttemptBounds from RetriesExhausted spec"
+    },
+    "assert_PermanentFailConsistent": {
+      "condition": "permanent implies (verdict = \"FAIL\" and lastAttemptMade = MaxRetries)",
+      "message": "Assertion failed: PermanentFailConsistent \u2014 permanent => (verdict = \"FAIL\" /\\ lastAttemptMade = MaxRetries)",
+      "description": "Test assertion for PermanentFailConsistent from RetriesExhausted spec"
+    },
+    "assert_CorrectionCountConsistent": {
+      "condition": "permanent implies correctionCount = MaxRetries - 1",
+      "message": "Assertion failed: CorrectionCountConsistent \u2014 permanent => correctionCount = MaxRetries - 1",
+      "description": "Test assertion for CorrectionCountConsistent from RetriesExhausted spec"
+    },
+    "assert_NoCorrectionExceedsMax": {
+      "condition": "correctionCount <= MaxRetries - 1",
+      "message": "Assertion failed: NoCorrectionExceedsMax \u2014 correctionCount <= MaxRetries - 1",
+      "description": "Test assertion for NoCorrectionExceedsMax from RetriesExhausted spec"
+    },
+    "assert_DependentsBlockedWhenPermanent": {
+      "condition": "permanent implies (CoverageDependents \\subseteq blockedPasses)",
+      "message": "Assertion failed: DependentsBlockedWhenPermanent \u2014 permanent => (CoverageDependents \\subseteq blockedPasses)",
+      "description": "Test assertion for DependentsBlockedWhenPermanent from RetriesExhausted spec"
+    },
+    "assert_SummaryCorrectWhenPermanent": {
+      "condition": "permanent implies\n        (summaryStatus    = \"fail\"\n         and stuckOn       = \"coverage\"\n         and findingsPreserved = TRUE)",
+      "message": "Assertion failed: SummaryCorrectWhenPermanent \u2014 permanent =>\n        (summaryStatus    = \"fail\"\n         /\\ stuckOn       = \"coverage\"\n         /\\ findingsPreserved ...",
+      "description": "Test assertion for SummaryCorrectWhenPermanent from RetriesExhausted spec"
+    },
+    "assert_BlockedPassesDistinctFromFailed": {
+      "condition": "\\A p in blockedPasses : p # \"coverage\"",
+      "message": "Assertion failed: BlockedPassesDistinctFromFailed \u2014 \\A p \\in blockedPasses : p # \"coverage\"",
+      "description": "Test assertion for BlockedPassesDistinctFromFailed from RetriesExhausted spec"
+    },
+    "assert_FindingsPreservedMonotone": {
+      "condition": "findingsPreserved = TRUE implies\n        (summaryStatus = \"fail\" or summaryStatus = \"none\")",
+      "message": "Assertion failed: FindingsPreservedMonotone \u2014 findingsPreserved = TRUE =>\n        (summaryStatus = \"fail\" \\/ summaryStatus = \"none\")",
+      "description": "Test assertion for FindingsPreservedMonotone from RetriesExhausted spec"
+    }
+  },
+  "test_scenarios": [
+    {
+      "name": "scenario_RetriesExhausted_DependentsBlockedWhenPermanent_0",
+      "setup": {
+        "verdict": "\"none\"",
+        "summaryStatus": "\"none\"",
+        "blockedPasses": "{}",
+        "attempt": "1",
+        "correctionCount": "0",
+        "pc": "[orch |-> \"RetryStart\"]",
+        "stuckOn": "\"none\"",
+        "permanent": "FALSE",
+        "findingsPreserved": "FALSE",
+        "lastAttemptMade": "0"
+      },
+      "steps": [],
+      "expected_outcome": "DependentsBlockedWhenPermanent should hold but was violated at state 1",
+      "invariant_tested": "DependentsBlockedWhenPermanent"
+    }
+  ],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"MaybeSpawnCorrection\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeSpawnCorrection",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"IncrementAttempt\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "IncrementAttempt",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"MaybeSpawnCorrection\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeSpawnCorrection",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"IncrementAttempt\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "IncrementAttempt",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"MaybeSpawnCorrection\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "MaybeSpawnCorrection",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "2",
+          "pc": "[orch |-> \"IncrementAttempt\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "IncrementAttempt",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "3",
+          "correctionCount": "2",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "3",
+          "correctionCount": "2",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "3",
+          "correctionCount": "2",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "3"
+        }
+      },
+      {
+        "state_num": 14,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "3",
+          "correctionCount": "2",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "3"
+        }
+      },
+      {
+        "state_num": 15,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "3",
+          "correctionCount": "2",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "3"
+        }
+      },
+      {
+        "state_num": 16,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "3",
+          "correctionCount": "2",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"PASS\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"MaybeSpawnCorrection\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeSpawnCorrection",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"IncrementAttempt\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "IncrementAttempt",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"MaybeSpawnCorrection\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeSpawnCorrection",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"IncrementAttempt\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "IncrementAttempt",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"MaybeSpawnCorrection\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "MaybeSpawnCorrection",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"IncrementAttempt\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "IncrementAttempt",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"FAIL\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "2",
+          "correctionCount": "1",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "2"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RetryStart\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "RetryStart",
+        "vars": {
+          "verdict": "\"none\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"RunReview\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "0"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunReview",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"CheckVerdict\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckVerdict",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"none\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"PostLoop\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "PostLoop",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Finish\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Finish",
+        "vars": {
+          "verdict": "\"WARNING\"",
+          "summaryStatus": "\"pass\"",
+          "blockedPasses": "{}",
+          "attempt": "1",
+          "correctionCount": "0",
+          "pc": "[orch |-> \"Done\"]",
+          "stuckOn": "\"none\"",
+          "permanent": "FALSE",
+          "findingsPreserved": "FALSE",
+          "lastAttemptMade": "1"
+        }
+      }
+    ]
+  ]
+}

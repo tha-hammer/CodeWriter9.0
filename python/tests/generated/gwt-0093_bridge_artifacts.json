@@ -1,0 +1,1122 @@
+{
+  "gwt_id": "gwt-0093",
+  "module_name": "PassDependencyBlocking",
+  "data_structures": {
+    "PassDependencyBlockingState": {
+      "function_id": "fn-PassDependencyBlocking-state",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"ProcessPasses\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "passStatus": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[p \\in PASSES |-> \"pending\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "ran": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "idx": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from PassDependencyBlocking TLA+ spec"
+    }
+  },
+  "operations": {
+    "ProcessPasses": {
+      "function_id": "fn-PassDependencyBlocking-ProcessPasses",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-ProcessPasses",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/ProcessPassesFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action ProcessPasses from PassDependencyBlocking spec"
+    },
+    "Finish": {
+      "function_id": "fn-PassDependencyBlocking-Finish",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from PassDependencyBlocking spec"
+    }
+  },
+  "verifiers": {
+    "DirectBlockInvariant": {
+      "function_id": "fn-PassDependencyBlocking-verify-DirectBlockInvariant",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-DirectBlockInvariant",
+      "conditions": [
+        "\\A p \\in PASSES :\n    passStatus[p] = \"blocked\" =>\n      \\E dep \\in DEPS[p] : passStatus[dep] \\in BLOCKING"
+      ],
+      "message": "DirectBlockInvariant violation: \\A p \\in PASSES :\n    passStatus[p] = \"blocked\" =>\n      \\E dep \\in DEPS[p] : passStatus[dep] \\in BLOCKING",
+      "applies_to": [
+        "passStatus"
+      ],
+      "description": "Verifier for invariant DirectBlockInvariant from PassDependencyBlocking spec"
+    },
+    "BlockedNeverRan": {
+      "function_id": "fn-PassDependencyBlocking-verify-BlockedNeverRan",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-BlockedNeverRan",
+      "conditions": [
+        "\\A p \\in PASSES : passStatus[p] = \"blocked\" => p \\notin ran"
+      ],
+      "message": "BlockedNeverRan violation: \\A p \\in PASSES : passStatus[p] = \"blocked\" => p \\notin ran",
+      "applies_to": [
+        "passStatus",
+        "ran"
+      ],
+      "description": "Verifier for invariant BlockedNeverRan from PassDependencyBlocking spec"
+    },
+    "NeverRunBlocked": {
+      "function_id": "fn-PassDependencyBlocking-verify-NeverRunBlocked",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-NeverRunBlocked",
+      "conditions": [
+        "\\A p \\in ran : passStatus[p] # \"blocked\""
+      ],
+      "message": "NeverRunBlocked violation: \\A p \\in ran : passStatus[p] # \"blocked\"",
+      "applies_to": [
+        "passStatus",
+        "ran"
+      ],
+      "description": "Verifier for invariant NeverRunBlocked from PassDependencyBlocking spec"
+    },
+    "ScheduledOnlySatisfied": {
+      "function_id": "fn-PassDependencyBlocking-verify-ScheduledOnlySatisfied",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-ScheduledOnlySatisfied",
+      "conditions": [
+        "\\A p \\in ran :\n    \\A dep \\in DEPS[p] : passStatus[dep] \\in SATISFIED"
+      ],
+      "message": "ScheduledOnlySatisfied violation: \\A p \\in ran :\n    \\A dep \\in DEPS[p] : passStatus[dep] \\in SATISFIED",
+      "applies_to": [
+        "passStatus",
+        "ran"
+      ],
+      "description": "Verifier for invariant ScheduledOnlySatisfied from PassDependencyBlocking spec"
+    },
+    "PartialSuccessInvariant": {
+      "function_id": "fn-PassDependencyBlocking-verify-PartialSuccessInvariant",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-PartialSuccessInvariant",
+      "conditions": [
+        "\\A p \\in PASSES :\n    ( passStatus[p] \\in SATISFIED",
+        "\\A dep \\in DEPS[p] : passStatus[dep] \\in SATISFIED ) =>\n    p \\in ran"
+      ],
+      "message": "PartialSuccessInvariant violation: \\A p \\in PASSES :\n    ( passStatus[p] \\in SATISFIED /\\\n      \\A dep \\in DEPS[p] : passStatus[dep] \\in SATISFIED ) =>\n...",
+      "applies_to": [
+        "passStatus",
+        "ran"
+      ],
+      "description": "Verifier for invariant PartialSuccessInvariant from PassDependencyBlocking spec"
+    },
+    "BlockedDistinctFromFail": {
+      "function_id": "fn-PassDependencyBlocking-verify-BlockedDistinctFromFail",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-BlockedDistinctFromFail",
+      "conditions": [
+        "\\A p \\in PASSES :\n    ~( passStatus[p] = \"blocked\"",
+        "passStatus[p] = \"FAIL\" "
+      ],
+      "message": "BlockedDistinctFromFail violation: \\A p \\in PASSES :\n    ~( passStatus[p] = \"blocked\" /\\ passStatus[p] = \"FAIL\" )",
+      "applies_to": [
+        "passStatus"
+      ],
+      "description": "Verifier for invariant BlockedDistinctFromFail from PassDependencyBlocking spec"
+    },
+    "FinalAllResolved": {
+      "function_id": "fn-PassDependencyBlocking-verify-FinalAllResolved",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-FinalAllResolved",
+      "conditions": [
+        "idx > Len(TOPO) =>\n    \\A p \\in PASSES : passStatus[p] \\in TERMINAL"
+      ],
+      "message": "FinalAllResolved violation: idx > Len(TOPO) =>\n    \\A p \\in PASSES : passStatus[p] \\in TERMINAL",
+      "applies_to": [
+        "idx",
+        "passStatus"
+      ],
+      "description": "Verifier for invariant FinalAllResolved from PassDependencyBlocking spec"
+    },
+    "TransitiveBlockWitness": {
+      "function_id": "fn-PassDependencyBlocking-verify-TransitiveBlockWitness",
+      "acceptance_criteria_id": "ac-PassDependencyBlocking-TransitiveBlockWitness",
+      "conditions": [
+        "\\A p \\in PASSES :\n    passStatus[p] = \"blocked\" =>\n      \\E dep \\in DEPS[p] : passStatus[dep] \\in BLOCKING\n\nVARIABLE cp"
+      ],
+      "message": "TransitiveBlockWitness violation: \\A p \\in PASSES :\n    passStatus[p] = \"blocked\" =>\n      \\E dep \\in DEPS[p] : passStatus[dep] \\in BLOCKING\n\nVARIABLE cp",
+      "applies_to": [
+        "passStatus"
+      ],
+      "description": "Verifier for invariant TransitiveBlockWitness from PassDependencyBlocking spec"
+    }
+  },
+  "assertions": {
+    "assert_DirectBlockInvariant": {
+      "condition": "\\A p in PASSES :\n    passStatus[p] = \"blocked\" implies\n      \\E dep in DEPS[p] : passStatus[dep] in BLOCKING",
+      "message": "Assertion failed: DirectBlockInvariant \u2014 \\A p \\in PASSES :\n    passStatus[p] = \"blocked\" =>\n      \\E dep \\in DEPS[p] : passStatus[dep] \\in BLOCKING",
+      "description": "Test assertion for DirectBlockInvariant from PassDependencyBlocking spec"
+    },
+    "assert_BlockedNeverRan": {
+      "condition": "\\A p in PASSES : passStatus[p] = \"blocked\" implies p not in ran",
+      "message": "Assertion failed: BlockedNeverRan \u2014 \\A p \\in PASSES : passStatus[p] = \"blocked\" => p \\notin ran",
+      "description": "Test assertion for BlockedNeverRan from PassDependencyBlocking spec"
+    },
+    "assert_NeverRunBlocked": {
+      "condition": "\\A p in ran : passStatus[p] # \"blocked\"",
+      "message": "Assertion failed: NeverRunBlocked \u2014 \\A p \\in ran : passStatus[p] # \"blocked\"",
+      "description": "Test assertion for NeverRunBlocked from PassDependencyBlocking spec"
+    },
+    "assert_ScheduledOnlySatisfied": {
+      "condition": "\\A p in ran :\n    \\A dep in DEPS[p] : passStatus[dep] in SATISFIED",
+      "message": "Assertion failed: ScheduledOnlySatisfied \u2014 \\A p \\in ran :\n    \\A dep \\in DEPS[p] : passStatus[dep] \\in SATISFIED",
+      "description": "Test assertion for ScheduledOnlySatisfied from PassDependencyBlocking spec"
+    },
+    "assert_PartialSuccessInvariant": {
+      "condition": "\\A p in PASSES :\n    ( passStatus[p] in SATISFIED and\n      \\A dep in DEPS[p] : passStatus[dep] in SATISFIED ) implies\n    p in ran",
+      "message": "Assertion failed: PartialSuccessInvariant \u2014 \\A p \\in PASSES :\n    ( passStatus[p] \\in SATISFIED /\\\n      \\A dep \\in DEPS[p] : passStatus[dep] \\in SATISFIED ) =>\n...",
+      "description": "Test assertion for PartialSuccessInvariant from PassDependencyBlocking spec"
+    },
+    "assert_BlockedDistinctFromFail": {
+      "condition": "\\A p in PASSES :\n    ~( passStatus[p] = \"blocked\" and passStatus[p] = \"FAIL\" )",
+      "message": "Assertion failed: BlockedDistinctFromFail \u2014 \\A p \\in PASSES :\n    ~( passStatus[p] = \"blocked\" /\\ passStatus[p] = \"FAIL\" )",
+      "description": "Test assertion for BlockedDistinctFromFail from PassDependencyBlocking spec"
+    },
+    "assert_FinalAllResolved": {
+      "condition": "idx > Len(TOPO) implies\n    \\A p in PASSES : passStatus[p] in TERMINAL",
+      "message": "Assertion failed: FinalAllResolved \u2014 idx > Len(TOPO) =>\n    \\A p \\in PASSES : passStatus[p] \\in TERMINAL",
+      "description": "Test assertion for FinalAllResolved from PassDependencyBlocking spec"
+    },
+    "assert_TransitiveBlockWitness": {
+      "condition": "\\A p in PASSES :\n    passStatus[p] = \"blocked\" implies\n      \\E dep in DEPS[p] : passStatus[dep] in BLOCKING\n\nVARIABLE cp",
+      "message": "Assertion failed: TransitiveBlockWitness \u2014 \\A p \\in PASSES :\n    passStatus[p] = \"blocked\" =>\n      \\E dep \\in DEPS[p] : passStatus[dep] \\in BLOCKING\n\nVARIABLE cp",
+      "description": "Test assertion for TransitiveBlockWitness from PassDependencyBlocking spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"PASS\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"PASS\", abstraction_gap |-> \"FAIL\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"PASS\", abstraction_gap |-> \"FAIL\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"PASS\", abstraction_gap |-> \"FAIL\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"PASS\", abstraction_gap |-> \"FAIL\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", interaction |-> \"WARNING\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", interaction |-> \"WARNING\", abstraction_gap |-> \"PASS\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", interaction |-> \"WARNING\", abstraction_gap |-> \"PASS\", imports |-> \"PASS\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", interaction |-> \"WARNING\", abstraction_gap |-> \"PASS\", imports |-> \"PASS\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"PASS\", interaction |-> \"WARNING\", abstraction_gap |-> \"PASS\", imports |-> \"PASS\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\", \"abstraction_gap\", \"imports\"}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"FAIL\", coverage |-> \"blocked\", interaction |-> \"blocked\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"FAIL\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"WARNING\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"WARNING\", abstraction_gap |-> \"blocked\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"WARNING\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"WARNING\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"FAIL\", interaction |-> \"WARNING\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "idx": "1",
+          "cp": "\"\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"pending\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{}"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "2",
+          "cp": "\"artifacts\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"pending\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\"}"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "3",
+          "cp": "\"coverage\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"pending\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\"}"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "4",
+          "cp": "\"interaction\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"pending\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "5",
+          "cp": "\"abstraction_gap\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"pending\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"ProcessPasses\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "ProcessPasses",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Finish\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "Finish",
+        "vars": {
+          "idx": "6",
+          "cp": "\"imports\"",
+          "pc": "[main |-> \"Done\"]",
+          "passStatus": "[artifacts |-> \"WARNING\", coverage |-> \"WARNING\", interaction |-> \"FAIL\", abstraction_gap |-> \"blocked\", imports |-> \"blocked\"]",
+          "ran": "{\"artifacts\", \"coverage\", \"interaction\"}"
+        }
+      }
+    ]
+  ]
+}

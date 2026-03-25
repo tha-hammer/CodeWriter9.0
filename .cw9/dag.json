@@ -1139,6 +1139,236 @@
       "when": "_orchestrate_reviews() computes the overall status",
       "then": "if any verdict is 'fail' then status='fail'; else if any verdict is 'warning' then status='warning'; else status='pass'; cmd_plan_review returns exit code 0 for pass/warning and 1 for fail"
     },
+    "gwt-0082": {
+      "id": "gwt-0082",
+      "kind": "behavior",
+      "name": "cmd_plan_review_dispatches_to_the_orches",
+      "description": "",
+      "version": 1,
+      "given": "the `cw9 plan-review <plan>` command is invoked without the `--auto-fix` flag",
+      "when": "`cmd_plan_review()` dispatches to the orchestration layer",
+      "then": "`_orchestrate_reviews()` is called (not `_orchestrate_reviews_with_correction()`); all passes execute in the existing dependency order with no correction agents spawned; results are aggregated identically to pre-correction-loop behaviour, preserving full backward compatibility"
+    },
+    "gwt-0083": {
+      "id": "gwt-0083",
+      "kind": "behavior",
+      "name": "cmd_plan_review_parses_cli_arguments",
+      "description": "",
+      "version": 1,
+      "given": "the `cw9 plan-review <plan>` command is invoked with the `--auto-fix` flag",
+      "when": "`cmd_plan_review()` parses CLI arguments",
+      "then": "`_orchestrate_reviews_with_correction()` is called instead of `_orchestrate_reviews()`; the correction loop is active for the entire run"
+    },
+    "gwt-0084": {
+      "id": "gwt-0084",
+      "kind": "behavior",
+      "name": "orchestrate_reviews_with_correction_init",
+      "description": "",
+      "version": 1,
+      "given": "`--auto-fix` is set and `--max-retries` is not provided on the command line",
+      "when": "`_orchestrate_reviews_with_correction()` initialises its per-pass retry budget",
+      "then": "`max_retries` defaults to `2`, meaning each pass may be attempted at most 3 times total (1 initial run + 2 correction cycles)"
+    },
+    "gwt-0085": {
+      "id": "gwt-0085",
+      "kind": "behavior",
+      "name": "cmd_plan_review_parses_cli_arguments",
+      "description": "",
+      "version": 1,
+      "given": "`--auto-fix` is set and `--max-retries N` is provided with a non-negative integer N",
+      "when": "`cmd_plan_review()` parses CLI arguments",
+      "then": "`max_retries` is set to N; a value of `0` means each pass runs exactly once with no correction cycles, equivalent to single-pass mode but still routing through `_orchestrate_reviews_with_correction()`; a negative value is rejected with a CLI error"
+    },
+    "gwt-0086": {
+      "id": "gwt-0086",
+      "kind": "behavior",
+      "name": "run_review_pass_constructs_the_query_cal",
+      "description": "",
+      "version": 1,
+      "given": "`--auto-fix` is active and a review pass is being executed inside the correction loop",
+      "when": "`_run_review_pass()` constructs the `query()` call for that pass",
+      "then": "`json_mode=True` is forced for the `query()` invocation regardless of whether `--json` was passed by the user; streaming is disabled for this call so that structured findings can be returned alongside the verdict"
+    },
+    "gwt-0087": {
+      "id": "gwt-0087",
+      "kind": "behavior",
+      "name": "extract_findings_is_called_with_the_resu",
+      "description": "",
+      "version": 1,
+      "given": "a review pass has completed with `json_mode=True` in auto-fix mode and the result text is available",
+      "when": "`_extract_findings()` is called with the result text",
+      "then": "structured findings are returned containing: the pass name, a list of specific issues (e.g., uncovered verifiers, dead imports, undocumented decisions), and the path of the report file written by the review agent under `thoughts/searchable/shared/plans/`; if extraction fails the function returns an empty findings object and does not raise"
+    },
+    "gwt-0088": {
+      "id": "gwt-0088",
+      "kind": "behavior",
+      "name": "run_review_pass_returns_to_the_orchestra",
+      "description": "",
+      "version": 1,
+      "given": "`--auto-fix` is active and a review pass returns a `PASS` verdict on any attempt",
+      "when": "`_run_review_pass()` returns to the orchestration loop",
+      "then": "no correction agent is spawned for that pass; the attempt counter is not incremented further; the orchestrator records the pass as `PASS` and proceeds to schedule the next eligible pass according to the dependency graph"
+    },
+    "gwt-0089": {
+      "id": "gwt-0089",
+      "kind": "behavior",
+      "name": "run_review_pass_returns_to_the_orchestra",
+      "description": "",
+      "version": 1,
+      "given": "`--auto-fix` is active and a review pass returns a `WARNING` verdict on any attempt",
+      "when": "`_run_review_pass()` returns to the orchestration loop",
+      "then": "no correction agent is spawned; the pass is recorded as `WARNING` and treated as non-blocking; the orchestrator continues scheduling dependent passes as if the pass had returned `PASS`"
+    },
+    "gwt-0090": {
+      "id": "gwt-0090",
+      "kind": "behavior",
+      "name": "run_review_pass_returns_a_fail_verdict",
+      "description": "",
+      "version": 1,
+      "given": "`--auto-fix` is active, a review pass returns `FAIL`, and the current attempt index is less than `max_retries`",
+      "when": "`_run_review_pass()` returns a `FAIL` verdict",
+      "then": "`_run_correction_pass()` is invoked with the pass name and the structured findings from `_extract_findings()`; a correction agent is spawned via a fresh `query()` call; the orchestrator awaits the correction agent's completion before re-running the review pass"
+    },
+    "gwt-0091": {
+      "id": "gwt-0091",
+      "kind": "behavior",
+      "name": "run_correction_pass_returns_to_the_orche",
+      "description": "",
+      "version": 1,
+      "given": "a correction agent has completed execution for a failed review pass",
+      "when": "`_run_correction_pass()` returns to the orchestration loop",
+      "then": "the same review pass is re-run via `_run_review_pass()` as a new attempt; the attempt counter increments by one; the re-run produces a new verdict, cost entry, and report file that are tracked independently from the original attempt"
+    },
+    "gwt-0092": {
+      "id": "gwt-0092",
+      "kind": "behavior",
+      "name": "the_inner_retry_loop_exits_for_that_pass",
+      "description": "",
+      "version": 1,
+      "given": "a review pass has returned `FAIL` and the attempt index equals `max_retries` (all retries exhausted)",
+      "when": "the inner retry loop exits for that pass",
+      "then": "the pass is recorded as permanently failed; no further correction agents are spawned for it; the orchestrator immediately stops scheduling dependent passes; the final summary contains `status: \"fail\"`, `stuck_on: <pass_name>`, and the structured findings from the last failed attempt"
+    },
+    "gwt-0093": {
+      "id": "gwt-0093",
+      "kind": "behavior",
+      "name": "check_dependencies_is_evaluated_for_any",
+      "description": "",
+      "version": 1,
+      "given": "a review pass has reached a terminal state of permanently FAIL or `verdict: \"blocked\"`",
+      "when": "`_check_dependencies()` is evaluated for any pass that lists the failed pass in its `PASS_DEPENDENCIES` entry",
+      "then": "the dependent pass is skipped without invoking any review or correction agents; its result is recorded as `verdict: \"blocked\"`; all passes that transitively depend on the blocked pass are also marked `verdict: \"blocked\"` via recursive evaluation"
+    },
+    "gwt-0094": {
+      "id": "gwt-0094",
+      "kind": "behavior",
+      "name": "the_orchestrator_attempts_to_schedule_co",
+      "description": "",
+      "version": 1,
+      "given": "the `artifacts` pass has exhausted all retries and its terminal verdict is `FAIL`",
+      "when": "the orchestrator attempts to schedule `coverage`, `interaction`, `abstraction_gap`, or `imports`",
+      "then": "all four passes are immediately marked `verdict: \"blocked\"` without running; the final summary reports `status: \"fail\"` and `stuck_on: \"artifacts\"`; no further agents are spawned for the session"
+    },
+    "gwt-0095": {
+      "id": "gwt-0095",
+      "kind": "behavior",
+      "name": "the_orchestrator_schedules_the_next_phas",
+      "description": "",
+      "version": 1,
+      "given": "the `artifacts` pass has reached a terminal verdict of `PASS` or `WARNING` and `--auto-fix` is active",
+      "when": "the orchestrator schedules the next phase",
+      "then": "`coverage` and `interaction` passes are dispatched concurrently; neither waits for the other to begin; each has its own independent retry budget and correction cycle; their results are collected before `abstraction_gap` is evaluated"
+    },
+    "gwt-0096": {
+      "id": "gwt-0096",
+      "kind": "behavior",
+      "name": "check_dependencies_evaluates_the_abstrac",
+      "description": "",
+      "version": 1,
+      "given": "both `coverage` and `interaction` have each reached a terminal verdict (PASS, WARNING, permanently FAIL, or blocked)",
+      "when": "`_check_dependencies()` evaluates the `abstraction_gap` pass",
+      "then": "`abstraction_gap` is scheduled only if both `coverage` and `interaction` have terminal verdicts of `PASS` or `WARNING`; if either is permanently FAIL or blocked, `abstraction_gap` is marked `verdict: \"blocked\"` without running"
+    },
+    "gwt-0097": {
+      "id": "gwt-0097",
+      "kind": "behavior",
+      "name": "check_dependencies_evaluates_the_imports",
+      "description": "",
+      "version": 1,
+      "given": "`abstraction_gap` has reached a terminal verdict",
+      "when": "`_check_dependencies()` evaluates the `imports` pass",
+      "then": "`imports` is scheduled only if `abstraction_gap` has a terminal verdict of `PASS` or `WARNING`; if `abstraction_gap` is permanently FAIL or blocked, `imports` is marked `verdict: \"blocked\"` without running"
+    },
+    "gwt-0098": {
+      "id": "gwt-0098",
+      "kind": "behavior",
+      "name": "aggregate_verdicts_is_called_with_the_fu",
+      "description": "",
+      "version": 1,
+      "given": "all passes have reached terminal verdicts and one or more have `verdict: \"blocked\"`",
+      "when": "`_aggregate_verdicts()` is called with the full results set",
+      "then": "the overall status is `\"fail\"` if any pass is permanently FAIL or blocked due to a failed dependency; the summary separates passes into three buckets \u2014 `passed` (PASS or WARNING), `failed` (permanently FAIL), and `blocked`; a `\"blocked\"` verdict on its own (where the root cause is a failed dep) does not generate a new `stuck_on` entry beyond the original failing pass"
+    },
+    "gwt-0099": {
+      "id": "gwt-0099",
+      "kind": "behavior",
+      "name": "run_correction_pass_constructs_the_query",
+      "description": "",
+      "version": 1,
+      "given": "a correction agent is being spawned for a failed review pass",
+      "when": "`_run_correction_pass()` constructs the `query()` call",
+      "then": "the `resume` parameter is NOT set; no session ID from the review agent conversation is passed; the correction agent receives a clean context window whose sole inputs are the structured findings and the path to the on-disk review report"
+    },
+    "gwt-0100": {
+      "id": "gwt-0100",
+      "kind": "behavior",
+      "name": "claudeagentoptions_is_assembled_for_the",
+      "description": "",
+      "version": 1,
+      "given": "a correction agent is being constructed in `_run_correction_pass()`",
+      "when": "`ClaudeAgentOptions` is assembled for the `query()` call",
+      "then": "`allowed_tools` is `[\"Read\", \"Grep\", \"Glob\", \"Bash\", \"Edit\", \"Write\"]`; `max_turns` is `20`; `model` is `\"claude-sonnet-4-6\"`; `system_prompt` identifies the agent as a CW9 correction agent with narrow scope; `output_format` is not set (correction agent produces prose, not structured JSON)"
+    },
+    "gwt-0101": {
+      "id": "gwt-0101",
+      "kind": "behavior",
+      "name": "the_agent_decides_what_modifications_to",
+      "description": "",
+      "version": 1,
+      "given": "a correction agent is executing against the `cw9_plan_fix.md` prompt for any review pass type",
+      "when": "the agent decides what modifications to make",
+      "then": "the agent is constrained to modify only: context files, plan text, and test scaffolding; it must NOT modify source code, TLA+ specs, or bridge artifacts; for `coverage` failures it adds missing assertions from bridge verifiers; for `abstraction_gap` failures it copies the decision checklist into context files; for `imports` failures it removes dead imports and flags wrong abstractions as human-review items; for `artifacts` failures it lists which pipeline steps need re-running without invoking them"
+    },
+    "gwt-0102": {
+      "id": "gwt-0102",
+      "kind": "behavior",
+      "name": "run_review_pass_returns",
+      "description": "",
+      "version": 1,
+      "given": "a review pass completes (any verdict) during a correction loop run",
+      "when": "`_run_review_pass()` returns",
+      "then": "the orchestrator appends an entry to `_review_manifest.json` in the working directory containing: `pass_name`, `attempt` (0-indexed), `verdict`, `report_path` (absolute path under `thoughts/searchable/shared/plans/`), `session_id`, and `cost` for that attempt; the file is created on the first entry and appended atomically on subsequent entries"
+    },
+    "gwt-0103": {
+      "id": "gwt-0103",
+      "kind": "behavior",
+      "name": "run_correction_pass_resolves_the_input_f",
+      "description": "",
+      "version": 1,
+      "given": "a correction agent is being assembled for a failed review pass and `_review_manifest.json` contains the most recent failed attempt entry",
+      "when": "`_run_correction_pass()` resolves the input for the correction agent",
+      "then": "the `report_path` from the latest failed attempt entry in `_review_manifest.json` is resolved to an absolute path and passed to the correction agent as its primary input; the agent reads the on-disk report rather than receiving the review conversation text inline; if the report file does not exist at the resolved path, `_run_correction_pass()` raises a descriptive error and does not spawn the agent"
+    },
+    "gwt-0104": {
+      "id": "gwt-0104",
+      "kind": "behavior",
+      "name": "orchestrate_reviews_with_correction_asse",
+      "description": "",
+      "version": 1,
+      "given": "`--auto-fix` is active and the orchestration run has completed (all passes reached terminal verdicts)",
+      "when": "`_orchestrate_reviews_with_correction()` assembles the final summary",
+      "then": "the summary includes a `cost` object broken down by: `review_passes` (array of `{pass_name, attempt, cost}` per run), `correction_passes` (array of `{pass_name, attempt, cost}` per correction agent run), and `total` (sum of all agent costs in the session); cost figures are taken from the `cost` field returned by each `query()` call"
+    },
     "impact-0001": {
       "id": "impact-0001",
       "kind": "resource",
@@ -3324,6 +3554,29 @@
     "gwt-0079": [],
     "gwt-0080": [],
     "gwt-0081": [],
+    "gwt-0082": [],
+    "gwt-0083": [],
+    "gwt-0084": [],
+    "gwt-0085": [],
+    "gwt-0086": [],
+    "gwt-0087": [],
+    "gwt-0088": [],
+    "gwt-0089": [],
+    "gwt-0090": [],
+    "gwt-0091": [],
+    "gwt-0092": [],
+    "gwt-0093": [],
+    "gwt-0094": [],
+    "gwt-0095": [],
+    "gwt-0096": [],
+    "gwt-0097": [],
+    "gwt-0098": [],
+    "gwt-0099": [],
+    "gwt-0100": [],
+    "gwt-0101": [],
+    "gwt-0102": [],
+    "gwt-0103": [],
+    "gwt-0104": [],
     "impact-0001": [
       "gwt-0012",
       "gwt-0013",
@@ -3923,21 +4176,90 @@
       "gwt-0081"
     ],
     "component-32": [
-      "req-0017"
+      "gwt-0082"
     ],
     "component-33": [
-      "req-0018"
+      "gwt-0083"
     ],
     "component-34": [
-      "req-0019"
+      "gwt-0084"
+    ],
+    "component-35": [
+      "gwt-0085"
+    ],
+    "component-36": [
+      "gwt-0086"
+    ],
+    "component-37": [
+      "gwt-0087"
+    ],
+    "component-38": [
+      "gwt-0088"
+    ],
+    "component-39": [
+      "gwt-0089"
     ],
     "component-4": [
       "cfg-n7a3"
+    ],
+    "component-40": [
+      "gwt-0090"
+    ],
+    "component-41": [
+      "gwt-0091"
+    ],
+    "component-42": [
+      "gwt-0092"
+    ],
+    "component-43": [
+      "gwt-0093"
+    ],
+    "component-44": [
+      "gwt-0094"
+    ],
+    "component-45": [
+      "gwt-0095"
+    ],
+    "component-46": [
+      "gwt-0096"
+    ],
+    "component-47": [
+      "gwt-0097"
+    ],
+    "component-48": [
+      "gwt-0098"
+    ],
+    "component-49": [
+      "gwt-0099"
     ],
     "component-5": [
       "cfg-p4b8",
       "cfg-q9c5",
       "cfg-r3d7"
+    ],
+    "component-50": [
+      "gwt-0100"
+    ],
+    "component-51": [
+      "gwt-0101"
+    ],
+    "component-52": [
+      "gwt-0102"
+    ],
+    "component-53": [
+      "gwt-0103"
+    ],
+    "component-54": [
+      "gwt-0104"
+    ],
+    "component-55": [
+      "req-0017"
+    ],
+    "component-56": [
+      "req-0018"
+    ],
+    "component-57": [
+      "req-0019"
     ],
     "component-6": [
       "cfg-u2k4"

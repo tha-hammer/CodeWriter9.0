@@ -1,0 +1,1526 @@
+{
+  "gwt_id": "gwt-0086",
+  "module_name": "RunReviewPassAutoFix",
+  "data_structures": {
+    "RunReviewPassAutoFixState": {
+      "function_id": "fn-RunReviewPassAutoFix-state",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"InitPass\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "auto_fix_active": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "user_json_flag": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "json_mode": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "query_constructed": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "stdout_written": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "result_captured": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "cost_captured": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "verdict": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "none",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "init",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "step_count": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from RunReviewPassAutoFix TLA+ spec"
+    }
+  },
+  "operations": {
+    "InitPass": {
+      "function_id": "fn-RunReviewPassAutoFix-InitPass",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-InitPass",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action InitPass from RunReviewPassAutoFix spec"
+    },
+    "ConstructQuery": {
+      "function_id": "fn-RunReviewPassAutoFix-ConstructQuery",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-ConstructQuery",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ConstructQuery from RunReviewPassAutoFix spec"
+    },
+    "ProcessAssistantMsg": {
+      "function_id": "fn-RunReviewPassAutoFix-ProcessAssistantMsg",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-ProcessAssistantMsg",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ProcessAssistantMsg from RunReviewPassAutoFix spec"
+    },
+    "CaptureResult": {
+      "function_id": "fn-RunReviewPassAutoFix-CaptureResult",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-CaptureResult",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CaptureResult from RunReviewPassAutoFix spec"
+    },
+    "ParseVerdict": {
+      "function_id": "fn-RunReviewPassAutoFix-ParseVerdict",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-ParseVerdict",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action ParseVerdict from RunReviewPassAutoFix spec"
+    },
+    "Finish": {
+      "function_id": "fn-RunReviewPassAutoFix-Finish",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from RunReviewPassAutoFix spec"
+    }
+  },
+  "verifiers": {
+    "JsonModeForced": {
+      "function_id": "fn-RunReviewPassAutoFix-verify-JsonModeForced",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-JsonModeForced",
+      "conditions": [
+        "auto_fix_active",
+        "query_constructed) => json_mode = TRUE"
+      ],
+      "message": "JsonModeForced violation: (auto_fix_active /\\ query_constructed) => json_mode = TRUE",
+      "applies_to": [
+        "auto_fix_active",
+        "json_mode",
+        "query_constructed"
+      ],
+      "description": "Verifier for invariant JsonModeForced from RunReviewPassAutoFix spec"
+    },
+    "NoStreaming": {
+      "function_id": "fn-RunReviewPassAutoFix-verify-NoStreaming",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-NoStreaming",
+      "conditions": [
+        "json_mode => ~stdout_written"
+      ],
+      "message": "NoStreaming violation: json_mode => ~stdout_written",
+      "applies_to": [
+        "json_mode",
+        "stdout_written"
+      ],
+      "description": "Verifier for invariant NoStreaming from RunReviewPassAutoFix spec"
+    },
+    "ResultCaptured": {
+      "function_id": "fn-RunReviewPassAutoFix-verify-ResultCaptured",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-ResultCaptured",
+      "conditions": [
+        "phase = \"complete\") => result_captured"
+      ],
+      "message": "ResultCaptured violation: (phase = \"complete\") => result_captured",
+      "applies_to": [
+        "phase",
+        "result_captured"
+      ],
+      "description": "Verifier for invariant ResultCaptured from RunReviewPassAutoFix spec"
+    },
+    "CostAccumulated": {
+      "function_id": "fn-RunReviewPassAutoFix-verify-CostAccumulated",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-CostAccumulated",
+      "conditions": [
+        "result_captured => cost_captured"
+      ],
+      "message": "CostAccumulated violation: result_captured => cost_captured",
+      "applies_to": [
+        "cost_captured",
+        "result_captured"
+      ],
+      "description": "Verifier for invariant CostAccumulated from RunReviewPassAutoFix spec"
+    },
+    "VerdictParsed": {
+      "function_id": "fn-RunReviewPassAutoFix-verify-VerdictParsed",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-VerdictParsed",
+      "conditions": [
+        "phase = \"complete\") => verdict \\in Verdicts"
+      ],
+      "message": "VerdictParsed violation: (phase = \"complete\") => verdict \\in Verdicts",
+      "applies_to": [
+        "phase",
+        "verdict"
+      ],
+      "description": "Verifier for invariant VerdictParsed from RunReviewPassAutoFix spec"
+    },
+    "BoundedExecution": {
+      "function_id": "fn-RunReviewPassAutoFix-verify-BoundedExecution",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-BoundedExecution",
+      "conditions": [
+        "step_count <= MaxSteps"
+      ],
+      "message": "BoundedExecution violation: step_count <= MaxSteps",
+      "applies_to": [
+        "step_count"
+      ],
+      "description": "Verifier for invariant BoundedExecution from RunReviewPassAutoFix spec"
+    },
+    "TypeOK": {
+      "function_id": "fn-RunReviewPassAutoFix-verify-TypeOK",
+      "acceptance_criteria_id": "ac-RunReviewPassAutoFix-TypeOK",
+      "conditions": [
+        "json_mode         \\in BOOLEAN",
+        "query_constructed \\in BOOLEAN",
+        "stdout_written    \\in BOOLEAN",
+        "result_captured   \\in BOOLEAN",
+        "cost_captured     \\in BOOLEAN",
+        "verdict           \\in (Verdicts \\union {\"none\"}",
+        "phase             \\in {\"init\", \"init_done\", \"query_constructed\",\n                              \"messages_processed\", \"result_captured\", \"complete\"}",
+        "step_count        \\in 0..MaxSteps"
+      ],
+      "message": "TypeOK violation: /\\ json_mode         \\in BOOLEAN\n    /\\ query_constructed \\in BOOLEAN\n    /\\ stdout_written    \\in BOOLEAN\n    /\\ res...",
+      "applies_to": [
+        "cost_captured",
+        "json_mode",
+        "phase",
+        "query_constructed",
+        "result_captured",
+        "stdout_written",
+        "step_count",
+        "verdict"
+      ],
+      "description": "Verifier for invariant TypeOK from RunReviewPassAutoFix spec"
+    }
+  },
+  "assertions": {
+    "assert_JsonModeForced": {
+      "condition": "(auto_fix_active and query_constructed) implies json_mode = TRUE",
+      "message": "Assertion failed: JsonModeForced \u2014 (auto_fix_active /\\ query_constructed) => json_mode = TRUE",
+      "description": "Test assertion for JsonModeForced from RunReviewPassAutoFix spec"
+    },
+    "assert_NoStreaming": {
+      "condition": "json_mode implies ~stdout_written",
+      "message": "Assertion failed: NoStreaming \u2014 json_mode => ~stdout_written",
+      "description": "Test assertion for NoStreaming from RunReviewPassAutoFix spec"
+    },
+    "assert_ResultCaptured": {
+      "condition": "(phase = \"complete\") implies result_captured",
+      "message": "Assertion failed: ResultCaptured \u2014 (phase = \"complete\") => result_captured",
+      "description": "Test assertion for ResultCaptured from RunReviewPassAutoFix spec"
+    },
+    "assert_CostAccumulated": {
+      "condition": "result_captured implies cost_captured",
+      "message": "Assertion failed: CostAccumulated \u2014 result_captured => cost_captured",
+      "description": "Test assertion for CostAccumulated from RunReviewPassAutoFix spec"
+    },
+    "assert_VerdictParsed": {
+      "condition": "(phase = \"complete\") implies verdict in Verdicts",
+      "message": "Assertion failed: VerdictParsed \u2014 (phase = \"complete\") => verdict \\in Verdicts",
+      "description": "Test assertion for VerdictParsed from RunReviewPassAutoFix spec"
+    },
+    "assert_BoundedExecution": {
+      "condition": "step_count <= MaxSteps",
+      "message": "Assertion failed: BoundedExecution \u2014 step_count <= MaxSteps",
+      "description": "Test assertion for BoundedExecution from RunReviewPassAutoFix spec"
+    },
+    "assert_TypeOK": {
+      "condition": "and json_mode         in BOOLEAN\n    and query_constructed in BOOLEAN\n    and stdout_written    in BOOLEAN\n    and result_captured   in BOOLEAN\n    and cost_captured     in BOOLEAN\n    and verdict           in (Verdicts \\union {\"none\"})\n    and phase             in {\"init\", \"init_done\", \"query_constructed\",\n                              \"messages_processed\", \"result_captured\", \"complete\"}\n    and step_count        in 0..MaxSteps",
+      "message": "Assertion failed: TypeOK \u2014 /\\ json_mode         \\in BOOLEAN\n    /\\ query_constructed \\in BOOLEAN\n    /\\ stdout_written    \\in BOOLEAN\n    /\\ res...",
+      "description": "Test assertion for TypeOK from RunReviewPassAutoFix spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "TRUE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "TRUE",
+          "json_mode": "FALSE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "TRUE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "TRUE",
+          "json_mode": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "TRUE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "TRUE",
+          "json_mode": "FALSE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "TRUE",
+          "user_json_flag": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"pass\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"pass\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"pass\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"pass\"",
+          "auto_fix_active": "FALSE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"fail\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"fail\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"pass\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"pass\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"warning\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "FALSE",
+          "phase": "\"init\"",
+          "pc": "[runner |-> \"InitPass\"]",
+          "step_count": "0",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "InitPass",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"init_done\"",
+          "pc": "[runner |-> \"ConstructQuery\"]",
+          "step_count": "1",
+          "query_constructed": "FALSE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "ConstructQuery",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"query_constructed\"",
+          "pc": "[runner |-> \"ProcessAssistantMsg\"]",
+          "step_count": "2",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "ProcessAssistantMsg",
+        "vars": {
+          "cost_captured": "FALSE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "FALSE",
+          "json_mode": "TRUE",
+          "phase": "\"messages_processed\"",
+          "pc": "[runner |-> \"CaptureResult\"]",
+          "step_count": "3",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "CaptureResult",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"none\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"result_captured\"",
+          "pc": "[runner |-> \"ParseVerdict\"]",
+          "step_count": "4",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "ParseVerdict",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"unknown\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Finish\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Finish",
+        "vars": {
+          "cost_captured": "TRUE",
+          "verdict": "\"unknown\"",
+          "auto_fix_active": "TRUE",
+          "result_captured": "TRUE",
+          "json_mode": "TRUE",
+          "phase": "\"complete\"",
+          "pc": "[runner |-> \"Done\"]",
+          "step_count": "5",
+          "query_constructed": "TRUE",
+          "stdout_written": "FALSE",
+          "user_json_flag": "FALSE"
+        }
+      }
+    ]
+  ]
+}

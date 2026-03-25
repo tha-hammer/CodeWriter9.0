@@ -1,0 +1,1619 @@
+{
+  "gwt_id": "gwt-0091",
+  "module_name": "CorrectionReviewRerun",
+  "data_structures": {
+    "CorrectionReviewRerunState": {
+      "function_id": "fn-CorrectionReviewRerun-state",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"OrchestratorLoop\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "attempt": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "history": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "empty_sequence",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "corrections": {
+          "type": "shared/data_types/Sequence",
+          "required": true,
+          "unique": false,
+          "default": "empty_sequence",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "currentVerdict": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "NONE",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "totalCost": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "0",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "nextSid": {
+          "type": "shared/data_types/Integer",
+          "required": true,
+          "unique": false,
+          "default": "1",
+          "validation": [
+            "IsInteger"
+          ]
+        },
+        "phase": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from CorrectionReviewRerun TLA+ spec"
+    }
+  },
+  "operations": {
+    "OrchestratorLoop": {
+      "function_id": "fn-CorrectionReviewRerun-OrchestratorLoop",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-OrchestratorLoop",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [
+        "shared/error_definitions/OrchestratorLoopFailure"
+      ],
+      "error_handling": "raise",
+      "description": "Action OrchestratorLoop from CorrectionReviewRerun spec"
+    },
+    "Terminate": {
+      "function_id": "fn-CorrectionReviewRerun-Terminate",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from CorrectionReviewRerun spec"
+    }
+  },
+  "verifiers": {
+    "AttemptPositive": {
+      "function_id": "fn-CorrectionReviewRerun-verify-AttemptPositive",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-AttemptPositive",
+      "conditions": [
+        "attempt >= 1"
+      ],
+      "message": "AttemptPositive violation: attempt >= 1",
+      "applies_to": [
+        "attempt"
+      ],
+      "description": "Verifier for invariant AttemptPositive from CorrectionReviewRerun spec"
+    },
+    "AttemptBounded": {
+      "function_id": "fn-CorrectionReviewRerun-verify-AttemptBounded",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-AttemptBounded",
+      "conditions": [
+        "attempt <= MaxRetries"
+      ],
+      "message": "AttemptBounded violation: attempt <= MaxRetries",
+      "applies_to": [
+        "attempt"
+      ],
+      "description": "Verifier for invariant AttemptBounded from CorrectionReviewRerun spec"
+    },
+    "HistoryLengthInvariant": {
+      "function_id": "fn-CorrectionReviewRerun-verify-HistoryLengthInvariant",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-HistoryLengthInvariant",
+      "conditions": [
+        "\\/ (phase = \"RunReview\"",
+        "Len(history) = attempt - 1)\n    \\/ (phase = \"RunCorrection\"",
+        "Len(history) = attempt)\n    \\/ (phase = \"IncrAttempt\"",
+        "Len(history) = attempt)\n    \\/ (phase = \"Finish\"",
+        "Len(history) = attempt"
+      ],
+      "message": "HistoryLengthInvariant violation: \\/ (phase = \"RunReview\"     /\\ Len(history) = attempt - 1)\n    \\/ (phase = \"RunCorrection\" /\\ Len(history) = attempt)...",
+      "applies_to": [
+        "attempt",
+        "history",
+        "phase"
+      ],
+      "description": "Verifier for invariant HistoryLengthInvariant from CorrectionReviewRerun spec"
+    },
+    "CorrectionsAppendOnly": {
+      "function_id": "fn-CorrectionReviewRerun-verify-CorrectionsAppendOnly",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-CorrectionsAppendOnly",
+      "conditions": [
+        "Len(corrections) <= Len(history"
+      ],
+      "message": "CorrectionsAppendOnly violation: Len(corrections) <= Len(history)",
+      "applies_to": [
+        "corrections",
+        "history"
+      ],
+      "description": "Verifier for invariant CorrectionsAppendOnly from CorrectionReviewRerun spec"
+    },
+    "CorrectionsTerminalBound": {
+      "function_id": "fn-CorrectionReviewRerun-verify-CorrectionsTerminalBound",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-CorrectionsTerminalBound",
+      "conditions": [
+        "phase = \"Finish\" => Len(corrections) <= Len(history) - 1"
+      ],
+      "message": "CorrectionsTerminalBound violation: phase = \"Finish\" => Len(corrections) <= Len(history) - 1",
+      "applies_to": [
+        "corrections",
+        "history",
+        "phase"
+      ],
+      "description": "Verifier for invariant CorrectionsTerminalBound from CorrectionReviewRerun spec"
+    },
+    "VerdictFromLatest": {
+      "function_id": "fn-CorrectionReviewRerun-verify-VerdictFromLatest",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-VerdictFromLatest",
+      "conditions": [
+        "Len(history) > 0 => currentVerdict = history[Len(history)].verdict"
+      ],
+      "message": "VerdictFromLatest violation: Len(history) > 0 => currentVerdict = history[Len(history)].verdict",
+      "applies_to": [
+        "currentVerdict",
+        "history"
+      ],
+      "description": "Verifier for invariant VerdictFromLatest from CorrectionReviewRerun spec"
+    },
+    "CostAccumulation": {
+      "function_id": "fn-CorrectionReviewRerun-verify-CostAccumulation",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-CostAccumulation",
+      "conditions": [
+        "totalCost = SumCosts(history) + SumCosts(corrections"
+      ],
+      "message": "CostAccumulation violation: totalCost = SumCosts(history) + SumCosts(corrections)",
+      "applies_to": [
+        "corrections",
+        "history",
+        "totalCost"
+      ],
+      "description": "Verifier for invariant CostAccumulation from CorrectionReviewRerun spec"
+    },
+    "AllSids": {
+      "function_id": "fn-CorrectionReviewRerun-verify-AllSids",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-AllSids",
+      "conditions": [
+        "{ history[i].session_id : i \\in 1..Len(history) }\n    \\union\n    { corrections[i].session_id : i \\in 1..Len(corrections) }"
+      ],
+      "message": "AllSids violation: { history[i].session_id : i \\in 1..Len(history) }\n    \\union\n    { corrections[i].session_id : i \\in 1..Len(correctio...",
+      "applies_to": [
+        "corrections",
+        "history"
+      ],
+      "description": "Verifier for invariant AllSids from CorrectionReviewRerun spec"
+    },
+    "SessionIdsUnique": {
+      "function_id": "fn-CorrectionReviewRerun-verify-SessionIdsUnique",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-SessionIdsUnique",
+      "conditions": [
+        "Cardinality(AllSids) = Len(history) + Len(corrections"
+      ],
+      "message": "SessionIdsUnique violation: Cardinality(AllSids) = Len(history) + Len(corrections)",
+      "applies_to": [
+        "corrections",
+        "history"
+      ],
+      "description": "Verifier for invariant SessionIdsUnique from CorrectionReviewRerun spec"
+    },
+    "IndependentTracking": {
+      "function_id": "fn-CorrectionReviewRerun-verify-IndependentTracking",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-IndependentTracking",
+      "conditions": [
+        "SessionIdsUnique"
+      ],
+      "message": "IndependentTracking violation: SessionIdsUnique",
+      "applies_to": [
+        "CorrectionReviewRerun"
+      ],
+      "description": "Verifier for invariant IndependentTracking from CorrectionReviewRerun spec"
+    },
+    "TerminalVerdictOrExhausted": {
+      "function_id": "fn-CorrectionReviewRerun-verify-TerminalVerdictOrExhausted",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-TerminalVerdictOrExhausted",
+      "conditions": [
+        "phase = \"Finish\" =>\n        (currentVerdict = \"PASS\" \\/ attempt >= MaxRetries"
+      ],
+      "message": "TerminalVerdictOrExhausted violation: phase = \"Finish\" =>\n        (currentVerdict = \"PASS\" \\/ attempt >= MaxRetries)",
+      "applies_to": [
+        "attempt",
+        "currentVerdict",
+        "phase"
+      ],
+      "description": "Verifier for invariant TerminalVerdictOrExhausted from CorrectionReviewRerun spec"
+    },
+    "SamePassReRun": {
+      "function_id": "fn-CorrectionReviewRerun-verify-SamePassReRun",
+      "acceptance_criteria_id": "ac-CorrectionReviewRerun-SamePassReRun",
+      "conditions": [
+        "TRUE\n\nVARIABLES verd, sid"
+      ],
+      "message": "SamePassReRun violation: TRUE\n\nVARIABLES verd, sid",
+      "applies_to": [
+        "CorrectionReviewRerun"
+      ],
+      "description": "Verifier for invariant SamePassReRun from CorrectionReviewRerun spec"
+    }
+  },
+  "assertions": {
+    "assert_AttemptPositive": {
+      "condition": "attempt >= 1",
+      "message": "Assertion failed: AttemptPositive \u2014 attempt >= 1",
+      "description": "Test assertion for AttemptPositive from CorrectionReviewRerun spec"
+    },
+    "assert_AttemptBounded": {
+      "condition": "attempt <= MaxRetries",
+      "message": "Assertion failed: AttemptBounded \u2014 attempt <= MaxRetries",
+      "description": "Test assertion for AttemptBounded from CorrectionReviewRerun spec"
+    },
+    "assert_HistoryLengthInvariant": {
+      "condition": "or (phase = \"RunReview\"     and Len(history) = attempt - 1)\n    or (phase = \"RunCorrection\" and Len(history) = attempt)\n    or (phase = \"IncrAttempt\"   and Len(history) = attempt)\n    or (phase = \"Finish\"        and Len(history) = attempt)",
+      "message": "Assertion failed: HistoryLengthInvariant \u2014 \\/ (phase = \"RunReview\"     /\\ Len(history) = attempt - 1)\n    \\/ (phase = \"RunCorrection\" /\\ Len(history) = attempt)...",
+      "description": "Test assertion for HistoryLengthInvariant from CorrectionReviewRerun spec"
+    },
+    "assert_CorrectionsAppendOnly": {
+      "condition": "Len(corrections) <= Len(history)",
+      "message": "Assertion failed: CorrectionsAppendOnly \u2014 Len(corrections) <= Len(history)",
+      "description": "Test assertion for CorrectionsAppendOnly from CorrectionReviewRerun spec"
+    },
+    "assert_CorrectionsTerminalBound": {
+      "condition": "phase = \"Finish\" implies Len(corrections) <= Len(history) - 1",
+      "message": "Assertion failed: CorrectionsTerminalBound \u2014 phase = \"Finish\" => Len(corrections) <= Len(history) - 1",
+      "description": "Test assertion for CorrectionsTerminalBound from CorrectionReviewRerun spec"
+    },
+    "assert_VerdictFromLatest": {
+      "condition": "Len(history) > 0 implies currentVerdict = history[Len(history)].verdict",
+      "message": "Assertion failed: VerdictFromLatest \u2014 Len(history) > 0 => currentVerdict = history[Len(history)].verdict",
+      "description": "Test assertion for VerdictFromLatest from CorrectionReviewRerun spec"
+    },
+    "assert_CostAccumulation": {
+      "condition": "totalCost = SumCosts(history) + SumCosts(corrections)",
+      "message": "Assertion failed: CostAccumulation \u2014 totalCost = SumCosts(history) + SumCosts(corrections)",
+      "description": "Test assertion for CostAccumulation from CorrectionReviewRerun spec"
+    },
+    "assert_AllSids": {
+      "condition": "{ history[i].session_id : i in 1..Len(history) }\n    \\union\n    { corrections[i].session_id : i in 1..Len(corrections) }",
+      "message": "Assertion failed: AllSids \u2014 { history[i].session_id : i \\in 1..Len(history) }\n    \\union\n    { corrections[i].session_id : i \\in 1..Len(correctio...",
+      "description": "Test assertion for AllSids from CorrectionReviewRerun spec"
+    },
+    "assert_SessionIdsUnique": {
+      "condition": "Cardinality(AllSids) = Len(history) + Len(corrections)",
+      "message": "Assertion failed: SessionIdsUnique \u2014 Cardinality(AllSids) = Len(history) + Len(corrections)",
+      "description": "Test assertion for SessionIdsUnique from CorrectionReviewRerun spec"
+    },
+    "assert_IndependentTracking": {
+      "condition": "SessionIdsUnique",
+      "message": "Assertion failed: IndependentTracking \u2014 SessionIdsUnique",
+      "description": "Test assertion for IndependentTracking from CorrectionReviewRerun spec"
+    },
+    "assert_TerminalVerdictOrExhausted": {
+      "condition": "phase = \"Finish\" implies\n        (currentVerdict = \"PASS\" or attempt >= MaxRetries)",
+      "message": "Assertion failed: TerminalVerdictOrExhausted \u2014 phase = \"Finish\" =>\n        (currentVerdict = \"PASS\" \\/ attempt >= MaxRetries)",
+      "description": "Test assertion for TerminalVerdictOrExhausted from CorrectionReviewRerun spec"
+    },
+    "assert_SamePassReRun": {
+      "condition": "TRUE\n\nVARIABLES verd, sid",
+      "message": "Assertion failed: SamePassReRun \u2014 TRUE\n\nVARIABLES verd, sid",
+      "description": "Test assertion for SamePassReRun from CorrectionReviewRerun spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "2",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "4",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "3",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "17",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "6",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "7",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "6",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "36",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "7",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "6",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "36",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5]>>",
+          "attempt": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "8",
+          "currentVerdict": "\"PASS\"",
+          "sid": "7",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "41",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 7]>>",
+          "attempt": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "8",
+          "currentVerdict": "\"PASS\"",
+          "sid": "7",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "41",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 7]>>",
+          "attempt": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "8",
+          "currentVerdict": "\"PASS\"",
+          "sid": "7",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "41",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 7]>>",
+          "attempt": "4"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "2",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "4",
+          "currentVerdict": "\"PASS\"",
+          "sid": "3",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "17",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "4",
+          "currentVerdict": "\"PASS\"",
+          "sid": "3",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "17",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "4",
+          "currentVerdict": "\"PASS\"",
+          "sid": "3",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "17",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "2",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "4",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "3",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "17",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "6",
+          "currentVerdict": "\"PASS\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "6",
+          "currentVerdict": "\"PASS\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "6",
+          "currentVerdict": "\"PASS\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "2",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "4",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "3",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "17",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "6",
+          "currentVerdict": "\"PASS\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "6",
+          "currentVerdict": "\"PASS\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "6",
+          "currentVerdict": "\"PASS\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "2",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "4",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "3",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "17",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "6",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "7",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "6",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "36",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "7",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "6",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "36",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5]>>",
+          "attempt": "4"
+        }
+      },
+      {
+        "state_num": 11,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "8",
+          "currentVerdict": "\"PASS\"",
+          "sid": "7",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "41",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 7]>>",
+          "attempt": "4"
+        }
+      },
+      {
+        "state_num": 12,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "8",
+          "currentVerdict": "\"PASS\"",
+          "sid": "7",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "41",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 7]>>",
+          "attempt": "4"
+        }
+      },
+      {
+        "state_num": 13,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "8",
+          "currentVerdict": "\"PASS\"",
+          "sid": "7",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4], [cost |-> 7, session_id |-> 6]>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "41",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 5], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 7]>>",
+          "attempt": "4"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "2",
+          "currentVerdict": "\"PASS\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"PASS\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "1",
+          "currentVerdict": "\"NONE\"",
+          "sid": "0",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"NONE\"",
+          "totalCost": "0",
+          "history": "<<>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "2",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "1",
+          "corrections": "<<>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "5",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "1"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "3",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "2",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "12",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunCorrection\"",
+          "nextSid": "4",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "3",
+          "corrections": "<<[cost |-> 7, session_id |-> 2]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "17",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"IncrAttempt\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "2"
+        }
+      },
+      {
+        "state_num": 7,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"RunReview\"",
+          "nextSid": "5",
+          "currentVerdict": "\"FAIL\"",
+          "sid": "4",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"FAIL\"",
+          "totalCost": "24",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 8,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "6",
+          "currentVerdict": "\"PASS\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"OrchestratorLoop\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 9,
+        "label": "OrchestratorLoop",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "6",
+          "currentVerdict": "\"PASS\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"Terminate\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      },
+      {
+        "state_num": 10,
+        "label": "Terminate",
+        "vars": {
+          "phase": "\"Finish\"",
+          "nextSid": "6",
+          "currentVerdict": "\"PASS\"",
+          "sid": "5",
+          "corrections": "<<[cost |-> 7, session_id |-> 2], [cost |-> 7, session_id |-> 4]>>",
+          "pc": "[orch |-> \"Done\"]",
+          "verd": "\"PASS\"",
+          "totalCost": "29",
+          "history": "<<[cost |-> 5, verdict |-> \"FAIL\", session_id |-> 1], [cost |-> 5, verdict |-> \"FAIL\", session_id |-> 3], [cost |-> 5, verdict |-> \"PASS\", session_id |-> 5]>>",
+          "attempt": "3"
+        }
+      }
+    ]
+  ]
+}

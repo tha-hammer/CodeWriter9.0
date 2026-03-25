@@ -1,102 +1,126 @@
----- MODULE PlanReviewVerdictAggregation ----
+---- MODULE OrchestrateReviewsOverallStatus ----
 
 EXTENDS Integers, Sequences, FiniteSets, TLC
 
 NumPasses == 3
 
-Verdict   == {"pass", "fail", "warning", "unknown"}
-StatusSet == {"pass", "fail", "warning"}
+Verdict == {"pass", "fail", "warning", "unknown"}
+Status  == {"pass", "fail", "warning"}
 
-(* --algorithm PlanReviewVerdictAggregation
+(* --algorithm OrchestrateReviewsOverallStatus
 
 variables
     verdicts  = <<>>,
     status    = "pass",
     exit_code = 0,
-    phase     = "adding";
+    phase     = "collecting",
+    collected = 0;
 
 define
 
     FailDominates ==
         ( phase = "done" /\
-          (\E i \in DOMAIN verdicts : verdicts[i] = "fail") )
-        => status = "fail"
+          \E i \in DOMAIN verdicts : verdicts[i] = "fail" )
+            => status = "fail"
 
     WarningSecond ==
         ( phase = "done" /\
           ~(\E i \in DOMAIN verdicts : verdicts[i] = "fail") /\
-          (\E i \in DOMAIN verdicts : verdicts[i] = "warning") )
-        => status = "warning"
+          \E i \in DOMAIN verdicts : verdicts[i] = "warning" )
+            => status = "warning"
+
+    PassRequiresAllPass ==
+        ( phase = "done" /\ status = "pass" ) =>
+            \A i \in DOMAIN verdicts : verdicts[i] \in {"pass", "unknown"}
 
     ExitCodeMapping ==
-        /\ ( phase = "done" /\ status \in {"pass", "warning"} ) => exit_code = 0
-        /\ ( phase = "done" /\ status = "fail" )                => exit_code = 1
+        phase = "done" =>
+            ( ( status \in {"pass", "warning"} => exit_code = 0 ) /\
+              ( status = "fail" => exit_code = 1 ) )
+
+    UnknownTreatedAsPass ==
+        ( phase = "done" /\
+          ~(\E i \in DOMAIN verdicts : verdicts[i] = "fail") /\
+          ~(\E i \in DOMAIN verdicts : verdicts[i] = "warning") )
+            => status = "pass"
 
     StatusIsValid ==
-        phase = "done" => status \in StatusSet
+        phase = "done" => status \in Status
 
-    VerdictLengthBound ==
-        Len(verdicts) <= NumPasses
+    ExitCodeIsValid ==
+        phase = "done" => exit_code \in {0, 1}
+
+    CollectedBound ==
+        collected <= NumPasses
 
 end define;
 
 fair process orchestrator = "main"
 begin
-    AddVerdicts:
-        while Len(verdicts) < NumPasses do
-            PickVerdict:
-                with v \in Verdict do
-                    verdicts := Append(verdicts, v);
-                end with;
+    Collect:
+        while collected < NumPasses do
+            with v \in Verdict do
+                verdicts  := Append(verdicts, v);
+                collected := collected + 1;
+            end with;
         end while;
-    ComputeOverall:
+    Compute:
         if \E i \in DOMAIN verdicts : verdicts[i] = "fail" then
-            status := "fail";
-        elsif \E i \in DOMAIN verdicts : verdicts[i] = "warning" then
-            status := "warning";
-        else
-            status := "pass";
-        end if;
-    SetExitCode:
-        if status = "fail" then
+            status    := "fail";
             exit_code := 1;
+        elsif \E i \in DOMAIN verdicts : verdicts[i] = "warning" then
+            status    := "warning";
+            exit_code := 0;
         else
+            status    := "pass";
             exit_code := 0;
         end if;
-    MarkDone:
-        phase := "done";
     Finish:
-        skip;
+        phase := "done";
 end process;
 
 end algorithm; *)
-\* BEGIN TRANSLATION (chksum(pcal) = "b91ba9d1" /\ chksum(tla) = "3df8c657")
-VARIABLES pc, verdicts, status, exit_code, phase
+\* BEGIN TRANSLATION (chksum(pcal) = "75a51b03" /\ chksum(tla) = "8c5de0af")
+VARIABLES pc, verdicts, status, exit_code, phase, collected
 
 (* define statement *)
 FailDominates ==
     ( phase = "done" /\
-      (\E i \in DOMAIN verdicts : verdicts[i] = "fail") )
-    => status = "fail"
+      \E i \in DOMAIN verdicts : verdicts[i] = "fail" )
+        => status = "fail"
 
 WarningSecond ==
     ( phase = "done" /\
       ~(\E i \in DOMAIN verdicts : verdicts[i] = "fail") /\
-      (\E i \in DOMAIN verdicts : verdicts[i] = "warning") )
-    => status = "warning"
+      \E i \in DOMAIN verdicts : verdicts[i] = "warning" )
+        => status = "warning"
+
+PassRequiresAllPass ==
+    ( phase = "done" /\ status = "pass" ) =>
+        \A i \in DOMAIN verdicts : verdicts[i] \in {"pass", "unknown"}
 
 ExitCodeMapping ==
-    /\ ( phase = "done" /\ status \in {"pass", "warning"} ) => exit_code = 0
-    /\ ( phase = "done" /\ status = "fail" )                => exit_code = 1
+    phase = "done" =>
+        ( ( status \in {"pass", "warning"} => exit_code = 0 ) /\
+          ( status = "fail" => exit_code = 1 ) )
+
+UnknownTreatedAsPass ==
+    ( phase = "done" /\
+      ~(\E i \in DOMAIN verdicts : verdicts[i] = "fail") /\
+      ~(\E i \in DOMAIN verdicts : verdicts[i] = "warning") )
+        => status = "pass"
 
 StatusIsValid ==
-    phase = "done" => status \in StatusSet
+    phase = "done" => status \in Status
 
-VerdictLengthBound ==
-    Len(verdicts) <= NumPasses
+ExitCodeIsValid ==
+    phase = "done" => exit_code \in {0, 1}
+
+CollectedBound ==
+    collected <= NumPasses
 
 
-vars == << pc, verdicts, status, exit_code, phase >>
+vars == << pc, verdicts, status, exit_code, phase, collected >>
 
 ProcSet == {"main"}
 
@@ -104,49 +128,38 @@ Init == (* Global variables *)
         /\ verdicts = <<>>
         /\ status = "pass"
         /\ exit_code = 0
-        /\ phase = "adding"
-        /\ pc = [self \in ProcSet |-> "AddVerdicts"]
+        /\ phase = "collecting"
+        /\ collected = 0
+        /\ pc = [self \in ProcSet |-> "Collect"]
 
-AddVerdicts == /\ pc["main"] = "AddVerdicts"
-               /\ IF Len(verdicts) < NumPasses
-                     THEN /\ pc' = [pc EXCEPT !["main"] = "PickVerdict"]
-                     ELSE /\ pc' = [pc EXCEPT !["main"] = "ComputeOverall"]
-               /\ UNCHANGED << verdicts, status, exit_code, phase >>
+Collect == /\ pc["main"] = "Collect"
+           /\ IF collected < NumPasses
+                 THEN /\ \E v \in Verdict:
+                           /\ verdicts' = Append(verdicts, v)
+                           /\ collected' = collected + 1
+                      /\ pc' = [pc EXCEPT !["main"] = "Collect"]
+                 ELSE /\ pc' = [pc EXCEPT !["main"] = "Compute"]
+                      /\ UNCHANGED << verdicts, collected >>
+           /\ UNCHANGED << status, exit_code, phase >>
 
-PickVerdict == /\ pc["main"] = "PickVerdict"
-               /\ \E v \in Verdict:
-                    verdicts' = Append(verdicts, v)
-               /\ pc' = [pc EXCEPT !["main"] = "AddVerdicts"]
-               /\ UNCHANGED << status, exit_code, phase >>
-
-ComputeOverall == /\ pc["main"] = "ComputeOverall"
-                  /\ IF \E i \in DOMAIN verdicts : verdicts[i] = "fail"
-                        THEN /\ status' = "fail"
-                        ELSE /\ IF \E i \in DOMAIN verdicts : verdicts[i] = "warning"
-                                   THEN /\ status' = "warning"
-                                   ELSE /\ status' = "pass"
-                  /\ pc' = [pc EXCEPT !["main"] = "SetExitCode"]
-                  /\ UNCHANGED << verdicts, exit_code, phase >>
-
-SetExitCode == /\ pc["main"] = "SetExitCode"
-               /\ IF status = "fail"
-                     THEN /\ exit_code' = 1
-                     ELSE /\ exit_code' = 0
-               /\ pc' = [pc EXCEPT !["main"] = "MarkDone"]
-               /\ UNCHANGED << verdicts, status, phase >>
-
-MarkDone == /\ pc["main"] = "MarkDone"
-            /\ phase' = "done"
-            /\ pc' = [pc EXCEPT !["main"] = "Finish"]
-            /\ UNCHANGED << verdicts, status, exit_code >>
+Compute == /\ pc["main"] = "Compute"
+           /\ IF \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+                 THEN /\ status' = "fail"
+                      /\ exit_code' = 1
+                 ELSE /\ IF \E i \in DOMAIN verdicts : verdicts[i] = "warning"
+                            THEN /\ status' = "warning"
+                                 /\ exit_code' = 0
+                            ELSE /\ status' = "pass"
+                                 /\ exit_code' = 0
+           /\ pc' = [pc EXCEPT !["main"] = "Finish"]
+           /\ UNCHANGED << verdicts, phase, collected >>
 
 Finish == /\ pc["main"] = "Finish"
-          /\ TRUE
+          /\ phase' = "done"
           /\ pc' = [pc EXCEPT !["main"] = "Done"]
-          /\ UNCHANGED << verdicts, status, exit_code, phase >>
+          /\ UNCHANGED << verdicts, status, exit_code, collected >>
 
-orchestrator == AddVerdicts \/ PickVerdict \/ ComputeOverall \/ SetExitCode
-                   \/ MarkDone \/ Finish
+orchestrator == Collect \/ Compute \/ Finish
 
 (* Allow infinite stuttering to prevent deadlock on termination. *)
 Terminating == /\ \A self \in ProcSet: pc[self] = "Done"
