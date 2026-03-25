@@ -1,0 +1,150 @@
+---- MODULE PlanReviewModeDetection ----
+
+EXTENDS Integers, TLC
+
+(* --algorithm PlanReviewModeDetection
+
+variables
+    self_flag \in BOOLEAN,
+    external_flag \in BOOLEAN,
+    cw9_dir_exists \in BOOLEAN,
+    mode = "unset",
+    reviews_list = "UNSET",
+    determined = FALSE;
+
+define
+
+    ValidInput == ~(self_flag /\ external_flag)
+
+    ModeValid ==
+        (determined /\ ValidInput) => mode \in {"self", "external"}
+
+    ReviewsValid ==
+        (determined /\ ValidInput) =>
+            reviews_list \in {"SELF_REVIEWS", "EXTERNAL_REVIEWS"}
+
+    ModeReviewConsistency ==
+        (determined /\ ValidInput) =>
+            /\ (mode = "self"     => reviews_list = "SELF_REVIEWS")
+            /\ (mode = "external" => reviews_list = "EXTERNAL_REVIEWS")
+
+    ExplicitOverrideSelf ==
+        (determined /\ ValidInput /\ self_flag = TRUE)
+            => mode = "self"
+
+    ExplicitOverrideExternal ==
+        (determined /\ ValidInput /\ external_flag = TRUE)
+            => mode = "external"
+
+    AutoDetectExternal ==
+        ( determined /\ ValidInput
+            /\ self_flag    = FALSE
+            /\ external_flag = FALSE
+            /\ cw9_dir_exists = TRUE )
+            => mode = "external"
+
+    AutoDetectSelf ==
+        ( determined /\ ValidInput
+            /\ self_flag    = FALSE
+            /\ external_flag = FALSE
+            /\ cw9_dir_exists = FALSE )
+            => mode = "self"
+
+end define;
+
+fair process detector = "main"
+begin
+    DetermineMode:
+        if ValidInput then
+            if self_flag = TRUE then
+                mode := "self" || reviews_list := "SELF_REVIEWS";
+            elsif external_flag = TRUE then
+                mode := "external" || reviews_list := "EXTERNAL_REVIEWS";
+            elsif cw9_dir_exists = TRUE then
+                mode := "external" || reviews_list := "EXTERNAL_REVIEWS";
+            else
+                mode := "self" || reviews_list := "SELF_REVIEWS";
+            end if;
+        end if;
+    Finish:
+        determined := TRUE;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE PlanReviewModeDetection ----
+
+EXTENDS Integers, TLC
+
+(* --algorithm PlanReviewModeDetection
+
+variables
+    self_flag \in BOOLEAN,
+    external_flag \in BOOLEAN,
+    cw9_dir_exists \in BOOLEAN,
+    mode = "unset",
+    reviews_list = "UNSET",
+    determined = FALSE;
+
+define
+
+    ValidInput == ~(self_flag /\ external_flag)
+
+    ModeValid ==
+        (determined /\ ValidInput) => mode \in {"self", "external"}
+
+    ReviewsValid ==
+        (determined /\ ValidInput) =>
+            reviews_list \in {"SELF_REVIEWS", "EXTERNAL_REVIEWS"}
+
+    ModeReviewConsistency ==
+        (determined /\ ValidInput) =>
+            /\ (mode = "self"     => reviews_list = "SELF_REVIEWS")
+            /\ (mode = "external" => reviews_list = "EXTERNAL_REVIEWS")
+
+    ExplicitOverrideSelf ==
+        (determined /\ ValidInput /\ self_flag = TRUE)
+            => mode = "self"
+
+    ExplicitOverrideExternal ==
+        (determined /\ ValidInput /\ external_flag = TRUE)
+            => mode = "external"
+
+    AutoDetectExternal ==
+        ( determined /\ ValidInput
+            /\ self_flag    = FALSE
+            /\ external_flag = FALSE
+            /\ cw9_dir_exists = TRUE )
+            => mode = "external"
+
+    AutoDetectSelf ==
+        ( determined /\ ValidInput
+            /\ self_flag    = FALSE
+            /\ external_flag = FALSE
+            /\ cw9_dir_exists = FALSE )
+            => mode = "self"
+
+end define;
+
+fair process detector = "main"
+begin
+    DetermineMode:
+        if ValidInput then
+            if self_flag = TRUE then
+                mode := "self" || reviews_list := "SELF_REVIEWS";
+            elsif external_flag = TRUE then
+                mode := "external" || reviews_list := "EXTERNAL_REVIEWS";
+            elsif cw9_dir_exists = TRUE then
+                mode := "external" || reviews_list := "EXTERNAL_REVIEWS";
+            else
+                mode := "self" || reviews_list := "SELF_REVIEWS";
+            end if;
+        end if;
+    Finish:
+        determined := TRUE;
+end process;
+
+end algorithm; *)
+
+====

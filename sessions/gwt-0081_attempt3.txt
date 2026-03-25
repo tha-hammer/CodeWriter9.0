@@ -1,0 +1,172 @@
+The error reveals the test harness treats every `define`-block operator as a TLC invariant. `HasFail` and `HasWarning` are helper predicates — not invariants — so they must be hidden inside `LET` expressions rather than exposed as top-level operators.
+
+---- MODULE PlanReviewVerdictAggregation ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+NumPasses == 3
+
+Verdict   == {"pass", "fail", "warning", "unknown"}
+StatusSet == {"pass", "fail", "warning"}
+
+(* --algorithm PlanReviewVerdictAggregation
+
+variables
+    verdicts  = <<>>,
+    status    = "pass",
+    exit_code = 0,
+    phase     = "adding";
+
+define
+
+    FailDominates ==
+        LET hasFail == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+        IN (phase = "done" /\ hasFail) => status = "fail"
+
+    WarningSecond ==
+        LET hasFail    == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+            hasWarning == \E i \in DOMAIN verdicts : verdicts[i] = "warning"
+        IN (phase = "done" /\ ~hasFail /\ hasWarning) => status = "warning"
+
+    PassRequiresNoFailOrWarning ==
+        LET hasFail    == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+            hasWarning == \E i \in DOMAIN verdicts : verdicts[i] = "warning"
+        IN (phase = "done" /\ status = "pass") => (~hasFail /\ ~hasWarning)
+
+    ExitCodeForPassOrWarning ==
+        (phase = "done" /\ status \in {"pass", "warning"}) => exit_code = 0
+
+    ExitCodeForFail ==
+        (phase = "done" /\ status = "fail") => exit_code = 1
+
+    UnknownTreatedAsPass ==
+        LET hasFail    == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+            hasWarning == \E i \in DOMAIN verdicts : verdicts[i] = "warning"
+        IN (phase = "done" /\ ~hasFail /\ ~hasWarning) => status = "pass"
+
+    StatusIsValid ==
+        phase = "done" => status \in StatusSet
+
+    VerdictLengthBound ==
+        Len(verdicts) <= NumPasses
+
+end define;
+
+fair process orchestrator = "main"
+begin
+    AddVerdicts:
+        while Len(verdicts) < NumPasses do
+            PickVerdict:
+                with v \in Verdict do
+                    verdicts := Append(verdicts, v);
+                end with;
+        end while;
+    ComputeOverall:
+        if \E i \in DOMAIN verdicts : verdicts[i] = "fail" then
+            status := "fail";
+        elsif \E i \in DOMAIN verdicts : verdicts[i] = "warning" then
+            status := "warning";
+        else
+            status := "pass";
+        end if;
+    SetExitCode:
+        if status = "fail" then
+            exit_code := 1;
+        else
+            exit_code := 0;
+        end if;
+    MarkDone:
+        phase := "done";
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+The error reveals the test harness treats every `define`-block operator as a TLC invariant. `HasFail` and `HasWarning` are helper predicates — not invariants — so they must be hidden inside `LET` expressions rather than exposed as top-level operators.
+
+---- MODULE PlanReviewVerdictAggregation ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+NumPasses == 3
+
+Verdict   == {"pass", "fail", "warning", "unknown"}
+StatusSet == {"pass", "fail", "warning"}
+
+(* --algorithm PlanReviewVerdictAggregation
+
+variables
+    verdicts  = <<>>,
+    status    = "pass",
+    exit_code = 0,
+    phase     = "adding";
+
+define
+
+    FailDominates ==
+        LET hasFail == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+        IN (phase = "done" /\ hasFail) => status = "fail"
+
+    WarningSecond ==
+        LET hasFail    == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+            hasWarning == \E i \in DOMAIN verdicts : verdicts[i] = "warning"
+        IN (phase = "done" /\ ~hasFail /\ hasWarning) => status = "warning"
+
+    PassRequiresNoFailOrWarning ==
+        LET hasFail    == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+            hasWarning == \E i \in DOMAIN verdicts : verdicts[i] = "warning"
+        IN (phase = "done" /\ status = "pass") => (~hasFail /\ ~hasWarning)
+
+    ExitCodeForPassOrWarning ==
+        (phase = "done" /\ status \in {"pass", "warning"}) => exit_code = 0
+
+    ExitCodeForFail ==
+        (phase = "done" /\ status = "fail") => exit_code = 1
+
+    UnknownTreatedAsPass ==
+        LET hasFail    == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+            hasWarning == \E i \in DOMAIN verdicts : verdicts[i] = "warning"
+        IN (phase = "done" /\ ~hasFail /\ ~hasWarning) => status = "pass"
+
+    StatusIsValid ==
+        phase = "done" => status \in StatusSet
+
+    VerdictLengthBound ==
+        Len(verdicts) <= NumPasses
+
+end define;
+
+fair process orchestrator = "main"
+begin
+    AddVerdicts:
+        while Len(verdicts) < NumPasses do
+            PickVerdict:
+                with v \in Verdict do
+                    verdicts := Append(verdicts, v);
+                end with;
+        end while;
+    ComputeOverall:
+        if \E i \in DOMAIN verdicts : verdicts[i] = "fail" then
+            status := "fail";
+        elsif \E i \in DOMAIN verdicts : verdicts[i] = "warning" then
+            status := "warning";
+        else
+            status := "pass";
+        end if;
+    SetExitCode:
+        if status = "fail" then
+            exit_code := 1;
+        else
+            exit_code := 0;
+        end if;
+    MarkDone:
+        phase := "done";
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

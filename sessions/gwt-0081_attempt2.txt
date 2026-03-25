@@ -1,0 +1,156 @@
+---- MODULE PlanReviewVerdictAggregation ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+NumPasses == 3
+
+Verdict   == {"pass", "fail", "warning", "unknown"}
+StatusSet == {"pass", "fail", "warning"}
+
+(* --algorithm PlanReviewVerdictAggregation
+
+variables
+    verdicts  = <<>>,
+    status    = "pass",
+    exit_code = 0,
+    phase     = "adding";
+
+define
+
+    HasFail    == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+    HasWarning == \E i \in DOMAIN verdicts : verdicts[i] = "warning"
+
+    FailDominates ==
+        (phase = "done" /\ HasFail) => status = "fail"
+
+    WarningSecond ==
+        (phase = "done" /\ ~HasFail /\ HasWarning) => status = "warning"
+
+    PassRequiresNoFailOrWarning ==
+        (phase = "done" /\ status = "pass") => (~HasFail /\ ~HasWarning)
+
+    ExitCodeMapping ==
+        /\ (phase = "done" /\ status \in {"pass", "warning"}) => exit_code = 0
+        /\ (phase = "done" /\ status = "fail")                => exit_code = 1
+
+    UnknownTreatedAsPass ==
+        (phase = "done" /\ ~HasFail /\ ~HasWarning) => status = "pass"
+
+    StatusIsValid ==
+        phase = "done" => status \in StatusSet
+
+    VerdictLengthBound ==
+        Len(verdicts) <= NumPasses
+
+end define;
+
+fair process orchestrator = "main"
+begin
+    AddVerdicts:
+        while Len(verdicts) < NumPasses do
+            PickVerdict:
+                with v \in Verdict do
+                    verdicts := Append(verdicts, v);
+                end with;
+        end while;
+    ComputeOverall:
+        if \E i \in DOMAIN verdicts : verdicts[i] = "fail" then
+            status := "fail";
+        elsif \E i \in DOMAIN verdicts : verdicts[i] = "warning" then
+            status := "warning";
+        else
+            status := "pass";
+        end if;
+    SetExitCode:
+        if status = "fail" then
+            exit_code := 1;
+        else
+            exit_code := 0;
+        end if;
+    MarkDone:
+        phase := "done";
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE PlanReviewVerdictAggregation ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+NumPasses == 3
+
+Verdict   == {"pass", "fail", "warning", "unknown"}
+StatusSet == {"pass", "fail", "warning"}
+
+(* --algorithm PlanReviewVerdictAggregation
+
+variables
+    verdicts  = <<>>,
+    status    = "pass",
+    exit_code = 0,
+    phase     = "adding";
+
+define
+
+    HasFail    == \E i \in DOMAIN verdicts : verdicts[i] = "fail"
+    HasWarning == \E i \in DOMAIN verdicts : verdicts[i] = "warning"
+
+    FailDominates ==
+        (phase = "done" /\ HasFail) => status = "fail"
+
+    WarningSecond ==
+        (phase = "done" /\ ~HasFail /\ HasWarning) => status = "warning"
+
+    PassRequiresNoFailOrWarning ==
+        (phase = "done" /\ status = "pass") => (~HasFail /\ ~HasWarning)
+
+    ExitCodeMapping ==
+        /\ (phase = "done" /\ status \in {"pass", "warning"}) => exit_code = 0
+        /\ (phase = "done" /\ status = "fail")                => exit_code = 1
+
+    UnknownTreatedAsPass ==
+        (phase = "done" /\ ~HasFail /\ ~HasWarning) => status = "pass"
+
+    StatusIsValid ==
+        phase = "done" => status \in StatusSet
+
+    VerdictLengthBound ==
+        Len(verdicts) <= NumPasses
+
+end define;
+
+fair process orchestrator = "main"
+begin
+    AddVerdicts:
+        while Len(verdicts) < NumPasses do
+            PickVerdict:
+                with v \in Verdict do
+                    verdicts := Append(verdicts, v);
+                end with;
+        end while;
+    ComputeOverall:
+        if \E i \in DOMAIN verdicts : verdicts[i] = "fail" then
+            status := "fail";
+        elsif \E i \in DOMAIN verdicts : verdicts[i] = "warning" then
+            status := "warning";
+        else
+            status := "pass";
+        end if;
+    SetExitCode:
+        if status = "fail" then
+            exit_code := 1;
+        else
+            exit_code := 0;
+        end if;
+    MarkDone:
+        phase := "done";
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

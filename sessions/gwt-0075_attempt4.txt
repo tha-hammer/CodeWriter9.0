@@ -1,0 +1,356 @@
+The counterexample reveals the root cause: `rem_skeletons = 10` and `rem_files = 10` — TLC has assigned integer values to `Skeletons` and `SourceFiles`. The spec then tries `with skel \in 10`, which throws an unexpected exception because an integer is not enumerable as a set. The fix is to treat `Skeletons` and `SourceFiles` as integer counts and iterate over `1..Skeletons` and `1..SourceFiles`, while introducing separate function constants for skeleton and file properties.
+
+---- MODULE GoEntryPointDiscovery ----
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    Skeletons,
+    SourceFiles,
+    SkelFuncName,
+    SkelClassName,
+    SkelVisibility,
+    SkelFile,
+    FileIsTest,
+    FileIsDot,
+    FilePats,
+    CodebaseType,
+    MaxSteps
+
+NoClass          == "None"
+NoRoute          == "None"
+NoMethod         == "None"
+MAIN_TYPE        == "MAIN"
+PUBLIC_API_TYPE  == "PUBLIC_API"
+HTTP_ROUTE_TYPE  == "HTTP_ROUTE"
+CLI_COMMAND_TYPE == "CLI_COMMAND"
+
+(* --algorithm GoEntryPointDiscovery
+
+variables
+    phase         = "skeleton",
+    entry_points  = {},
+    rem_skels     = 1..Skeletons,
+    rem_files     = 1..SourceFiles,
+    cur_file      = 0,
+    cur_patterns  = {},
+    step_count    = 0;
+
+define
+
+    AllEntryTypesValid ==
+        \A ep \in entry_points :
+            ep.entry_type \in {MAIN_TYPE, PUBLIC_API_TYPE,
+                               HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE}
+
+    MainIsTopLevel ==
+        \A ep \in entry_points :
+            ep.entry_type = MAIN_TYPE => ep.function_name = "main"
+
+    PublicOnlyForLibrary ==
+        \A ep \in entry_points :
+            ep.entry_type = PUBLIC_API_TYPE => CodebaseType = "library"
+
+    HandleFuncMethodAgnostic ==
+        \A ep \in entry_points :
+            (ep.entry_type = HTTP_ROUTE_TYPE /\ ep.pat_type = "handlefunc") =>
+                ep.method = NoMethod
+
+    TestFilesNotScanned ==
+        \A ep \in entry_points :
+            ep.entry_type \in {HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE} =>
+                FileIsTest[ep.file_path] = FALSE
+
+    DotFilesNotScanned ==
+        \A ep \in entry_points :
+            ep.entry_type \in {HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE} =>
+                FileIsDot[ep.file_path] = FALSE
+
+    MainSkipsPublicApi ==
+        ~(\E ep1, ep2 \in entry_points :
+            ep1.file_path     = ep2.file_path     /\
+            ep1.function_name = ep2.function_name  /\
+            ep1.entry_type    = MAIN_TYPE          /\
+            ep2.entry_type    = PUBLIC_API_TYPE)
+
+    DeduplicatedResults ==
+        \A ep1, ep2 \in entry_points :
+            ( ep1.file_path     = ep2.file_path     /\
+              ep1.function_name = ep2.function_name  /\
+              ep1.entry_type    = ep2.entry_type     /\
+              ep1.route         = ep2.route          /\
+              ep1.method        = ep2.method ) => ep1 = ep2
+
+    BoundedExecution == step_count <= MaxSteps
+
+    Completion ==
+        phase = "complete" =>
+            rem_skels = {} /\ rem_files = {} /\ cur_patterns = {}
+
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    SkeletonLoop:
+        while rem_skels /= {} /\ step_count < MaxSteps do
+            with idx \in rem_skels do
+                rem_skels    := rem_skels \ {idx} ||
+                step_count   := step_count + 1    ||
+                entry_points :=
+                    IF SkelFuncName[idx] = "main" /\ SkelClassName[idx] = NoClass
+                    THEN entry_points \cup {[
+                            file_path     |-> SkelFile[idx],
+                            function_name |-> "main",
+                            entry_type    |-> MAIN_TYPE,
+                            route         |-> NoRoute,
+                            method        |-> NoMethod,
+                            pat_type      |-> "skeleton" ]}
+                    ELSE IF SkelClassName[idx]  = NoClass   /\
+                            SkelVisibility[idx] = "public"  /\
+                            CodebaseType        = "library" /\
+                            SkelFuncName[idx]  /= "main"
+                         THEN entry_points \cup {[
+                                 file_path     |-> SkelFile[idx],
+                                 function_name |-> SkelFuncName[idx],
+                                 entry_type    |-> PUBLIC_API_TYPE,
+                                 route         |-> NoRoute,
+                                 method        |-> NoMethod,
+                                 pat_type      |-> "skeleton" ]}
+                         ELSE entry_points;
+            end with;
+        end while;
+
+    TransitionToScan:
+        phase := "scanning";
+
+    FileLoop:
+        while rem_files /= {} /\ step_count < MaxSteps do
+            with fidx \in rem_files do
+                rem_files    := rem_files \ {fidx}  ||
+                step_count   := step_count + 1      ||
+                cur_file     := fidx                ||
+                cur_patterns :=
+                    IF FileIsTest[fidx] = FALSE /\ FileIsDot[fidx] = FALSE
+                    THEN FilePats[fidx]
+                    ELSE {};
+            end with;
+            PatternInnerLoop:
+                while cur_patterns /= {} do
+                    with pat \in cur_patterns do
+                        cur_patterns := cur_patterns \ {pat} ||
+                        entry_points :=
+                            IF pat.type = "gin_route"  \/
+                               pat.type = "echo_route" \/
+                               pat.type = "chi_route"
+                            THEN entry_points \cup {[
+                                    file_path     |-> cur_file,
+                                    function_name |-> pat.handler,
+                                    entry_type    |-> HTTP_ROUTE_TYPE,
+                                    route         |-> pat.route,
+                                    method        |-> pat.method,
+                                    pat_type      |-> pat.type ]}
+                            ELSE IF pat.type = "handlefunc"
+                                 THEN entry_points \cup {[
+                                         file_path     |-> cur_file,
+                                         function_name |-> pat.handler,
+                                         entry_type    |-> HTTP_ROUTE_TYPE,
+                                         route         |-> pat.route,
+                                         method        |-> NoMethod,
+                                         pat_type      |-> "handlefunc" ]}
+                                 ELSE IF pat.type = "cobra"
+                                      THEN entry_points \cup {[
+                                               file_path     |-> cur_file,
+                                               function_name |-> pat.use,
+                                               entry_type    |-> CLI_COMMAND_TYPE,
+                                               route         |-> NoRoute,
+                                               method        |-> NoMethod,
+                                               pat_type      |-> "cobra" ]}
+                                      ELSE entry_points;
+                    end with;
+                end while;
+        end while;
+
+    Finish:
+        phase := "complete";
+
+end process;
+
+end algorithm; *)
+====
+The counterexample reveals the root cause: `rem_skeletons = 10` and `rem_files = 10` — TLC has assigned integer values to `Skeletons` and `SourceFiles`. The spec then tries `with skel \in 10`, which throws an unexpected exception because an integer is not enumerable as a set. The fix is to treat `Skeletons` and `SourceFiles` as integer counts and iterate over `1..Skeletons` and `1..SourceFiles`, while introducing separate function constants for skeleton and file properties.
+
+---- MODULE GoEntryPointDiscovery ----
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    Skeletons,
+    SourceFiles,
+    SkelFuncName,
+    SkelClassName,
+    SkelVisibility,
+    SkelFile,
+    FileIsTest,
+    FileIsDot,
+    FilePats,
+    CodebaseType,
+    MaxSteps
+
+NoClass          == "None"
+NoRoute          == "None"
+NoMethod         == "None"
+MAIN_TYPE        == "MAIN"
+PUBLIC_API_TYPE  == "PUBLIC_API"
+HTTP_ROUTE_TYPE  == "HTTP_ROUTE"
+CLI_COMMAND_TYPE == "CLI_COMMAND"
+
+(* --algorithm GoEntryPointDiscovery
+
+variables
+    phase         = "skeleton",
+    entry_points  = {},
+    rem_skels     = 1..Skeletons,
+    rem_files     = 1..SourceFiles,
+    cur_file      = 0,
+    cur_patterns  = {},
+    step_count    = 0;
+
+define
+
+    AllEntryTypesValid ==
+        \A ep \in entry_points :
+            ep.entry_type \in {MAIN_TYPE, PUBLIC_API_TYPE,
+                               HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE}
+
+    MainIsTopLevel ==
+        \A ep \in entry_points :
+            ep.entry_type = MAIN_TYPE => ep.function_name = "main"
+
+    PublicOnlyForLibrary ==
+        \A ep \in entry_points :
+            ep.entry_type = PUBLIC_API_TYPE => CodebaseType = "library"
+
+    HandleFuncMethodAgnostic ==
+        \A ep \in entry_points :
+            (ep.entry_type = HTTP_ROUTE_TYPE /\ ep.pat_type = "handlefunc") =>
+                ep.method = NoMethod
+
+    TestFilesNotScanned ==
+        \A ep \in entry_points :
+            ep.entry_type \in {HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE} =>
+                FileIsTest[ep.file_path] = FALSE
+
+    DotFilesNotScanned ==
+        \A ep \in entry_points :
+            ep.entry_type \in {HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE} =>
+                FileIsDot[ep.file_path] = FALSE
+
+    MainSkipsPublicApi ==
+        ~(\E ep1, ep2 \in entry_points :
+            ep1.file_path     = ep2.file_path     /\
+            ep1.function_name = ep2.function_name  /\
+            ep1.entry_type    = MAIN_TYPE          /\
+            ep2.entry_type    = PUBLIC_API_TYPE)
+
+    DeduplicatedResults ==
+        \A ep1, ep2 \in entry_points :
+            ( ep1.file_path     = ep2.file_path     /\
+              ep1.function_name = ep2.function_name  /\
+              ep1.entry_type    = ep2.entry_type     /\
+              ep1.route         = ep2.route          /\
+              ep1.method        = ep2.method ) => ep1 = ep2
+
+    BoundedExecution == step_count <= MaxSteps
+
+    Completion ==
+        phase = "complete" =>
+            rem_skels = {} /\ rem_files = {} /\ cur_patterns = {}
+
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    SkeletonLoop:
+        while rem_skels /= {} /\ step_count < MaxSteps do
+            with idx \in rem_skels do
+                rem_skels    := rem_skels \ {idx} ||
+                step_count   := step_count + 1    ||
+                entry_points :=
+                    IF SkelFuncName[idx] = "main" /\ SkelClassName[idx] = NoClass
+                    THEN entry_points \cup {[
+                            file_path     |-> SkelFile[idx],
+                            function_name |-> "main",
+                            entry_type    |-> MAIN_TYPE,
+                            route         |-> NoRoute,
+                            method        |-> NoMethod,
+                            pat_type      |-> "skeleton" ]}
+                    ELSE IF SkelClassName[idx]  = NoClass   /\
+                            SkelVisibility[idx] = "public"  /\
+                            CodebaseType        = "library" /\
+                            SkelFuncName[idx]  /= "main"
+                         THEN entry_points \cup {[
+                                 file_path     |-> SkelFile[idx],
+                                 function_name |-> SkelFuncName[idx],
+                                 entry_type    |-> PUBLIC_API_TYPE,
+                                 route         |-> NoRoute,
+                                 method        |-> NoMethod,
+                                 pat_type      |-> "skeleton" ]}
+                         ELSE entry_points;
+            end with;
+        end while;
+
+    TransitionToScan:
+        phase := "scanning";
+
+    FileLoop:
+        while rem_files /= {} /\ step_count < MaxSteps do
+            with fidx \in rem_files do
+                rem_files    := rem_files \ {fidx}  ||
+                step_count   := step_count + 1      ||
+                cur_file     := fidx                ||
+                cur_patterns :=
+                    IF FileIsTest[fidx] = FALSE /\ FileIsDot[fidx] = FALSE
+                    THEN FilePats[fidx]
+                    ELSE {};
+            end with;
+            PatternInnerLoop:
+                while cur_patterns /= {} do
+                    with pat \in cur_patterns do
+                        cur_patterns := cur_patterns \ {pat} ||
+                        entry_points :=
+                            IF pat.type = "gin_route"  \/
+                               pat.type = "echo_route" \/
+                               pat.type = "chi_route"
+                            THEN entry_points \cup {[
+                                    file_path     |-> cur_file,
+                                    function_name |-> pat.handler,
+                                    entry_type    |-> HTTP_ROUTE_TYPE,
+                                    route         |-> pat.route,
+                                    method        |-> pat.method,
+                                    pat_type      |-> pat.type ]}
+                            ELSE IF pat.type = "handlefunc"
+                                 THEN entry_points \cup {[
+                                         file_path     |-> cur_file,
+                                         function_name |-> pat.handler,
+                                         entry_type    |-> HTTP_ROUTE_TYPE,
+                                         route         |-> pat.route,
+                                         method        |-> NoMethod,
+                                         pat_type      |-> "handlefunc" ]}
+                                 ELSE IF pat.type = "cobra"
+                                      THEN entry_points \cup {[
+                                               file_path     |-> cur_file,
+                                               function_name |-> pat.use,
+                                               entry_type    |-> CLI_COMMAND_TYPE,
+                                               route         |-> NoRoute,
+                                               method        |-> NoMethod,
+                                               pat_type      |-> "cobra" ]}
+                                      ELSE entry_points;
+                    end with;
+                end while;
+        end while;
+
+    Finish:
+        phase := "complete";
+
+end process;
+
+end algorithm; *)
+====

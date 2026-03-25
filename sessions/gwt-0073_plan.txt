@@ -1,0 +1,128 @@
+Please grant write permission so I can create the test file. Once you do, the complete suite will be written to `/tests/test_entry_point_discovery_dispatch.py`.
+
+Here is a full summary of what the generated test plan contains — ready to write the moment you approve:
+
+---
+
+## Test Plan Summary
+
+### Structure (4 layers)
+
+#### 1. Shared infrastructure
+| Symbol | Purpose |
+|--------|---------|
+| `PYTHON_LANGS`, `NON_PYTHON_LANGS`, `KNOWN_LANGS`, … | TLA+ domain sets as `frozenset` constants |
+| `MAX_STEPS = 4` | `BoundedExecution` upper bound |
+| `_make_dag(nodes, edges, codebase_type)` | Fixture factory — builds a real `RegistryDag` using `Node.resource`, `Edge`, `EdgeType.IMPORTS` |
+| `discover_entry_points(dag, lang, skeletons)` | **System under test** — models all 5 TLA+ actions; returns `(entry_points, state)` |
+
+#### 2. Eight invariant helper functions
+Each maps directly to one TLA+ invariant:
+
+| Helper | Invariant |
+|--------|-----------|
+| `_verify_type_invariant` | `TypeInvariant` |
+| `_verify_python_preserved` | `PythonPreserved` |
+| `_verify_non_python_dispatched` | `NonPythonDispatched` |
+| `_verify_unknown_safe` | `UnknownSafe` |
+| `_verify_autodetect_before_dispatch` | `AutodetectBeforeDispatch` |
+| `_verify_codebase_resolved_before_dispatch` | `CodebaseResolvedBeforeDispatch` |
+| `_verify_mutual_exclusion` | `MutualExclusion` |
+| `_verify_bounded_execution` | `BoundedExecution` |
+
+`_verify_all_invariants(state)` composes all eight and is called at the end of every trace test.
+
+#### 3. Ten trace-derived test classes (`TestTrace1` – `TestTrace10`)
+
+| Class | lang | skeletons | codebase_type | Expected dispatched_to | Expected python_helper |
+|-------|------|-----------|---------------|------------------------|------------------------|
+| `TestTrace1` | `"ruby"` | ✓ | `web_app` | `"none"` | `"none"` |
+| `TestTrace2` | `None` | ✗ | `cli` | `"python"` | `"cli_commands"` |
+| `TestTrace3` | `"python"` | ✗ | `web_app` | `"python"` | `"web_routes"` |
+| `TestTrace4` | `"rust"` | ✓ | `event_driven` | `"rust"` | `"none"` |
+| `TestTrace5` | `"typescript"` | ✓ | `library` | `"typescript"` | `"none"` |
+| `TestTrace6` | `"go"` | ✗ | `event_driven` | `"go"` | `"none"` |
+| `TestTrace7` | `None` | ✗ | `library` | `"python"` | `"public_api"` |
+| `TestTrace8` | `"javascript"` | ✗ | `event_driven` | `"javascript"` | `"none"` |
+| `TestTrace9` | `"ruby"` | ✓ | `web_app` | `"none"` | `"none"` |
+| `TestTrace10` | `"go"` | ✗ | `cli` | `"go"` | `"none"` |
+
+Each test class has a `dag` pytest fixture derived from the trace's Init state, and one test method that asserts every final-state variable then calls `_verify_all_invariants`.
+
+#### 4. Dedicated invariant + edge-case test classes
+
+| Class | Tests |
+|-------|-------|
+| `TestTypeInvariant` | Domain membership for all langs; step_count pinned to 4 |
+| `TestPythonPreserved` | All 4 codebase→helper mappings; both `None` and `"python"` |
+| `TestNonPythonDispatched` | All 4 non-Python langs; `python_helper=="none"` for all |
+| `TestUnknownSafe` | `ruby` + 5 other unknown langs; skeletons don't override |
+| `TestAutodetectBeforeDispatch` | Python, go, ruby, None — all finish with `autodetect_done=True` |
+| `TestCodebaseResolvedBeforeDispatch` | All 4 valid types pass; invalid type raises `AssertionError` |
+| `TestMutualExclusion` | go, rust, ruby — matrix across all langs |
+| `TestBoundedExecution` | All 7 lang variants × all 4 codebase types |
+| `TestEdgeCases` | Empty DAG (unknown + Python); isolated node; diamond; `None`↔`"python"` equivalence; skeletons flag invariance; 4×4 non-Python×codebase matrix; 5-node linear chain |
+Please grant write permission so I can create the test file. Once you do, the complete suite will be written to `/tests/test_entry_point_discovery_dispatch.py`.
+
+Here is a full summary of what the generated test plan contains — ready to write the moment you approve:
+
+---
+
+## Test Plan Summary
+
+### Structure (4 layers)
+
+#### 1. Shared infrastructure
+| Symbol | Purpose |
+|--------|---------|
+| `PYTHON_LANGS`, `NON_PYTHON_LANGS`, `KNOWN_LANGS`, … | TLA+ domain sets as `frozenset` constants |
+| `MAX_STEPS = 4` | `BoundedExecution` upper bound |
+| `_make_dag(nodes, edges, codebase_type)` | Fixture factory — builds a real `RegistryDag` using `Node.resource`, `Edge`, `EdgeType.IMPORTS` |
+| `discover_entry_points(dag, lang, skeletons)` | **System under test** — models all 5 TLA+ actions; returns `(entry_points, state)` |
+
+#### 2. Eight invariant helper functions
+Each maps directly to one TLA+ invariant:
+
+| Helper | Invariant |
+|--------|-----------|
+| `_verify_type_invariant` | `TypeInvariant` |
+| `_verify_python_preserved` | `PythonPreserved` |
+| `_verify_non_python_dispatched` | `NonPythonDispatched` |
+| `_verify_unknown_safe` | `UnknownSafe` |
+| `_verify_autodetect_before_dispatch` | `AutodetectBeforeDispatch` |
+| `_verify_codebase_resolved_before_dispatch` | `CodebaseResolvedBeforeDispatch` |
+| `_verify_mutual_exclusion` | `MutualExclusion` |
+| `_verify_bounded_execution` | `BoundedExecution` |
+
+`_verify_all_invariants(state)` composes all eight and is called at the end of every trace test.
+
+#### 3. Ten trace-derived test classes (`TestTrace1` – `TestTrace10`)
+
+| Class | lang | skeletons | codebase_type | Expected dispatched_to | Expected python_helper |
+|-------|------|-----------|---------------|------------------------|------------------------|
+| `TestTrace1` | `"ruby"` | ✓ | `web_app` | `"none"` | `"none"` |
+| `TestTrace2` | `None` | ✗ | `cli` | `"python"` | `"cli_commands"` |
+| `TestTrace3` | `"python"` | ✗ | `web_app` | `"python"` | `"web_routes"` |
+| `TestTrace4` | `"rust"` | ✓ | `event_driven` | `"rust"` | `"none"` |
+| `TestTrace5` | `"typescript"` | ✓ | `library` | `"typescript"` | `"none"` |
+| `TestTrace6` | `"go"` | ✗ | `event_driven` | `"go"` | `"none"` |
+| `TestTrace7` | `None` | ✗ | `library` | `"python"` | `"public_api"` |
+| `TestTrace8` | `"javascript"` | ✗ | `event_driven` | `"javascript"` | `"none"` |
+| `TestTrace9` | `"ruby"` | ✓ | `web_app` | `"none"` | `"none"` |
+| `TestTrace10` | `"go"` | ✗ | `cli` | `"go"` | `"none"` |
+
+Each test class has a `dag` pytest fixture derived from the trace's Init state, and one test method that asserts every final-state variable then calls `_verify_all_invariants`.
+
+#### 4. Dedicated invariant + edge-case test classes
+
+| Class | Tests |
+|-------|-------|
+| `TestTypeInvariant` | Domain membership for all langs; step_count pinned to 4 |
+| `TestPythonPreserved` | All 4 codebase→helper mappings; both `None` and `"python"` |
+| `TestNonPythonDispatched` | All 4 non-Python langs; `python_helper=="none"` for all |
+| `TestUnknownSafe` | `ruby` + 5 other unknown langs; skeletons don't override |
+| `TestAutodetectBeforeDispatch` | Python, go, ruby, None — all finish with `autodetect_done=True` |
+| `TestCodebaseResolvedBeforeDispatch` | All 4 valid types pass; invalid type raises `AssertionError` |
+| `TestMutualExclusion` | go, rust, ruby — matrix across all langs |
+| `TestBoundedExecution` | All 7 lang variants × all 4 codebase types |
+| `TestEdgeCases` | Empty DAG (unknown + Python); isolated node; diamond; `None`↔`"python"` equivalence; skeletons flag invariance; 4×4 non-Python×codebase matrix; 5-node linear chain |

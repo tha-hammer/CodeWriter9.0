@@ -1,0 +1,362 @@
+---- MODULE RustDiscovery ----
+EXTENDS Naturals, Sequences, FiniteSets
+
+CONSTANTS
+    SkelSeq,      \* finite set of skeleton records: [kind, name, is_public, path]
+    FileLineMap,  \* finite set of records: [path |-> STRING, lines |-> Seq(LineRec)]
+    DotfilePaths, \* set of dotfile-directory path strings to exclude
+    CodebaseType, \* "binary" or "library"
+    MaxSteps      \* positive integer bounding total line-scan iterations
+
+\* ---------------------------------------------------------------------------
+\* Derived helpers (evaluated at model-check time from the constants above)
+\* ---------------------------------------------------------------------------
+FilePaths    == {r.path : r \in FileLineMap}
+FileLines(fp) == (CHOOSE r \in FileLineMap : r.path = fp).lines
+
+\* ---------------------------------------------------------------------------
+\* Algorithm
+\* ---------------------------------------------------------------------------
+(*--algorithm RustDiscovery
+variables
+  entry_points       = {},
+  files_todo         = FilePaths,
+  current_file       = "",
+  line_idx           = 0,
+  pending_http_attr  = FALSE,
+  pending_http_meth  = "",
+  pending_http_route = "",
+  pending_clap       = FALSE,
+  step_count         = 0;
+
+define
+  \* Every recorded entry carries a recognised type tag
+  ValidEntryTypes ==
+    \A e \in entry_points :
+      e.type \in {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+  \* MAIN entries are always named "main"
+  MainAlwaysNamedMain ==
+    \A e \in entry_points : e.type = "MAIN" => e.name = "main"
+
+  \* MAIN entries must originate from a free-function skeleton named "main"
+  MainOnlyFromFreeSkeleton ==
+    \A e \in entry_points : e.type = "MAIN" =>
+      \E sk \in SkelSeq :
+        sk.kind = "free" /\ sk.name = "main" /\ sk.path = e.path
+
+  \* PUBLIC_API entries appear only when the codebase is a library
+  PublicOnlyForLibrary ==
+    CodebaseType /= "library" =>
+      \A e \in entry_points : e.type /= "PUBLIC_API"
+
+  \* PUBLIC_API entries originate from public free non-main skeletons
+  PublicAPIOnlyFromFreeSkeleton ==
+    \A e \in entry_points : e.type = "PUBLIC_API" =>
+      \E sk \in SkelSeq :
+        sk.kind = "free" /\ sk.is_public /\ sk.name /= "main" /\ sk.name = e.name
+
+  \* impl-method skeletons are never promoted to entry points
+  ImplMethodsExcluded ==
+    \A e \in entry_points : e.type \in {"MAIN", "PUBLIC_API"} =>
+      ~(\E sk \in SkelSeq :
+          sk.kind = "impl" /\ sk.name = e.name /\ sk.path = e.path)
+
+  \* Every HTTP_ROUTE entry carries a non-empty HTTP method
+  HttpRouteHasMethod ==
+    \A e \in entry_points : e.type = "HTTP_ROUTE" => e.method /= ""
+
+  \* No entry is sourced from a path inside a dotfile directory
+  DotfilesExcludedInv ==
+    \A e \in entry_points : e.path \notin DotfilePaths
+
+  \* The line-scan step counter never exceeds the declared bound
+  BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+begin
+  \* ------------------------------------------------------------------
+  \* Phase 1 – harvest MAIN from free fn main() skeletons
+  \* ------------------------------------------------------------------
+  ComputeMain:
+    entry_points :=
+      { [ type   |-> "MAIN",
+          name   |-> sk.name,
+          path   |-> sk.path,
+          method |-> "",
+          route  |-> "" ]
+      : sk \in { s \in SkelSeq :
+                   s.kind = "free" /\
+                   s.name = "main"  /\
+                   s.path \notin DotfilePaths } };
+
+  \* ------------------------------------------------------------------
+  \* Phase 2 – harvest PUBLIC_API from public free functions (library only)
+  \* ------------------------------------------------------------------
+  ComputePublicAPI:
+    if CodebaseType = "library" then
+      entry_points := entry_points \union
+        { [ type   |-> "PUBLIC_API",
+            name   |-> sk.name,
+            path   |-> sk.path,
+            method |-> "",
+            route  |-> "" ]
+        : sk \in { s \in SkelSeq :
+                     s.kind = "free" /\
+                     s.is_public      /\
+                     s.name /= "main" /\
+                     s.path \notin DotfilePaths } };
+    end if;
+
+  \* ------------------------------------------------------------------
+  \* Phase 3 – scan source files for HTTP routes and CLI commands
+  \* ------------------------------------------------------------------
+  ScanFiles:
+    while {f \in files_todo : f \notin DotfilePaths} /= {} do
+      with fp \in {f \in files_todo : f \notin DotfilePaths} do
+        current_file := fp;
+      end with;
+      SetupFileState:
+        line_idx           := 1;
+        pending_http_attr  := FALSE;
+        pending_http_meth  := "";
+        pending_http_route := "";
+        pending_clap       := FALSE;
+      ScanLines:
+        while line_idx <= Len(FileLines(current_file)) /\ step_count < MaxSteps do
+          ProcessLine:
+            with ln = FileLines(current_file)[line_idx] do
+              if ln.kind = "http_attr" then
+                \* Actix-web style: #[get("/path")] — remember until fn def
+                pending_http_attr  := TRUE;
+                pending_http_meth  := ln.method;
+                pending_http_route := ln.route;
+              elsif ln.kind = "fn_def" /\ pending_http_attr then
+                \* fn def following an HTTP attribute macro → HTTP_ROUTE
+                entry_points      := entry_points \union
+                  {[ type   |-> "HTTP_ROUTE",
+                     name   |-> ln.name,
+                     path   |-> current_file,
+                     method |-> pending_http_meth,
+                     route  |-> pending_http_route ]};
+                pending_http_attr  := FALSE;
+                pending_http_meth  := "";
+                pending_http_route := "";
+              elsif ln.kind = "axum_route" then
+                \* Axum builder: .route("/path", get(handler)) → HTTP_ROUTE
+                entry_points := entry_points \union
+                  {[ type   |-> "HTTP_ROUTE",
+                     name   |-> ln.handler,
+                     path   |-> current_file,
+                     method |-> ln.method,
+                     route  |-> ln.route ]};
+              elsif ln.kind = "clap_derive" then
+                \* #[derive(Parser)] seen — remember until struct def
+                pending_clap := TRUE;
+              elsif ln.kind = "struct_def" /\ pending_clap then
+                \* struct following #[derive(Parser)] → CLI_COMMAND
+                entry_points := entry_points \union
+                  {[ type   |-> "CLI_COMMAND",
+                     name   |-> ln.name,
+                     path   |-> current_file,
+                     method |-> "",
+                     route  |-> "" ]};
+                pending_clap := FALSE;
+              else
+                skip;
+              end if;
+            end with;
+          AdvanceLine:
+            line_idx   := line_idx   + 1;
+            step_count := step_count + 1;
+        end while;
+      FileDone:
+        files_todo := files_todo \ {current_file};
+    end while;
+
+  Finish: skip;
+end algorithm; *)
+
+====
+---- MODULE RustDiscovery ----
+EXTENDS Naturals, Sequences, FiniteSets
+
+CONSTANTS
+    SkelSeq,      \* finite set of skeleton records: [kind, name, is_public, path]
+    FileLineMap,  \* finite set of records: [path |-> STRING, lines |-> Seq(LineRec)]
+    DotfilePaths, \* set of dotfile-directory path strings to exclude
+    CodebaseType, \* "binary" or "library"
+    MaxSteps      \* positive integer bounding total line-scan iterations
+
+\* ---------------------------------------------------------------------------
+\* Derived helpers (evaluated at model-check time from the constants above)
+\* ---------------------------------------------------------------------------
+FilePaths    == {r.path : r \in FileLineMap}
+FileLines(fp) == (CHOOSE r \in FileLineMap : r.path = fp).lines
+
+\* ---------------------------------------------------------------------------
+\* Algorithm
+\* ---------------------------------------------------------------------------
+(*--algorithm RustDiscovery
+variables
+  entry_points       = {},
+  files_todo         = FilePaths,
+  current_file       = "",
+  line_idx           = 0,
+  pending_http_attr  = FALSE,
+  pending_http_meth  = "",
+  pending_http_route = "",
+  pending_clap       = FALSE,
+  step_count         = 0;
+
+define
+  \* Every recorded entry carries a recognised type tag
+  ValidEntryTypes ==
+    \A e \in entry_points :
+      e.type \in {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+  \* MAIN entries are always named "main"
+  MainAlwaysNamedMain ==
+    \A e \in entry_points : e.type = "MAIN" => e.name = "main"
+
+  \* MAIN entries must originate from a free-function skeleton named "main"
+  MainOnlyFromFreeSkeleton ==
+    \A e \in entry_points : e.type = "MAIN" =>
+      \E sk \in SkelSeq :
+        sk.kind = "free" /\ sk.name = "main" /\ sk.path = e.path
+
+  \* PUBLIC_API entries appear only when the codebase is a library
+  PublicOnlyForLibrary ==
+    CodebaseType /= "library" =>
+      \A e \in entry_points : e.type /= "PUBLIC_API"
+
+  \* PUBLIC_API entries originate from public free non-main skeletons
+  PublicAPIOnlyFromFreeSkeleton ==
+    \A e \in entry_points : e.type = "PUBLIC_API" =>
+      \E sk \in SkelSeq :
+        sk.kind = "free" /\ sk.is_public /\ sk.name /= "main" /\ sk.name = e.name
+
+  \* impl-method skeletons are never promoted to entry points
+  ImplMethodsExcluded ==
+    \A e \in entry_points : e.type \in {"MAIN", "PUBLIC_API"} =>
+      ~(\E sk \in SkelSeq :
+          sk.kind = "impl" /\ sk.name = e.name /\ sk.path = e.path)
+
+  \* Every HTTP_ROUTE entry carries a non-empty HTTP method
+  HttpRouteHasMethod ==
+    \A e \in entry_points : e.type = "HTTP_ROUTE" => e.method /= ""
+
+  \* No entry is sourced from a path inside a dotfile directory
+  DotfilesExcludedInv ==
+    \A e \in entry_points : e.path \notin DotfilePaths
+
+  \* The line-scan step counter never exceeds the declared bound
+  BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+begin
+  \* ------------------------------------------------------------------
+  \* Phase 1 – harvest MAIN from free fn main() skeletons
+  \* ------------------------------------------------------------------
+  ComputeMain:
+    entry_points :=
+      { [ type   |-> "MAIN",
+          name   |-> sk.name,
+          path   |-> sk.path,
+          method |-> "",
+          route  |-> "" ]
+      : sk \in { s \in SkelSeq :
+                   s.kind = "free" /\
+                   s.name = "main"  /\
+                   s.path \notin DotfilePaths } };
+
+  \* ------------------------------------------------------------------
+  \* Phase 2 – harvest PUBLIC_API from public free functions (library only)
+  \* ------------------------------------------------------------------
+  ComputePublicAPI:
+    if CodebaseType = "library" then
+      entry_points := entry_points \union
+        { [ type   |-> "PUBLIC_API",
+            name   |-> sk.name,
+            path   |-> sk.path,
+            method |-> "",
+            route  |-> "" ]
+        : sk \in { s \in SkelSeq :
+                     s.kind = "free" /\
+                     s.is_public      /\
+                     s.name /= "main" /\
+                     s.path \notin DotfilePaths } };
+    end if;
+
+  \* ------------------------------------------------------------------
+  \* Phase 3 – scan source files for HTTP routes and CLI commands
+  \* ------------------------------------------------------------------
+  ScanFiles:
+    while {f \in files_todo : f \notin DotfilePaths} /= {} do
+      with fp \in {f \in files_todo : f \notin DotfilePaths} do
+        current_file := fp;
+      end with;
+      SetupFileState:
+        line_idx           := 1;
+        pending_http_attr  := FALSE;
+        pending_http_meth  := "";
+        pending_http_route := "";
+        pending_clap       := FALSE;
+      ScanLines:
+        while line_idx <= Len(FileLines(current_file)) /\ step_count < MaxSteps do
+          ProcessLine:
+            with ln = FileLines(current_file)[line_idx] do
+              if ln.kind = "http_attr" then
+                \* Actix-web style: #[get("/path")] — remember until fn def
+                pending_http_attr  := TRUE;
+                pending_http_meth  := ln.method;
+                pending_http_route := ln.route;
+              elsif ln.kind = "fn_def" /\ pending_http_attr then
+                \* fn def following an HTTP attribute macro → HTTP_ROUTE
+                entry_points      := entry_points \union
+                  {[ type   |-> "HTTP_ROUTE",
+                     name   |-> ln.name,
+                     path   |-> current_file,
+                     method |-> pending_http_meth,
+                     route  |-> pending_http_route ]};
+                pending_http_attr  := FALSE;
+                pending_http_meth  := "";
+                pending_http_route := "";
+              elsif ln.kind = "axum_route" then
+                \* Axum builder: .route("/path", get(handler)) → HTTP_ROUTE
+                entry_points := entry_points \union
+                  {[ type   |-> "HTTP_ROUTE",
+                     name   |-> ln.handler,
+                     path   |-> current_file,
+                     method |-> ln.method,
+                     route  |-> ln.route ]};
+              elsif ln.kind = "clap_derive" then
+                \* #[derive(Parser)] seen — remember until struct def
+                pending_clap := TRUE;
+              elsif ln.kind = "struct_def" /\ pending_clap then
+                \* struct following #[derive(Parser)] → CLI_COMMAND
+                entry_points := entry_points \union
+                  {[ type   |-> "CLI_COMMAND",
+                     name   |-> ln.name,
+                     path   |-> current_file,
+                     method |-> "",
+                     route  |-> "" ]};
+                pending_clap := FALSE;
+              else
+                skip;
+              end if;
+            end with;
+          AdvanceLine:
+            line_idx   := line_idx   + 1;
+            step_count := step_count + 1;
+        end while;
+      FileDone:
+        files_todo := files_todo \ {current_file};
+    end while;
+
+  Finish: skip;
+end algorithm; *)
+
+====

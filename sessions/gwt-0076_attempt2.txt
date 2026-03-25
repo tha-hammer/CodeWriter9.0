@@ -1,0 +1,326 @@
+---- MODULE RustDiscovery ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+(* --algorithm RustDiscovery
+
+variables
+  codebase_type     \in {"web_app", "cli", "library"},
+  skel_is_main      \in [1..2 -> BOOLEAN],
+  skel_is_public    \in [1..2 -> BOOLEAN],
+  skel_has_class    \in [1..2 -> BOOLEAN],
+  skel_dotfile      \in [1..2 -> BOOLEAN],
+  file_dotfile      \in [1..2 -> BOOLEAN],
+  file_has_actix    \in [1..2 -> BOOLEAN],
+  file_actix_method \in [1..2 -> {"GET", "POST", "PUT", "DELETE"}],
+  file_has_axum     \in [1..2 -> BOOLEAN],
+  file_axum_method  \in [1..2 -> {"GET", "POST", "PUT", "DELETE"}],
+  file_has_clap     \in [1..2 -> BOOLEAN],
+  entry_points = {},
+  phase = "skeletons",
+  idx = 1;
+
+define
+
+  MainIsTopLevel ==
+    \A ep \in entry_points :
+      ep.etype = "MAIN" =>
+        ep.is_main = TRUE /\ ep.has_class = FALSE
+
+  MainNotImpl ==
+    \A ep \in entry_points :
+      ep.etype = "MAIN" => ep.has_class = FALSE
+
+  PublicOnlyForLibrary ==
+    \A ep \in entry_points :
+      ep.etype = "PUBLIC_API" => codebase_type = "library"
+
+  ImplMethodsExcluded ==
+    \A ep \in entry_points :
+      ep.etype = "PUBLIC_API" => ep.has_class = FALSE
+
+  DotfilesExcluded ==
+    \A ep \in entry_points : ep.is_dotfile = FALSE
+
+  HttpRouteHasMethod ==
+    \A ep \in entry_points :
+      ep.etype = "HTTP_ROUTE" =>
+        ep.method \in {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"}
+
+  ValidEntryTypes ==
+    \A ep \in entry_points :
+      ep.etype \in {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+  NoMainFromImpl ==
+    \A ep \in entry_points :
+      ep.has_class = TRUE => ep.etype /= "MAIN"
+
+  NoPublicAPIFromImpl ==
+    \A ep \in entry_points :
+      ep.has_class = TRUE => ep.etype /= "PUBLIC_API"
+
+  AllInvariants ==
+    /\ MainIsTopLevel
+    /\ MainNotImpl
+    /\ PublicOnlyForLibrary
+    /\ ImplMethodsExcluded
+    /\ DotfilesExcluded
+    /\ HttpRouteHasMethod
+    /\ ValidEntryTypes
+    /\ NoMainFromImpl
+    /\ NoPublicAPIFromImpl
+
+end define;
+
+fair process Discoverer = "discoverer"
+begin
+  SkelLoop:
+    while idx <= 2 do
+      SkelCheckMain:
+        if ~skel_dotfile[idx] /\ skel_is_main[idx] /\ ~skel_has_class[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "MAIN",
+              is_main    |-> TRUE,
+              has_class  |-> FALSE,
+              is_public  |-> skel_is_public[idx],
+              is_dotfile |-> FALSE,
+              method     |-> "NONE",
+              src        |-> "skel",
+              sid        |-> idx]};
+        end if;
+      SkelCheckPubAPI:
+        if ~skel_dotfile[idx]
+           /\ codebase_type = "library"
+           /\ skel_is_public[idx]
+           /\ ~skel_has_class[idx]
+           /\ ~skel_is_main[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "PUBLIC_API",
+              is_main    |-> FALSE,
+              has_class  |-> FALSE,
+              is_public  |-> TRUE,
+              is_dotfile |-> FALSE,
+              method     |-> "NONE",
+              src        |-> "skel",
+              sid        |-> idx]};
+        end if;
+      SkelNext:
+        idx := idx + 1;
+    end while;
+
+  StartFiles:
+    idx := 1;
+    phase := "files";
+
+  FileLoop:
+    while idx <= 2 do
+      FileCheckActix:
+        if ~file_dotfile[idx] /\ file_has_actix[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "HTTP_ROUTE",
+              is_main    |-> FALSE,
+              has_class  |-> FALSE,
+              is_public  |-> FALSE,
+              is_dotfile |-> FALSE,
+              method     |-> file_actix_method[idx],
+              src        |-> "actix",
+              sid        |-> idx]};
+        end if;
+      FileCheckAxum:
+        if ~file_dotfile[idx] /\ file_has_axum[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "HTTP_ROUTE",
+              is_main    |-> FALSE,
+              has_class  |-> FALSE,
+              is_public  |-> FALSE,
+              is_dotfile |-> FALSE,
+              method     |-> file_axum_method[idx],
+              src        |-> "axum",
+              sid        |-> idx]};
+        end if;
+      FileCheckClap:
+        if ~file_dotfile[idx] /\ file_has_clap[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "CLI_COMMAND",
+              is_main    |-> FALSE,
+              has_class  |-> FALSE,
+              is_public  |-> FALSE,
+              is_dotfile |-> FALSE,
+              method     |-> "NONE",
+              src        |-> "clap",
+              sid        |-> idx]};
+        end if;
+      FileNext:
+        idx := idx + 1;
+    end while;
+
+  Finish:
+    phase := "done";
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE RustDiscovery ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+(* --algorithm RustDiscovery
+
+variables
+  codebase_type     \in {"web_app", "cli", "library"},
+  skel_is_main      \in [1..2 -> BOOLEAN],
+  skel_is_public    \in [1..2 -> BOOLEAN],
+  skel_has_class    \in [1..2 -> BOOLEAN],
+  skel_dotfile      \in [1..2 -> BOOLEAN],
+  file_dotfile      \in [1..2 -> BOOLEAN],
+  file_has_actix    \in [1..2 -> BOOLEAN],
+  file_actix_method \in [1..2 -> {"GET", "POST", "PUT", "DELETE"}],
+  file_has_axum     \in [1..2 -> BOOLEAN],
+  file_axum_method  \in [1..2 -> {"GET", "POST", "PUT", "DELETE"}],
+  file_has_clap     \in [1..2 -> BOOLEAN],
+  entry_points = {},
+  phase = "skeletons",
+  idx = 1;
+
+define
+
+  MainIsTopLevel ==
+    \A ep \in entry_points :
+      ep.etype = "MAIN" =>
+        ep.is_main = TRUE /\ ep.has_class = FALSE
+
+  MainNotImpl ==
+    \A ep \in entry_points :
+      ep.etype = "MAIN" => ep.has_class = FALSE
+
+  PublicOnlyForLibrary ==
+    \A ep \in entry_points :
+      ep.etype = "PUBLIC_API" => codebase_type = "library"
+
+  ImplMethodsExcluded ==
+    \A ep \in entry_points :
+      ep.etype = "PUBLIC_API" => ep.has_class = FALSE
+
+  DotfilesExcluded ==
+    \A ep \in entry_points : ep.is_dotfile = FALSE
+
+  HttpRouteHasMethod ==
+    \A ep \in entry_points :
+      ep.etype = "HTTP_ROUTE" =>
+        ep.method \in {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"}
+
+  ValidEntryTypes ==
+    \A ep \in entry_points :
+      ep.etype \in {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+  NoMainFromImpl ==
+    \A ep \in entry_points :
+      ep.has_class = TRUE => ep.etype /= "MAIN"
+
+  NoPublicAPIFromImpl ==
+    \A ep \in entry_points :
+      ep.has_class = TRUE => ep.etype /= "PUBLIC_API"
+
+  AllInvariants ==
+    /\ MainIsTopLevel
+    /\ MainNotImpl
+    /\ PublicOnlyForLibrary
+    /\ ImplMethodsExcluded
+    /\ DotfilesExcluded
+    /\ HttpRouteHasMethod
+    /\ ValidEntryTypes
+    /\ NoMainFromImpl
+    /\ NoPublicAPIFromImpl
+
+end define;
+
+fair process Discoverer = "discoverer"
+begin
+  SkelLoop:
+    while idx <= 2 do
+      SkelCheckMain:
+        if ~skel_dotfile[idx] /\ skel_is_main[idx] /\ ~skel_has_class[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "MAIN",
+              is_main    |-> TRUE,
+              has_class  |-> FALSE,
+              is_public  |-> skel_is_public[idx],
+              is_dotfile |-> FALSE,
+              method     |-> "NONE",
+              src        |-> "skel",
+              sid        |-> idx]};
+        end if;
+      SkelCheckPubAPI:
+        if ~skel_dotfile[idx]
+           /\ codebase_type = "library"
+           /\ skel_is_public[idx]
+           /\ ~skel_has_class[idx]
+           /\ ~skel_is_main[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "PUBLIC_API",
+              is_main    |-> FALSE,
+              has_class  |-> FALSE,
+              is_public  |-> TRUE,
+              is_dotfile |-> FALSE,
+              method     |-> "NONE",
+              src        |-> "skel",
+              sid        |-> idx]};
+        end if;
+      SkelNext:
+        idx := idx + 1;
+    end while;
+
+  StartFiles:
+    idx := 1;
+    phase := "files";
+
+  FileLoop:
+    while idx <= 2 do
+      FileCheckActix:
+        if ~file_dotfile[idx] /\ file_has_actix[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "HTTP_ROUTE",
+              is_main    |-> FALSE,
+              has_class  |-> FALSE,
+              is_public  |-> FALSE,
+              is_dotfile |-> FALSE,
+              method     |-> file_actix_method[idx],
+              src        |-> "actix",
+              sid        |-> idx]};
+        end if;
+      FileCheckAxum:
+        if ~file_dotfile[idx] /\ file_has_axum[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "HTTP_ROUTE",
+              is_main    |-> FALSE,
+              has_class  |-> FALSE,
+              is_public  |-> FALSE,
+              is_dotfile |-> FALSE,
+              method     |-> file_axum_method[idx],
+              src        |-> "axum",
+              sid        |-> idx]};
+        end if;
+      FileCheckClap:
+        if ~file_dotfile[idx] /\ file_has_clap[idx] then
+          entry_points := entry_points \cup
+            {[etype      |-> "CLI_COMMAND",
+              is_main    |-> FALSE,
+              has_class  |-> FALSE,
+              is_public  |-> FALSE,
+              is_dotfile |-> FALSE,
+              method     |-> "NONE",
+              src        |-> "clap",
+              sid        |-> idx]};
+        end if;
+      FileNext:
+        idx := idx + 1;
+    end while;
+
+  Finish:
+    phase := "done";
+end process;
+
+end algorithm; *)
+
+====

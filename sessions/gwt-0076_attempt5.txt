@@ -1,0 +1,472 @@
+---- MODULE RustDiscovery ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+CONSTANTS
+    SkelSeq,
+    FileLineMap,
+    DotfilePaths,
+    CodebaseType,
+    MaxSteps
+
+HttpMethods  == {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"}
+EntryTypeSet == {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+(* --algorithm RustDiscovery
+
+variables
+    files_todo          = DOMAIN FileLineMap,
+    current_file        = "",
+    line_idx            = 1,
+    pending_attr_active = FALSE,
+    pending_attr_route  = "",
+    pending_attr_method = "",
+    pending_clap        = FALSE,
+    entry_points        = {},
+    step_count          = 0;
+
+define
+
+    FnAlreadyRecorded(fp, fn) ==
+        \E ep \in entry_points : ep.file_path = fp /\ ep.function_name = fn
+
+    ValidEntryTypes ==
+        \A ep \in entry_points : ep.entry_type \in EntryTypeSet
+
+    MainAlwaysNamedMain ==
+        \A ep \in entry_points :
+            ep.entry_type = "MAIN" => ep.function_name = "main"
+
+    MainOnlyFromFreeSkeleton ==
+        \A ep \in entry_points :
+            ep.entry_type = "MAIN" =>
+                \E sk \in SkelSeq :
+                    /\ sk.file_path     = ep.file_path
+                    /\ sk.function_name = "main"
+                    /\ ~sk.has_class_name
+
+    PublicOnlyForLibrary ==
+        \A ep \in entry_points :
+            ep.entry_type = "PUBLIC_API" => CodebaseType = "library"
+
+    PublicAPIOnlyFromFreeSkeleton ==
+        \A ep \in entry_points :
+            ep.entry_type = "PUBLIC_API" =>
+                \E sk \in SkelSeq :
+                    /\ sk.file_path     = ep.file_path
+                    /\ sk.function_name = ep.function_name
+                    /\ sk.visibility    = "public"
+                    /\ ~sk.has_class_name
+
+    ImplMethodsExcluded ==
+        \A sk \in SkelSeq :
+            sk.has_class_name =>
+                ~(\E ep \in entry_points :
+                      ep.file_path     = sk.file_path     /\
+                      ep.function_name = sk.function_name /\
+                      ep.entry_type \in {"MAIN", "PUBLIC_API"})
+
+    HttpRouteHasMethod ==
+        \A ep \in entry_points :
+            ep.entry_type = "HTTP_ROUTE" => ep.method \in HttpMethods
+
+    DotfilesExcludedInv ==
+        \A ep \in entry_points : ep.file_path \notin DotfilePaths
+
+    DeduplicatedResults ==
+        \A ep1 \in entry_points :
+            \A ep2 \in entry_points :
+                (ep1.file_path = ep2.file_path /\ ep1.function_name = ep2.function_name) =>
+                    ep1 = ep2
+
+    BoundedExecution == step_count <= MaxSteps
+
+    TypeInvariant ==
+        /\ ValidEntryTypes
+        /\ MainAlwaysNamedMain
+        /\ MainOnlyFromFreeSkeleton
+        /\ PublicOnlyForLibrary
+        /\ PublicAPIOnlyFromFreeSkeleton
+        /\ ImplMethodsExcluded
+        /\ HttpRouteHasMethod
+        /\ DotfilesExcludedInv
+        /\ DeduplicatedResults
+        /\ BoundedExecution
+
+end define;
+
+fair process Discoverer = "discoverer"
+begin
+
+    ComputeMain:
+        entry_points := entry_points \union
+            {[file_path     |-> sk.file_path,
+              function_name |-> "main",
+              entry_type    |-> "MAIN",
+              route         |-> "",
+              method        |-> ""] :
+                 sk \in {s \in SkelSeq :
+                            s.function_name = "main" /\
+                            ~s.has_class_name         /\
+                            s.file_path \notin DotfilePaths}};
+        step_count := step_count + 1;
+
+    ComputePublicAPI:
+        entry_points := entry_points \union
+            {[file_path     |-> sk.file_path,
+              function_name |-> sk.function_name,
+              entry_type    |-> "PUBLIC_API",
+              route         |-> "",
+              method        |-> ""] :
+                 sk \in {s \in SkelSeq :
+                            s.visibility = "public"         /\
+                            ~s.has_class_name               /\
+                            CodebaseType = "library"        /\
+                            s.file_path \notin DotfilePaths /\
+                            ~(\E ep \in entry_points :
+                                  ep.file_path     = s.file_path /\
+                                  ep.function_name = s.function_name)}};
+        step_count := step_count + 1;
+
+    ScanFiles:
+        while {f \in files_todo : f \notin DotfilePaths} /= {}
+              /\ step_count < MaxSteps do
+            with fp \in {f \in files_todo : f \notin DotfilePaths} do
+                current_file := fp;
+            end with;
+        SetupFileState:
+            pending_attr_active := FALSE;
+            pending_attr_route  := "";
+            pending_attr_method := "";
+            pending_clap        := FALSE;
+            line_idx            := 1;
+        ScanLines:
+            while line_idx <= Len(FileLineMap[current_file])
+                  /\ step_count < MaxSteps do
+                ProcessLine:
+                    if FileLineMap[current_file][line_idx].kind = "http_attr" then
+                        pending_attr_active := TRUE;
+                        pending_attr_route  := FileLineMap[current_file][line_idx].route;
+                        pending_attr_method := FileLineMap[current_file][line_idx].method;
+                        pending_clap        := FALSE;
+                    elsif FileLineMap[current_file][line_idx].kind = "axum_route"
+                          /\ ~FnAlreadyRecorded(
+                                 current_file,
+                                 FileLineMap[current_file][line_idx].handler) then
+                        entry_points := entry_points \union
+                            {[file_path     |-> current_file,
+                              function_name |-> FileLineMap[current_file][line_idx].handler,
+                              entry_type    |-> "HTTP_ROUTE",
+                              route         |-> FileLineMap[current_file][line_idx].route,
+                              method        |-> FileLineMap[current_file][line_idx].method]};
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    elsif FileLineMap[current_file][line_idx].kind = "axum_route" then
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    elsif FileLineMap[current_file][line_idx].kind = "fn_def"
+                          /\ pending_attr_active
+                          /\ ~FnAlreadyRecorded(
+                                 current_file,
+                                 FileLineMap[current_file][line_idx].name) then
+                        entry_points := entry_points \union
+                            {[file_path     |-> current_file,
+                              function_name |-> FileLineMap[current_file][line_idx].name,
+                              entry_type    |-> "HTTP_ROUTE",
+                              route         |-> pending_attr_route,
+                              method        |-> pending_attr_method]};
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                        pending_clap        := FALSE;
+                    elsif FileLineMap[current_file][line_idx].kind = "fn_def" then
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                        pending_clap        := FALSE;
+                    elsif FileLineMap[current_file][line_idx].kind = "struct_def"
+                          /\ pending_clap
+                          /\ ~FnAlreadyRecorded(
+                                 current_file,
+                                 FileLineMap[current_file][line_idx].name) then
+                        entry_points := entry_points \union
+                            {[file_path     |-> current_file,
+                              function_name |-> FileLineMap[current_file][line_idx].name,
+                              entry_type    |-> "CLI_COMMAND",
+                              route         |-> "",
+                              method        |-> ""]};
+                        pending_clap        := FALSE;
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    elsif FileLineMap[current_file][line_idx].kind = "struct_def" then
+                        pending_clap        := FALSE;
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    elsif FileLineMap[current_file][line_idx].kind = "clap_derive" then
+                        pending_clap        := TRUE;
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    else
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                        pending_clap        := FALSE;
+                    end if;
+                AdvanceLine:
+                    line_idx   := line_idx + 1;
+                    step_count := step_count + 1;
+            end while;
+        FileDone:
+            files_todo := files_todo \ {current_file};
+            step_count := step_count + 1;
+        end while;
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE RustDiscovery ----
+
+EXTENDS Integers, Sequences, FiniteSets, TLC
+
+CONSTANTS
+    SkelSeq,
+    FileLineMap,
+    DotfilePaths,
+    CodebaseType,
+    MaxSteps
+
+HttpMethods  == {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD"}
+EntryTypeSet == {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+(* --algorithm RustDiscovery
+
+variables
+    files_todo          = DOMAIN FileLineMap,
+    current_file        = "",
+    line_idx            = 1,
+    pending_attr_active = FALSE,
+    pending_attr_route  = "",
+    pending_attr_method = "",
+    pending_clap        = FALSE,
+    entry_points        = {},
+    step_count          = 0;
+
+define
+
+    FnAlreadyRecorded(fp, fn) ==
+        \E ep \in entry_points : ep.file_path = fp /\ ep.function_name = fn
+
+    ValidEntryTypes ==
+        \A ep \in entry_points : ep.entry_type \in EntryTypeSet
+
+    MainAlwaysNamedMain ==
+        \A ep \in entry_points :
+            ep.entry_type = "MAIN" => ep.function_name = "main"
+
+    MainOnlyFromFreeSkeleton ==
+        \A ep \in entry_points :
+            ep.entry_type = "MAIN" =>
+                \E sk \in SkelSeq :
+                    /\ sk.file_path     = ep.file_path
+                    /\ sk.function_name = "main"
+                    /\ ~sk.has_class_name
+
+    PublicOnlyForLibrary ==
+        \A ep \in entry_points :
+            ep.entry_type = "PUBLIC_API" => CodebaseType = "library"
+
+    PublicAPIOnlyFromFreeSkeleton ==
+        \A ep \in entry_points :
+            ep.entry_type = "PUBLIC_API" =>
+                \E sk \in SkelSeq :
+                    /\ sk.file_path     = ep.file_path
+                    /\ sk.function_name = ep.function_name
+                    /\ sk.visibility    = "public"
+                    /\ ~sk.has_class_name
+
+    ImplMethodsExcluded ==
+        \A sk \in SkelSeq :
+            sk.has_class_name =>
+                ~(\E ep \in entry_points :
+                      ep.file_path     = sk.file_path     /\
+                      ep.function_name = sk.function_name /\
+                      ep.entry_type \in {"MAIN", "PUBLIC_API"})
+
+    HttpRouteHasMethod ==
+        \A ep \in entry_points :
+            ep.entry_type = "HTTP_ROUTE" => ep.method \in HttpMethods
+
+    DotfilesExcludedInv ==
+        \A ep \in entry_points : ep.file_path \notin DotfilePaths
+
+    DeduplicatedResults ==
+        \A ep1 \in entry_points :
+            \A ep2 \in entry_points :
+                (ep1.file_path = ep2.file_path /\ ep1.function_name = ep2.function_name) =>
+                    ep1 = ep2
+
+    BoundedExecution == step_count <= MaxSteps
+
+    TypeInvariant ==
+        /\ ValidEntryTypes
+        /\ MainAlwaysNamedMain
+        /\ MainOnlyFromFreeSkeleton
+        /\ PublicOnlyForLibrary
+        /\ PublicAPIOnlyFromFreeSkeleton
+        /\ ImplMethodsExcluded
+        /\ HttpRouteHasMethod
+        /\ DotfilesExcludedInv
+        /\ DeduplicatedResults
+        /\ BoundedExecution
+
+end define;
+
+fair process Discoverer = "discoverer"
+begin
+
+    ComputeMain:
+        entry_points := entry_points \union
+            {[file_path     |-> sk.file_path,
+              function_name |-> "main",
+              entry_type    |-> "MAIN",
+              route         |-> "",
+              method        |-> ""] :
+                 sk \in {s \in SkelSeq :
+                            s.function_name = "main" /\
+                            ~s.has_class_name         /\
+                            s.file_path \notin DotfilePaths}};
+        step_count := step_count + 1;
+
+    ComputePublicAPI:
+        entry_points := entry_points \union
+            {[file_path     |-> sk.file_path,
+              function_name |-> sk.function_name,
+              entry_type    |-> "PUBLIC_API",
+              route         |-> "",
+              method        |-> ""] :
+                 sk \in {s \in SkelSeq :
+                            s.visibility = "public"         /\
+                            ~s.has_class_name               /\
+                            CodebaseType = "library"        /\
+                            s.file_path \notin DotfilePaths /\
+                            ~(\E ep \in entry_points :
+                                  ep.file_path     = s.file_path /\
+                                  ep.function_name = s.function_name)}};
+        step_count := step_count + 1;
+
+    ScanFiles:
+        while {f \in files_todo : f \notin DotfilePaths} /= {}
+              /\ step_count < MaxSteps do
+            with fp \in {f \in files_todo : f \notin DotfilePaths} do
+                current_file := fp;
+            end with;
+        SetupFileState:
+            pending_attr_active := FALSE;
+            pending_attr_route  := "";
+            pending_attr_method := "";
+            pending_clap        := FALSE;
+            line_idx            := 1;
+        ScanLines:
+            while line_idx <= Len(FileLineMap[current_file])
+                  /\ step_count < MaxSteps do
+                ProcessLine:
+                    if FileLineMap[current_file][line_idx].kind = "http_attr" then
+                        pending_attr_active := TRUE;
+                        pending_attr_route  := FileLineMap[current_file][line_idx].route;
+                        pending_attr_method := FileLineMap[current_file][line_idx].method;
+                        pending_clap        := FALSE;
+                    elsif FileLineMap[current_file][line_idx].kind = "axum_route"
+                          /\ ~FnAlreadyRecorded(
+                                 current_file,
+                                 FileLineMap[current_file][line_idx].handler) then
+                        entry_points := entry_points \union
+                            {[file_path     |-> current_file,
+                              function_name |-> FileLineMap[current_file][line_idx].handler,
+                              entry_type    |-> "HTTP_ROUTE",
+                              route         |-> FileLineMap[current_file][line_idx].route,
+                              method        |-> FileLineMap[current_file][line_idx].method]};
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    elsif FileLineMap[current_file][line_idx].kind = "axum_route" then
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    elsif FileLineMap[current_file][line_idx].kind = "fn_def"
+                          /\ pending_attr_active
+                          /\ ~FnAlreadyRecorded(
+                                 current_file,
+                                 FileLineMap[current_file][line_idx].name) then
+                        entry_points := entry_points \union
+                            {[file_path     |-> current_file,
+                              function_name |-> FileLineMap[current_file][line_idx].name,
+                              entry_type    |-> "HTTP_ROUTE",
+                              route         |-> pending_attr_route,
+                              method        |-> pending_attr_method]};
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                        pending_clap        := FALSE;
+                    elsif FileLineMap[current_file][line_idx].kind = "fn_def" then
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                        pending_clap        := FALSE;
+                    elsif FileLineMap[current_file][line_idx].kind = "struct_def"
+                          /\ pending_clap
+                          /\ ~FnAlreadyRecorded(
+                                 current_file,
+                                 FileLineMap[current_file][line_idx].name) then
+                        entry_points := entry_points \union
+                            {[file_path     |-> current_file,
+                              function_name |-> FileLineMap[current_file][line_idx].name,
+                              entry_type    |-> "CLI_COMMAND",
+                              route         |-> "",
+                              method        |-> ""]};
+                        pending_clap        := FALSE;
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    elsif FileLineMap[current_file][line_idx].kind = "struct_def" then
+                        pending_clap        := FALSE;
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    elsif FileLineMap[current_file][line_idx].kind = "clap_derive" then
+                        pending_clap        := TRUE;
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                    else
+                        pending_attr_active := FALSE;
+                        pending_attr_route  := "";
+                        pending_attr_method := "";
+                        pending_clap        := FALSE;
+                    end if;
+                AdvanceLine:
+                    line_idx   := line_idx + 1;
+                    step_count := step_count + 1;
+            end while;
+        FileDone:
+            files_todo := files_todo \ {current_file};
+            step_count := step_count + 1;
+        end while;
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

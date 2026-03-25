@@ -1,0 +1,663 @@
+{
+  "gwt_id": "gwt-0079",
+  "module_name": "PlanReviewModeDetection",
+  "data_structures": {
+    "PlanReviewModeDetectionState": {
+      "function_id": "fn-PlanReviewModeDetection-state",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"DetermineMode\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "self_flag": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "external_flag": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "cw9_dir_exists": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "mode": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "unset",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "reviews_list": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "UNSET",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "determined": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from PlanReviewModeDetection TLA+ spec"
+    }
+  },
+  "operations": {
+    "DetermineMode": {
+      "function_id": "fn-PlanReviewModeDetection-DetermineMode",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-DetermineMode",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action DetermineMode from PlanReviewModeDetection spec"
+    },
+    "Finish": {
+      "function_id": "fn-PlanReviewModeDetection-Finish",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-Finish",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Finish from PlanReviewModeDetection spec"
+    }
+  },
+  "verifiers": {
+    "ModeValid": {
+      "function_id": "fn-PlanReviewModeDetection-verify-ModeValid",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-ModeValid",
+      "conditions": [
+        "determined => mode \\in {\"self\", \"external\"}"
+      ],
+      "message": "ModeValid violation: determined => mode \\in {\"self\", \"external\"}",
+      "applies_to": [
+        "determined",
+        "mode"
+      ],
+      "description": "Verifier for invariant ModeValid from PlanReviewModeDetection spec"
+    },
+    "ReviewsValid": {
+      "function_id": "fn-PlanReviewModeDetection-verify-ReviewsValid",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-ReviewsValid",
+      "conditions": [
+        "determined => reviews_list \\in {\"SELF_REVIEWS\", \"EXTERNAL_REVIEWS\"}"
+      ],
+      "message": "ReviewsValid violation: determined => reviews_list \\in {\"SELF_REVIEWS\", \"EXTERNAL_REVIEWS\"}",
+      "applies_to": [
+        "determined",
+        "reviews_list"
+      ],
+      "description": "Verifier for invariant ReviewsValid from PlanReviewModeDetection spec"
+    },
+    "ModeReviewConsistency": {
+      "function_id": "fn-PlanReviewModeDetection-verify-ModeReviewConsistency",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-ModeReviewConsistency",
+      "conditions": [
+        "determined =>",
+        "mode = \"self\"     => reviews_list = \"SELF_REVIEWS\"",
+        "mode = \"external\" => reviews_list = \"EXTERNAL_REVIEWS\""
+      ],
+      "message": "ModeReviewConsistency violation: determined =>\n        /\\ (mode = \"self\"     => reviews_list = \"SELF_REVIEWS\")\n        /\\ (mode = \"external\" => review...",
+      "applies_to": [
+        "determined",
+        "mode",
+        "reviews_list"
+      ],
+      "description": "Verifier for invariant ModeReviewConsistency from PlanReviewModeDetection spec"
+    },
+    "ExplicitOverrideSelf": {
+      "function_id": "fn-PlanReviewModeDetection-verify-ExplicitOverrideSelf",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-ExplicitOverrideSelf",
+      "conditions": [
+        "determined",
+        "self_flag = TRUE",
+        "external_flag = FALSE)\n        => mode = \"self\""
+      ],
+      "message": "ExplicitOverrideSelf violation: (determined /\\ self_flag = TRUE /\\ external_flag = FALSE)\n        => mode = \"self\"",
+      "applies_to": [
+        "determined",
+        "external_flag",
+        "mode",
+        "self_flag"
+      ],
+      "description": "Verifier for invariant ExplicitOverrideSelf from PlanReviewModeDetection spec"
+    },
+    "ExplicitOverrideExternal": {
+      "function_id": "fn-PlanReviewModeDetection-verify-ExplicitOverrideExternal",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-ExplicitOverrideExternal",
+      "conditions": [
+        "determined",
+        "external_flag = TRUE",
+        "self_flag = FALSE)\n        => mode = \"external\""
+      ],
+      "message": "ExplicitOverrideExternal violation: (determined /\\ external_flag = TRUE /\\ self_flag = FALSE)\n        => mode = \"external\"",
+      "applies_to": [
+        "determined",
+        "external_flag",
+        "mode",
+        "self_flag"
+      ],
+      "description": "Verifier for invariant ExplicitOverrideExternal from PlanReviewModeDetection spec"
+    },
+    "AutoDetectExternal": {
+      "function_id": "fn-PlanReviewModeDetection-verify-AutoDetectExternal",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-AutoDetectExternal",
+      "conditions": [
+        " determined",
+        "self_flag     = FALSE",
+        "external_flag = FALSE",
+        "cw9_dir_exists = TRUE )\n        => mode = \"external\""
+      ],
+      "message": "AutoDetectExternal violation: ( determined\n        /\\ self_flag     = FALSE\n        /\\ external_flag = FALSE\n        /\\ cw9_dir_exists = TRUE )\n   ...",
+      "applies_to": [
+        "cw9_dir_exists",
+        "determined",
+        "external_flag",
+        "mode",
+        "self_flag"
+      ],
+      "description": "Verifier for invariant AutoDetectExternal from PlanReviewModeDetection spec"
+    },
+    "AutoDetectSelf": {
+      "function_id": "fn-PlanReviewModeDetection-verify-AutoDetectSelf",
+      "acceptance_criteria_id": "ac-PlanReviewModeDetection-AutoDetectSelf",
+      "conditions": [
+        " determined",
+        "self_flag     = FALSE",
+        "external_flag = FALSE",
+        "cw9_dir_exists = FALSE )\n        => mode = \"self\""
+      ],
+      "message": "AutoDetectSelf violation: ( determined\n        /\\ self_flag     = FALSE\n        /\\ external_flag = FALSE\n        /\\ cw9_dir_exists = FALSE )\n  ...",
+      "applies_to": [
+        "cw9_dir_exists",
+        "determined",
+        "external_flag",
+        "mode",
+        "self_flag"
+      ],
+      "description": "Verifier for invariant AutoDetectSelf from PlanReviewModeDetection spec"
+    }
+  },
+  "assertions": {
+    "assert_ModeValid": {
+      "condition": "determined implies mode in {\"self\", \"external\"}",
+      "message": "Assertion failed: ModeValid \u2014 determined => mode \\in {\"self\", \"external\"}",
+      "description": "Test assertion for ModeValid from PlanReviewModeDetection spec"
+    },
+    "assert_ReviewsValid": {
+      "condition": "determined implies reviews_list in {\"SELF_REVIEWS\", \"EXTERNAL_REVIEWS\"}",
+      "message": "Assertion failed: ReviewsValid \u2014 determined => reviews_list \\in {\"SELF_REVIEWS\", \"EXTERNAL_REVIEWS\"}",
+      "description": "Test assertion for ReviewsValid from PlanReviewModeDetection spec"
+    },
+    "assert_ModeReviewConsistency": {
+      "condition": "determined implies\n        and (mode = \"self\"     implies reviews_list = \"SELF_REVIEWS\")\n        and (mode = \"external\" implies reviews_list = \"EXTERNAL_REVIEWS\")",
+      "message": "Assertion failed: ModeReviewConsistency \u2014 determined =>\n        /\\ (mode = \"self\"     => reviews_list = \"SELF_REVIEWS\")\n        /\\ (mode = \"external\" => review...",
+      "description": "Test assertion for ModeReviewConsistency from PlanReviewModeDetection spec"
+    },
+    "assert_ExplicitOverrideSelf": {
+      "condition": "(determined and self_flag = TRUE and external_flag = FALSE)\n        implies mode = \"self\"",
+      "message": "Assertion failed: ExplicitOverrideSelf \u2014 (determined /\\ self_flag = TRUE /\\ external_flag = FALSE)\n        => mode = \"self\"",
+      "description": "Test assertion for ExplicitOverrideSelf from PlanReviewModeDetection spec"
+    },
+    "assert_ExplicitOverrideExternal": {
+      "condition": "(determined and external_flag = TRUE and self_flag = FALSE)\n        implies mode = \"external\"",
+      "message": "Assertion failed: ExplicitOverrideExternal \u2014 (determined /\\ external_flag = TRUE /\\ self_flag = FALSE)\n        => mode = \"external\"",
+      "description": "Test assertion for ExplicitOverrideExternal from PlanReviewModeDetection spec"
+    },
+    "assert_AutoDetectExternal": {
+      "condition": "( determined\n        and self_flag     = FALSE\n        and external_flag = FALSE\n        and cw9_dir_exists = TRUE )\n        implies mode = \"external\"",
+      "message": "Assertion failed: AutoDetectExternal \u2014 ( determined\n        /\\ self_flag     = FALSE\n        /\\ external_flag = FALSE\n        /\\ cw9_dir_exists = TRUE )\n   ...",
+      "description": "Test assertion for AutoDetectExternal from PlanReviewModeDetection spec"
+    },
+    "assert_AutoDetectSelf": {
+      "condition": "( determined\n        and self_flag     = FALSE\n        and external_flag = FALSE\n        and cw9_dir_exists = FALSE )\n        implies mode = \"self\"",
+      "message": "Assertion failed: AutoDetectSelf \u2014 ( determined\n        /\\ self_flag     = FALSE\n        /\\ external_flag = FALSE\n        /\\ cw9_dir_exists = FALSE )\n  ...",
+      "description": "Test assertion for AutoDetectSelf from PlanReviewModeDetection spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "FALSE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"EXTERNAL_REVIEWS\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "FALSE",
+          "mode": "\"external\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"EXTERNAL_REVIEWS\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "TRUE",
+          "self_flag": "FALSE",
+          "mode": "\"external\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "FALSE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"EXTERNAL_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "FALSE",
+          "mode": "\"external\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"EXTERNAL_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "TRUE",
+          "self_flag": "FALSE",
+          "mode": "\"external\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "FALSE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"EXTERNAL_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "FALSE",
+          "mode": "\"external\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"EXTERNAL_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "TRUE",
+          "self_flag": "FALSE",
+          "mode": "\"external\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"SELF_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"self\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"SELF_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "TRUE",
+          "self_flag": "TRUE",
+          "mode": "\"self\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "FALSE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"SELF_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "FALSE",
+          "mode": "\"self\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"SELF_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "TRUE",
+          "self_flag": "FALSE",
+          "mode": "\"self\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "FALSE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "TRUE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "TRUE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "TRUE"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "reviews_list": "\"UNSET\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"unset\"",
+          "pc": "[main |-> \"DetermineMode\"]",
+          "external_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "DetermineMode",
+        "vars": {
+          "reviews_list": "\"SELF_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "FALSE",
+          "self_flag": "TRUE",
+          "mode": "\"self\"",
+          "pc": "[main |-> \"Finish\"]",
+          "external_flag": "FALSE"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "Finish",
+        "vars": {
+          "reviews_list": "\"SELF_REVIEWS\"",
+          "cw9_dir_exists": "FALSE",
+          "determined": "TRUE",
+          "self_flag": "TRUE",
+          "mode": "\"self\"",
+          "pc": "[main |-> \"Done\"]",
+          "external_flag": "FALSE"
+        }
+      }
+    ]
+  ]
+}

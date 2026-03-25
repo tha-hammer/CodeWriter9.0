@@ -1,0 +1,278 @@
+The `Completion` invariant is violated because the `SkeletonLoop` consumes all 10 of the `MaxSteps` steps before `FileLoop` can run — then `FileLoop` exits immediately with `rem_files` still non-empty, `Finish` fires, and `rem_files = {}` fails. The fix is two-fold: remove `step_count` from `SkeletonLoop` (it terminates naturally as `rem_skels` shrinks), so only file-scanning counts against the budget; and drop `rem_files = {}` from `Completion` since early exit due to the step bound is legitimate.
+
+---- MODULE GoEntryPointDiscovery ----
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    Skeletons,
+    SourceFiles,
+    TestFiles,
+    DotFiles,
+    FilePatterns,
+    CodebaseType,
+    MaxSteps
+
+NoRoute          == "None"
+NoMethod         == "None"
+MAIN_TYPE        == "MAIN"
+PUBLIC_API_TYPE  == "PUBLIC_API"
+HTTP_ROUTE_TYPE  == "HTTP_ROUTE"
+CLI_COMMAND_TYPE == "CLI_COMMAND"
+
+(* --algorithm GoEntryPointDiscovery
+
+variables
+    phase         = "skeleton",
+    entry_points  = {},
+    rem_skels     = 1..Skeletons,
+    rem_files     = 1..SourceFiles,
+    cur_file      = 0,
+    cur_patterns  = {},
+    step_count    = 0;
+
+define
+
+    AllEntryTypesValid ==
+        \A ep \in entry_points :
+            ep.entry_type \in {MAIN_TYPE, PUBLIC_API_TYPE,
+                               HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE}
+
+    PublicOnlyForLibrary ==
+        \A ep \in entry_points :
+            ep.entry_type = PUBLIC_API_TYPE => CodebaseType = "library"
+
+    HandleFuncMethodAgnostic ==
+        \A ep \in entry_points :
+            (ep.entry_type = HTTP_ROUTE_TYPE /\ ep.pat_type = "handlefunc") =>
+                ep.method = NoMethod
+
+    TestFilesNotScanned ==
+        \A ep \in entry_points :
+            ep.entry_type \in {HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE} =>
+                ep.file_path \notin TestFiles
+
+    DotFilesNotScanned ==
+        \A ep \in entry_points :
+            ep.entry_type \in {HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE} =>
+                ep.file_path \notin DotFiles
+
+    DeduplicatedResults ==
+        \A ep1, ep2 \in entry_points :
+            ( ep1.file_path     = ep2.file_path     /\
+              ep1.function_name = ep2.function_name  /\
+              ep1.entry_type    = ep2.entry_type     /\
+              ep1.route         = ep2.route          /\
+              ep1.method        = ep2.method ) => ep1 = ep2
+
+    BoundedExecution == step_count <= MaxSteps
+
+    Completion ==
+        phase = "complete" => rem_skels = {} /\ cur_patterns = {}
+
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    SkeletonLoop:
+        while rem_skels /= {} do
+            with idx \in rem_skels do
+                rem_skels := rem_skels \ {idx};
+            end with;
+        end while;
+
+    TransitionToScan:
+        phase := "scanning";
+
+    FileLoop:
+        while rem_files /= {} /\ step_count < MaxSteps do
+            with fidx \in rem_files do
+                rem_files    := rem_files \ {fidx}  ||
+                step_count   := step_count + 1      ||
+                cur_file     := fidx                ||
+                cur_patterns :=
+                    IF fidx \notin TestFiles /\ fidx \notin DotFiles
+                    THEN FilePatterns[fidx]
+                    ELSE {};
+            end with;
+            PatternInnerLoop:
+                while cur_patterns /= {} do
+                    with pat \in cur_patterns do
+                        cur_patterns := cur_patterns \ {pat} ||
+                        entry_points :=
+                            IF pat.type = "gin_route"  \/
+                               pat.type = "echo_route" \/
+                               pat.type = "chi_route"
+                            THEN entry_points \cup {[
+                                    file_path     |-> cur_file,
+                                    function_name |-> pat.handler,
+                                    entry_type    |-> HTTP_ROUTE_TYPE,
+                                    route         |-> pat.route,
+                                    method        |-> pat.method,
+                                    pat_type      |-> pat.type ]}
+                            ELSE IF pat.type = "handlefunc"
+                                 THEN entry_points \cup {[
+                                         file_path     |-> cur_file,
+                                         function_name |-> pat.handler,
+                                         entry_type    |-> HTTP_ROUTE_TYPE,
+                                         route         |-> pat.route,
+                                         method        |-> NoMethod,
+                                         pat_type      |-> "handlefunc" ]}
+                                 ELSE IF pat.type = "cobra"
+                                      THEN entry_points \cup {[
+                                               file_path     |-> cur_file,
+                                               function_name |-> pat.use,
+                                               entry_type    |-> CLI_COMMAND_TYPE,
+                                               route         |-> NoRoute,
+                                               method        |-> NoMethod,
+                                               pat_type      |-> "cobra" ]}
+                                      ELSE entry_points;
+                    end with;
+                end while;
+        end while;
+
+    Finish:
+        phase := "complete";
+
+end process;
+
+end algorithm; *)
+====
+The `Completion` invariant is violated because the `SkeletonLoop` consumes all 10 of the `MaxSteps` steps before `FileLoop` can run — then `FileLoop` exits immediately with `rem_files` still non-empty, `Finish` fires, and `rem_files = {}` fails. The fix is two-fold: remove `step_count` from `SkeletonLoop` (it terminates naturally as `rem_skels` shrinks), so only file-scanning counts against the budget; and drop `rem_files = {}` from `Completion` since early exit due to the step bound is legitimate.
+
+---- MODULE GoEntryPointDiscovery ----
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    Skeletons,
+    SourceFiles,
+    TestFiles,
+    DotFiles,
+    FilePatterns,
+    CodebaseType,
+    MaxSteps
+
+NoRoute          == "None"
+NoMethod         == "None"
+MAIN_TYPE        == "MAIN"
+PUBLIC_API_TYPE  == "PUBLIC_API"
+HTTP_ROUTE_TYPE  == "HTTP_ROUTE"
+CLI_COMMAND_TYPE == "CLI_COMMAND"
+
+(* --algorithm GoEntryPointDiscovery
+
+variables
+    phase         = "skeleton",
+    entry_points  = {},
+    rem_skels     = 1..Skeletons,
+    rem_files     = 1..SourceFiles,
+    cur_file      = 0,
+    cur_patterns  = {},
+    step_count    = 0;
+
+define
+
+    AllEntryTypesValid ==
+        \A ep \in entry_points :
+            ep.entry_type \in {MAIN_TYPE, PUBLIC_API_TYPE,
+                               HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE}
+
+    PublicOnlyForLibrary ==
+        \A ep \in entry_points :
+            ep.entry_type = PUBLIC_API_TYPE => CodebaseType = "library"
+
+    HandleFuncMethodAgnostic ==
+        \A ep \in entry_points :
+            (ep.entry_type = HTTP_ROUTE_TYPE /\ ep.pat_type = "handlefunc") =>
+                ep.method = NoMethod
+
+    TestFilesNotScanned ==
+        \A ep \in entry_points :
+            ep.entry_type \in {HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE} =>
+                ep.file_path \notin TestFiles
+
+    DotFilesNotScanned ==
+        \A ep \in entry_points :
+            ep.entry_type \in {HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE} =>
+                ep.file_path \notin DotFiles
+
+    DeduplicatedResults ==
+        \A ep1, ep2 \in entry_points :
+            ( ep1.file_path     = ep2.file_path     /\
+              ep1.function_name = ep2.function_name  /\
+              ep1.entry_type    = ep2.entry_type     /\
+              ep1.route         = ep2.route          /\
+              ep1.method        = ep2.method ) => ep1 = ep2
+
+    BoundedExecution == step_count <= MaxSteps
+
+    Completion ==
+        phase = "complete" => rem_skels = {} /\ cur_patterns = {}
+
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    SkeletonLoop:
+        while rem_skels /= {} do
+            with idx \in rem_skels do
+                rem_skels := rem_skels \ {idx};
+            end with;
+        end while;
+
+    TransitionToScan:
+        phase := "scanning";
+
+    FileLoop:
+        while rem_files /= {} /\ step_count < MaxSteps do
+            with fidx \in rem_files do
+                rem_files    := rem_files \ {fidx}  ||
+                step_count   := step_count + 1      ||
+                cur_file     := fidx                ||
+                cur_patterns :=
+                    IF fidx \notin TestFiles /\ fidx \notin DotFiles
+                    THEN FilePatterns[fidx]
+                    ELSE {};
+            end with;
+            PatternInnerLoop:
+                while cur_patterns /= {} do
+                    with pat \in cur_patterns do
+                        cur_patterns := cur_patterns \ {pat} ||
+                        entry_points :=
+                            IF pat.type = "gin_route"  \/
+                               pat.type = "echo_route" \/
+                               pat.type = "chi_route"
+                            THEN entry_points \cup {[
+                                    file_path     |-> cur_file,
+                                    function_name |-> pat.handler,
+                                    entry_type    |-> HTTP_ROUTE_TYPE,
+                                    route         |-> pat.route,
+                                    method        |-> pat.method,
+                                    pat_type      |-> pat.type ]}
+                            ELSE IF pat.type = "handlefunc"
+                                 THEN entry_points \cup {[
+                                         file_path     |-> cur_file,
+                                         function_name |-> pat.handler,
+                                         entry_type    |-> HTTP_ROUTE_TYPE,
+                                         route         |-> pat.route,
+                                         method        |-> NoMethod,
+                                         pat_type      |-> "handlefunc" ]}
+                                 ELSE IF pat.type = "cobra"
+                                      THEN entry_points \cup {[
+                                               file_path     |-> cur_file,
+                                               function_name |-> pat.use,
+                                               entry_type    |-> CLI_COMMAND_TYPE,
+                                               route         |-> NoRoute,
+                                               method        |-> NoMethod,
+                                               pat_type      |-> "cobra" ]}
+                                      ELSE entry_points;
+                    end with;
+                end while;
+        end while;
+
+    Finish:
+        phase := "complete";
+
+end process;
+
+end algorithm; *)
+====

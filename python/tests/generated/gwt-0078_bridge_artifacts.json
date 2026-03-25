@@ -1,0 +1,884 @@
+{
+  "gwt_id": "gwt-0078",
+  "module_name": "ArtifactsGate",
+  "data_structures": {
+    "ArtifactsGateState": {
+      "function_id": "fn-ArtifactsGate-state",
+      "acceptance_criteria_id": "ac-ArtifactsGate-state",
+      "fields": {
+        "pc": {
+          "type": "shared/data_types/Record",
+          "required": true,
+          "unique": false,
+          "default": "[self \\in ProcSet |-> \"SelectVerdict\"]",
+          "validation": [
+            "NotNull"
+          ]
+        },
+        "artifacts_verdict": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "fail",
+          "validation": [
+            "IsString"
+          ]
+        },
+        "gate_checked": {
+          "type": "shared/data_types/Boolean",
+          "required": true,
+          "unique": false,
+          "default": "false",
+          "validation": [
+            "IsBoolean"
+          ]
+        },
+        "passes_started": {
+          "type": "shared/data_types/Set",
+          "required": true,
+          "unique": false,
+          "default": "empty_set",
+          "validation": [
+            "IsSet"
+          ]
+        },
+        "final_result": {
+          "type": "shared/data_types/String",
+          "required": true,
+          "unique": false,
+          "default": "null",
+          "validation": [
+            "NotNull"
+          ]
+        }
+      },
+      "relations": {},
+      "description": "State model derived from ArtifactsGate TLA+ spec"
+    }
+  },
+  "operations": {
+    "SelectVerdict": {
+      "function_id": "fn-ArtifactsGate-SelectVerdict",
+      "acceptance_criteria_id": "ac-ArtifactsGate-SelectVerdict",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action SelectVerdict from ArtifactsGate spec"
+    },
+    "RunArtifacts": {
+      "function_id": "fn-ArtifactsGate-RunArtifacts",
+      "acceptance_criteria_id": "ac-ArtifactsGate-RunArtifacts",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunArtifacts from ArtifactsGate spec"
+    },
+    "CheckGate": {
+      "function_id": "fn-ArtifactsGate-CheckGate",
+      "acceptance_criteria_id": "ac-ArtifactsGate-CheckGate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action CheckGate from ArtifactsGate spec"
+    },
+    "RunParallel": {
+      "function_id": "fn-ArtifactsGate-RunParallel",
+      "acceptance_criteria_id": "ac-ArtifactsGate-RunParallel",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action RunParallel from ArtifactsGate spec"
+    },
+    "Terminate": {
+      "function_id": "fn-ArtifactsGate-Terminate",
+      "acceptance_criteria_id": "ac-ArtifactsGate-Terminate",
+      "parameters": {},
+      "returns": "shared/data_types/Record",
+      "error_types": [],
+      "error_handling": "none",
+      "description": "Action Terminate from ArtifactsGate spec"
+    }
+  },
+  "verifiers": {
+    "GateBlocking": {
+      "function_id": "fn-ArtifactsGate-verify-GateBlocking",
+      "acceptance_criteria_id": "ac-ArtifactsGate-GateBlocking",
+      "conditions": [
+        "gate_checked",
+        "artifacts_verdict = \"fail\") =>\n        (DOMAIN final_result.results = {\"artifacts\"}",
+        "passes_started = {\"artifacts\"}"
+      ],
+      "message": "GateBlocking violation: (gate_checked /\\ artifacts_verdict = \"fail\") =>\n        (DOMAIN final_result.results = {\"artifacts\"} /\\\n         pass...",
+      "applies_to": [
+        "artifacts_verdict",
+        "final_result",
+        "gate_checked",
+        "passes_started"
+      ],
+      "description": "Verifier for invariant GateBlocking from ArtifactsGate spec"
+    },
+    "GatePassthrough": {
+      "function_id": "fn-ArtifactsGate-verify-GatePassthrough",
+      "acceptance_criteria_id": "ac-ArtifactsGate-GatePassthrough",
+      "conditions": [
+        "final_result.status \\in {\"pass\", \"warning\"}) =>\n        ({\"artifacts\", \"coverage\", \"security\"} \\subseteq passes_started"
+      ],
+      "message": "GatePassthrough violation: (final_result.status \\in {\"pass\", \"warning\"}) =>\n        ({\"artifacts\", \"coverage\", \"security\"} \\subseteq passes_star...",
+      "applies_to": [
+        "final_result",
+        "passes_started"
+      ],
+      "description": "Verifier for invariant GatePassthrough from ArtifactsGate spec"
+    },
+    "BlockedStatus": {
+      "function_id": "fn-ArtifactsGate-verify-BlockedStatus",
+      "acceptance_criteria_id": "ac-ArtifactsGate-BlockedStatus",
+      "conditions": [
+        "final_result.status = \"blocked\") <=>\n        (gate_checked",
+        "artifacts_verdict = \"fail\""
+      ],
+      "message": "BlockedStatus violation: (final_result.status = \"blocked\") <=>\n        (gate_checked /\\ artifacts_verdict = \"fail\")",
+      "applies_to": [
+        "artifacts_verdict",
+        "final_result",
+        "gate_checked"
+      ],
+      "description": "Verifier for invariant BlockedStatus from ArtifactsGate spec"
+    },
+    "CostAccuracy": {
+      "function_id": "fn-ArtifactsGate-verify-CostAccuracy",
+      "acceptance_criteria_id": "ac-ArtifactsGate-CostAccuracy",
+      "conditions": [
+        "final_result.status = \"blocked\") =>\n        (final_result.total_cost = ArtifactsCost"
+      ],
+      "message": "CostAccuracy violation: (final_result.status = \"blocked\") =>\n        (final_result.total_cost = ArtifactsCost)",
+      "applies_to": [
+        "final_result"
+      ],
+      "description": "Verifier for invariant CostAccuracy from ArtifactsGate spec"
+    },
+    "OnlyArtifactsWhenBlocked": {
+      "function_id": "fn-ArtifactsGate-verify-OnlyArtifactsWhenBlocked",
+      "acceptance_criteria_id": "ac-ArtifactsGate-OnlyArtifactsWhenBlocked",
+      "conditions": [
+        "final_result.status = \"blocked\") =>\n        DOMAIN final_result.results = {\"artifacts\"}"
+      ],
+      "message": "OnlyArtifactsWhenBlocked violation: (final_result.status = \"blocked\") =>\n        DOMAIN final_result.results = {\"artifacts\"}",
+      "applies_to": [
+        "final_result"
+      ],
+      "description": "Verifier for invariant OnlyArtifactsWhenBlocked from ArtifactsGate spec"
+    },
+    "NoExtraPassesWhenBlocked": {
+      "function_id": "fn-ArtifactsGate-verify-NoExtraPassesWhenBlocked",
+      "acceptance_criteria_id": "ac-ArtifactsGate-NoExtraPassesWhenBlocked",
+      "conditions": [
+        "final_result.status = \"blocked\") =>\n        passes_started = {\"artifacts\"}"
+      ],
+      "message": "NoExtraPassesWhenBlocked violation: (final_result.status = \"blocked\") =>\n        passes_started = {\"artifacts\"}",
+      "applies_to": [
+        "final_result",
+        "passes_started"
+      ],
+      "description": "Verifier for invariant NoExtraPassesWhenBlocked from ArtifactsGate spec"
+    },
+    "TypeOK": {
+      "function_id": "fn-ArtifactsGate-verify-TypeOK",
+      "acceptance_criteria_id": "ac-ArtifactsGate-TypeOK",
+      "conditions": [
+        "gate_checked      \\in BOOLEAN",
+        "passes_started    \\subseteq {\"artifacts\", \"coverage\", \"security\"}",
+        "artifacts_verdict \\in Verdict",
+        "final_result.status \\in {\"none\", \"blocked\", \"pass\", \"fail\", \"warning\"}"
+      ],
+      "message": "TypeOK violation: /\\ gate_checked      \\in BOOLEAN\n    /\\ passes_started    \\subseteq {\"artifacts\", \"coverage\", \"security\"}\n    /\\ arti...",
+      "applies_to": [
+        "artifacts_verdict",
+        "final_result",
+        "gate_checked",
+        "passes_started"
+      ],
+      "description": "Verifier for invariant TypeOK from ArtifactsGate spec"
+    }
+  },
+  "assertions": {
+    "assert_GateBlocking": {
+      "condition": "(gate_checked and artifacts_verdict = \"fail\") implies\n        (DOMAIN final_result.results = {\"artifacts\"} and\n         passes_started = {\"artifacts\"})",
+      "message": "Assertion failed: GateBlocking \u2014 (gate_checked /\\ artifacts_verdict = \"fail\") =>\n        (DOMAIN final_result.results = {\"artifacts\"} /\\\n         pass...",
+      "description": "Test assertion for GateBlocking from ArtifactsGate spec"
+    },
+    "assert_GatePassthrough": {
+      "condition": "(final_result.status in {\"pass\", \"warning\"}) implies\n        ({\"artifacts\", \"coverage\", \"security\"} \\subseteq passes_started)",
+      "message": "Assertion failed: GatePassthrough \u2014 (final_result.status \\in {\"pass\", \"warning\"}) =>\n        ({\"artifacts\", \"coverage\", \"security\"} \\subseteq passes_star...",
+      "description": "Test assertion for GatePassthrough from ArtifactsGate spec"
+    },
+    "assert_BlockedStatus": {
+      "condition": "(final_result.status = \"blocked\") <implies\n        (gate_checked and artifacts_verdict = \"fail\")",
+      "message": "Assertion failed: BlockedStatus \u2014 (final_result.status = \"blocked\") <=>\n        (gate_checked /\\ artifacts_verdict = \"fail\")",
+      "description": "Test assertion for BlockedStatus from ArtifactsGate spec"
+    },
+    "assert_CostAccuracy": {
+      "condition": "(final_result.status = \"blocked\") implies\n        (final_result.total_cost = ArtifactsCost)",
+      "message": "Assertion failed: CostAccuracy \u2014 (final_result.status = \"blocked\") =>\n        (final_result.total_cost = ArtifactsCost)",
+      "description": "Test assertion for CostAccuracy from ArtifactsGate spec"
+    },
+    "assert_OnlyArtifactsWhenBlocked": {
+      "condition": "(final_result.status = \"blocked\") implies\n        DOMAIN final_result.results = {\"artifacts\"}",
+      "message": "Assertion failed: OnlyArtifactsWhenBlocked \u2014 (final_result.status = \"blocked\") =>\n        DOMAIN final_result.results = {\"artifacts\"}",
+      "description": "Test assertion for OnlyArtifactsWhenBlocked from ArtifactsGate spec"
+    },
+    "assert_NoExtraPassesWhenBlocked": {
+      "condition": "(final_result.status = \"blocked\") implies\n        passes_started = {\"artifacts\"}",
+      "message": "Assertion failed: NoExtraPassesWhenBlocked \u2014 (final_result.status = \"blocked\") =>\n        passes_started = {\"artifacts\"}",
+      "description": "Test assertion for NoExtraPassesWhenBlocked from ArtifactsGate spec"
+    },
+    "assert_TypeOK": {
+      "condition": "and gate_checked      in BOOLEAN\n    and passes_started    \\subseteq {\"artifacts\", \"coverage\", \"security\"}\n    and artifacts_verdict in Verdict\n    and final_result.status in {\"none\", \"blocked\", \"pass\", \"fail\", \"warning\"}",
+      "message": "Assertion failed: TypeOK \u2014 /\\ gate_checked      \\in BOOLEAN\n    /\\ passes_started    \\subseteq {\"artifacts\", \"coverage\", \"security\"}\n    /\\ arti...",
+      "description": "Test assertion for TypeOK from ArtifactsGate spec"
+    }
+  },
+  "test_scenarios": [],
+  "simulation_traces": [
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"fail\", cost_usd |-> 10]], status |-> \"blocked\", total_cost |-> 10, blocked_by |-> \"artifacts\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"fail\", cost_usd |-> 10]], status |-> \"blocked\", total_cost |-> 10, blocked_by |-> \"artifacts\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"fail\", cost_usd |-> 10]], status |-> \"blocked\", total_cost |-> 10, blocked_by |-> \"artifacts\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"fail\", cost_usd |-> 10]], status |-> \"blocked\", total_cost |-> 10, blocked_by |-> \"artifacts\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"RunParallel\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunParallel",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"warning\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"warning\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"warning\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"warning\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"pass\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"pass\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"pass\"",
+          "pc": "[main |-> \"RunParallel\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunParallel",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"pass\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"pass\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"pass\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"pass\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"pass\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"pass\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"RunParallel\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunParallel",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"warning\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"warning\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"warning\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"warning\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"fail\", cost_usd |-> 10]], status |-> \"blocked\", total_cost |-> 10, blocked_by |-> \"artifacts\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"fail\", cost_usd |-> 10]], status |-> \"blocked\", total_cost |-> 10, blocked_by |-> \"artifacts\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"RunParallel\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunParallel",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"unknown\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"pass\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"unknown\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"pass\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"RunParallel\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunParallel",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"unknown\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"pass\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"unknown\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"pass\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"unknown\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"RunParallel\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "RunParallel",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"warning\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"warning\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 6,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"warning\", cost_usd |-> 10], coverage |-> [name |-> \"coverage\", verdict |-> \"pass\", cost_usd |-> 5], security |-> [name |-> \"security\", verdict |-> \"pass\", cost_usd |-> 5]], status |-> \"warning\", total_cost |-> 20, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\", \"coverage\", \"security\"}",
+          "artifacts_verdict": "\"warning\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ],
+    [
+      {
+        "state_num": 1,
+        "label": "Init",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"SelectVerdict\"]"
+        }
+      },
+      {
+        "state_num": 2,
+        "label": "SelectVerdict",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"RunArtifacts\"]"
+        }
+      },
+      {
+        "state_num": 3,
+        "label": "RunArtifacts",
+        "vars": {
+          "gate_checked": "FALSE",
+          "final_result": "[results |-> <<>>, status |-> \"none\", total_cost |-> 0, blocked_by |-> \"none\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"CheckGate\"]"
+        }
+      },
+      {
+        "state_num": 4,
+        "label": "CheckGate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"fail\", cost_usd |-> 10]], status |-> \"blocked\", total_cost |-> 10, blocked_by |-> \"artifacts\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"Terminate\"]"
+        }
+      },
+      {
+        "state_num": 5,
+        "label": "Terminate",
+        "vars": {
+          "gate_checked": "TRUE",
+          "final_result": "[results |-> [artifacts |-> [name |-> \"artifacts\", verdict |-> \"fail\", cost_usd |-> 10]], status |-> \"blocked\", total_cost |-> 10, blocked_by |-> \"artifacts\"]",
+          "passes_started": "{\"artifacts\"}",
+          "artifacts_verdict": "\"fail\"",
+          "pc": "[main |-> \"Done\"]"
+        }
+      }
+    ]
+  ]
+}

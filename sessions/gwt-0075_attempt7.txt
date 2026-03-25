@@ -1,0 +1,226 @@
+---- MODULE GoEntryPointDiscovery ----
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    Skeletons,
+    SourceFiles,
+    TestFiles,
+    DotFiles,
+    FilePatterns,
+    CodebaseType,
+    MaxSteps
+
+NoRoute          == "None"
+NoMethod         == "None"
+MAIN_TYPE        == "MAIN"
+PUBLIC_API_TYPE  == "PUBLIC_API"
+HTTP_ROUTE_TYPE  == "HTTP_ROUTE"
+CLI_COMMAND_TYPE == "CLI_COMMAND"
+
+(* --algorithm GoEntryPointDiscovery
+
+variables
+    phase        = "skeleton",
+    entry_points = {},
+    skel_cnt     = 0,
+    file_idx     = 1,
+    step_count   = 0;
+
+define
+    AllEntryTypesValid ==
+        \A ep \in entry_points :
+            ep.type \in {MAIN_TYPE, PUBLIC_API_TYPE,
+                         HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE}
+
+    HandleFuncMethodAgnostic ==
+        \A ep \in entry_points :
+            (ep.type = HTTP_ROUTE_TYPE /\ ep.pattern = "handlefunc")
+                => ep.method = NoMethod
+
+    TestFilesExcluded ==
+        \A ep \in entry_points : ep.file \notin TestFiles
+
+    DotFilesExcluded ==
+        \A ep \in entry_points : ep.file \notin DotFiles
+
+    BoundedExecution == step_count <= MaxSteps
+
+    Completion ==
+        phase = "complete" =>
+            skel_cnt = Skeletons /\ file_idx > SourceFiles
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    SkeletonLoop:
+        while skel_cnt < Skeletons do
+            skel_cnt := skel_cnt + 1;
+        end while;
+    TransitionToScan:
+        phase := "scanning";
+    FileLoop:
+        while file_idx <= SourceFiles do
+            step_count := step_count + 1;
+            PatternProcess:
+                if file_idx \notin TestFiles /\ file_idx \notin DotFiles then
+                    either
+                        entry_points := entry_points \cup
+                            {[type    |-> MAIN_TYPE,
+                              file    |-> file_idx,
+                              route   |-> NoRoute,
+                              method  |-> NoMethod,
+                              pattern |-> "main"]};
+                    or
+                        entry_points := entry_points \cup
+                            {[type    |-> PUBLIC_API_TYPE,
+                              file    |-> file_idx,
+                              route   |-> NoRoute,
+                              method  |-> NoMethod,
+                              pattern |-> "export"]};
+                    or
+                        entry_points := entry_points \cup
+                            {[type    |-> HTTP_ROUTE_TYPE,
+                              file    |-> file_idx,
+                              route   |-> "/api",
+                              method  |-> "GET",
+                              pattern |-> "gin_route"]};
+                    or
+                        entry_points := entry_points \cup
+                            {[type    |-> HTTP_ROUTE_TYPE,
+                              file    |-> file_idx,
+                              route   |-> "/api",
+                              method  |-> NoMethod,
+                              pattern |-> "handlefunc"]};
+                    or
+                        entry_points := entry_points \cup
+                            {[type    |-> CLI_COMMAND_TYPE,
+                              file    |-> file_idx,
+                              route   |-> NoRoute,
+                              method  |-> NoMethod,
+                              pattern |-> "cobra"]};
+                    or
+                        skip;
+                    end either;
+                end if;
+            FileAdvance:
+                file_idx := file_idx + 1;
+        end while;
+    Finish:
+        phase := "complete";
+end process;
+end algorithm; *)
+
+====
+---- MODULE GoEntryPointDiscovery ----
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS
+    Skeletons,
+    SourceFiles,
+    TestFiles,
+    DotFiles,
+    FilePatterns,
+    CodebaseType,
+    MaxSteps
+
+NoRoute          == "None"
+NoMethod         == "None"
+MAIN_TYPE        == "MAIN"
+PUBLIC_API_TYPE  == "PUBLIC_API"
+HTTP_ROUTE_TYPE  == "HTTP_ROUTE"
+CLI_COMMAND_TYPE == "CLI_COMMAND"
+
+(* --algorithm GoEntryPointDiscovery
+
+variables
+    phase        = "skeleton",
+    entry_points = {},
+    skel_cnt     = 0,
+    file_idx     = 1,
+    step_count   = 0;
+
+define
+    AllEntryTypesValid ==
+        \A ep \in entry_points :
+            ep.type \in {MAIN_TYPE, PUBLIC_API_TYPE,
+                         HTTP_ROUTE_TYPE, CLI_COMMAND_TYPE}
+
+    HandleFuncMethodAgnostic ==
+        \A ep \in entry_points :
+            (ep.type = HTTP_ROUTE_TYPE /\ ep.pattern = "handlefunc")
+                => ep.method = NoMethod
+
+    TestFilesExcluded ==
+        \A ep \in entry_points : ep.file \notin TestFiles
+
+    DotFilesExcluded ==
+        \A ep \in entry_points : ep.file \notin DotFiles
+
+    BoundedExecution == step_count <= MaxSteps
+
+    Completion ==
+        phase = "complete" =>
+            skel_cnt = Skeletons /\ file_idx > SourceFiles
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    SkeletonLoop:
+        while skel_cnt < Skeletons do
+            skel_cnt := skel_cnt + 1;
+        end while;
+    TransitionToScan:
+        phase := "scanning";
+    FileLoop:
+        while file_idx <= SourceFiles do
+            step_count := step_count + 1;
+            PatternProcess:
+                if file_idx \notin TestFiles /\ file_idx \notin DotFiles then
+                    either
+                        entry_points := entry_points \cup
+                            {[type    |-> MAIN_TYPE,
+                              file    |-> file_idx,
+                              route   |-> NoRoute,
+                              method  |-> NoMethod,
+                              pattern |-> "main"]};
+                    or
+                        entry_points := entry_points \cup
+                            {[type    |-> PUBLIC_API_TYPE,
+                              file    |-> file_idx,
+                              route   |-> NoRoute,
+                              method  |-> NoMethod,
+                              pattern |-> "export"]};
+                    or
+                        entry_points := entry_points \cup
+                            {[type    |-> HTTP_ROUTE_TYPE,
+                              file    |-> file_idx,
+                              route   |-> "/api",
+                              method  |-> "GET",
+                              pattern |-> "gin_route"]};
+                    or
+                        entry_points := entry_points \cup
+                            {[type    |-> HTTP_ROUTE_TYPE,
+                              file    |-> file_idx,
+                              route   |-> "/api",
+                              method  |-> NoMethod,
+                              pattern |-> "handlefunc"]};
+                    or
+                        entry_points := entry_points \cup
+                            {[type    |-> CLI_COMMAND_TYPE,
+                              file    |-> file_idx,
+                              route   |-> NoRoute,
+                              method  |-> NoMethod,
+                              pattern |-> "cobra"]};
+                    or
+                        skip;
+                    end either;
+                end if;
+            FileAdvance:
+                file_idx := file_idx + 1;
+        end while;
+    Finish:
+        phase := "complete";
+end process;
+end algorithm; *)
+
+====

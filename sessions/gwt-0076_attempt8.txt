@@ -1,0 +1,216 @@
+---- MODULE RustDiscovery ----
+EXTENDS Naturals, Sequences, FiniteSets
+
+CONSTANTS
+    SkelSeq,
+    ScannedRoutes,
+    ScannedCmds,
+    DotfilePaths,
+    CodebaseType
+
+(*--algorithm RustDiscovery
+variables
+  entry_points = {};
+
+define
+
+  ValidEntryTypes ==
+    \A e \in entry_points :
+      e.type \in {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+  MainAlwaysNamedMain ==
+    \A e \in entry_points : e.type = "MAIN" => e.name = "main"
+
+  MainOnlyFromFreeSkeleton ==
+    \A e \in entry_points : e.type = "MAIN" =>
+      \E sk \in SkelSeq :
+        sk.kind = "free" /\ sk.name = "main" /\ sk.path = e.path
+
+  PublicOnlyForLibrary ==
+    CodebaseType /= "library" =>
+      \A e \in entry_points : e.type /= "PUBLIC_API"
+
+  PublicAPIOnlyFromFreeSkeleton ==
+    \A e \in entry_points : e.type = "PUBLIC_API" =>
+      \E sk \in SkelSeq :
+        sk.kind = "free" /\ sk.is_public /\ sk.name = e.name
+
+  ImplMethodsExcluded ==
+    \A e \in entry_points : e.type \in {"MAIN", "PUBLIC_API"} =>
+      ~(\E sk \in SkelSeq :
+          sk.kind = "impl" /\ sk.name = e.name /\ sk.path = e.path)
+
+  HttpRouteHasMethod ==
+    \A e \in entry_points : e.type = "HTTP_ROUTE" => e.method /= ""
+
+  DotfilesExcludedInv ==
+    \A e \in entry_points : e.path \notin DotfilePaths
+
+  DeduplicatedResults ==
+    \A e1, e2 \in entry_points :
+      (e1.type = e2.type /\ e1.name = e2.name /\ e1.path = e2.path) => e1 = e2
+
+  ClapDetectsStruct ==
+    \A e \in entry_points : e.type = "CLI_COMMAND" =>
+      \E c \in ScannedCmds : c.name = e.name /\ c.path = e.path
+
+end define;
+
+begin
+  ComputeMain:
+    entry_points :=
+      { [ type   |-> "MAIN",
+          name   |-> sk.name,
+          path   |-> sk.path,
+          method |-> "",
+          route  |-> "" ]
+      : sk \in { s \in SkelSeq :
+                   s.kind = "free" /\
+                   s.name = "main"  /\
+                   s.path \notin DotfilePaths } };
+
+  ComputePublicAPI:
+    if CodebaseType = "library" then
+      entry_points := entry_points \union
+        { [ type   |-> "PUBLIC_API",
+            name   |-> sk.name,
+            path   |-> sk.path,
+            method |-> "",
+            route  |-> "" ]
+        : sk \in { s \in SkelSeq :
+                     s.kind = "free"  /\
+                     s.is_public       /\
+                     s.name /= "main"  /\
+                     s.path \notin DotfilePaths } };
+    end if;
+
+  ComputeHttpRoutes:
+    entry_points := entry_points \union
+      { [ type   |-> "HTTP_ROUTE",
+          name   |-> r.name,
+          path   |-> r.path,
+          method |-> r.method,
+          route  |-> r.route ]
+      : r \in { x \in ScannedRoutes : x.path \notin DotfilePaths } };
+
+  ComputeCliCommands:
+    entry_points := entry_points \union
+      { [ type   |-> "CLI_COMMAND",
+          name   |-> c.name,
+          path   |-> c.path,
+          method |-> "",
+          route  |-> "" ]
+      : c \in { x \in ScannedCmds : x.path \notin DotfilePaths } };
+
+  Finish: skip;
+end algorithm; *)
+
+====
+---- MODULE RustDiscovery ----
+EXTENDS Naturals, Sequences, FiniteSets
+
+CONSTANTS
+    SkelSeq,
+    ScannedRoutes,
+    ScannedCmds,
+    DotfilePaths,
+    CodebaseType
+
+(*--algorithm RustDiscovery
+variables
+  entry_points = {};
+
+define
+
+  ValidEntryTypes ==
+    \A e \in entry_points :
+      e.type \in {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+  MainAlwaysNamedMain ==
+    \A e \in entry_points : e.type = "MAIN" => e.name = "main"
+
+  MainOnlyFromFreeSkeleton ==
+    \A e \in entry_points : e.type = "MAIN" =>
+      \E sk \in SkelSeq :
+        sk.kind = "free" /\ sk.name = "main" /\ sk.path = e.path
+
+  PublicOnlyForLibrary ==
+    CodebaseType /= "library" =>
+      \A e \in entry_points : e.type /= "PUBLIC_API"
+
+  PublicAPIOnlyFromFreeSkeleton ==
+    \A e \in entry_points : e.type = "PUBLIC_API" =>
+      \E sk \in SkelSeq :
+        sk.kind = "free" /\ sk.is_public /\ sk.name = e.name
+
+  ImplMethodsExcluded ==
+    \A e \in entry_points : e.type \in {"MAIN", "PUBLIC_API"} =>
+      ~(\E sk \in SkelSeq :
+          sk.kind = "impl" /\ sk.name = e.name /\ sk.path = e.path)
+
+  HttpRouteHasMethod ==
+    \A e \in entry_points : e.type = "HTTP_ROUTE" => e.method /= ""
+
+  DotfilesExcludedInv ==
+    \A e \in entry_points : e.path \notin DotfilePaths
+
+  DeduplicatedResults ==
+    \A e1, e2 \in entry_points :
+      (e1.type = e2.type /\ e1.name = e2.name /\ e1.path = e2.path) => e1 = e2
+
+  ClapDetectsStruct ==
+    \A e \in entry_points : e.type = "CLI_COMMAND" =>
+      \E c \in ScannedCmds : c.name = e.name /\ c.path = e.path
+
+end define;
+
+begin
+  ComputeMain:
+    entry_points :=
+      { [ type   |-> "MAIN",
+          name   |-> sk.name,
+          path   |-> sk.path,
+          method |-> "",
+          route  |-> "" ]
+      : sk \in { s \in SkelSeq :
+                   s.kind = "free" /\
+                   s.name = "main"  /\
+                   s.path \notin DotfilePaths } };
+
+  ComputePublicAPI:
+    if CodebaseType = "library" then
+      entry_points := entry_points \union
+        { [ type   |-> "PUBLIC_API",
+            name   |-> sk.name,
+            path   |-> sk.path,
+            method |-> "",
+            route  |-> "" ]
+        : sk \in { s \in SkelSeq :
+                     s.kind = "free"  /\
+                     s.is_public       /\
+                     s.name /= "main"  /\
+                     s.path \notin DotfilePaths } };
+    end if;
+
+  ComputeHttpRoutes:
+    entry_points := entry_points \union
+      { [ type   |-> "HTTP_ROUTE",
+          name   |-> r.name,
+          path   |-> r.path,
+          method |-> r.method,
+          route  |-> r.route ]
+      : r \in { x \in ScannedRoutes : x.path \notin DotfilePaths } };
+
+  ComputeCliCommands:
+    entry_points := entry_points \union
+      { [ type   |-> "CLI_COMMAND",
+          name   |-> c.name,
+          path   |-> c.path,
+          method |-> "",
+          route  |-> "" ]
+      : c \in { x \in ScannedCmds : x.path \notin DotfilePaths } };
+
+  Finish: skip;
+end algorithm; *)
+
+====

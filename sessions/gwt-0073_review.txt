@@ -1,0 +1,324 @@
+## Test Plan Review — Semantic Correctness Assessment
+
+The plan has **4 critical issues**, **4 significant issues**, and **2 minor issues**. Corrected sections are marked with `[CORRECTED]`. Unchanged sections are marked `[PASS]`.
+
+---
+
+## Critical Issues
+
+### ❌ CRITICAL-1: `TestTrace9` is a byte-for-byte duplicate of `TestTrace1` [CORRECTED]
+
+`TestTrace9` (ruby, skeletons=True, web_app) is identical to `TestTrace1`. It contributes zero coverage and signals a copy-paste error. A unique trace is required.
+
+**Fix:** Replace with a combination not covered by any other trace. `rust + skeletons=False + codebase_type="cli"` exercises:
+- The non-Python dispatch path with the `skeletons=False` branch
+- A codebase type (`cli`) not previously paired with rust
+
+---
+
+### ❌ CRITICAL-2: `result_empty` is absent from all 10 trace rows [CORRECTED]
+
+The plan states each trace test "asserts every final-state variable," but `result_empty` is not present in the table. This is not a cosmetic gap — three invariants (`NonPythonDispatched`, `UnknownSafe`, `MutualExclusion`) directly constrain `result_empty`. Without asserting it, these invariants are never exercised by the trace tests.
+
+**Derivation rules from the invariants:**
+| `dispatched_to` | `result_empty` required |
+|---|---|
+| lang ∈ NonPythonLangs | `FALSE` (NonPythonDispatched) |
+| `"none"` with lang ∉ KnownLangs | `TRUE` (UnknownSafe) |
+| `"python"` | `FALSE` (implied; would otherwise violate PythonPreserved intent) |
+
+---
+
+### ❌ CRITICAL-3: `TestNonPythonDispatched` omits the `result_empty = FALSE` assertion
+
+The `NonPythonDispatched` invariant is a three-part conjunction:
+
+```
+(phase = "finished" ∧ lang ∈ NonPythonLangs) =>
+    (dispatched_to = lang ∧ python_helper = "none" ∧ result_empty = FALSE)
+```
+
+The plan describes this class as testing only `python_helper=="none"`. Testing two of three conjuncts while omitting the third means a broken implementation that sets `result_empty = TRUE` for non-Python dispatches would pass all tests despite violating the invariant.
+
+---
+
+### ❌ CRITICAL-4: `TestUnknownSafe` with "5 other unknown langs" directly violates `TypeInvariant`
+
+The `TypeInvariant` defines the valid domain for `lang` in the final state as `KnownLangs ∪ {"ruby"}`. Ruby is the **only** permitted unknown-language value. Passing five additional unknown strings (e.g., `"cobol"`, `"perl"`) as lang would produce a final state where `lang ∉ KnownLangs ∪ {"ruby"}`, causing `_verify_type_invariant` to fail before `_verify_unknown_safe` even runs.
+
+This creates a self-defeating test: `_verify_all_invariants` would always error for a reason unrelated to UnknownSafe. The test would be testing the wrong invariant.
+
+**Fix:** `TestUnknownSafe` must use only `"ruby"` as the unknown-lang representative (matching the TypeInvariant domain). To test the robustness of the "skeletons don't override" behaviour, vary the `skeletons` flag and DAG topology with `lang="ruby"`.
+
+---
+
+## Significant Issues
+
+### ⚠️ SIGNIFICANT-1: `TestMutualExclusion` includes `"ruby"` — the invariant is vacuously true for it
+
+The `MutualExclusion` invariant is:
+```
+~(dispatched_to ∈ NonPythonLangs ∧ result_empty = TRUE)
+```
+
+For ruby, `dispatched_to = "none"` (since `"none" ∉ NonPythonLangs`), so the conjunction is always false regardless of `result_empty`. The invariant is vacuously satisfied — no invariant logic is exercised. Including ruby in this test class creates false confidence.
+
+**Fix:** `TestMutualExclusion` must use only `lang ∈ NonPythonLangs` (go, rust, typescript, javascript). Ruby belongs in `TestUnknownSafe`, not here.
+
+---
+
+### ⚠️ SIGNIFICANT-2: `TestAutodetectBeforeDispatch` is missing three of the seven lang variants
+
+The `AutodetectBeforeDispatch` invariant is unconditional across all languages:
+```
+(phase ∈ {dispatching, python_subdispatch, finished}) => autodetect_done = TRUE
+```
+
+The plan tests only `python, go, ruby, None`. The langs `rust`, `typescript`, and `javascript` are missing. An implementation that skips setting `autodetect_done = TRUE` during the rust dispatch path would pass all four tested cases and fail silently.
+
+**Fix:** Add `rust`, `typescript`, and `javascript` to this test class to cover all seven lang variants.
+
+---
+
+### ⚠️ SIGNIFICANT-3: `TestCodebaseResolvedBeforeDispatch` — "invalid type raises `AssertionError`" is an implementation artifact, not a TLA+ semantic
+
+The TLA+ invariant is:
+```
+(phase ∈ {dispatching, python_subdispatch, finished}) => codebase_type ∈ ValidCodebaseTypes
+```
+
+This is a **safety property on reachable states**, not a precondition guard. In TLA+ model checking, an invalid codebase_type reaching the dispatch phase is simply a counterexample — the spec doesn't prescribe *how* the implementation prevents it.
+
+Testing for a Python `AssertionError` couples the test to one specific implementation choice. A compliant implementation could instead return early with an empty result set, raise a different exception, or reject the input at a validation layer. The test should verify the invariant's semantic intent: **the system never reaches `phase="finished"` with `codebase_type ∉ ValidCodebaseTypes` after having dispatched**. If the implementation raises, that is an acceptable mechanism — but the test assertion should be `with pytest.raises((AssertionError, ValueError))` or, better, verify the invariant post-call.
+
+---
+
+### ⚠️ SIGNIFICANT-4: `phase` and `autodetect_done` are absent from the trace table
+
+The plan states each test "asserts every final-state variable." The final state has at least: `phase`, `lang`, `dispatched_to`, `python_helper`, `result_empty`, `autodetect_done`, `step_count`. The table currently specifies only `dispatched_to` and `python_helper`. Omitting `phase`, `autodetect_done`, and `step_count` from the trace table leaves the trace tests under-specified.
+
+---
+
+## Minor Issues
+
+### ℹ️ MINOR-1: `step_count` assertions are absent from trace tests
+
+`BoundedExecution` requires `step_count ≤ MaxSteps`. While `_verify_all_invariants` covers the ≤4 bound, each trace test should additionally assert an exact `step_count` value (derivable from the number of TLA+ actions taken in that trace). This makes regressions where the implementation takes a wrong number of steps detectable.
+
+---
+
+### ℹ️ MINOR-2: `TestEdgeCases` — `None`↔`"python"` equivalence test is underspecified
+
+The plan mentions testing "`None`↔`"python"` equivalence" but does not specify what "equivalence" means semantically. If it means `discover_entry_points(dag, None, ...)` and `discover_entry_points(dag, "python", ...)` return identical `(entry_points, state)` tuples, that is a valid and testable property. This must be made explicit; otherwise the test has no falsifiable assertion.
+
+---
+
+## Corrected Trace Table [CORRECTED]
+
+| Class | lang | skeletons | codebase_type | phase | dispatched_to | python_helper | result_empty | autodetect_done |
+|-------|------|-----------|---------------|-------|---------------|---------------|--------------|-----------------|
+| `TestTrace1` | `"ruby"` | ✓ | `web_app` | `"finished"` | `"none"` | `"none"` | `TRUE` | `TRUE` |
+| `TestTrace2` | `None` | ✗ | `cli` | `"finished"` | `"python"` | `"cli_commands"` | `FALSE` | `TRUE` |
+| `TestTrace3` | `"python"` | ✗ | `web_app` | `"finished"` | `"python"` | `"web_routes"` | `FALSE` | `TRUE` |
+| `TestTrace4` | `"rust"` | ✓ | `event_driven` | `"finished"` | `"rust"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace5` | `"typescript"` | ✓ | `library` | `"finished"` | `"typescript"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace6` | `"go"` | ✗ | `event_driven` | `"finished"` | `"go"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace7` | `None` | ✗ | `library` | `"finished"` | `"python"` | `"public_api"` | `FALSE` | `TRUE` |
+| `TestTrace8` | `"javascript"` | ✗ | `event_driven` | `"finished"` | `"javascript"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace9` **[CORRECTED]** | `"rust"` | ✗ | `cli` | `"finished"` | `"rust"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace10` | `"go"` | ✗ | `cli` | `"finished"` | `"go"` | `"none"` | `FALSE` | `TRUE` |
+
+---
+
+## Corrected Invariant Test Class Descriptions [CORRECTED]
+
+| Class | Corrected Tests |
+|-------|-----------------|
+| `TestTypeInvariant` [PASS] | Domain membership for all langs; step_count pinned to 4 |
+| `TestPythonPreserved` [PASS] | All 4 codebase→helper mappings; both `None` and `"python"` inputs |
+| `TestNonPythonDispatched` **[CORRECTED]** | All 4 non-Python langs; assert `python_helper=="none"` **AND** `result_empty==False` for all |
+| `TestUnknownSafe` **[CORRECTED]** | `lang="ruby"` only (TypeInvariant domain constraint); vary `skeletons` (True/False) and DAG topology (empty, single-node, multi-node) to test that `result_empty=True`, `dispatched_to="none"`, `python_helper="none"` hold in all cases |
+| `TestAutodetectBeforeDispatch` **[CORRECTED]** | All 7 lang variants (`python`, `go`, `rust`, `typescript`, `javascript`, `ruby`, `None`) — all finish with `autodetect_done=True` |
+| `TestCodebaseResolvedBeforeDispatch` **[CORRECTED]** | All 4 valid types pass; invalid type is verified by asserting the invariant `(phase="finished" with invalid codebase_type) never occurs` — accept `pytest.raises((AssertionError, ValueError))` or assert `phase != "finished"` as implementation-agnostic alternatives |
+| `TestMutualExclusion` **[CORRECTED]** | go, rust, typescript, javascript only — ruby removed (vacuously true for unknown langs); assert `not (dispatched_to ∈ NonPythonLangs and result_empty == True)` across all combinations |
+| `TestBoundedExecution` [PASS] | All 7 lang variants × all 4 codebase types |
+| `TestEdgeCases` **[CORRECTED]** | Empty DAG (unknown + Python); isolated node; diamond; `None`↔`"python"` **explicit equivalence assertion** (full state comparison); skeletons flag invariance; 4×4 non-Python×codebase matrix; 5-node linear chain |
+
+---
+
+## Summary Table
+
+| Issue | Severity | Section Affected |
+|-------|----------|-----------------|
+| TestTrace1 ≡ TestTrace9 duplicate | Critical | Trace table |
+| `result_empty` missing from all trace rows | Critical | Trace table + all trace test bodies |
+| `TestNonPythonDispatched` omits `result_empty=FALSE` | Critical | Invariant test class |
+| `TestUnknownSafe` 5 extra langs violate TypeInvariant | Critical | Invariant test class |
+| `TestMutualExclusion` includes ruby (vacuously true) | Significant | Invariant test class |
+| `TestAutodetectBeforeDispatch` missing rust/ts/js | Significant | Invariant test class |
+| `AssertionError` expectation is implementation-specific | Significant | Invariant test class |
+| `phase`/`autodetect_done` missing from trace table | Significant | Trace table |
+| `step_count` not asserted in trace tests | Minor | Trace test bodies |
+| `None`↔`"python"` equivalence underspecified | Minor | Edge case tests |
+## Test Plan Review — Semantic Correctness Assessment
+
+The plan has **4 critical issues**, **4 significant issues**, and **2 minor issues**. Corrected sections are marked with `[CORRECTED]`. Unchanged sections are marked `[PASS]`.
+
+---
+
+## Critical Issues
+
+### ❌ CRITICAL-1: `TestTrace9` is a byte-for-byte duplicate of `TestTrace1` [CORRECTED]
+
+`TestTrace9` (ruby, skeletons=True, web_app) is identical to `TestTrace1`. It contributes zero coverage and signals a copy-paste error. A unique trace is required.
+
+**Fix:** Replace with a combination not covered by any other trace. `rust + skeletons=False + codebase_type="cli"` exercises:
+- The non-Python dispatch path with the `skeletons=False` branch
+- A codebase type (`cli`) not previously paired with rust
+
+---
+
+### ❌ CRITICAL-2: `result_empty` is absent from all 10 trace rows [CORRECTED]
+
+The plan states each trace test "asserts every final-state variable," but `result_empty` is not present in the table. This is not a cosmetic gap — three invariants (`NonPythonDispatched`, `UnknownSafe`, `MutualExclusion`) directly constrain `result_empty`. Without asserting it, these invariants are never exercised by the trace tests.
+
+**Derivation rules from the invariants:**
+| `dispatched_to` | `result_empty` required |
+|---|---|
+| lang ∈ NonPythonLangs | `FALSE` (NonPythonDispatched) |
+| `"none"` with lang ∉ KnownLangs | `TRUE` (UnknownSafe) |
+| `"python"` | `FALSE` (implied; would otherwise violate PythonPreserved intent) |
+
+---
+
+### ❌ CRITICAL-3: `TestNonPythonDispatched` omits the `result_empty = FALSE` assertion
+
+The `NonPythonDispatched` invariant is a three-part conjunction:
+
+```
+(phase = "finished" ∧ lang ∈ NonPythonLangs) =>
+    (dispatched_to = lang ∧ python_helper = "none" ∧ result_empty = FALSE)
+```
+
+The plan describes this class as testing only `python_helper=="none"`. Testing two of three conjuncts while omitting the third means a broken implementation that sets `result_empty = TRUE` for non-Python dispatches would pass all tests despite violating the invariant.
+
+---
+
+### ❌ CRITICAL-4: `TestUnknownSafe` with "5 other unknown langs" directly violates `TypeInvariant`
+
+The `TypeInvariant` defines the valid domain for `lang` in the final state as `KnownLangs ∪ {"ruby"}`. Ruby is the **only** permitted unknown-language value. Passing five additional unknown strings (e.g., `"cobol"`, `"perl"`) as lang would produce a final state where `lang ∉ KnownLangs ∪ {"ruby"}`, causing `_verify_type_invariant` to fail before `_verify_unknown_safe` even runs.
+
+This creates a self-defeating test: `_verify_all_invariants` would always error for a reason unrelated to UnknownSafe. The test would be testing the wrong invariant.
+
+**Fix:** `TestUnknownSafe` must use only `"ruby"` as the unknown-lang representative (matching the TypeInvariant domain). To test the robustness of the "skeletons don't override" behaviour, vary the `skeletons` flag and DAG topology with `lang="ruby"`.
+
+---
+
+## Significant Issues
+
+### ⚠️ SIGNIFICANT-1: `TestMutualExclusion` includes `"ruby"` — the invariant is vacuously true for it
+
+The `MutualExclusion` invariant is:
+```
+~(dispatched_to ∈ NonPythonLangs ∧ result_empty = TRUE)
+```
+
+For ruby, `dispatched_to = "none"` (since `"none" ∉ NonPythonLangs`), so the conjunction is always false regardless of `result_empty`. The invariant is vacuously satisfied — no invariant logic is exercised. Including ruby in this test class creates false confidence.
+
+**Fix:** `TestMutualExclusion` must use only `lang ∈ NonPythonLangs` (go, rust, typescript, javascript). Ruby belongs in `TestUnknownSafe`, not here.
+
+---
+
+### ⚠️ SIGNIFICANT-2: `TestAutodetectBeforeDispatch` is missing three of the seven lang variants
+
+The `AutodetectBeforeDispatch` invariant is unconditional across all languages:
+```
+(phase ∈ {dispatching, python_subdispatch, finished}) => autodetect_done = TRUE
+```
+
+The plan tests only `python, go, ruby, None`. The langs `rust`, `typescript`, and `javascript` are missing. An implementation that skips setting `autodetect_done = TRUE` during the rust dispatch path would pass all four tested cases and fail silently.
+
+**Fix:** Add `rust`, `typescript`, and `javascript` to this test class to cover all seven lang variants.
+
+---
+
+### ⚠️ SIGNIFICANT-3: `TestCodebaseResolvedBeforeDispatch` — "invalid type raises `AssertionError`" is an implementation artifact, not a TLA+ semantic
+
+The TLA+ invariant is:
+```
+(phase ∈ {dispatching, python_subdispatch, finished}) => codebase_type ∈ ValidCodebaseTypes
+```
+
+This is a **safety property on reachable states**, not a precondition guard. In TLA+ model checking, an invalid codebase_type reaching the dispatch phase is simply a counterexample — the spec doesn't prescribe *how* the implementation prevents it.
+
+Testing for a Python `AssertionError` couples the test to one specific implementation choice. A compliant implementation could instead return early with an empty result set, raise a different exception, or reject the input at a validation layer. The test should verify the invariant's semantic intent: **the system never reaches `phase="finished"` with `codebase_type ∉ ValidCodebaseTypes` after having dispatched**. If the implementation raises, that is an acceptable mechanism — but the test assertion should be `with pytest.raises((AssertionError, ValueError))` or, better, verify the invariant post-call.
+
+---
+
+### ⚠️ SIGNIFICANT-4: `phase` and `autodetect_done` are absent from the trace table
+
+The plan states each test "asserts every final-state variable." The final state has at least: `phase`, `lang`, `dispatched_to`, `python_helper`, `result_empty`, `autodetect_done`, `step_count`. The table currently specifies only `dispatched_to` and `python_helper`. Omitting `phase`, `autodetect_done`, and `step_count` from the trace table leaves the trace tests under-specified.
+
+---
+
+## Minor Issues
+
+### ℹ️ MINOR-1: `step_count` assertions are absent from trace tests
+
+`BoundedExecution` requires `step_count ≤ MaxSteps`. While `_verify_all_invariants` covers the ≤4 bound, each trace test should additionally assert an exact `step_count` value (derivable from the number of TLA+ actions taken in that trace). This makes regressions where the implementation takes a wrong number of steps detectable.
+
+---
+
+### ℹ️ MINOR-2: `TestEdgeCases` — `None`↔`"python"` equivalence test is underspecified
+
+The plan mentions testing "`None`↔`"python"` equivalence" but does not specify what "equivalence" means semantically. If it means `discover_entry_points(dag, None, ...)` and `discover_entry_points(dag, "python", ...)` return identical `(entry_points, state)` tuples, that is a valid and testable property. This must be made explicit; otherwise the test has no falsifiable assertion.
+
+---
+
+## Corrected Trace Table [CORRECTED]
+
+| Class | lang | skeletons | codebase_type | phase | dispatched_to | python_helper | result_empty | autodetect_done |
+|-------|------|-----------|---------------|-------|---------------|---------------|--------------|-----------------|
+| `TestTrace1` | `"ruby"` | ✓ | `web_app` | `"finished"` | `"none"` | `"none"` | `TRUE` | `TRUE` |
+| `TestTrace2` | `None` | ✗ | `cli` | `"finished"` | `"python"` | `"cli_commands"` | `FALSE` | `TRUE` |
+| `TestTrace3` | `"python"` | ✗ | `web_app` | `"finished"` | `"python"` | `"web_routes"` | `FALSE` | `TRUE` |
+| `TestTrace4` | `"rust"` | ✓ | `event_driven` | `"finished"` | `"rust"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace5` | `"typescript"` | ✓ | `library` | `"finished"` | `"typescript"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace6` | `"go"` | ✗ | `event_driven` | `"finished"` | `"go"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace7` | `None` | ✗ | `library` | `"finished"` | `"python"` | `"public_api"` | `FALSE` | `TRUE` |
+| `TestTrace8` | `"javascript"` | ✗ | `event_driven` | `"finished"` | `"javascript"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace9` **[CORRECTED]** | `"rust"` | ✗ | `cli` | `"finished"` | `"rust"` | `"none"` | `FALSE` | `TRUE` |
+| `TestTrace10` | `"go"` | ✗ | `cli` | `"finished"` | `"go"` | `"none"` | `FALSE` | `TRUE` |
+
+---
+
+## Corrected Invariant Test Class Descriptions [CORRECTED]
+
+| Class | Corrected Tests |
+|-------|-----------------|
+| `TestTypeInvariant` [PASS] | Domain membership for all langs; step_count pinned to 4 |
+| `TestPythonPreserved` [PASS] | All 4 codebase→helper mappings; both `None` and `"python"` inputs |
+| `TestNonPythonDispatched` **[CORRECTED]** | All 4 non-Python langs; assert `python_helper=="none"` **AND** `result_empty==False` for all |
+| `TestUnknownSafe` **[CORRECTED]** | `lang="ruby"` only (TypeInvariant domain constraint); vary `skeletons` (True/False) and DAG topology (empty, single-node, multi-node) to test that `result_empty=True`, `dispatched_to="none"`, `python_helper="none"` hold in all cases |
+| `TestAutodetectBeforeDispatch` **[CORRECTED]** | All 7 lang variants (`python`, `go`, `rust`, `typescript`, `javascript`, `ruby`, `None`) — all finish with `autodetect_done=True` |
+| `TestCodebaseResolvedBeforeDispatch` **[CORRECTED]** | All 4 valid types pass; invalid type is verified by asserting the invariant `(phase="finished" with invalid codebase_type) never occurs` — accept `pytest.raises((AssertionError, ValueError))` or assert `phase != "finished"` as implementation-agnostic alternatives |
+| `TestMutualExclusion` **[CORRECTED]** | go, rust, typescript, javascript only — ruby removed (vacuously true for unknown langs); assert `not (dispatched_to ∈ NonPythonLangs and result_empty == True)` across all combinations |
+| `TestBoundedExecution` [PASS] | All 7 lang variants × all 4 codebase types |
+| `TestEdgeCases` **[CORRECTED]** | Empty DAG (unknown + Python); isolated node; diamond; `None`↔`"python"` **explicit equivalence assertion** (full state comparison); skeletons flag invariance; 4×4 non-Python×codebase matrix; 5-node linear chain |
+
+---
+
+## Summary Table
+
+| Issue | Severity | Section Affected |
+|-------|----------|-----------------|
+| TestTrace1 ≡ TestTrace9 duplicate | Critical | Trace table |
+| `result_empty` missing from all trace rows | Critical | Trace table + all trace test bodies |
+| `TestNonPythonDispatched` omits `result_empty=FALSE` | Critical | Invariant test class |
+| `TestUnknownSafe` 5 extra langs violate TypeInvariant | Critical | Invariant test class |
+| `TestMutualExclusion` includes ruby (vacuously true) | Significant | Invariant test class |
+| `TestAutodetectBeforeDispatch` missing rust/ts/js | Significant | Invariant test class |
+| `AssertionError` expectation is implementation-specific | Significant | Invariant test class |
+| `phase`/`autodetect_done` missing from trace table | Significant | Trace table |
+| `step_count` not asserted in trace tests | Minor | Trace test bodies |
+| `None`↔`"python"` equivalence underspecified | Minor | Edge case tests |

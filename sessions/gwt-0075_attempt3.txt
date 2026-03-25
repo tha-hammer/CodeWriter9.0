@@ -1,0 +1,374 @@
+---- MODULE GoEntryPointDiscovery ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+NumSkeletons == 2
+NumSourceFiles == 2
+
+(* --algorithm GoEntryPointDiscovery
+
+variables
+    codebase_type \in {"web_app", "cli", "library"},
+    entry_points = {},
+    skel_idx = 1,
+    file_idx = 1,
+    sk_is_main = FALSE,
+    sk_is_public = FALSE,
+    sk_has_receiver = FALSE,
+    sk_is_test_file = FALSE,
+    f_is_test = FALSE,
+    f_has_gin_route = FALSE,
+    f_has_http_handle = FALSE,
+    f_has_cobra = FALSE;
+
+define
+
+    ValidEntryTypes ==
+        \A ep \in entry_points :
+            ep.entry_type \in {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+    MainHasCorrectName ==
+        \A ep \in entry_points :
+            ep.entry_type = "MAIN" => ep.function_name = "main"
+
+    MainNeverPublicApi ==
+        \A ep \in entry_points :
+            ep.function_name = "main" => ep.entry_type /= "PUBLIC_API"
+
+    PublicOnlyForLibrary ==
+        \A ep \in entry_points :
+            ep.entry_type = "PUBLIC_API" => codebase_type = "library"
+
+    HttpRouteHasRoute ==
+        \A ep \in entry_points :
+            ep.entry_type = "HTTP_ROUTE" => ep.route /= "none"
+
+    HandleFuncMethodAgnostic ==
+        \A ep \in entry_points :
+            (ep.entry_type = "HTTP_ROUTE" /\ ep.route_type = "handlefunc") =>
+            ep.method = "none"
+
+    GinRouteHasMethod ==
+        \A ep \in entry_points :
+            ep.route_type = "gin" => ep.method /= "none"
+
+    NoDuplicates ==
+        \A ep1 \in entry_points : \A ep2 \in entry_points :
+            (ep1.file_path = ep2.file_path /\
+             ep1.function_name = ep2.function_name) =>
+            ep1 = ep2
+
+    MethodsNeverPublicApi ==
+        \A ep \in entry_points :
+            ep.entry_type = "PUBLIC_API" => ep.has_receiver = FALSE
+
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    ProcessSkeletons:
+        while skel_idx <= NumSkeletons do
+            ChooseIsMain:
+                either
+                    sk_is_main := TRUE;
+                or
+                    sk_is_main := FALSE;
+                end either;
+            ChooseIsPublic:
+                either
+                    sk_is_public := TRUE;
+                or
+                    sk_is_public := FALSE;
+                end either;
+            ChooseHasReceiver:
+                either
+                    sk_has_receiver := TRUE;
+                or
+                    sk_has_receiver := FALSE;
+                end either;
+            ChooseIsTestFileSkel:
+                either
+                    sk_is_test_file := TRUE;
+                or
+                    sk_is_test_file := FALSE;
+                end either;
+            ClassifySkel:
+                if sk_is_test_file then
+                    skip;
+                elsif sk_is_main /\ ~sk_has_receiver then
+                    entry_points := entry_points \union
+                        {[file_path     |-> skel_idx,
+                          function_name |-> "main",
+                          entry_type    |-> "MAIN",
+                          route         |-> "none",
+                          method        |-> "none",
+                          route_type    |-> "none",
+                          has_receiver  |-> FALSE]};
+                elsif sk_is_public /\ ~sk_has_receiver /\ ~sk_is_main /\
+                      codebase_type = "library" then
+                    entry_points := entry_points \union
+                        {[file_path     |-> skel_idx,
+                          function_name |-> "ExportedFunc",
+                          entry_type    |-> "PUBLIC_API",
+                          route         |-> "none",
+                          method        |-> "none",
+                          route_type    |-> "none",
+                          has_receiver  |-> FALSE]};
+                end if;
+                skel_idx := skel_idx + 1;
+        end while;
+    ScanFiles:
+        while file_idx <= NumSourceFiles do
+            ChooseIsTestFileF:
+                either
+                    f_is_test := TRUE;
+                or
+                    f_is_test := FALSE;
+                end either;
+            ChooseGinRoute:
+                either
+                    f_has_gin_route := TRUE;
+                or
+                    f_has_gin_route := FALSE;
+                end either;
+            ChooseHttpHandle:
+                either
+                    f_has_http_handle := TRUE;
+                or
+                    f_has_http_handle := FALSE;
+                end either;
+            ChooseCobra:
+                either
+                    f_has_cobra := TRUE;
+                or
+                    f_has_cobra := FALSE;
+                end either;
+            ProcessGinRoute:
+                if ~f_is_test /\ f_has_gin_route then
+                    entry_points := entry_points \union
+                        {[file_path     |-> NumSkeletons + file_idx,
+                          function_name |-> "ginRouteHandler",
+                          entry_type    |-> "HTTP_ROUTE",
+                          route         |-> "/api",
+                          method        |-> "GET",
+                          route_type    |-> "gin",
+                          has_receiver  |-> FALSE]};
+                end if;
+            ProcessHttpHandle:
+                if ~f_is_test /\ f_has_http_handle then
+                    entry_points := entry_points \union
+                        {[file_path     |-> NumSkeletons + file_idx,
+                          function_name |-> "httpHandleFunc",
+                          entry_type    |-> "HTTP_ROUTE",
+                          route         |-> "/health",
+                          method        |-> "none",
+                          route_type    |-> "handlefunc",
+                          has_receiver  |-> FALSE]};
+                end if;
+            ProcessCobraCmd:
+                if ~f_is_test /\ f_has_cobra then
+                    entry_points := entry_points \union
+                        {[file_path     |-> NumSkeletons + file_idx,
+                          function_name |-> "cobraCommand",
+                          entry_type    |-> "CLI_COMMAND",
+                          route         |-> "none",
+                          method        |-> "none",
+                          route_type    |-> "none",
+                          has_receiver  |-> FALSE]};
+                end if;
+                file_idx := file_idx + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE GoEntryPointDiscovery ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+NumSkeletons == 2
+NumSourceFiles == 2
+
+(* --algorithm GoEntryPointDiscovery
+
+variables
+    codebase_type \in {"web_app", "cli", "library"},
+    entry_points = {},
+    skel_idx = 1,
+    file_idx = 1,
+    sk_is_main = FALSE,
+    sk_is_public = FALSE,
+    sk_has_receiver = FALSE,
+    sk_is_test_file = FALSE,
+    f_is_test = FALSE,
+    f_has_gin_route = FALSE,
+    f_has_http_handle = FALSE,
+    f_has_cobra = FALSE;
+
+define
+
+    ValidEntryTypes ==
+        \A ep \in entry_points :
+            ep.entry_type \in {"MAIN", "PUBLIC_API", "HTTP_ROUTE", "CLI_COMMAND"}
+
+    MainHasCorrectName ==
+        \A ep \in entry_points :
+            ep.entry_type = "MAIN" => ep.function_name = "main"
+
+    MainNeverPublicApi ==
+        \A ep \in entry_points :
+            ep.function_name = "main" => ep.entry_type /= "PUBLIC_API"
+
+    PublicOnlyForLibrary ==
+        \A ep \in entry_points :
+            ep.entry_type = "PUBLIC_API" => codebase_type = "library"
+
+    HttpRouteHasRoute ==
+        \A ep \in entry_points :
+            ep.entry_type = "HTTP_ROUTE" => ep.route /= "none"
+
+    HandleFuncMethodAgnostic ==
+        \A ep \in entry_points :
+            (ep.entry_type = "HTTP_ROUTE" /\ ep.route_type = "handlefunc") =>
+            ep.method = "none"
+
+    GinRouteHasMethod ==
+        \A ep \in entry_points :
+            ep.route_type = "gin" => ep.method /= "none"
+
+    NoDuplicates ==
+        \A ep1 \in entry_points : \A ep2 \in entry_points :
+            (ep1.file_path = ep2.file_path /\
+             ep1.function_name = ep2.function_name) =>
+            ep1 = ep2
+
+    MethodsNeverPublicApi ==
+        \A ep \in entry_points :
+            ep.entry_type = "PUBLIC_API" => ep.has_receiver = FALSE
+
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    ProcessSkeletons:
+        while skel_idx <= NumSkeletons do
+            ChooseIsMain:
+                either
+                    sk_is_main := TRUE;
+                or
+                    sk_is_main := FALSE;
+                end either;
+            ChooseIsPublic:
+                either
+                    sk_is_public := TRUE;
+                or
+                    sk_is_public := FALSE;
+                end either;
+            ChooseHasReceiver:
+                either
+                    sk_has_receiver := TRUE;
+                or
+                    sk_has_receiver := FALSE;
+                end either;
+            ChooseIsTestFileSkel:
+                either
+                    sk_is_test_file := TRUE;
+                or
+                    sk_is_test_file := FALSE;
+                end either;
+            ClassifySkel:
+                if sk_is_test_file then
+                    skip;
+                elsif sk_is_main /\ ~sk_has_receiver then
+                    entry_points := entry_points \union
+                        {[file_path     |-> skel_idx,
+                          function_name |-> "main",
+                          entry_type    |-> "MAIN",
+                          route         |-> "none",
+                          method        |-> "none",
+                          route_type    |-> "none",
+                          has_receiver  |-> FALSE]};
+                elsif sk_is_public /\ ~sk_has_receiver /\ ~sk_is_main /\
+                      codebase_type = "library" then
+                    entry_points := entry_points \union
+                        {[file_path     |-> skel_idx,
+                          function_name |-> "ExportedFunc",
+                          entry_type    |-> "PUBLIC_API",
+                          route         |-> "none",
+                          method        |-> "none",
+                          route_type    |-> "none",
+                          has_receiver  |-> FALSE]};
+                end if;
+                skel_idx := skel_idx + 1;
+        end while;
+    ScanFiles:
+        while file_idx <= NumSourceFiles do
+            ChooseIsTestFileF:
+                either
+                    f_is_test := TRUE;
+                or
+                    f_is_test := FALSE;
+                end either;
+            ChooseGinRoute:
+                either
+                    f_has_gin_route := TRUE;
+                or
+                    f_has_gin_route := FALSE;
+                end either;
+            ChooseHttpHandle:
+                either
+                    f_has_http_handle := TRUE;
+                or
+                    f_has_http_handle := FALSE;
+                end either;
+            ChooseCobra:
+                either
+                    f_has_cobra := TRUE;
+                or
+                    f_has_cobra := FALSE;
+                end either;
+            ProcessGinRoute:
+                if ~f_is_test /\ f_has_gin_route then
+                    entry_points := entry_points \union
+                        {[file_path     |-> NumSkeletons + file_idx,
+                          function_name |-> "ginRouteHandler",
+                          entry_type    |-> "HTTP_ROUTE",
+                          route         |-> "/api",
+                          method        |-> "GET",
+                          route_type    |-> "gin",
+                          has_receiver  |-> FALSE]};
+                end if;
+            ProcessHttpHandle:
+                if ~f_is_test /\ f_has_http_handle then
+                    entry_points := entry_points \union
+                        {[file_path     |-> NumSkeletons + file_idx,
+                          function_name |-> "httpHandleFunc",
+                          entry_type    |-> "HTTP_ROUTE",
+                          route         |-> "/health",
+                          method        |-> "none",
+                          route_type    |-> "handlefunc",
+                          has_receiver  |-> FALSE]};
+                end if;
+            ProcessCobraCmd:
+                if ~f_is_test /\ f_has_cobra then
+                    entry_points := entry_points \union
+                        {[file_path     |-> NumSkeletons + file_idx,
+                          function_name |-> "cobraCommand",
+                          entry_type    |-> "CLI_COMMAND",
+                          route         |-> "none",
+                          method        |-> "none",
+                          route_type    |-> "none",
+                          has_receiver  |-> FALSE]};
+                end if;
+                file_idx := file_idx + 1;
+        end while;
+    Finish:
+        skip;
+end process;
+
+end algorithm; *)
+
+====

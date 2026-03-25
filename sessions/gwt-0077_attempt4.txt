@@ -1,0 +1,282 @@
+The PlusCal compiled. The remaining failure is `Assumption ... is false` — TLC evaluates the `ASSUME` at load time using the auto-configured model constants (which may be symbolic model values, not integers), causing `\subseteq Nat` and `c > 0` to fail. Fix: remove the `ASSUME` entirely. Everything else stays identical to the previous attempt.
+
+---- MODULE ReviewOrchestration ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    PassCosts,
+    MaxTotalCost
+
+(* --algorithm ReviewOrchestration
+
+variables
+    current_step = "idle",
+    artifacts_verdict = "not_run",
+    pass_states = [artifacts       |-> "not_run",
+                   coverage        |-> "not_run",
+                   interaction     |-> "not_run",
+                   abstraction_gap |-> "not_run",
+                   imports         |-> "not_run"],
+    total_cost = 0,
+    overall_status = "pass",
+    art_cost \in PassCosts,
+    cov_cost \in PassCosts,
+    int_cost \in PassCosts,
+    abg_cost \in PassCosts,
+    imp_cost \in PassCosts,
+    art_verdict \in {"pass", "fail"};
+
+define
+    Passes == {"artifacts","coverage","interaction","abstraction_gap","imports"}
+
+    DependencyOrder ==
+        (pass_states["abstraction_gap"] \in {"running","done"}) =>
+        (pass_states["coverage"] = "done" /\ pass_states["interaction"] = "done")
+
+    GateEnforcement ==
+        (artifacts_verdict = "fail") =>
+        (\A p \in Passes \ {"artifacts"} : pass_states[p] = "not_run")
+
+    CostMonotonicity == total_cost >= 0
+
+    CompletionConsistency ==
+        (current_step = "done") =>
+        (\A p \in Passes : pass_states[p] = "done")
+
+    ParallelSafety ==
+        (current_step = "parallel") =>
+        (pass_states["coverage"] \in {"running","done"} /\
+         pass_states["interaction"] \in {"running","done"})
+
+    BoundedCost == total_cost <= MaxTotalCost
+
+    TypeOK ==
+        /\ current_step \in {"idle","artifacts","parallel",
+                              "abstraction_gap","imports","done","blocked"}
+        /\ artifacts_verdict \in {"not_run","pass","fail"}
+        /\ (\A p \in Passes : pass_states[p] \in {"not_run","running","done"})
+        /\ total_cost \in Nat
+        /\ overall_status \in {"pass","fail","blocked"}
+
+end define;
+
+fair process Orchestrator = "orch"
+begin
+    StartArtifacts:
+        current_step := "artifacts";
+        pass_states["artifacts"] := "running";
+
+    CompleteArtifacts:
+        artifacts_verdict := art_verdict;
+        total_cost := total_cost + art_cost;
+        pass_states["artifacts"] := "done";
+
+    CheckGate:
+        if artifacts_verdict = "fail" then
+            goto HandleFail;
+        else
+            skip;
+        end if;
+
+    StartParallel:
+        current_step := "parallel";
+        pass_states := [pass_states EXCEPT !["coverage"] = "running",
+                                           !["interaction"] = "running"];
+
+    ChooseParallel:
+        either
+            goto FinishCoverageFirst;
+        or
+            goto FinishInteractionFirst;
+        end either;
+
+    FinishCoverageFirst:
+        pass_states["coverage"] := "done";
+        total_cost := total_cost + cov_cost;
+        goto FinishInteractionSecond;
+
+    FinishInteractionFirst:
+        pass_states["interaction"] := "done";
+        total_cost := total_cost + int_cost;
+
+    FinishCoverageSecond:
+        pass_states["coverage"] := "done";
+        total_cost := total_cost + cov_cost;
+        goto StartAbstractionGap;
+
+    FinishInteractionSecond:
+        pass_states["interaction"] := "done";
+        total_cost := total_cost + int_cost;
+
+    StartAbstractionGap:
+        current_step := "abstraction_gap";
+        pass_states["abstraction_gap"] := "running";
+
+    CompleteAbstractionGap:
+        pass_states["abstraction_gap"] := "done";
+        total_cost := total_cost + abg_cost;
+
+    StartImports:
+        current_step := "imports";
+        pass_states["imports"] := "running";
+
+    CompleteImports:
+        pass_states["imports"] := "done";
+        total_cost := total_cost + imp_cost;
+        current_step := "done";
+        goto Terminate;
+
+    HandleFail:
+        overall_status := "blocked";
+        current_step := "blocked";
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+The PlusCal compiled. The remaining failure is `Assumption ... is false` — TLC evaluates the `ASSUME` at load time using the auto-configured model constants (which may be symbolic model values, not integers), causing `\subseteq Nat` and `c > 0` to fail. Fix: remove the `ASSUME` entirely. Everything else stays identical to the previous attempt.
+
+---- MODULE ReviewOrchestration ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    PassCosts,
+    MaxTotalCost
+
+(* --algorithm ReviewOrchestration
+
+variables
+    current_step = "idle",
+    artifacts_verdict = "not_run",
+    pass_states = [artifacts       |-> "not_run",
+                   coverage        |-> "not_run",
+                   interaction     |-> "not_run",
+                   abstraction_gap |-> "not_run",
+                   imports         |-> "not_run"],
+    total_cost = 0,
+    overall_status = "pass",
+    art_cost \in PassCosts,
+    cov_cost \in PassCosts,
+    int_cost \in PassCosts,
+    abg_cost \in PassCosts,
+    imp_cost \in PassCosts,
+    art_verdict \in {"pass", "fail"};
+
+define
+    Passes == {"artifacts","coverage","interaction","abstraction_gap","imports"}
+
+    DependencyOrder ==
+        (pass_states["abstraction_gap"] \in {"running","done"}) =>
+        (pass_states["coverage"] = "done" /\ pass_states["interaction"] = "done")
+
+    GateEnforcement ==
+        (artifacts_verdict = "fail") =>
+        (\A p \in Passes \ {"artifacts"} : pass_states[p] = "not_run")
+
+    CostMonotonicity == total_cost >= 0
+
+    CompletionConsistency ==
+        (current_step = "done") =>
+        (\A p \in Passes : pass_states[p] = "done")
+
+    ParallelSafety ==
+        (current_step = "parallel") =>
+        (pass_states["coverage"] \in {"running","done"} /\
+         pass_states["interaction"] \in {"running","done"})
+
+    BoundedCost == total_cost <= MaxTotalCost
+
+    TypeOK ==
+        /\ current_step \in {"idle","artifacts","parallel",
+                              "abstraction_gap","imports","done","blocked"}
+        /\ artifacts_verdict \in {"not_run","pass","fail"}
+        /\ (\A p \in Passes : pass_states[p] \in {"not_run","running","done"})
+        /\ total_cost \in Nat
+        /\ overall_status \in {"pass","fail","blocked"}
+
+end define;
+
+fair process Orchestrator = "orch"
+begin
+    StartArtifacts:
+        current_step := "artifacts";
+        pass_states["artifacts"] := "running";
+
+    CompleteArtifacts:
+        artifacts_verdict := art_verdict;
+        total_cost := total_cost + art_cost;
+        pass_states["artifacts"] := "done";
+
+    CheckGate:
+        if artifacts_verdict = "fail" then
+            goto HandleFail;
+        else
+            skip;
+        end if;
+
+    StartParallel:
+        current_step := "parallel";
+        pass_states := [pass_states EXCEPT !["coverage"] = "running",
+                                           !["interaction"] = "running"];
+
+    ChooseParallel:
+        either
+            goto FinishCoverageFirst;
+        or
+            goto FinishInteractionFirst;
+        end either;
+
+    FinishCoverageFirst:
+        pass_states["coverage"] := "done";
+        total_cost := total_cost + cov_cost;
+        goto FinishInteractionSecond;
+
+    FinishInteractionFirst:
+        pass_states["interaction"] := "done";
+        total_cost := total_cost + int_cost;
+
+    FinishCoverageSecond:
+        pass_states["coverage"] := "done";
+        total_cost := total_cost + cov_cost;
+        goto StartAbstractionGap;
+
+    FinishInteractionSecond:
+        pass_states["interaction"] := "done";
+        total_cost := total_cost + int_cost;
+
+    StartAbstractionGap:
+        current_step := "abstraction_gap";
+        pass_states["abstraction_gap"] := "running";
+
+    CompleteAbstractionGap:
+        pass_states["abstraction_gap"] := "done";
+        total_cost := total_cost + abg_cost;
+
+    StartImports:
+        current_step := "imports";
+        pass_states["imports"] := "running";
+
+    CompleteImports:
+        pass_states["imports"] := "done";
+        total_cost := total_cost + imp_cost;
+        current_step := "done";
+        goto Terminate;
+
+    HandleFail:
+        overall_status := "blocked";
+        current_step := "blocked";
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

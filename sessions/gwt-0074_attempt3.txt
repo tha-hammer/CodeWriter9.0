@@ -1,0 +1,420 @@
+The root cause is confirmed: module content was emitted twice past the `====` boundary. I'll also add a `handler` field to route scans (matching the Python `function_name` on `EntryPoint`) and eliminate the `Dedup` operator in favor of direct assignment, which is correct under the uniqueness assumptions.
+
+---- MODULE JSTSEntryPointDiscovery ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Files,
+    ExcludedFiles,
+    DtsFiles,
+    Skeletons,
+    CodebaseType,
+    HasPackageJson,
+    PkgJsonValid,
+    BinTargets,
+    RouteScans,
+    CliScans,
+    MaxSteps
+
+ASSUME ExcludedFiles \subseteq Files
+ASSUME DtsFiles \subseteq ExcludedFiles
+ASSUME \A s \in Skeletons  : s.file \in Files
+ASSUME \A r \in RouteScans : r.file \in Files
+ASSUME \A c \in CliScans   : c.file \in Files
+ASSUME \A b \in BinTargets : b.file \in Files /\ b.file \notin DtsFiles
+ASSUME \A r \in RouteScans :
+    r.method \in {"GET","POST","PUT","DELETE","PATCH","HEAD","OPTIONS"}
+ASSUME CodebaseType \in {"library", "web_app", "cli"}
+ASSUME HasPackageJson \in BOOLEAN
+ASSUME PkgJsonValid   \in BOOLEAN
+ASSUME ~HasPackageJson => BinTargets = {}
+ASSUME MaxSteps >= 6
+ASSUME \A r1 \in RouteScans : \A r2 \in RouteScans :
+    (r1.file = r2.file /\ r1.handler = r2.handler) => r1 = r2
+ASSUME \A s1 \in Skeletons : \A s2 \in Skeletons :
+    (s1.file = s2.file /\ s1.fname = s2.fname) => s1 = s2
+ASSUME \A b1 \in BinTargets : \A b2 \in BinTargets :
+    (b1.file = b2.file /\ b1.fname = b2.fname) => b1 = b2
+ASSUME \A c1 \in CliScans : \A c2 \in CliScans :
+    (c1.file = c2.file /\ c1.cmd = c2.cmd) => c1 = c2
+ASSUME \A s \in Skeletons : \A r \in RouteScans :
+    ~(r.file = s.file /\ r.handler = s.fname)
+ASSUME \A s \in Skeletons : \A c \in CliScans :
+    ~(c.file = s.file /\ c.cmd = s.fname)
+ASSUME \A s \in Skeletons : \A b \in BinTargets :
+    ~(b.file = s.file /\ b.fname = s.fname)
+ASSUME \A r \in RouteScans : \A c \in CliScans :
+    ~(r.file = c.file /\ r.handler = c.cmd)
+ASSUME \A r \in RouteScans : \A b \in BinTargets :
+    ~(r.file = b.file /\ r.handler = b.fname)
+
+NONE == "NONE"
+HttpMethods == {"GET","POST","PUT","DELETE","PATCH","HEAD","OPTIONS"}
+EntryTypeSet == {"HTTP_ROUTE","CLI_COMMAND","PUBLIC_API","MAIN"}
+Phases == {"Init","ScanFiles","ParseManifest","ProcessSkeletons",
+           "Deduplicate","FallbackCheck","Finish"}
+
+PublicTopLevelSkeletons ==
+    {s \in Skeletons :
+        s.is_public /\ s.is_top_level /\ s.file \notin ExcludedFiles}
+
+NonExcludedRouteScans ==
+    {r \in RouteScans : r.file \notin ExcludedFiles}
+
+NonExcludedCliScans ==
+    {c \in CliScans : c.file \notin ExcludedFiles}
+
+RouteEPs ==
+    {[file   |-> r.file,
+      fname  |-> r.handler,
+      etype  |-> "HTTP_ROUTE",
+      route  |-> r.route,
+      method |-> r.method] : r \in NonExcludedRouteScans}
+
+CliScanEPs ==
+    {[file   |-> c.file,
+      fname  |-> c.cmd,
+      etype  |-> "CLI_COMMAND",
+      route  |-> NONE,
+      method |-> NONE] : c \in NonExcludedCliScans}
+
+ManifestEPs ==
+    {[file   |-> b.file,
+      fname  |-> b.fname,
+      etype  |-> "CLI_COMMAND",
+      route  |-> NONE,
+      method |-> NONE] : b \in BinTargets}
+
+SkeletonEPs ==
+    {[file   |-> s.file,
+      fname  |-> s.fname,
+      etype  |-> "PUBLIC_API",
+      route  |-> NONE,
+      method |-> NONE] : s \in PublicTopLevelSkeletons}
+
+(* --algorithm JSTSEntryPointDiscovery
+
+variables
+    phase        = "Init",
+    raw_eps      = {},
+    entry_points = {},
+    step_count   = 0;
+
+define
+
+    ValidPhase == phase \in Phases
+
+    TypeOK ==
+        /\ phase \in Phases
+        /\ step_count >= 0
+        /\ \A ep \in entry_points :
+               /\ ep.etype \in EntryTypeSet
+               /\ ep.file  \in Files
+               /\ (ep.etype = "HTTP_ROUTE" => ep.method \in HttpMethods)
+               /\ (ep.etype = "HTTP_ROUTE" => ep.route  # NONE)
+               /\ (ep.etype # "HTTP_ROUTE" => ep.method = NONE)
+               /\ (ep.etype # "HTTP_ROUTE" => ep.route  = NONE)
+
+    NoExcludedEntries ==
+        \A ep \in entry_points : ep.file \notin ExcludedFiles
+
+    NoDtsRouteOrCliEntries ==
+        \A ep \in entry_points :
+            ep.etype \in {"HTTP_ROUTE", "CLI_COMMAND"} =>
+                ep.file \notin DtsFiles
+
+    WellFormedRouteMethods ==
+        \A ep \in entry_points :
+            ep.etype = "HTTP_ROUTE" => ep.method \in HttpMethods
+
+    DeduplicatedEntries ==
+        \A ep1 \in entry_points : \A ep2 \in entry_points :
+            (ep1.file = ep2.file /\ ep1.fname = ep2.fname) => ep1 = ep2
+
+    LibraryPublicApiComplete ==
+        (phase = "Finish" /\ CodebaseType = "library") =>
+            \A s \in PublicTopLevelSkeletons :
+                \E ep \in entry_points :
+                    ep.file  = s.file  /\
+                    ep.fname = s.fname /\
+                    ep.etype = "PUBLIC_API"
+
+    ManifestFailSafe ==
+        (~HasPackageJson \/ ~PkgJsonValid) =>
+            \A ep \in entry_points :
+                ep.etype = "CLI_COMMAND" =>
+                    \E c \in NonExcludedCliScans :
+                        c.file = ep.file /\ c.cmd = ep.fname
+
+    FallbackCorrect ==
+        (phase = "Finish"         /\
+         CodebaseType # "library"  /\
+         RouteEPs    = {}          /\
+         CliScanEPs  = {}          /\
+         ManifestEPs = {}) =>
+            \A s \in PublicTopLevelSkeletons :
+                \E ep \in entry_points :
+                    ep.file  = s.file  /\
+                    ep.fname = s.fname /\
+                    ep.etype = "PUBLIC_API"
+
+    BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    Init:
+        step_count := step_count + 1;
+        phase := "ScanFiles";
+
+    ScanFiles:
+        raw_eps := RouteEPs \cup CliScanEPs;
+        step_count := step_count + 1;
+        phase := "ParseManifest";
+
+    ParseManifest:
+        if HasPackageJson /\ PkgJsonValid then
+            raw_eps := raw_eps \cup ManifestEPs;
+        end if;
+        step_count := step_count + 1;
+        phase := "ProcessSkeletons";
+
+    ProcessSkeletons:
+        if CodebaseType = "library" then
+            raw_eps := raw_eps \cup SkeletonEPs;
+        end if;
+        step_count := step_count + 1;
+        phase := "Deduplicate";
+
+    Deduplicate:
+        entry_points := raw_eps;
+        step_count := step_count + 1;
+        phase := "FallbackCheck";
+
+    FallbackCheck:
+        if entry_points = {} /\ CodebaseType # "library" then
+            entry_points := SkeletonEPs;
+        end if;
+        step_count := step_count + 1;
+        phase := "Finish";
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+The root cause is confirmed: module content was emitted twice past the `====` boundary. I'll also add a `handler` field to route scans (matching the Python `function_name` on `EntryPoint`) and eliminate the `Dedup` operator in favor of direct assignment, which is correct under the uniqueness assumptions.
+
+---- MODULE JSTSEntryPointDiscovery ----
+
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS
+    Files,
+    ExcludedFiles,
+    DtsFiles,
+    Skeletons,
+    CodebaseType,
+    HasPackageJson,
+    PkgJsonValid,
+    BinTargets,
+    RouteScans,
+    CliScans,
+    MaxSteps
+
+ASSUME ExcludedFiles \subseteq Files
+ASSUME DtsFiles \subseteq ExcludedFiles
+ASSUME \A s \in Skeletons  : s.file \in Files
+ASSUME \A r \in RouteScans : r.file \in Files
+ASSUME \A c \in CliScans   : c.file \in Files
+ASSUME \A b \in BinTargets : b.file \in Files /\ b.file \notin DtsFiles
+ASSUME \A r \in RouteScans :
+    r.method \in {"GET","POST","PUT","DELETE","PATCH","HEAD","OPTIONS"}
+ASSUME CodebaseType \in {"library", "web_app", "cli"}
+ASSUME HasPackageJson \in BOOLEAN
+ASSUME PkgJsonValid   \in BOOLEAN
+ASSUME ~HasPackageJson => BinTargets = {}
+ASSUME MaxSteps >= 6
+ASSUME \A r1 \in RouteScans : \A r2 \in RouteScans :
+    (r1.file = r2.file /\ r1.handler = r2.handler) => r1 = r2
+ASSUME \A s1 \in Skeletons : \A s2 \in Skeletons :
+    (s1.file = s2.file /\ s1.fname = s2.fname) => s1 = s2
+ASSUME \A b1 \in BinTargets : \A b2 \in BinTargets :
+    (b1.file = b2.file /\ b1.fname = b2.fname) => b1 = b2
+ASSUME \A c1 \in CliScans : \A c2 \in CliScans :
+    (c1.file = c2.file /\ c1.cmd = c2.cmd) => c1 = c2
+ASSUME \A s \in Skeletons : \A r \in RouteScans :
+    ~(r.file = s.file /\ r.handler = s.fname)
+ASSUME \A s \in Skeletons : \A c \in CliScans :
+    ~(c.file = s.file /\ c.cmd = s.fname)
+ASSUME \A s \in Skeletons : \A b \in BinTargets :
+    ~(b.file = s.file /\ b.fname = s.fname)
+ASSUME \A r \in RouteScans : \A c \in CliScans :
+    ~(r.file = c.file /\ r.handler = c.cmd)
+ASSUME \A r \in RouteScans : \A b \in BinTargets :
+    ~(r.file = b.file /\ r.handler = b.fname)
+
+NONE == "NONE"
+HttpMethods == {"GET","POST","PUT","DELETE","PATCH","HEAD","OPTIONS"}
+EntryTypeSet == {"HTTP_ROUTE","CLI_COMMAND","PUBLIC_API","MAIN"}
+Phases == {"Init","ScanFiles","ParseManifest","ProcessSkeletons",
+           "Deduplicate","FallbackCheck","Finish"}
+
+PublicTopLevelSkeletons ==
+    {s \in Skeletons :
+        s.is_public /\ s.is_top_level /\ s.file \notin ExcludedFiles}
+
+NonExcludedRouteScans ==
+    {r \in RouteScans : r.file \notin ExcludedFiles}
+
+NonExcludedCliScans ==
+    {c \in CliScans : c.file \notin ExcludedFiles}
+
+RouteEPs ==
+    {[file   |-> r.file,
+      fname  |-> r.handler,
+      etype  |-> "HTTP_ROUTE",
+      route  |-> r.route,
+      method |-> r.method] : r \in NonExcludedRouteScans}
+
+CliScanEPs ==
+    {[file   |-> c.file,
+      fname  |-> c.cmd,
+      etype  |-> "CLI_COMMAND",
+      route  |-> NONE,
+      method |-> NONE] : c \in NonExcludedCliScans}
+
+ManifestEPs ==
+    {[file   |-> b.file,
+      fname  |-> b.fname,
+      etype  |-> "CLI_COMMAND",
+      route  |-> NONE,
+      method |-> NONE] : b \in BinTargets}
+
+SkeletonEPs ==
+    {[file   |-> s.file,
+      fname  |-> s.fname,
+      etype  |-> "PUBLIC_API",
+      route  |-> NONE,
+      method |-> NONE] : s \in PublicTopLevelSkeletons}
+
+(* --algorithm JSTSEntryPointDiscovery
+
+variables
+    phase        = "Init",
+    raw_eps      = {},
+    entry_points = {},
+    step_count   = 0;
+
+define
+
+    ValidPhase == phase \in Phases
+
+    TypeOK ==
+        /\ phase \in Phases
+        /\ step_count >= 0
+        /\ \A ep \in entry_points :
+               /\ ep.etype \in EntryTypeSet
+               /\ ep.file  \in Files
+               /\ (ep.etype = "HTTP_ROUTE" => ep.method \in HttpMethods)
+               /\ (ep.etype = "HTTP_ROUTE" => ep.route  # NONE)
+               /\ (ep.etype # "HTTP_ROUTE" => ep.method = NONE)
+               /\ (ep.etype # "HTTP_ROUTE" => ep.route  = NONE)
+
+    NoExcludedEntries ==
+        \A ep \in entry_points : ep.file \notin ExcludedFiles
+
+    NoDtsRouteOrCliEntries ==
+        \A ep \in entry_points :
+            ep.etype \in {"HTTP_ROUTE", "CLI_COMMAND"} =>
+                ep.file \notin DtsFiles
+
+    WellFormedRouteMethods ==
+        \A ep \in entry_points :
+            ep.etype = "HTTP_ROUTE" => ep.method \in HttpMethods
+
+    DeduplicatedEntries ==
+        \A ep1 \in entry_points : \A ep2 \in entry_points :
+            (ep1.file = ep2.file /\ ep1.fname = ep2.fname) => ep1 = ep2
+
+    LibraryPublicApiComplete ==
+        (phase = "Finish" /\ CodebaseType = "library") =>
+            \A s \in PublicTopLevelSkeletons :
+                \E ep \in entry_points :
+                    ep.file  = s.file  /\
+                    ep.fname = s.fname /\
+                    ep.etype = "PUBLIC_API"
+
+    ManifestFailSafe ==
+        (~HasPackageJson \/ ~PkgJsonValid) =>
+            \A ep \in entry_points :
+                ep.etype = "CLI_COMMAND" =>
+                    \E c \in NonExcludedCliScans :
+                        c.file = ep.file /\ c.cmd = ep.fname
+
+    FallbackCorrect ==
+        (phase = "Finish"         /\
+         CodebaseType # "library"  /\
+         RouteEPs    = {}          /\
+         CliScanEPs  = {}          /\
+         ManifestEPs = {}) =>
+            \A s \in PublicTopLevelSkeletons :
+                \E ep \in entry_points :
+                    ep.file  = s.file  /\
+                    ep.fname = s.fname /\
+                    ep.etype = "PUBLIC_API"
+
+    BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process discoverer = "discoverer"
+begin
+    Init:
+        step_count := step_count + 1;
+        phase := "ScanFiles";
+
+    ScanFiles:
+        raw_eps := RouteEPs \cup CliScanEPs;
+        step_count := step_count + 1;
+        phase := "ParseManifest";
+
+    ParseManifest:
+        if HasPackageJson /\ PkgJsonValid then
+            raw_eps := raw_eps \cup ManifestEPs;
+        end if;
+        step_count := step_count + 1;
+        phase := "ProcessSkeletons";
+
+    ProcessSkeletons:
+        if CodebaseType = "library" then
+            raw_eps := raw_eps \cup SkeletonEPs;
+        end if;
+        step_count := step_count + 1;
+        phase := "Deduplicate";
+
+    Deduplicate:
+        entry_points := raw_eps;
+        step_count := step_count + 1;
+        phase := "FallbackCheck";
+
+    FallbackCheck:
+        if entry_points = {} /\ CodebaseType # "library" then
+            entry_points := SkeletonEPs;
+        end if;
+        step_count := step_count + 1;
+        phase := "Finish";
+
+    Finish:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

@@ -1,0 +1,210 @@
+---- MODULE ArtifactsGate ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS ArtifactsVerdict
+
+Verdict == {"pass", "fail", "warning", "unknown"}
+
+ASSUME ArtifactsVerdict \in Verdict
+
+ArtifactsCostUSD == 10
+ParallelCostUSD  == 10
+
+ArtifactsPassResult ==
+    [name |-> "artifacts", verdict |-> ArtifactsVerdict, cost_usd |-> ArtifactsCostUSD]
+
+CoveragePassResult ==
+    [name |-> "coverage", verdict |-> "pass", cost_usd |-> 5]
+
+SecurityPassResult ==
+    [name |-> "security", verdict |-> "pass", cost_usd |-> 5]
+
+(* --algorithm ArtifactsGate
+
+variables
+    gate_checked   = FALSE,
+    passes_started = {},
+    final_result   = [
+        status     |-> "none",
+        blocked_by |-> "none",
+        results    |-> [x \in {} |-> 0],
+        total_cost |-> 0
+    ];
+
+define
+
+    GateBlocking ==
+        (gate_checked /\ ArtifactsVerdict = "fail") =>
+            (DOMAIN final_result.results = {"artifacts"} /\
+             passes_started = {"artifacts"})
+
+    GatePassthrough ==
+        (gate_checked /\ ArtifactsVerdict \in {"pass", "warning"}) =>
+            ({"artifacts", "coverage", "security"} \subseteq passes_started)
+
+    BlockedStatus ==
+        (final_result.status = "blocked") <=>
+            (gate_checked /\ ArtifactsVerdict = "fail")
+
+    CostAccuracy ==
+        (final_result.status = "blocked") =>
+            (final_result.total_cost = ArtifactsCostUSD)
+
+    OnlyArtifactsWhenBlocked ==
+        (final_result.status = "blocked") =>
+            DOMAIN final_result.results = {"artifacts"}
+
+    NoExtraPassesWhenBlocked ==
+        (final_result.status = "blocked") =>
+            passes_started = {"artifacts"}
+
+    TypeOK ==
+        /\ gate_checked   \in BOOLEAN
+        /\ passes_started \subseteq {"artifacts", "coverage", "security"}
+        /\ final_result.status \in {"none", "blocked", "pass", "fail", "warning"}
+
+end define;
+
+fair process orchestrator = "main"
+begin
+    RunArtifacts:
+        passes_started := {"artifacts"};
+
+    CheckGate:
+        gate_checked := TRUE;
+        if ArtifactsVerdict = "fail" then
+            final_result := [
+                status     |-> "blocked",
+                blocked_by |-> "artifacts",
+                results    |-> [n \in {"artifacts"} |-> ArtifactsPassResult],
+                total_cost |-> ArtifactsCostUSD
+            ];
+            goto Terminate;
+        end if;
+
+    RunParallel:
+        passes_started := passes_started \union {"coverage", "security"};
+        final_result := [
+            status     |-> IF ArtifactsVerdict = "warning" THEN "warning" ELSE "pass",
+            blocked_by |-> "none",
+            results    |-> [n \in {"artifacts", "coverage", "security"} |->
+                               IF n = "artifacts" THEN ArtifactsPassResult
+                               ELSE IF n = "coverage" THEN CoveragePassResult
+                               ELSE SecurityPassResult
+                           ],
+            total_cost |-> ArtifactsCostUSD + ParallelCostUSD
+        ];
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE ArtifactsGate ----
+EXTENDS Integers, FiniteSets, TLC
+
+CONSTANTS ArtifactsVerdict
+
+Verdict == {"pass", "fail", "warning", "unknown"}
+
+ASSUME ArtifactsVerdict \in Verdict
+
+ArtifactsCostUSD == 10
+ParallelCostUSD  == 10
+
+ArtifactsPassResult ==
+    [name |-> "artifacts", verdict |-> ArtifactsVerdict, cost_usd |-> ArtifactsCostUSD]
+
+CoveragePassResult ==
+    [name |-> "coverage", verdict |-> "pass", cost_usd |-> 5]
+
+SecurityPassResult ==
+    [name |-> "security", verdict |-> "pass", cost_usd |-> 5]
+
+(* --algorithm ArtifactsGate
+
+variables
+    gate_checked   = FALSE,
+    passes_started = {},
+    final_result   = [
+        status     |-> "none",
+        blocked_by |-> "none",
+        results    |-> [x \in {} |-> 0],
+        total_cost |-> 0
+    ];
+
+define
+
+    GateBlocking ==
+        (gate_checked /\ ArtifactsVerdict = "fail") =>
+            (DOMAIN final_result.results = {"artifacts"} /\
+             passes_started = {"artifacts"})
+
+    GatePassthrough ==
+        (gate_checked /\ ArtifactsVerdict \in {"pass", "warning"}) =>
+            ({"artifacts", "coverage", "security"} \subseteq passes_started)
+
+    BlockedStatus ==
+        (final_result.status = "blocked") <=>
+            (gate_checked /\ ArtifactsVerdict = "fail")
+
+    CostAccuracy ==
+        (final_result.status = "blocked") =>
+            (final_result.total_cost = ArtifactsCostUSD)
+
+    OnlyArtifactsWhenBlocked ==
+        (final_result.status = "blocked") =>
+            DOMAIN final_result.results = {"artifacts"}
+
+    NoExtraPassesWhenBlocked ==
+        (final_result.status = "blocked") =>
+            passes_started = {"artifacts"}
+
+    TypeOK ==
+        /\ gate_checked   \in BOOLEAN
+        /\ passes_started \subseteq {"artifacts", "coverage", "security"}
+        /\ final_result.status \in {"none", "blocked", "pass", "fail", "warning"}
+
+end define;
+
+fair process orchestrator = "main"
+begin
+    RunArtifacts:
+        passes_started := {"artifacts"};
+
+    CheckGate:
+        gate_checked := TRUE;
+        if ArtifactsVerdict = "fail" then
+            final_result := [
+                status     |-> "blocked",
+                blocked_by |-> "artifacts",
+                results    |-> [n \in {"artifacts"} |-> ArtifactsPassResult],
+                total_cost |-> ArtifactsCostUSD
+            ];
+            goto Terminate;
+        end if;
+
+    RunParallel:
+        passes_started := passes_started \union {"coverage", "security"};
+        final_result := [
+            status     |-> IF ArtifactsVerdict = "warning" THEN "warning" ELSE "pass",
+            blocked_by |-> "none",
+            results    |-> [n \in {"artifacts", "coverage", "security"} |->
+                               IF n = "artifacts" THEN ArtifactsPassResult
+                               ELSE IF n = "coverage" THEN CoveragePassResult
+                               ELSE SecurityPassResult
+                           ],
+            total_cost |-> ArtifactsCostUSD + ParallelCostUSD
+        ];
+
+    Terminate:
+        skip;
+
+end process;
+
+end algorithm; *)
+
+====

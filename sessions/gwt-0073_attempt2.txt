@@ -1,0 +1,244 @@
+---- MODULE EntryPointDiscoveryDispatch ----
+
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps >= 5
+
+PythonLangs        == {"none", "python"}
+NonPythonLangs     == {"go", "rust", "javascript", "typescript"}
+KnownLangs         == PythonLangs \cup NonPythonLangs
+ValidCodebaseTypes == {"web_app", "cli", "event_driven", "library"}
+PythonHelpers      == {"web_routes", "cli_commands",
+                       "event_handlers", "public_api", "main_functions"}
+AllDispatchTargets == NonPythonLangs \cup {"python", "none"}
+
+(* --algorithm EntryPointDiscoveryDispatch
+
+variables
+    lang            \in {"none", "python", "go", "rust",
+                         "javascript", "typescript", "ruby"},
+    skeletons_given \in {TRUE, FALSE},
+    codebase_type   = "unresolved",
+    dispatched_to   = "none",
+    python_helper   = "none",
+    result_empty    = FALSE,
+    autodetect_done = FALSE,
+    phase           = "init",
+    step_count      = 0;
+
+define
+
+    TypeInvariant ==
+        /\ lang            \in KnownLangs \cup {"ruby"}
+        /\ phase           \in {"init", "resolving", "dispatching",
+                                 "python_subdispatch", "finished"}
+        /\ dispatched_to   \in AllDispatchTargets
+        /\ python_helper   \in PythonHelpers \cup {"none"}
+        /\ result_empty    \in {TRUE, FALSE}
+        /\ autodetect_done \in {TRUE, FALSE}
+        /\ step_count      \in 0..MaxSteps
+
+    PythonPreserved ==
+        (phase = "finished" /\ lang \in PythonLangs) =>
+            (dispatched_to = "python" /\ python_helper \in PythonHelpers)
+
+    NonPythonDispatched ==
+        (phase = "finished" /\ lang \in NonPythonLangs) =>
+            (dispatched_to = lang /\ python_helper = "none" /\ result_empty = FALSE)
+
+    UnknownSafe ==
+        (phase = "finished" /\ lang \notin KnownLangs) =>
+            (result_empty = TRUE /\ dispatched_to = "none" /\ python_helper = "none")
+
+    AutodetectBeforeDispatch ==
+        (phase \in {"dispatching", "python_subdispatch", "finished"}) =>
+            autodetect_done = TRUE
+
+    CodebaseResolvedBeforeDispatch ==
+        (phase \in {"dispatching", "python_subdispatch", "finished"}) =>
+            codebase_type \in ValidCodebaseTypes
+
+    MutualExclusion ==
+        ~(dispatched_to \in NonPythonLangs /\ result_empty = TRUE)
+
+    BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process DiscoveryDispatch = "main"
+begin
+    Start:
+        phase := "resolving";
+        step_count := step_count + 1;
+
+    ResolveCodebase:
+        with t \in {"web_app", "cli", "event_driven", "library"} do
+            codebase_type := t;
+        end with;
+        autodetect_done := TRUE;
+        phase := "dispatching";
+        step_count := step_count + 1;
+
+    DispatchByLang:
+        if lang \in {"none", "python"} then
+            dispatched_to := "python"
+        elsif lang = "go" then
+            dispatched_to := "go"
+        elsif lang = "rust" then
+            dispatched_to := "rust"
+        elsif lang = "javascript" then
+            dispatched_to := "javascript"
+        elsif lang = "typescript" then
+            dispatched_to := "typescript"
+        else
+            result_empty := TRUE
+        end if;
+        step_count := step_count + 1;
+
+    PythonSubDispatch:
+        if dispatched_to = "python" then
+            phase := "python_subdispatch";
+            if codebase_type = "web_app" then
+                python_helper := "web_routes"
+            elsif codebase_type = "cli" then
+                python_helper := "cli_commands"
+            elsif codebase_type = "event_driven" then
+                python_helper := "event_handlers"
+            else
+                python_helper := "public_api"
+            end if
+        end if;
+        step_count := step_count + 1;
+
+    Finish:
+        phase := "finished";
+
+end process;
+
+end algorithm; *)
+
+====
+---- MODULE EntryPointDiscoveryDispatch ----
+
+EXTENDS Integers, FiniteSets, Sequences, TLC
+
+CONSTANTS MaxSteps
+
+ASSUME MaxSteps \in Nat /\ MaxSteps >= 5
+
+PythonLangs        == {"none", "python"}
+NonPythonLangs     == {"go", "rust", "javascript", "typescript"}
+KnownLangs         == PythonLangs \cup NonPythonLangs
+ValidCodebaseTypes == {"web_app", "cli", "event_driven", "library"}
+PythonHelpers      == {"web_routes", "cli_commands",
+                       "event_handlers", "public_api", "main_functions"}
+AllDispatchTargets == NonPythonLangs \cup {"python", "none"}
+
+(* --algorithm EntryPointDiscoveryDispatch
+
+variables
+    lang            \in {"none", "python", "go", "rust",
+                         "javascript", "typescript", "ruby"},
+    skeletons_given \in {TRUE, FALSE},
+    codebase_type   = "unresolved",
+    dispatched_to   = "none",
+    python_helper   = "none",
+    result_empty    = FALSE,
+    autodetect_done = FALSE,
+    phase           = "init",
+    step_count      = 0;
+
+define
+
+    TypeInvariant ==
+        /\ lang            \in KnownLangs \cup {"ruby"}
+        /\ phase           \in {"init", "resolving", "dispatching",
+                                 "python_subdispatch", "finished"}
+        /\ dispatched_to   \in AllDispatchTargets
+        /\ python_helper   \in PythonHelpers \cup {"none"}
+        /\ result_empty    \in {TRUE, FALSE}
+        /\ autodetect_done \in {TRUE, FALSE}
+        /\ step_count      \in 0..MaxSteps
+
+    PythonPreserved ==
+        (phase = "finished" /\ lang \in PythonLangs) =>
+            (dispatched_to = "python" /\ python_helper \in PythonHelpers)
+
+    NonPythonDispatched ==
+        (phase = "finished" /\ lang \in NonPythonLangs) =>
+            (dispatched_to = lang /\ python_helper = "none" /\ result_empty = FALSE)
+
+    UnknownSafe ==
+        (phase = "finished" /\ lang \notin KnownLangs) =>
+            (result_empty = TRUE /\ dispatched_to = "none" /\ python_helper = "none")
+
+    AutodetectBeforeDispatch ==
+        (phase \in {"dispatching", "python_subdispatch", "finished"}) =>
+            autodetect_done = TRUE
+
+    CodebaseResolvedBeforeDispatch ==
+        (phase \in {"dispatching", "python_subdispatch", "finished"}) =>
+            codebase_type \in ValidCodebaseTypes
+
+    MutualExclusion ==
+        ~(dispatched_to \in NonPythonLangs /\ result_empty = TRUE)
+
+    BoundedExecution == step_count <= MaxSteps
+
+end define;
+
+fair process DiscoveryDispatch = "main"
+begin
+    Start:
+        phase := "resolving";
+        step_count := step_count + 1;
+
+    ResolveCodebase:
+        with t \in {"web_app", "cli", "event_driven", "library"} do
+            codebase_type := t;
+        end with;
+        autodetect_done := TRUE;
+        phase := "dispatching";
+        step_count := step_count + 1;
+
+    DispatchByLang:
+        if lang \in {"none", "python"} then
+            dispatched_to := "python"
+        elsif lang = "go" then
+            dispatched_to := "go"
+        elsif lang = "rust" then
+            dispatched_to := "rust"
+        elsif lang = "javascript" then
+            dispatched_to := "javascript"
+        elsif lang = "typescript" then
+            dispatched_to := "typescript"
+        else
+            result_empty := TRUE
+        end if;
+        step_count := step_count + 1;
+
+    PythonSubDispatch:
+        if dispatched_to = "python" then
+            phase := "python_subdispatch";
+            if codebase_type = "web_app" then
+                python_helper := "web_routes"
+            elsif codebase_type = "cli" then
+                python_helper := "cli_commands"
+            elsif codebase_type = "event_driven" then
+                python_helper := "event_handlers"
+            else
+                python_helper := "public_api"
+            end if
+        end if;
+        step_count := step_count + 1;
+
+    Finish:
+        phase := "finished";
+
+end process;
+
+end algorithm; *)
+
+====
